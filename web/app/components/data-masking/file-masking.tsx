@@ -319,9 +319,17 @@ export function FileMasking({ sandboxPath }: FileMaskingProps) {
     if (encryptionEnabled === 'false') {
       // 不加密，直接保存
       await handleSaveWithoutEncryption()
+      return
+    }
+    
+    // 检查是否有全局口令
+    const globalPassphrase = localStorage.getItem('mapping_encryption_passphrase')
+    if (globalPassphrase && globalPassphrase.length >= 32) {
+      // 使用全局口令直接加密
+      await handleConfirmEncryptionWithKey(globalPassphrase)
     } else {
-      // 显示加密设置界面
-      setStep('encryption-setup')
+      // 没有全局口令或口令长度不足，提示用户去设置
+      setError('请先在"设置 → 数据安全"页面配置全局加密口令（至少32位字符）')
     }
   }
 
@@ -444,6 +452,11 @@ export function FileMasking({ sandboxPath }: FileMaskingProps) {
       setError('加密口令必须至少32位字符')
       return
     }
+    await handleConfirmEncryptionWithKey(encryptionKey)
+  }
+
+  const handleConfirmEncryptionWithKey = async (key: string) => {
+    if (!selectedFile || !maskedContent) return
 
     setSavingFiles(true)
     setError('')
@@ -489,7 +502,7 @@ export function FileMasking({ sandboxPath }: FileMaskingProps) {
     // Encrypt mapping data
     let encryptedMappingJson: string
     try {
-      encryptedMappingJson = await encrypt(mappingJson, encryptionKey)
+      encryptedMappingJson = await encrypt(mappingJson, key)
     }
     catch (encErr) {
       setSavingFiles(false)
@@ -864,6 +877,9 @@ export function FileMasking({ sandboxPath }: FileMaskingProps) {
           <div className="flex items-center gap-2 mb-4">
             <ShieldCheckIcon className="h-5 w-5 text-text-warning" />
             <h3 className="text-base font-medium text-text-primary">设置映射文件加密口令</h3>
+          </div>
+          <div className="mb-4 rounded-md bg-state-accent-hover border border-state-accent-hover-alt px-3 py-2">
+            <p className="text-xs text-text-accent">💡 提示：您可以在"设置 → 数据安全"页面中配置全局加密口令，配置后将自动应用于所有文件，无需每次设置。</p>
           </div>
           <p className="text-sm text-text-tertiary mb-6">
             映射文件包含原始敏感数据，建议使用加密口令进行加密保护。请妥善保管此口令，反脱敏时需要使用。

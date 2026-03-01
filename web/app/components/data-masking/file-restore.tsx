@@ -94,16 +94,42 @@ export function FileRestore({ sandboxPath }: FileRestoreProps) {
       return
     }
     const reader = new FileReader()
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
         const rawData = JSON.parse(ev.target?.result as string)
         
         // Check if encrypted
         if (rawData.encrypted && rawData.data) {
-          // Encrypted mapping file
-          setEncryptedData(rawData.data)
-          setMappingData(null)
-          setStep('decrypt')
+          // Encrypted mapping file - try global passphrase first
+          const globalPassphrase = localStorage.getItem('mapping_encryption_passphrase')
+          if (globalPassphrase && globalPassphrase.length >= 32) {
+            // Try to decrypt with global passphrase
+            try {
+              const decryptedJson = await decrypt(rawData.data, globalPassphrase)
+              const data = JSON.parse(decryptedJson) as MappingData
+              
+              if (!data.rules || !Array.isArray(data.rules)) {
+                setError('解密后的数据格式错误：缺少 rules 字段')
+                return
+              }
+              
+              setMappingData(data)
+              setEncryptedData(null)
+              setStep('confirm')
+              return
+            }
+            catch {
+              // Global passphrase failed, prompt user
+              setEncryptedData(rawData.data)
+              setMappingData(null)
+              setStep('decrypt')
+            }
+          } else {
+            // No global passphrase, prompt user
+            setEncryptedData(rawData.data)
+            setMappingData(null)
+            setStep('decrypt')
+          }
         } else if (rawData.rules && Array.isArray(rawData.rules)) {
           // Unencrypted mapping file (legacy)
           setEncryptedData(null)
@@ -355,7 +381,7 @@ export function FileRestore({ sandboxPath }: FileRestoreProps) {
             <h3 className="text-base font-medium text-text-primary">输入解密口令</h3>
           </div>
           <p className="text-sm text-text-tertiary mb-6">
-            该映射文件已加密，请输入创建时设置的加密口令以解密。
+            该映射文件已加密。全局口令解密失败或未配置，请手动输入创建时设置的加密口令。
           </p>
 
           <div className="space-y-4">
