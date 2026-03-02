@@ -881,6 +881,9 @@ services:
       interval: 1s
       timeout: 3s
       retries: 60
+    networks:
+      - ssrf_proxy_network
+      - default
 
   # The mysql database.
   db_mysql:
