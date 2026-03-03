@@ -5,7 +5,7 @@ Authenticated endpoint — stores/retrieves user settings from the
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from flask import request
 from flask_restx import Resource
@@ -47,7 +47,7 @@ class UserConfigApi(Resource):
         if row:
             merged = {**(row.config or {}), **config_patch}
             row.config = merged
-            row.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            row.updated_at = datetime.now(UTC).replace(tzinfo=None)
         else:
             row = UserConfig(account_id=account.id, config=config_patch)
             db.session.add(row)

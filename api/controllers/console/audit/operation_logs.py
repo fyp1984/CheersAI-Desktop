@@ -1,4 +1,3 @@
-from flask import request
 from flask_login import current_user
 from flask_restx import Resource, fields
 from sqlalchemy import desc, func, or_
@@ -10,6 +9,7 @@ from extensions.ext_database import db
 from libs.helper import TimestampField
 from models.account import Account
 from models.model import OperationLog
+
 operation_log_model = console_ns.model(
     "OperationLog",
     {
@@ -136,7 +136,7 @@ class OperationLogStatsApi(Resource):
         """Get operation logs statistics"""
         with Session(db.engine) as session:
             # Today's count
-            from datetime import datetime, timedelta
+            from datetime import datetime
 
             today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             today_count = (

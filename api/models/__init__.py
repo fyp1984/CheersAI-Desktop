@@ -81,7 +81,6 @@ from .provider import (
 )
 from .source import DataSourceApiKeyAuthBinding, DataSourceOauthBinding
 from .task import CeleryTask, CeleryTaskSet
-from .user_config import UserConfig
 from .tools import (
     ApiToolProvider,
     BuiltinToolProvider,
@@ -98,6 +97,7 @@ from .trigger import (
     TriggerSubscription,
     WorkflowSchedulePlan,
 )
+from .user_config import UserConfig
 from .web import PinnedConversation, SavedMessage
 from .workflow import (
     ConversationVariable,
