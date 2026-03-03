@@ -1,4 +1,4 @@
-# CheersAI
+# CheersAI-Desktop
 
 基于 [CheersAI](https://github.com/CheersAI/CheersAI-Desktop) 开源平台的定制版本，新增数据脱敏功能和 Tauri 桌面应用支持。
 
