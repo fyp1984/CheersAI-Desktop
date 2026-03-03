@@ -14,7 +14,7 @@ export const logoPathMap: Record<LogoStyle, string> = {
 export type LogoSize = 'large' | 'medium' | 'small'
 
 export const logoSizeMap: Record<LogoSize, string> = {
-  large: 'w-16 h-7',
+  large: 'h-14 w-auto border-none shadow-none ring-0 outline-none',
   medium: 'w-12 h-[22px]',
   small: 'w-9 h-4',
 }
@@ -35,7 +35,7 @@ const DifyLogo: FC<DifyLogoProps> = ({
 
   return (
     <img
-      src={`${basePath}${logoPathMap[themedStyle]}`}
+      src={`${basePath}${logoPathMap[themedStyle]}?v=20260303`}
       className={cn('block object-contain', logoSizeMap[size], className)}
       alt="CheersAI logo"
     />

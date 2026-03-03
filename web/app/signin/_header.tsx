@@ -11,7 +11,7 @@ import { languages } from '@/i18n-config/language'
 // Avoid rendering the logo and theme selector on the server
 const DifyLogo = dynamic(() => import('@/app/components/base/logo/dify-logo'), {
   ssr: false,
-  loading: () => <div className="h-7 w-16 bg-transparent" />,
+  loading: () => <div className="h-14 w-14 bg-transparent" />,
 })
 const ThemeSelector = dynamic(() => import('@/app/components/base/theme-selector'), {
   ssr: false,
