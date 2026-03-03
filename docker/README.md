@@ -1,6 +1,6 @@
 ## README for docker Deployment
 
-Welcome to the new `docker` directory for deploying Dify using Docker Compose. This README outlines the updates, deployment instructions, and migration details for existing users.
+Welcome to the new `docker` directory for deploying CheersAI using Docker Compose. This README outlines the updates, deployment instructions, and migration details for existing users.
 
 ### What's Updated
 
@@ -16,7 +16,7 @@ Welcome to the new `docker` directory for deploying Dify using Docker Compose. T
 
 - **Mandatory .env File**: A `.env` file is now required to run `docker compose up`. This file is crucial for configuring your deployment and for any custom settings to persist through upgrades.
 
-### How to Deploy Dify with `docker-compose.yaml`
+### How to Deploy CheersAI with `docker-compose.yaml`
 
 1. **Prerequisites**: Ensure Docker and Docker Compose are installed on your system.
 1. **Environment Setup**:
@@ -25,7 +25,7 @@ Welcome to the new `docker` directory for deploying Dify using Docker Compose. T
    - Customize the `.env` file as needed. Refer to the `.env.example` file for detailed configuration options.
    - **Optional (Recommended for upgrades)**:
      You may use the environment synchronization tool to help keep your `.env` file aligned with the latest `.env.example` updates, while preserving your custom settings.
-     This is especially useful when upgrading Dify or managing a large, customized `.env` file.
+     This is especially useful when upgrading CheersAI or managing a large, customized `.env` file.
      See the [Environment Variables Synchronization](#environment-variables-synchronization) section below.
 1. **Running the Services**:
    - Execute `docker compose up` from the `docker` directory to start the services.
@@ -36,7 +36,7 @@ Welcome to the new `docker` directory for deploying Dify using Docker Compose. T
    - Change `ENABLE_OTEL` to `true` in `.env`.
    - Configure `OTLP_BASE_ENDPOINT` properly.
 
-### How to Deploy Middleware for Developing Dify
+### How to Deploy Middleware for Developing CheersAI
 
 1. **Middleware Setup**:
    - Use the `docker-compose.middleware.yaml` for setting up essential middleware services like databases and caches.
@@ -117,7 +117,7 @@ The `.env.example` file provided in the Docker setup is extensive and covers a w
 
 ### Environment Variables Synchronization
 
-When upgrading Dify or pulling the latest changes, new environment variables may be introduced in `.env.example`.
+When upgrading CheersAI or pulling the latest changes, new environment variables may be introduced in `.env.example`.
 
 To help keep your existing `.env` file up to date **without losing your custom values**, an optional environment variables synchronization tool is provided.
 
@@ -142,7 +142,7 @@ Before synchronization, the current `.env` file is saved to the `env-backup/` di
 
 **When to use**
 
-- After upgrading Dify to a newer version
+- After upgrading CheersAI to a newer version
 - When `.env.example` has been updated with new environment variables
 - When managing a large or heavily customized `.env` file
 

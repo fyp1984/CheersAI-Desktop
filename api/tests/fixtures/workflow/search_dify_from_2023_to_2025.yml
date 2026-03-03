@@ -676,7 +676,7 @@ workflow:
         tool_parameters:
           query:
             type: mixed
-            value: Dify.AI {{#1754979524910.year#}}
+            value: CheersAI.AI {{#1754979524910.year#}}
         type: tool
       height: 376
       id: '1754979561786'

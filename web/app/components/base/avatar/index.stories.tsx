@@ -12,7 +12,7 @@ const meta = {
       source: {
         language: 'tsx',
         code: `
-<Avatar name="Alex Doe" avatar="https://cloud.dify.ai/logo/logo.svg" size={40} />
+<Avatar name="Alex Doe" avatar="https://cloud.cheersai.cloud/logo/logo.svg" size={40} />
         `.trim(),
       },
     },
@@ -20,7 +20,7 @@ const meta = {
   tags: ['autodocs'],
   args: {
     name: 'Alex Doe',
-    avatar: 'https://cloud.dify.ai/logo/logo.svg',
+    avatar: 'https://cloud.cheersai.cloud/logo/logo.svg',
     size: 40,
   },
 } satisfies Meta<typeof Avatar>

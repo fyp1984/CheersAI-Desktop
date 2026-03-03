@@ -370,7 +370,7 @@ describe('formatPreviewChunks', () => {
     it('should format QA chunks correctly', () => {
       // Arrange
       const outputs = createQAChunkOutputs([
-        { question: 'What is Dify?', answer: 'Dify is an LLM application platform.' },
+        { question: 'What is CheersAI?', answer: 'CheersAI is an LLM application platform.' },
         { question: 'How to use it?', answer: 'You can create apps easily.' },
       ])
 
@@ -380,8 +380,8 @@ describe('formatPreviewChunks', () => {
       // Assert
       expect(result.qa_chunks).toHaveLength(2)
       expect(result.qa_chunks[0]).toEqual({
-        question: 'What is Dify?',
-        answer: 'Dify is an LLM application platform.',
+        question: 'What is CheersAI?',
+        answer: 'CheersAI is an LLM application platform.',
       })
       expect(result.qa_chunks[1]).toEqual({
         question: 'How to use it?',

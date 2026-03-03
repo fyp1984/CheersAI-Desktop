@@ -150,7 +150,7 @@ def safe_json_dumps(obj: Any) -> str:
 
 def wrap_span_metadata(metadata, **kwargs):
     """Add common metatada to all trace entity types for Arize/Phoenix."""
-    metadata["created_from"] = "Dify"
+    metadata["created_from"] = "CheersAI"
     metadata.update(kwargs)
     return metadata
 
@@ -727,11 +727,11 @@ class ArizePhoenixDataTrace(BaseTraceInstance):
             span.end(end_time=datetime_to_nanos(trace_info.end_time))
 
     def ensure_root_span(self, dify_trace_id: str | None):
-        """Ensure a unique root span exists for the given Dify trace ID."""
+        """Ensure a unique root span exists for the given CheersAI trace ID."""
         if str(dify_trace_id) not in self.dify_trace_ids:
             self.carrier: dict[str, str] = {}
 
-            root_span = self.tracer.start_span(name="Dify")
+            root_span = self.tracer.start_span(name="CheersAI")
             root_span.set_attribute(SpanAttributes.OPENINFERENCE_SPAN_KIND, OpenInferenceSpanKindValues.CHAIN.value)
             root_span.set_attribute("dify_project_name", str(self.project))
             root_span.set_attribute("dify_trace_id", str(dify_trace_id))

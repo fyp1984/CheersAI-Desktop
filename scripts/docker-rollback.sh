@@ -10,10 +10,10 @@ TS="$1"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DOCKER_DIR="${ROOT_DIR}/docker"
 
-docker tag "dify-api:local_prev_${TS}" dify-api:local
-docker tag "dify-web:local_prev_${TS}" dify-web:local
-if docker image inspect "dify-web:hot_prev_${TS}" >/dev/null 2>&1; then
-  docker tag "dify-web:hot_prev_${TS}" dify-web:hot
+docker tag "cheersai-api:local_prev_${TS}" cheersai-api:local
+docker tag "cheersai-web:local_prev_${TS}" cheersai-web:local
+if docker image inspect "cheersai-web:hot_prev_${TS}" >/dev/null 2>&1; then
+  docker tag "cheersai-web:hot_prev_${TS}" cheersai-web:hot
 fi
 
 cd "${DOCKER_DIR}"

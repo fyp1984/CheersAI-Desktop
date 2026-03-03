@@ -1,9 +1,9 @@
 # 端口清理脚本
-# 用于清理 Dify 项目占用的端口
+# 用于清理 CheersAI 项目占用的端口
 
 $rootDir = Split-Path $PSScriptRoot -Parent
 
-Write-Host "清理 Dify 项目端口..." -ForegroundColor Cyan
+Write-Host "清理 CheersAI 项目端口..." -ForegroundColor Cyan
 
 # 停止 Docker 容器
 Write-Host "`n1. 停止 Docker 容器..." -ForegroundColor Yellow

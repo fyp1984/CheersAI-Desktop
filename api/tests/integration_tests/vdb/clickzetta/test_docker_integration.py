@@ -58,8 +58,8 @@ def test_clickzetta_connection():
 
 
 def test_dify_api():
-    """Test Dify API with Clickzetta backend"""
-    print("\n=== Testing Dify API ===")
+    """Test CheersAI API with Clickzetta backend"""
+    print("\n=== Testing CheersAI API ===")
     base_url = "http://localhost:5001"
 
     # Wait for API to be ready
@@ -68,18 +68,18 @@ def test_dify_api():
         try:
             response = httpx.get(f"{base_url}/console/api/health")
             if response.status_code == 200:
-                print("✓ Dify API is ready")
+                print("✓ CheersAI API is ready")
                 break
         except:
             if i == max_retries - 1:
-                print("✗ Dify API is not responding")
+                print("✗ CheersAI API is not responding")
                 return False
             time.sleep(2)
 
     # Check vector store configuration
     try:
         # This is a simplified check - in production, you'd use proper auth
-        print("✓ Dify is configured to use Clickzetta as vector store")
+        print("✓ CheersAI is configured to use Clickzetta as vector store")
         return True
     except Exception as e:
         print(f"✗ API test failed: {e}")
@@ -87,7 +87,7 @@ def test_dify_api():
 
 
 def verify_table_structure():
-    """Verify the table structure meets Dify requirements"""
+    """Verify the table structure meets CheersAI requirements"""
     print("\n=== Verifying Table Structure ===")
 
     expected_columns = {
@@ -118,11 +118,11 @@ def verify_table_structure():
 
 def main():
     """Run all tests"""
-    print("Starting Clickzetta integration tests for Dify Docker\n")
+    print("Starting Clickzetta integration tests for CheersAI Docker\n")
 
     tests = [
         ("Direct Clickzetta Connection", test_clickzetta_connection),
-        ("Dify API Status", test_dify_api),
+        ("CheersAI API Status", test_dify_api),
         ("Table Structure Verification", verify_table_structure),
     ]
 
@@ -150,10 +150,10 @@ def main():
     print(f"\nTotal: {passed}/{total} tests passed")
 
     if passed == total:
-        print("\n🎉 All tests passed! Clickzetta is ready for Dify Docker deployment.")
+        print("\n🎉 All tests passed! Clickzetta is ready for CheersAI Docker deployment.")
         print("\nNext steps:")
         print("1. Run: cd docker && docker-compose -f docker-compose.yaml -f docker-compose.clickzetta.yaml up -d")
-        print("2. Access Dify at http://localhost:3000")
+        print("2. Access CheersAI at http://localhost:3000")
         print("3. Create a dataset and test vector storage with Clickzetta")
         return 0
     else:

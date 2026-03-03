@@ -279,7 +279,7 @@ def length_prefixed_response(magic_number: int, response: Union[Mapping, Generat
     This function is used to return a response with a length prefix.
     Magic number is a one byte number that indicates the type of the response.
 
-    For a compatibility with latest plugin daemon https://github.com/langgenius/dify-plugin-daemon/pull/341
+    For a compatibility with latest plugin daemon https://github.com/cheersai/cheersai-plugin-daemon/pull/341
     Avoid using line-based response, it leads a memory issue.
 
     We uses following format:

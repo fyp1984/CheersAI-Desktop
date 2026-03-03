@@ -149,7 +149,7 @@ class DatasourceProviderIdentity(BaseModel):
     )
 
     def generate_datasource_icon_url(self, tenant_id: str) -> str:
-        HARD_CODED_DATASOURCE_ICONS = ["https://assets.dify.ai/images/File%20Upload.svg"]
+        HARD_CODED_DATASOURCE_ICONS = ["https://assets.cheersai.cloud/images/File%20Upload.svg"]
         if self.icon in HARD_CODED_DATASOURCE_ICONS:
             return self.icon
         return str(

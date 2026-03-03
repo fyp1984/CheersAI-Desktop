@@ -30,12 +30,12 @@ def test_qq_email():
         message = MIMEMultipart()
         message['From'] = SENDER_EMAIL
         message['To'] = RECIPIENT_EMAIL
-        message['Subject'] = Header("Dify邮件配置测试", 'utf-8').encode()
+        message['Subject'] = Header("CheersAI邮件配置测试", 'utf-8').encode()
         
         # 邮件正文
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         body = f"""
-这是一封来自Dify的测试邮件。
+这是一封来自CheersAI的测试邮件。
 
 如果你收到这封邮件，说明QQ邮箱SMTP配置成功！
 

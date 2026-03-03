@@ -1,6 +1,6 @@
-# Dify Node.js SDK
+# CheersAI Node.js SDK
 
-This is the Node.js SDK for the Dify API, which allows you to easily integrate Dify into your Node.js applications.
+This is the Node.js SDK for the CheersAI API, which allows you to easily integrate CheersAI into your Node.js applications.
 
 ## Install
 

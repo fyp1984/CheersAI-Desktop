@@ -21,8 +21,8 @@ if TYPE_CHECKING:
     from models.tools import MCPToolProvider
 
 # Constants
-CLIENT_NAME = "Dify"
-CLIENT_URI = "https://github.com/langgenius/dify"
+CLIENT_NAME = "CheersAI"
+CLIENT_URI = "https://github.com/CheersAI/CheersAI-Desktop"
 DEFAULT_TOKEN_TYPE = "Bearer"
 DEFAULT_EXPIRES_IN = 3600
 MASK_CHAR = "*"

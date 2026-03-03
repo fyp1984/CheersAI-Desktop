@@ -4,12 +4,12 @@ services:
   # PostgreSQL 数据库
   postgres:
     image: postgres:15-alpine
-    container_name: dify-postgres
+    container_name: cheersai-postgres
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: difyai123456
-      POSTGRES_DB: dify
+      POSTGRES_PASSWORD: cheersai123456
+      POSTGRES_DB: cheersai
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
@@ -24,15 +24,15 @@ services:
   # Redis 缓存
   redis:
     image: redis:7-alpine
-    container_name: dify-redis
+    container_name: cheersai-redis
     restart: always
-    command: redis-server --requirepass difyai123456
+    command: redis-server --requirepass cheersai123456
     ports:
       - "6700:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "difyai123456", "ping"]
+      test: ["CMD", "redis-cli", "-a", "cheersai123456", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -40,7 +40,7 @@ services:
   # Weaviate 向量数据库
   weaviate:
     image: semitechnologies/weaviate:1.19.0
-    container_name: dify-weaviate
+    container_name: cheersai-weaviate
     restart: always
     environment:
       QUERY_DEFAULTS_LIMIT: 25
@@ -50,9 +50,9 @@ services:
       CLUSTER_HOSTNAME: 'node1'
       AUTHENTICATION_APIKEY_ENABLED: 'true'
       AUTHENTICATION_APIKEY_ALLOWED_KEYS: 'WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih'
-      AUTHENTICATION_APIKEY_USERS: 'hello@dify.ai'
+      AUTHENTICATION_APIKEY_USERS: 'hello@cheersai.cloud'
       AUTHORIZATION_ADMINLIST_ENABLED: 'true'
-      AUTHORIZATION_ADMINLIST_USERS: 'hello@dify.ai'
+      AUTHORIZATION_ADMINLIST_USERS: 'hello@cheersai.cloud'
     ports:
       - "8080:8080"
     volumes:
@@ -60,13 +60,13 @@ services:
 
   # Plugin Daemon
   plugin_daemon:
-    image: langgenius/dify-plugin-daemon:0.5.3-local
-    container_name: dify-plugin-daemon
+    image: cheersai/cheersai-plugin-daemon:0.5.3-local
+    container_name: cheersai-plugin-daemon
     restart: always
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: difyai123456
+      REDIS_PASSWORD: cheersai123456
       SERVER_PORT: 5002
       SERVER_KEY: lYkiYYT6owG+71oLerGzA7GXCgOT++6ovaezWAjpCjf+Sjc3ZtU+qUEi
       MAX_PLUGIN_PACKAGE_SIZE: 52428800
@@ -77,10 +77,10 @@ services:
       PLUGIN_REMOTE_INSTALLING_PORT: 5003
       PLUGIN_WORKING_PATH: /app/storage
       DB_USERNAME: postgres
-      DB_PASSWORD: difyai123456
+      DB_PASSWORD: cheersai123456
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_DATABASE: dify_plugin
+      DB_DATABASE: cheersai_plugin
     ports:
       - "5002:5002"
       - "5003:5003"

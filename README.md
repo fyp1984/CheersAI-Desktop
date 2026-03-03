@@ -1,10 +1,10 @@
 # CheersAI
 
-基于 [Dify](https://github.com/langgenius/dify) 开源平台的定制版本，新增数据脱敏功能和 Tauri 桌面应用支持。
+基于 [CheersAI](https://github.com/CheersAI/CheersAI-Desktop) 开源平台的定制版本，新增数据脱敏功能和 Tauri 桌面应用支持。
 
 ## 功能特性
 
-- Dify 全部原生功能（AI 工作流、RAG、Agent、模型管理等）
+- CheersAI 全部原生功能（AI 工作流、RAG、Agent、模型管理等）
 - 数据脱敏模块：可配置规则的敏感数据脱敏，支持 Markdown 文件处理
 - Tauri 桌面应用：一键打包为 Windows 桌面 exe
 - 脱敏文件本地存储：通过 Tauri 后端直接写入本地沙箱目录
@@ -129,4 +129,4 @@ docker-compose -f docker-compose.dev.yaml down
 
 ## 基于
 
-[Dify](https://github.com/langgenius/dify) - 开源 LLM 应用开发平台，Apache 2.0 协议。
+[CheersAI](https://github.com/CheersAI/CheersAI-Desktop) - 开源 LLM 应用开发平台，Apache 2.0 协议。

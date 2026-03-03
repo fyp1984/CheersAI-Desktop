@@ -69,7 +69,7 @@ class TestMailInviteMemberTask:
             mock_email_service.return_value = mock_email_service_instance
 
             # Setup config mock
-            mock_config.CONSOLE_WEB_URL = "https://console.dify.ai"
+            mock_config.CONSOLE_WEB_URL = "https://console.cheersai.cloud"
 
             yield {
                 "mail": mock_mail,
@@ -227,7 +227,7 @@ class TestMailInviteMemberTask:
         assert template_context["to"] == invitee_email
         assert template_context["inviter_name"] == inviter_name
         assert template_context["workspace_name"] == workspace_name
-        assert template_context["url"] == f"https://console.dify.ai/activate?token={token}"
+        assert template_context["url"] == f"https://console.cheersai.cloud/activate?token={token}"
 
     def test_send_invite_member_mail_different_languages(
         self, db_session_with_containers, mock_external_service_dependencies
@@ -364,7 +364,7 @@ class TestMailInviteMemberTask:
         assert template_context["to"] == invitee_email
         assert template_context["inviter_name"] == inviter_name
         assert template_context["workspace_name"] == workspace_name
-        assert template_context["url"] == f"https://console.dify.ai/activate?token={token}"
+        assert template_context["url"] == f"https://console.cheersai.cloud/activate?token={token}"
 
     def test_send_invite_member_mail_integration_with_redis_token(
         self, db_session_with_containers, mock_external_service_dependencies

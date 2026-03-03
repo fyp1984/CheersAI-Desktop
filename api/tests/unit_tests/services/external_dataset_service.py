@@ -2,7 +2,7 @@
 Extensive unit tests for ``ExternalDatasetService``.
 
 This module focuses on the *external dataset service* surface area, which is responsible
-for integrating with **external knowledge APIs** and wiring them into Dify datasets.
+for integrating with **external knowledge APIs** and wiring them into CheersAI datasets.
 
 The goal of this test suite is twofold:
 

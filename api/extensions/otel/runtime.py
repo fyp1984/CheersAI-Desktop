@@ -79,6 +79,6 @@ def is_instrument_flag_enabled() -> bool:
     Check if external instrumentation is enabled via environment variable.
 
     Third-party non-invasive instrumentation agents set this flag to coordinate
-    with Dify's manual OpenTelemetry instrumentation.
+    with CheersAI's manual OpenTelemetry instrumentation.
     """
     return os.getenv("ENABLE_OTEL_FOR_INSTRUMENT", "").strip().lower() == "true"

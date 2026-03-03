@@ -1,11 +1,11 @@
 ---
 name: component-refactoring
-description: Refactor high-complexity React components in Dify frontend. Use when `pnpm analyze-component --json` shows complexity > 50 or lineCount > 300, when the user asks for code splitting, hook extraction, or complexity reduction, or when `pnpm analyze-component` warns to refactor before testing; avoid for simple/well-structured components, third-party wrappers, or when the user explicitly wants testing without refactoring.
+description: Refactor high-complexity React components in CheersAI frontend. Use when `pnpm analyze-component --json` shows complexity > 50 or lineCount > 300, when the user asks for code splitting, hook extraction, or complexity reduction, or when `pnpm analyze-component` warns to refactor before testing; avoid for simple/well-structured components, third-party wrappers, or when the user explicitly wants testing without refactoring.
 ---
 
-# Dify Component Refactoring Skill
+# CheersAI Component Refactoring Skill
 
-Refactor high-complexity React components in the Dify frontend codebase with the patterns and workflow below.
+Refactor high-complexity React components in the CheersAI frontend codebase with the patterns and workflow below.
 
 > **Complexity Threshold**: Components with complexity > 50 (measured by `pnpm analyze-component`) should be refactored before testing.
 
@@ -59,7 +59,7 @@ pnpm analyze-component <path> --json
 
 **When**: Component has complex state management, multiple `useState`/`useEffect`, or business logic mixed with UI.
 
-**Dify Convention**: Place hooks in a `hooks/` subdirectory or alongside the component as `use-<feature>.ts`.
+**CheersAI Convention**: Place hooks in a `hooks/` subdirectory or alongside the component as `use-<feature>.ts`.
 
 ```typescript
 // ❌ Before: Complex state logic in component
@@ -91,7 +91,7 @@ const Configuration: FC = () => {
 }
 ```
 
-**Dify Examples**:
+**CheersAI Examples**:
 - `web/app/components/app/configuration/hooks/use-advanced-prompt-config.ts`
 - `web/app/components/app/configuration/debug/hooks.tsx`
 - `web/app/components/workflow/hooks/use-workflow.ts`
@@ -100,7 +100,7 @@ const Configuration: FC = () => {
 
 **When**: Single component has multiple UI sections, conditional rendering blocks, or repeated patterns.
 
-**Dify Convention**: Place sub-components in subdirectories or as separate files in the same directory.
+**CheersAI Convention**: Place sub-components in subdirectories or as separate files in the same directory.
 
 ```typescript
 // ❌ Before: Monolithic JSX with multiple sections
@@ -134,7 +134,7 @@ const AppInfo = () => {
 }
 ```
 
-**Dify Examples**:
+**CheersAI Examples**:
 - `web/app/components/app/configuration/` directory structure
 - `web/app/components/workflow/nodes/` per-node organization
 
@@ -187,7 +187,7 @@ const Template = useMemo(() => {
 
 **When**: Component directly handles API calls, data transformation, or complex async operations.
 
-**Dify Convention**: Use `@tanstack/react-query` hooks from `web/service/use-*.ts` or create custom data hooks.
+**CheersAI Convention**: Use `@tanstack/react-query` hooks from `web/service/use-*.ts` or create custom data hooks.
 
 ```typescript
 // ❌ Before: API logic in component
@@ -229,13 +229,13 @@ const MCPServiceCard = () => {
 }
 ```
 
-**React Query Best Practices in Dify**:
+**React Query Best Practices in CheersAI**:
 - Define `NAME_SPACE` for query key organization
 - Use `enabled` option for conditional fetching
 - Use `select` for data transformation
 - Export invalidation hooks: `useInvalidXxx`
 
-**Dify Examples**:
+**CheersAI Examples**:
 - `web/service/use-workflow.ts`
 - `web/service/use-common.ts`
 - `web/service/knowledge/use-dataset.ts`
@@ -245,7 +245,7 @@ const MCPServiceCard = () => {
 
 **When**: Component manages multiple modals with complex open/close states.
 
-**Dify Convention**: Modals should be extracted with their state management.
+**CheersAI Convention**: Modals should be extracted with their state management.
 
 ```typescript
 // ❌ Before: Multiple modal states in component
@@ -280,7 +280,7 @@ const useAppInfoModals = () => {
 
 **When**: Complex form validation, submission handling, or field transformation.
 
-**Dify Convention**: Use `@tanstack/react-form` patterns from `web/app/components/base/form/`.
+**CheersAI Convention**: Use `@tanstack/react-form` patterns from `web/app/components/base/form/`.
 
 ```typescript
 // ✅ Use existing form infrastructure
@@ -296,7 +296,7 @@ const ConfigForm = () => {
 }
 ```
 
-## Dify-Specific Refactoring Guidelines
+## CheersAI-Specific Refactoring Guidelines
 
 ### 1. Context Provider Extraction
 
@@ -321,7 +321,7 @@ return <ConfigContext.Provider value={value}>...</ConfigContext.Provider>
 </ModelConfigProvider>
 ```
 
-**Dify Reference**: `web/context/` directory structure
+**CheersAI Reference**: `web/context/` directory structure
 
 ### 2. Workflow Node Components
 
@@ -469,7 +469,7 @@ const useButtonState = () => {
 
 ## References
 
-### Dify Codebase Examples
+### CheersAI Codebase Examples
 
 - **Hook extraction**: `web/app/components/app/configuration/hooks/`
 - **Component splitting**: `web/app/components/app/configuration/`

@@ -2,7 +2,7 @@
  * 反向替换器
  * Reverse Substitution
  * 
- * 在 Dify 后端响应中识别脱敏值并恢复原始值
+ * 在 CheersAI 后端响应中识别脱敏值并恢复原始值
  */
 
 import type { SubstitutionResult } from './types'
@@ -21,7 +21,7 @@ export class ReverseSubstitution {
 
   /**
    * 对响应数据执行反向替换
-   * @param response - Dify 后端响应
+   * @param response - CheersAI 后端响应
    * @param mappingId - 映射ID
    * @returns 恢复后的响应
    */

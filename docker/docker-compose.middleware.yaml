@@ -9,8 +9,8 @@ services:
     env_file:
       - ./middleware.env
     environment:
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-difyai123456}
-      POSTGRES_DB: ${DB_DATABASE:-dify}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cheersai123456}
+      POSTGRES_DB: ${DB_DATABASE:-cheersai}
       PGDATA: ${PGDATA:-/var/lib/postgresql/data/pgdata}
     command: >
       postgres -c 'max_connections=${POSTGRES_MAX_CONNECTIONS:-100}'
@@ -34,7 +34,7 @@ services:
           "-U",
           "${DB_USERNAME:-postgres}",
           "-d",
-          "${DB_DATABASE:-dify}",
+          "${DB_DATABASE:-cheersai}",
         ]
       interval: 1s
       timeout: 3s
@@ -48,8 +48,8 @@ services:
     env_file:
       - ./middleware.env
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-difyai123456}
-      MYSQL_DATABASE: ${DB_DATABASE:-dify}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-cheersai123456}
+      MYSQL_DATABASE: ${DB_DATABASE:-cheersai}
     command: >
       --max_connections=1000
       --innodb_buffer_pool_size=${MYSQL_INNODB_BUFFER_POOL_SIZE:-512M}
@@ -67,7 +67,7 @@ services:
           "ping",
           "-u",
           "root",
-          "-p${DB_PASSWORD:-difyai123456}",
+          "-p${DB_PASSWORD:-cheersai123456}",
         ]
       interval: 1s
       timeout: 3s
@@ -80,32 +80,32 @@ services:
     env_file:
       - ./middleware.env
     environment:
-      REDISCLI_AUTH: ${REDIS_PASSWORD:-difyai123456}
+      REDISCLI_AUTH: ${REDIS_PASSWORD:-cheersai123456}
     volumes:
       # Mount the redis data directory to the container.
       - ${REDIS_HOST_VOLUME:-./volumes/redis/data}:/data
     # Set the redis password when startup redis server.
-    command: redis-server --requirepass ${REDIS_PASSWORD:-difyai123456}
+    command: redis-server --requirepass ${REDIS_PASSWORD:-cheersai123456}
     ports:
       - "${EXPOSE_REDIS_PORT:-6379}:6379"
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "redis-cli -a ${REDIS_PASSWORD:-difyai123456} ping | grep -q PONG",
+          "redis-cli -a ${REDIS_PASSWORD:-cheersai123456} ping | grep -q PONG",
         ]
 
-  # The DifySandbox
+  # The CheersAISandbox
   sandbox:
-    image: langgenius/dify-sandbox:0.2.12
+    image: cheersai/cheersai-sandbox:0.2.12
     restart: always
     env_file:
       - ./middleware.env
     environment:
-      # The DifySandbox configurations
+      # The CheersAISandbox configurations
       # Make sure you are changing this key for your deployment with a strong key.
       # You can generate a strong key using `openssl rand -base64 42`.
-      API_KEY: ${SANDBOX_API_KEY:-dify-sandbox}
+      API_KEY: ${SANDBOX_API_KEY:-cheersai-sandbox}
       GIN_MODE: ${SANDBOX_GIN_MODE:-release}
       WORKER_TIMEOUT: ${SANDBOX_WORKER_TIMEOUT:-15}
       ENABLE_NETWORK: ${SANDBOX_ENABLE_NETWORK:-true}
@@ -123,17 +123,17 @@ services:
 
   # plugin daemon
   plugin_daemon:
-    image: langgenius/dify-plugin-daemon:0.5.3-local
+    image: cheersai/cheersai-plugin-daemon:0.5.3-local
     restart: always
     env_file:
       - ./middleware.env
     environment:
       # Use the shared environment variables.
       LOG_OUTPUT_FORMAT: ${LOG_OUTPUT_FORMAT:-text}
-      DB_DATABASE: ${DB_PLUGIN_DATABASE:-dify_plugin}
+      DB_DATABASE: ${DB_PLUGIN_DATABASE:-cheersai_plugin}
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-difyai123456}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-cheersai123456}
       SERVER_PORT: ${PLUGIN_DAEMON_PORT:-5002}
       SERVER_KEY: ${PLUGIN_DAEMON_KEY:-lYkiYYT6owG+71oLerGzA7GXCgOT++6ovaezWAjpCjf+Sjc3ZtU+qUEi}
       MAX_PLUGIN_PACKAGE_SIZE: ${PLUGIN_MAX_PACKAGE_SIZE:-52428800}
@@ -185,7 +185,7 @@ services:
 
   # ssrf_proxy server
   # for more information, please refer to
-  # https://docs.dify.ai/learn-more/faq/install-faq#18-why-is-ssrf-proxy-needed%3F
+  # https://docs.cheersai.cloud/learn-more/faq/install-faq#18-why-is-ssrf-proxy-needed%3F
   ssrf_proxy:
     image: ubuntu/squid:latest
     restart: always
@@ -236,9 +236,9 @@ services:
       CLUSTER_HOSTNAME: ${WEAVIATE_CLUSTER_HOSTNAME:-node1}
       AUTHENTICATION_APIKEY_ENABLED: ${WEAVIATE_AUTHENTICATION_APIKEY_ENABLED:-true}
       AUTHENTICATION_APIKEY_ALLOWED_KEYS: ${WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS:-WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih}
-      AUTHENTICATION_APIKEY_USERS: ${WEAVIATE_AUTHENTICATION_APIKEY_USERS:-hello@dify.ai}
+      AUTHENTICATION_APIKEY_USERS: ${WEAVIATE_AUTHENTICATION_APIKEY_USERS:-hello@cheersai.cloud}
       AUTHORIZATION_ADMINLIST_ENABLED: ${WEAVIATE_AUTHORIZATION_ADMINLIST_ENABLED:-true}
-      AUTHORIZATION_ADMINLIST_USERS: ${WEAVIATE_AUTHORIZATION_ADMINLIST_USERS:-hello@dify.ai}
+      AUTHORIZATION_ADMINLIST_USERS: ${WEAVIATE_AUTHORIZATION_ADMINLIST_USERS:-hello@cheersai.cloud}
       DISABLE_TELEMETRY: ${WEAVIATE_DISABLE_TELEMETRY:-false}
     ports:
       - "${EXPOSE_WEAVIATE_PORT:-8080}:8080"

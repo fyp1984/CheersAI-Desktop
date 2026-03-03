@@ -3,7 +3,7 @@ import { AppModeEnum } from '@/types/app'
 import CustomizeModal from './index'
 
 // Mock useDocLink from context
-const mockDocLink = vi.fn((path?: string) => `https://docs.dify.ai/en-US${path || ''}`)
+const mockDocLink = vi.fn((path?: string) => `https://docs.cheersai.cloud/en-US${path || ''}`)
 vi.mock('@/context/i18n', () => ({
   useDocLink: () => mockDocLink,
 }))

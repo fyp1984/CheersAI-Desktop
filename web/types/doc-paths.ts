@@ -1,7 +1,7 @@
 // GENERATE BY script
 // DON NOT EDIT IT MANUALLY
 //
-// Generated from: https://raw.githubusercontent.com/langgenius/dify-docs/refs/heads/main/docs.json
+// Generated from: https://raw.githubusercontent.com/CheersAI/CheersAI-Desktop-docs/refs/heads/main/docs.json
 // Generated at: 2026-01-30T09:14:29.304Z
 
 // Language prefixes

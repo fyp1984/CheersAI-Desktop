@@ -1,6 +1,6 @@
 # Complexity Reduction Patterns
 
-This document provides patterns for reducing cognitive complexity in Dify React components.
+This document provides patterns for reducing cognitive complexity in CheersAI React components.
 
 ## Understanding Complexity
 

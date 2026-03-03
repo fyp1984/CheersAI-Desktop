@@ -1346,7 +1346,7 @@ class TestBillingServiceSubscriptionOperations:
             {
                 "created_at": "2025-10-16T01:56:17",
                 "tenant_id": "36bd55ec-2ea9-4d75-a9ea-1f26aeb4ffe6",
-                "contact": "example@dify.ai",
+                "contact": "example@cheersai.cloud",
                 "id": "36bd55ec-2ea9-4d75-a9ea-1f26aeb4ffe5",
                 "expired_at": "2026-01-01T01:56:17",
                 "updated_at": "2025-10-16T01:56:17",

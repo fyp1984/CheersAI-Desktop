@@ -81,7 +81,7 @@ elif [[ "${MODE}" == "job" ]]; then
   #   - admin@example.com
   #
   # Example Docker usage:
-  #   docker run -e MODE=job dify-api:latest create-tenant --email admin@example.com
+  #   docker run -e MODE=job cheersai-api:latest create-tenant --email admin@example.com
 
   if [[ $# -eq 0 ]]; then
     echo "Error: No command specified for job mode."
@@ -91,7 +91,7 @@ elif [[ "${MODE}" == "job" ]]; then
     echo "    args: [create-tenant, --email, admin@example.com]"
     echo ""
     echo "  Docker:"
-    echo "    docker run -e MODE=job dify-api create-tenant --email admin@example.com"
+    echo "    docker run -e MODE=job cheersai-api create-tenant --email admin@example.com"
     echo ""
     echo "Available commands:"
     echo "  create-tenant, reset-password, reset-email, upgrade-db,"

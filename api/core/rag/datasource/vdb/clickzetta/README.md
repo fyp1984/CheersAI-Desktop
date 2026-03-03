@@ -1,6 +1,6 @@
 # Clickzetta Vector Database Integration
 
-This module provides integration with Clickzetta Lakehouse as a vector database for Dify.
+This module provides integration with Clickzetta Lakehouse as a vector database for CheersAI.
 
 ## Features
 
@@ -49,7 +49,7 @@ CLICKZETTA_VECTOR_DISTANCE_FUNCTION=cosine_distance  # Options: l2_distance, cos
 
 ### 1. Set Clickzetta as the Vector Store
 
-In your Dify configuration, set:
+In your CheersAI configuration, set:
 
 ```bash
 VECTOR_STORE=clickzetta

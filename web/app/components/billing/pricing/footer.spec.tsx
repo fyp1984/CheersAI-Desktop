@@ -20,12 +20,12 @@ describe('Footer', () => {
   describe('Rendering', () => {
     it('should render tax tips and comparison link when in cloud category', () => {
       // Arrange
-      render(<Footer pricingPageURL="https://dify.ai/pricing#plans-and-features" currentCategory={CategoryEnum.CLOUD} />)
+      render(<Footer pricingPageURL="https://cheersai.cloud/pricing#plans-and-features" currentCategory={CategoryEnum.CLOUD} />)
 
       // Assert
       expect(screen.getByText('billing.plansCommon.taxTip')).toBeInTheDocument()
       expect(screen.getByText('billing.plansCommon.taxTipSecond')).toBeInTheDocument()
-      expect(screen.getByTestId('pricing-link')).toHaveAttribute('href', 'https://dify.ai/pricing#plans-and-features')
+      expect(screen.getByTestId('pricing-link')).toHaveAttribute('href', 'https://cheersai.cloud/pricing#plans-and-features')
       expect(screen.getByText('billing.plansCommon.comparePlanAndFeatures')).toBeInTheDocument()
     })
   })
@@ -34,7 +34,7 @@ describe('Footer', () => {
   describe('Props', () => {
     it('should hide tax tips when category is self-hosted', () => {
       // Arrange
-      render(<Footer pricingPageURL="https://dify.ai/pricing#plans-and-features" currentCategory={CategoryEnum.SELF} />)
+      render(<Footer pricingPageURL="https://cheersai.cloud/pricing#plans-and-features" currentCategory={CategoryEnum.SELF} />)
 
       // Assert
       expect(screen.queryByText('billing.plansCommon.taxTip')).not.toBeInTheDocument()

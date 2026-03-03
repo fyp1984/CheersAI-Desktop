@@ -14,6 +14,7 @@ def init_app(app: DifyApp):
         """Add Version headers to the response."""
         response.headers.add("X-Version", dify_config.project.version)
         response.headers.add("X-Env", dify_config.DEPLOY_ENV)
+        response.headers["X-Powered-By"] = "CheersAI"
         return response
 
     @app.route("/health")

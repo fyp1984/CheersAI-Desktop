@@ -17,7 +17,7 @@ vi.mock('@/context/app-context', () => ({
 // Mock useLocale and useDocLink
 vi.mock('@/context/i18n', () => ({
   useLocale: () => 'en-US',
-  useDocLink: () => (path: string) => `https://docs.dify.ai/en/${path?.startsWith('/') ? path.slice(1) : path}`,
+  useDocLink: () => (path: string) => `https://docs.cheersai.cloud/en/${path?.startsWith('/') ? path.slice(1) : path}`,
 }))
 
 // Mock getLanguage

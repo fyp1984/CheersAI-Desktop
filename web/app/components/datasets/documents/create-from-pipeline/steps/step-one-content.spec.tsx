@@ -130,7 +130,7 @@ vi.mock('../data-source/online-drive', () => ({
 // Mock locale context
 vi.mock('@/context/i18n', () => ({
   useLocale: vi.fn(() => 'en'),
-  useDocLink: () => (path: string) => `https://docs.dify.ai${path}`,
+  useDocLink: () => (path: string) => `https://docs.cheersai.cloud${path}`,
 }))
 
 // Mock theme hook

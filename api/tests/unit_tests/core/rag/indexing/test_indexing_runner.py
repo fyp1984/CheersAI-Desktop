@@ -1,7 +1,7 @@
 """Comprehensive unit tests for IndexingRunner.
 
 This test module provides complete coverage of the IndexingRunner class, which is responsible
-for orchestrating the document indexing pipeline in the Dify RAG system.
+for orchestrating the document indexing pipeline in the CheersAI RAG system.
 
 Test Coverage Areas:
 ==================

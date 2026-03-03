@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-SSE (Server-Sent Events) Stress Test for Dify Workflow API
+SSE (Server-Sent Events) Stress Test for CheersAI Workflow API
 
-This script stress tests the streaming performance of Dify's workflow execution API,
+This script stress tests the streaming performance of CheersAI's workflow execution API,
 measuring key metrics like connection rate, event throughput, and time to first event (TTFE).
 """
 
@@ -362,7 +362,7 @@ class SSEParser:
 
 
 class DifyWorkflowUser(HttpUser):
-    """Locust user for testing Dify workflow SSE endpoints"""
+    """Locust user for testing CheersAI workflow SSE endpoints"""
 
     # Use constant wait for streaming workloads
     wait_time = constant(0) if os.getenv("WAIT_TIME", "0") == "0" else between(1, 3)

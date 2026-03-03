@@ -42,8 +42,8 @@ try:
     
     # 发送测试邮件
     to_email = "1034566686@qq.com"
-    msg = MIMEText("这是Dify邮件配置测试", "plain", "utf-8")
-    msg["Subject"] = "Dify测试邮件"
+    msg = MIMEText("这是CheersAI邮件配置测试", "plain", "utf-8")
+    msg["Subject"] = "CheersAI测试邮件"
     msg["From"] = username
     msg["To"] = to_email
     
@@ -70,8 +70,8 @@ try:
     
     # 发送测试邮件
     to_email = "1034566686@qq.com"
-    msg = MIMEText("这是Dify邮件配置测试", "plain", "utf-8")
-    msg["Subject"] = "Dify测试邮件"
+    msg = MIMEText("这是CheersAI邮件配置测试", "plain", "utf-8")
+    msg["Subject"] = "CheersAI测试邮件"
     msg["From"] = username
     msg["To"] = to_email
     

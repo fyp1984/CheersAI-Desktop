@@ -4,7 +4,7 @@
 2026-02-03
 
 ## 修改概述
-根据 `CheersAI产品UI规范.md` 对 Dify 项目进行主题定制，使其符合 CheersAI 的品牌视觉规范。
+根据 `CheersAI产品UI规范.md` 对 CheersAI 项目进行主题定制，使其符合 CheersAI 的品牌视觉规范。
 
 ## 已完成的修改
 

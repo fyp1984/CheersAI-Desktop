@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   autofix:
-    if: github.repository == 'langgenius/dify'
+    if: github.repository == 'CheersAI/CheersAI-Desktop'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

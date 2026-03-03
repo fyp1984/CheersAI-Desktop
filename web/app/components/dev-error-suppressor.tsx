@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 
 /**
  * Suppress unhandled rejection errors from Response objects in dev mode.
- * Dify's base fetch rejects with raw Response objects on 401/etc,
+ * CheersAI's base fetch rejects with raw Response objects on 401/etc,
  * which triggers Next.js dev overlay. This is harmless — suppress it.
  */
 export default function DevErrorSuppressor() {

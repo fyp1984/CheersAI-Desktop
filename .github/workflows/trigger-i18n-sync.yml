@@ -2,7 +2,7 @@ name: Trigger i18n Sync on Push
 
 # This workflow bridges the push event to repository_dispatch
 # because claude-code-action doesn't support push events directly.
-# See: https://github.com/langgenius/dify/issues/30743
+# See: https://github.com/CheersAI/CheersAI-Desktop/issues/30743
 
 on:
   push:
@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   trigger:
-    if: github.repository == 'langgenius/dify'
+    if: github.repository == 'CheersAI/CheersAI-Desktop'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 

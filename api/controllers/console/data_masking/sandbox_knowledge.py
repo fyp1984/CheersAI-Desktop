@@ -1,4 +1,4 @@
-"""Sync sandbox files to Dify Knowledge Base (Dataset).
+"""Sync sandbox files to CheersAI Knowledge Base (Dataset).
 
 This endpoint requires authentication because it interacts with
 the Dataset/Document services which need a current user and tenant.
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 @console_ns.route("/data-masking/sandbox/sync-to-knowledge")
 class SandboxSyncToKnowledge(Resource):
-    """Sync sandbox files into a Dify Dataset (Knowledge Base)."""
+    """Sync sandbox files into a CheersAI Dataset (Knowledge Base)."""
 
     @setup_required
     @login_required
@@ -48,7 +48,7 @@ class SandboxSyncToKnowledge(Resource):
         if not dir_path.is_dir():
             return {"error": "沙箱目录不存在"}, 404
 
-        # Use Dify's own DOCUMENT_EXTENSIONS to filter
+        # Use CheersAI's own DOCUMENT_EXTENSIONS to filter
         allowed_exts = {e.lower() for e in DOCUMENT_EXTENSIONS}
 
         if file_names:

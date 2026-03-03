@@ -2,17 +2,17 @@
 
 ## 概述
 
-数据脱敏功能是一个在桌面客户端实现的本地数据保护系统，允许用户在将文件上传到 Dify 后端进行 AI 处理之前对敏感信息进行脱敏。该系统由以下核心组件组成：
+数据脱敏功能是一个在桌面客户端实现的本地数据保护系统，允许用户在将文件上传到 CheersAI 后端进行 AI 处理之前对敏感信息进行脱敏。该系统由以下核心组件组成：
 
 1. **脱敏引擎**：在前端实现的 TypeScript 模块，负责识别和替换敏感数据
 2. **沙箱管理器**：管理本地隔离目录，存储脱敏文件和元数据
 3. **映射存储**：本地加密存储，维护原始值与脱敏值的映射关系
-4. **反向替换器**：在接收到 Dify 后端响应时恢复原始数据
+4. **反向替换器**：在接收到 CheersAI 后端响应时恢复原始数据
 
 该设计遵循以下原则：
 - **隐私优先**：原始敏感数据永不离开本地环境
 - **前端为主**：所有脱敏逻辑在桌面客户端实现
-- **最小后端修改**：仅需 Dify 后端配合进行文件路径验证
+- **最小后端修改**：仅需 CheersAI 后端配合进行文件路径验证
 - **用户控制**：用户完全控制脱敏规则和沙箱配置
 
 ## 架构
@@ -37,7 +37,7 @@ graph TB
         MappingDB[映射数据库]
     end
     
-    subgraph "Dify 后端 (Python Flask + DDD)"
+    subgraph "CheersAI 后端 (Python Flask + DDD)"
         FileValidator[文件路径验证器]
         AIProcessor[AI 处理服务]
     end
@@ -85,7 +85,7 @@ sequenceDiagram
     participant User as 用户
     participant UI as 用户界面
     participant Uploader as 文件上传器
-    participant Backend as Dify 后端
+    participant Backend as CheersAI 后端
     participant AI as AI 处理服务
     participant Reverse as 反向替换器
     participant Store as 映射存储
@@ -325,7 +325,7 @@ interface MappingInfo {
 ### 4. 反向替换器 (ReverseSubstitution)
 
 **职责**：
-- 在 Dify 后端响应中识别脱敏值
+- 在 CheersAI 后端响应中识别脱敏值
 - 查询映射存储获取原始值
 - 替换脱敏值为原始值
 
@@ -335,7 +335,7 @@ interface MappingInfo {
 interface ReverseSubstitution {
   /**
    * 对响应数据执行反向替换
-   * @param response - Dify 后端响应
+   * @param response - CheersAI 后端响应
    * @param mappingId - 映射ID
    * @returns 恢复后的响应
    */
@@ -364,7 +364,7 @@ interface ReverseSubstitution {
 
 **职责**：
 - 验证文件在沙箱内
-- 上传文件到 Dify 后端
+- 上传文件到 CheersAI 后端
 - 跟踪上传进度
 
 **接口**：
@@ -372,7 +372,7 @@ interface ReverseSubstitution {
 ```typescript
 interface FileUploader {
   /**
-   * 上传文件到 Dify 后端
+   * 上传文件到 CheersAI 后端
    * @param filePath - 文件路径
    * @param mappingId - 关联的映射ID
    * @param onProgress - 进度回调
@@ -393,7 +393,7 @@ interface UploadResult {
 ```
 
 **实现细节**：
-- 使用 Dify API 进行文件上传
+- 使用 CheersAI API 进行文件上传
 - 在请求头中包含沙箱路径信息
 - 支持大文件分块上传
 - 实现重试机制
@@ -660,7 +660,7 @@ CREATE TABLE masking_logs (
 
 ### 属性 9：只传输脱敏数据
 
-*对于任何*文件上传操作，传输到 Dify 后端的数据应该只包含脱敏值，不应该包含任何原始敏感数据。
+*对于任何*文件上传操作，传输到 CheersAI 后端的数据应该只包含脱敏值，不应该包含任何原始敏感数据。
 
 **验证：需求 4.2, 9.2**
 
@@ -1149,7 +1149,7 @@ function arbitraryMaskingRule(): fc.Arbitrary<MaskingRule> {
 
 ### 3. 网络安全
 
-- **HTTPS 传输**：所有与 Dify 后端的通信使用 HTTPS
+- **HTTPS 传输**：所有与 CheersAI 后端的通信使用 HTTPS
 - **数据验证**：验证上传的数据不包含原始敏感值
 - **请求签名**：使用 HMAC 签名验证请求完整性
 

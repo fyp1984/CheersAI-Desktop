@@ -195,7 +195,7 @@ class WorkflowExecutionStatus(StrEnum):
     FAILED = "failed"
 
     # `STOPPED` means the execution of workflow was stopped, either manually
-    # by the user, or automatically by the Dify application (E.G. the moderation
+    # by the user, or automatically by the CheersAI application (E.G. the moderation
     # mechanism.)
     STOPPED = "stopped"
 

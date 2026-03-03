@@ -19,17 +19,17 @@ class InvokeFrom(StrEnum):
     Invoke From.
     """
 
-    # SERVICE_API indicates that this invocation is from an API call to Dify app.
+    # SERVICE_API indicates that this invocation is from an API call to CheersAI app.
     #
-    # Description of service api in Dify docs:
-    # https://docs.dify.ai/en/guides/application-publishing/developing-with-apis
+    # Description of service api in CheersAI docs:
+    # https://docs.cheersai.cloud/en/guides/application-publishing/developing-with-apis
     SERVICE_API = "service-api"
 
     # WEB_APP indicates that this invocation is from
     # the web app of the workflow (or chatflow).
     #
-    # Description of web app in Dify docs:
-    # https://docs.dify.ai/en/guides/application-publishing/launch-your-webapp-quickly/README
+    # Description of web app in CheersAI docs:
+    # https://docs.cheersai.cloud/en/guides/application-publishing/launch-your-webapp-quickly/README
     WEB_APP = "web-app"
 
     # TRIGGER indicates that this invocation is from a trigger.

@@ -49,13 +49,13 @@ ENV PYTHONIOENCODING=utf-8
 WORKDIR /app/api
 
 # Create non-root user
-ARG dify_uid=1001
+ARG cheersai_uid=1001
 ARG NODE_MAJOR=22
 ARG NODE_PACKAGE_VERSION=22.21.0-1nodesource1
 ARG NODESOURCE_KEY_FPR=6F71F525282841EEDAF851B42F59B5F99B1BE0B4
-RUN groupadd -r -g ${dify_uid} dify && \
-    useradd -r -u ${dify_uid} -g ${dify_uid} -s /bin/bash dify && \
-    chown -R dify:dify /app
+RUN groupadd -r -g ${cheersai_uid} cheersai && \
+    useradd -r -u ${cheersai_uid} -g ${cheersai_uid} -s /bin/bash cheersai && \
+    chown -R cheersai:cheersai /app
 
 RUN sed -i 's@deb.debian.org@mirrors.aliyun.com@g' /etc/apt/sources.list.d/debian.sources
 
@@ -94,7 +94,7 @@ RUN \
 
 # Copy Python environment and packages
 ENV VIRTUAL_ENV=/app/api/.venv
-COPY --from=packages --chown=dify:dify ${VIRTUAL_ENV} ${VIRTUAL_ENV}
+COPY --from=packages --chown=cheersai:cheersai ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
 
 # Download nltk data
@@ -105,19 +105,19 @@ RUN mkdir -p /usr/local/share/nltk_data \
 ENV TIKTOKEN_CACHE_DIR=/app/api/.tiktoken_cache
 
 RUN python -c "import tiktoken; tiktoken.encoding_for_model('gpt2')" \
-    && chown -R dify:dify ${TIKTOKEN_CACHE_DIR}
+    && chown -R cheersai:cheersai ${TIKTOKEN_CACHE_DIR}
 
 # Copy source code
-COPY --chown=dify:dify . /app/api/
+COPY --chown=cheersai:cheersai . /app/api/
 
 # Prepare entrypoint script
-COPY --chown=dify:dify --chmod=755 docker/entrypoint.sh /entrypoint.sh
+COPY --chown=cheersai:cheersai --chmod=755 docker/entrypoint.sh /entrypoint.sh
 
 
 ARG COMMIT_SHA
 ENV COMMIT_SHA=${COMMIT_SHA}
 ENV NLTK_DATA=/usr/local/share/nltk_data
 
-USER dify
+USER cheersai
 
 ENTRYPOINT ["/bin/bash", "/entrypoint.sh"]

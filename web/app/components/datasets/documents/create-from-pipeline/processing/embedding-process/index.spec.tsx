@@ -61,7 +61,7 @@ vi.mock('@/service/knowledge/use-document', () => ({
 
 // Mock useDatasetApiAccessUrl hook
 vi.mock('@/hooks/use-api-access-url', () => ({
-  useDatasetApiAccessUrl: () => 'https://docs.dify.ai/api-reference/datasets',
+  useDatasetApiAccessUrl: () => 'https://docs.cheersai.cloud/api-reference/datasets',
 }))
 
 // ==========================================
@@ -191,7 +191,7 @@ describe('EmbeddingProcess', () => {
 
       // Assert
       const apiLink = screen.getByRole('link', { name: /access the api/i })
-      expect(apiLink).toHaveAttribute('href', 'https://docs.dify.ai/api-reference/datasets')
+      expect(apiLink).toHaveAttribute('href', 'https://docs.cheersai.cloud/api-reference/datasets')
       expect(apiLink).toHaveAttribute('target', '_blank')
       expect(apiLink).toHaveAttribute('rel', 'noopener noreferrer')
     })

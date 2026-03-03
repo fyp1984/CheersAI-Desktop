@@ -6,7 +6,7 @@
 
 ## 📋 实施概览
 
-本文档记录了 CheersAI UI 规范在 Dify 项目中的完整实施情况。
+本文档记录了 CheersAI UI 规范在 CheersAI 项目中的完整实施情况。
 
 ---
 

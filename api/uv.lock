@@ -1379,7 +1379,7 @@ wheels = [
 ]
 
 [[package]]
-name = "dify-api"
+name = "cheersai-api"
 version = "1.12.0"
 source = { virtual = "." }
 dependencies = [

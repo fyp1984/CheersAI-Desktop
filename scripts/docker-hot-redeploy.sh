@@ -11,9 +11,9 @@ git rev-parse HEAD
 cd "${DOCKER_DIR}"
 
 TS="$(date +%Y%m%d_%H%M%S)"
-docker image inspect dify-api:local >/dev/null 2>&1 && docker tag dify-api:local "dify-api:local_prev_${TS}" || true
-docker image inspect dify-web:local >/dev/null 2>&1 && docker tag dify-web:local "dify-web:local_prev_${TS}" || true
-docker image inspect dify-web:hot >/dev/null 2>&1 && docker tag dify-web:hot "dify-web:hot_prev_${TS}" || true
+docker image inspect cheersai-api:local >/dev/null 2>&1 && docker tag cheersai-api:local "cheersai-api:local_prev_${TS}" || true
+docker image inspect cheersai-web:local >/dev/null 2>&1 && docker tag cheersai-web:local "cheersai-web:local_prev_${TS}" || true
+docker image inspect cheersai-web:hot >/dev/null 2>&1 && docker tag cheersai-web:hot "cheersai-web:hot_prev_${TS}" || true
 
 CONSOLE_API_URL= APP_API_URL= SERVICE_API_URL= FILES_URL= MARKETPLACE_API_URL= MARKETPLACE_URL= \
   docker compose -f docker-compose.yaml -f docker-compose.override.yaml -f docker-compose.hot.yaml build api web worker worker_beat

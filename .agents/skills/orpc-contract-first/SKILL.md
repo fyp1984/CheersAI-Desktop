@@ -1,6 +1,6 @@
 ---
 name: orpc-contract-first
-description: Guide for implementing oRPC contract-first API patterns in Dify frontend. Triggers when creating new API contracts, adding service endpoints, integrating TanStack Query with typed contracts, or migrating legacy service calls to oRPC. Use for all API layer work in web/contract and web/service directories.
+description: Guide for implementing oRPC contract-first API patterns in CheersAI frontend. Triggers when creating new API contracts, adding service endpoints, integrating TanStack Query with typed contracts, or migrating legacy service calls to oRPC. Use for all API layer work in web/contract and web/service directories.
 ---
 
 # oRPC Contract-First Development

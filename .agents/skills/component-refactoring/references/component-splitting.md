@@ -1,6 +1,6 @@
 # Component Splitting Patterns
 
-This document provides detailed guidance on splitting large components into smaller, focused components in Dify.
+This document provides detailed guidance on splitting large components into smaller, focused components in CheersAI.
 
 ## When to Split Components
 
@@ -366,9 +366,9 @@ component-name/
       └── helpers.ts
 ```
 
-### Pattern C: Feature-Based Structure (Dify Standard)
+### Pattern C: Feature-Based Structure (CheersAI Standard)
 
-Following Dify's existing patterns:
+Following CheersAI's existing patterns:
 
 ```
 configuration/

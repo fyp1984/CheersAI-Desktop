@@ -5,7 +5,7 @@ Both frontend and backend environments are initialized when the container is sta
 
 ## GitHub Codespaces
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/langgenius/dify)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/CheersAI/CheersAI-Desktop)
 
 you can simply click the button above to open this project in GitHub Codespaces.
 
@@ -13,7 +13,7 @@ For more info, check out the [GitHub documentation](https://docs.github.com/en/f
 
 ## VS Code Dev Containers
 
-[![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/langgenius/dify)
+[![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/CheersAI/CheersAI-Desktop)
 
 if you have VS Code installed, you can click the button above to open this project in VS Code Dev Containers.
 

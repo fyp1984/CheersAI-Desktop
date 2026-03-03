@@ -51,8 +51,8 @@ describe('ApiServer', () => {
     })
 
     it('should render production URL', () => {
-      render(<ApiServer apiBaseUrl="https://api.dify.ai/v1" />)
-      expect(screen.getByText('https://api.dify.ai/v1')).toBeInTheDocument()
+      render(<ApiServer apiBaseUrl="https://api.cheersai.cloud/v1" />)
+      expect(screen.getByText('https://api.cheersai.cloud/v1')).toBeInTheDocument()
     })
 
     it('should render URL with path', () => {

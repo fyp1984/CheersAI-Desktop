@@ -1,4 +1,4 @@
-export const DEFAULT_BASE_URL = "https://api.dify.ai/v1";
+export const DEFAULT_BASE_URL = "https://api.cheersai.cloud/v1";
 export const DEFAULT_TIMEOUT_SECONDS = 60;
 export const DEFAULT_MAX_RETRIES = 3;
 export const DEFAULT_RETRY_DELAY_SECONDS = 1;

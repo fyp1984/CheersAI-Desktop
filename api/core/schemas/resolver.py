@@ -60,7 +60,7 @@ class QueueItem:
 
 
 class SchemaResolver:
-    """Resolver for Dify schema references with caching and optimizations"""
+    """Resolver for CheersAI schema references with caching and optimizations"""
 
     _cache: dict[str, SchemaDict] = {}
     _cache_lock = threading.Lock()
@@ -102,7 +102,7 @@ class SchemaResolver:
         if not isinstance(schema, (dict, list)):
             return schema
 
-        # Fast path: if no Dify refs found, return original schema unchanged
+        # Fast path: if no CheersAI refs found, return original schema unchanged
         # This avoids expensive deepcopy and BFS traversal for schemas without refs
         if not _has_dify_refs(schema):
             return schema
@@ -226,7 +226,7 @@ def resolve_dify_schema_refs(
     schema: SchemaType, registry: SchemaRegistry | None = None, max_depth: int = 30
 ) -> SchemaType:
     """
-    Resolve $ref references in Dify schema to actual schema content
+    Resolve $ref references in CheersAI schema to actual schema content
 
     This is a convenience function that creates a resolver and resolves the schema.
     Performance optimization: quickly checks for $ref presence before processing.
@@ -244,7 +244,7 @@ def resolve_dify_schema_refs(
         MaxDepthExceededError: If maximum depth exceeded
         SchemaNotFoundError: If referenced schema not found
     """
-    # Fast path: if no Dify refs found, return original schema unchanged
+    # Fast path: if no CheersAI refs found, return original schema unchanged
     # This avoids expensive deepcopy and BFS traversal for schemas without refs
     if not _has_dify_refs(schema):
         return schema
@@ -276,13 +276,13 @@ def _remove_metadata_fields(schema: dict) -> dict:
 
 def _is_dify_schema_ref(ref_uri: Any) -> bool:
     """
-    Check if the reference URI is a Dify schema reference
+    Check if the reference URI is a CheersAI schema reference
 
     Args:
         ref_uri: URI to check
 
     Returns:
-        True if it's a Dify schema reference
+        True if it's a CheersAI schema reference
     """
     if not isinstance(ref_uri, str):
         return False
@@ -293,7 +293,7 @@ def _is_dify_schema_ref(ref_uri: Any) -> bool:
 
 def _has_dify_refs_recursive(schema: SchemaType) -> bool:
     """
-    Recursively check if a schema contains any Dify $ref references
+    Recursively check if a schema contains any CheersAI $ref references
 
     This is the fallback method when string-based detection is not possible.
 
@@ -301,7 +301,7 @@ def _has_dify_refs_recursive(schema: SchemaType) -> bool:
         schema: Schema to check for references
 
     Returns:
-        True if any Dify $ref is found, False otherwise
+        True if any CheersAI $ref is found, False otherwise
     """
     if isinstance(schema, dict):
         # Check if this dict has a $ref field
@@ -336,7 +336,7 @@ def _has_dify_refs_hybrid(schema: SchemaType) -> bool:
         schema: Schema to check for references
 
     Returns:
-        True if any Dify $ref is found, False otherwise
+        True if any CheersAI $ref is found, False otherwise
     """
     # Phase 1: Fast string-based pre-filtering
     try:
@@ -348,8 +348,8 @@ def _has_dify_refs_hybrid(schema: SchemaType) -> bool:
         if '"$ref"' not in schema_str:
             return False
 
-        # Quick elimination: no Dify schema URLs
-        if "https://dify.ai/schemas/" not in schema_str:
+        # Quick elimination: no CheersAI schema URLs
+        if "https://cheersai.cloud/schemas/" not in schema_str:
             return False
 
     except (TypeError, ValueError, OverflowError):
@@ -365,7 +365,7 @@ def _has_dify_refs_hybrid(schema: SchemaType) -> bool:
 
 def _has_dify_refs(schema: SchemaType) -> bool:
     """
-    Check if a schema contains any Dify $ref references
+    Check if a schema contains any CheersAI $ref references
 
     Uses hybrid detection for optimal performance:
     - Fast string scan for quick elimination
@@ -375,14 +375,14 @@ def _has_dify_refs(schema: SchemaType) -> bool:
         schema: Schema to check for references
 
     Returns:
-        True if any Dify $ref is found, False otherwise
+        True if any CheersAI $ref is found, False otherwise
     """
     return _has_dify_refs_hybrid(schema)
 
 
 def parse_dify_schema_uri(uri: str) -> tuple[str, str]:
     """
-    Parse a Dify schema URI to extract version and schema name
+    Parse a CheersAI schema URI to extract version and schema name
 
     Args:
         uri: Schema URI to parse

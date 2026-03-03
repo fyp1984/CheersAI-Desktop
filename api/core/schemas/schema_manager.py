@@ -33,7 +33,7 @@ class SchemaManager:
         Returns:
             Dictionary containing name and schema, returns None if not found
         """
-        uri = f"https://dify.ai/schemas/{version}/{schema_name}.json"
+        uri = f"https://cheersai.cloud/schemas/{version}/{schema_name}.json"
         schema = self.registry.get_schema(uri)
 
         if schema:

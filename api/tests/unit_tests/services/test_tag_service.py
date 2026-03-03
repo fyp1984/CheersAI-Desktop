@@ -1,7 +1,7 @@
 """
 Comprehensive unit tests for TagService.
 
-This test suite provides complete coverage of tag management operations in Dify,
+This test suite provides complete coverage of tag management operations in CheersAI,
 following TDD principles with the Arrange-Act-Assert pattern.
 
 The TagService is responsible for managing tags that can be associated with

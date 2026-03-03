@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Dify is an open-source platform for developing LLM applications with an intuitive interface combining agentic AI workflows, RAG pipelines, agent capabilities, and model management.
+CheersAI is an open-source platform for developing LLM applications with an intuitive interface combining agentic AI workflows, RAG pipelines, agent capabilities, and model management.
 
 The codebase is split into:
 

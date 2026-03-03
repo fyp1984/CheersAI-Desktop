@@ -11,7 +11,7 @@ The MetadataService provides methods for:
 - Metadata filtering and querying operations
 - Lock management for concurrent metadata operations
 
-Metadata in Dify allows users to add custom fields to datasets and documents,
+Metadata in CheersAI allows users to add custom fields to datasets and documents,
 enabling rich filtering and search capabilities. Metadata can be of various
 types (string, number, date, boolean, etc.) and can be used to categorize
 and filter documents within a dataset.
@@ -29,7 +29,7 @@ This test suite ensures:
 ARCHITECTURE OVERVIEW
 ================================================================================
 
-The MetadataService is a critical component in the Dify platform's metadata
+The MetadataService is a critical component in the CheersAI platform's metadata
 management system. It serves as the primary interface for all metadata-related
 operations, including field definitions and document-level metadata values.
 

@@ -49,7 +49,7 @@
   "sandbox.helpTitle": "关于沙箱目录",
   "sandbox.helpItems.storage": "所有脱敏文件将存储在此目录中",
   "sandbox.helpItems.encryption": "映射数据将加密并本地存储",
-  "sandbox.helpItems.restriction": "只有此目录内的文件可以上传到 Dify",
+  "sandbox.helpItems.restriction": "只有此目录内的文件可以上传到 CheersAI",
   "sandbox.helpItems.space": "选择一个有足够存储空间的位置",
   "sandbox.errors.empty": "请输入沙箱路径",
   "sandbox.errors.invalid": "无效的沙箱路径",

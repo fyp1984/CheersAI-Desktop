@@ -10,14 +10,14 @@ from common import Logger, config_helper
 
 
 def setup_admin_account() -> None:
-    """Setup Dify API with an admin account."""
+    """Setup CheersAI API with an admin account."""
 
     log = Logger("SetupAdmin")
     log.header("Setting up Admin Account")
 
     # Admin account credentials
     admin_config = {
-        "email": "test@dify.ai",
+        "email": "test@cheersai.cloud",
         "username": "dify",
         "password": "password123",
     }
@@ -37,7 +37,7 @@ def setup_admin_account() -> None:
         "password": admin_config["password"],
     }
 
-    log.step("Configuring Dify with admin account...")
+    log.step("Configuring CheersAI with admin account...")
 
     try:
         # Make the setup request
@@ -61,7 +61,7 @@ def setup_admin_account() -> None:
                 log.debug(f"Response: {response.text}")
 
     except httpx.ConnectError:
-        log.error("Could not connect to Dify API at http://localhost:5001")
+        log.error("Could not connect to CheersAI API at http://localhost:5001")
         log.info("Make sure the API server is running with: ./dev/start-api")
     except Exception as e:
         log.error(f"An error occurred: {e}")

@@ -288,7 +288,7 @@ class WorkflowWebhookTrigger(TypeBase):
     - app_id (uuid) App ID to bind to a specific app
     - node_id (varchar) Node ID which node in the workflow
     - tenant_id (uuid) Workspace ID
-    - webhook_id (varchar) Webhook ID for URL: https://api.dify.ai/triggers/webhook/:webhook_id
+    - webhook_id (varchar) Webhook ID for URL: https://api.cheersai.cloud/triggers/webhook/:webhook_id
     - created_by (varchar) User ID of the creator
     - created_at (timestamp) Creation time
     - updated_at (timestamp) Last update time

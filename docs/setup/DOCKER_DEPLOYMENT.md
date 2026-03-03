@@ -68,6 +68,45 @@ docker compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
 docker compose -f docker-compose.yaml -f docker-compose.override.yaml restart nginx
 ```
 
+## 热部署（GitHub 大量更新后）
+
+目标是保证在 `git pull` 更新大量文件后，容器运行的是最新本地代码，并尽量减少停机时间。
+
+### 1) 代码同步校验
+
+```bash
+git status --porcelain
+git rev-parse HEAD
+```
+
+### 2) 热更新策略
+
+- API：使用 volume 挂载 + Flask debug 模式实现代码变更自动重启（见 [docker-compose.hot.yaml](file:///Users/FYP/Documents/WorkSpace/CheersAI/subproducts/CheersAI-Desktop/cheersAIdesktop/docker/docker-compose.hot.yaml)）
+- Web：生产构建模式不支持热重载，采用 “重建镜像 + 重新创建容器” 策略
+- DB/Redis/Weaviate：保持数据卷不动，除非版本升级或 schema/索引策略变更
+
+### 3) 一键热更新
+
+```bash
+./scripts/docker-hot-redeploy.sh
+```
+
+该脚本会：
+
+- 对当前本地镜像打备份标签（用于回滚）
+- `docker compose build` 重建 `api/web/worker/worker_beat`
+- `docker compose up -d` 以最小集合重建容器
+- 重启 Nginx 刷新上游 DNS 解析
+- 轮询验证 `GET /console/api/ping` 与 `GET /apps`
+
+### 4) 回滚
+
+脚本会打印备份标签的时间戳后缀（如 `20260302_142233`），用该值回滚：
+
+```bash
+./scripts/docker-rollback.sh 20260302_142233
+```
+
 ## 数据持久化
 
 该编排默认使用仓库内的持久化目录（示例）：
@@ -82,6 +121,7 @@ docker compose -f docker-compose.yaml -f docker-compose.override.yaml restart ng
 - 所有服务的核心运行参数由 [docker/.env](file:///Users/FYP/Documents/WorkSpace/CheersAI/subproducts/CheersAI-Desktop/cheersAIdesktop/docker/.env) 注入。
 - Web 容器启动脚本会根据 `CONSOLE_API_URL` / `APP_API_URL` 生成 `NEXT_PUBLIC_API_PREFIX` 等前端变量（见 [entrypoint.sh](file:///Users/FYP/Documents/WorkSpace/CheersAI/subproducts/CheersAI-Desktop/cheersAIdesktop/web/docker/entrypoint.sh)）。
   - 若通过 Nginx 同域访问（推荐），`CONSOLE_API_URL` 留空可让前端使用相对路径 `/console/api`。
+  - 若将 `CONSOLE_API_URL` 设为 `http://localhost:8080`，浏览器访问 `http://localhost` 时会变成跨源请求（端口不同也算不同 Origin），需要同时正确配置 `CONSOLE_CORS_ALLOW_ORIGINS` 才能通过预检请求。
 
 ## 运维操作
 
@@ -105,4 +145,3 @@ docker compose -f docker-compose.yaml -f docker-compose.override.yaml logs -f --
 cd docker
 docker compose -f docker-compose.yaml -f docker-compose.override.yaml down
 ```
-

@@ -1,6 +1,6 @@
 # Hook Extraction Patterns
 
-This document provides detailed guidance on extracting custom hooks from complex components in Dify.
+This document provides detailed guidance on extracting custom hooks from complex components in CheersAI.
 
 ## When to Extract Hooks
 
@@ -153,7 +153,7 @@ const Configuration: FC = () => {
 - Suffix with `Return`: `UseModelConfigReturn`
 - Suffix params with `Params`: `UseModelConfigParams`
 
-## Common Hook Patterns in Dify
+## Common Hook Patterns in CheersAI
 
 ### 1. Data Fetching Hook (React Query)
 

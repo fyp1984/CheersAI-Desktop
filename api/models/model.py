@@ -678,7 +678,7 @@ class ExporleBanner(TypeBase):
 class OAuthProviderApp(TypeBase):
     """
     Globally shared OAuth provider app information.
-    Only for Dify Cloud.
+    Only for CheersAI Cloud.
     """
 
     __tablename__ = "oauth_provider_apps"

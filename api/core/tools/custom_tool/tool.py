@@ -270,7 +270,7 @@ class ApiTool(Tool):
 
         # if there is a file upload, remove the Content-Type header
         # so that httpx can automatically generate the boundary header required for multipart/form-data.
-        # issue: https://github.com/langgenius/dify/issues/13684
+        # issue: https://github.com/CheersAI/CheersAI-Desktop/issues/13684
         # reference: https://stackoverflow.com/questions/39280438/fetch-missing-boundary-in-multipart-form-data-post
         if files:
             headers.pop("Content-Type", None)
@@ -401,7 +401,7 @@ class ApiTool(Tool):
 
             # The yield below must be preserved to keep backward compatibility.
             #
-            # ref: https://github.com/langgenius/dify/pull/23456#issuecomment-3182413088
+            # ref: https://github.com/CheersAI/CheersAI-Desktop/pull/23456#issuecomment-3182413088
             yield self.create_text_message(response.text)
         else:
             # Convert to string if needed and create text message

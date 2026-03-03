@@ -1,10 +1,10 @@
 # Configurable Suggested Questions After Answer
 
-This document explains how to configure the "Suggested Questions After Answer" feature in Dify using environment variables.
+This document explains how to configure the "Suggested Questions After Answer" feature in CheersAI using environment variables.
 
 ## Overview
 
-The suggested questions feature generates follow-up questions after each AI response to help users continue the conversation. By default, Dify generates 3 short questions (under 20 characters each), but you can customize this behavior to better fit your specific use case.
+The suggested questions feature generates follow-up questions after each AI response to help users continue the conversation. By default, CheersAI generates 3 short questions (under 20 characters each), but you can customize this behavior to better fit your specific use case.
 
 ## Environment Variables
 
@@ -158,7 +158,7 @@ The implementation modifies these files:
    export SUGGESTED_QUESTIONS_TEMPERATURE=0.4
    ```
 
-1. Start Dify API:
+1. Start CheersAI API:
 
    ```bash
    cd api

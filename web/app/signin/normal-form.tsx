@@ -246,7 +246,7 @@ const NormalForm = () => {
                   className="system-xs-medium text-text-secondary hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
-                  href="https://dify.ai/terms"
+                  href="https://cheersai.cloud/terms"
                 >
                   {t('tos', { ns: 'login' })}
                 </Link>
@@ -255,7 +255,7 @@ const NormalForm = () => {
                   className="system-xs-medium text-text-secondary hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
-                  href="https://dify.ai/privacy"
+                  href="https://cheersai.cloud/privacy"
                 >
                   {t('pp', { ns: 'login' })}
                 </Link>

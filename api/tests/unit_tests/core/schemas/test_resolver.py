@@ -33,7 +33,7 @@ class TestSchemaResolver:
 
     def test_simple_ref_resolution(self):
         """Test resolving a simple $ref to a complete schema"""
-        schema_with_ref = {"$ref": "https://dify.ai/schemas/v1/qa_structure.json"}
+        schema_with_ref = {"$ref": "https://cheersai.cloud/schemas/v1/qa_structure.json"}
 
         resolved = resolve_dify_schema_refs(schema_with_ref)
 
@@ -53,7 +53,7 @@ class TestSchemaResolver:
         nested_schema = {
             "type": "object",
             "properties": {
-                "file_data": {"$ref": "https://dify.ai/schemas/v1/file.json"},
+                "file_data": {"$ref": "https://cheersai.cloud/schemas/v1/file.json"},
                 "metadata": {"type": "string", "description": "Additional metadata"},
             },
         }
@@ -80,7 +80,7 @@ class TestSchemaResolver:
         """Test resolving $refs in array items"""
         array_schema = {
             "type": "array",
-            "items": {"$ref": "https://dify.ai/schemas/v1/general_structure.json"},
+            "items": {"$ref": "https://cheersai.cloud/schemas/v1/general_structure.json"},
             "description": "Array of general structures",
         }
 
@@ -96,12 +96,12 @@ class TestSchemaResolver:
         assert items_schema["title"] == "General Structure"
 
     def test_non_dify_ref_unchanged(self):
-        """Test that non-Dify $refs are left unchanged"""
+        """Test that non-CheersAI $refs are left unchanged"""
         external_ref_schema = {
             "type": "object",
             "properties": {
                 "external_data": {"$ref": "https://example.com/external-schema.json"},
-                "dify_data": {"$ref": "https://dify.ai/schemas/v1/file.json"},
+                "dify_data": {"$ref": "https://cheersai.cloud/schemas/v1/file.json"},
             },
         }
 
@@ -110,7 +110,7 @@ class TestSchemaResolver:
         # External $ref should remain unchanged
         assert resolved["properties"]["external_data"]["$ref"] == "https://example.com/external-schema.json"
 
-        # Dify $ref should be resolved
+        # CheersAI $ref should be resolved
         assert resolved["properties"]["dify_data"]["type"] == "object"
         assert resolved["properties"]["dify_data"]["title"] == "File"
 
@@ -137,7 +137,7 @@ class TestSchemaResolver:
     def test_recursion_depth_protection(self):
         """Test that excessive recursion depth is prevented"""
         # Create a moderately nested structure
-        deep_schema = {"$ref": "https://dify.ai/schemas/v1/qa_structure.json"}
+        deep_schema = {"$ref": "https://cheersai.cloud/schemas/v1/qa_structure.json"}
 
         # Wrap it in fewer layers to make the test more reasonable
         for _ in range(2):
@@ -158,11 +158,11 @@ class TestSchemaResolver:
         # Mock registry with circular reference
         mock_registry = MagicMock()
         mock_registry.get_schema.side_effect = lambda uri: {
-            "$ref": "https://dify.ai/schemas/v1/circular.json",
+            "$ref": "https://cheersai.cloud/schemas/v1/circular.json",
             "type": "object",
         }
 
-        schema = {"$ref": "https://dify.ai/schemas/v1/circular.json"}
+        schema = {"$ref": "https://cheersai.cloud/schemas/v1/circular.json"}
         resolved = resolve_dify_schema_refs(schema, registry=mock_registry)
 
         # Should mark circular reference
@@ -174,11 +174,11 @@ class TestSchemaResolver:
         mock_registry = MagicMock()
         mock_registry.get_schema.return_value = None
 
-        schema = {"$ref": "https://dify.ai/schemas/v1/unknown.json"}
+        schema = {"$ref": "https://cheersai.cloud/schemas/v1/unknown.json"}
         resolved = resolve_dify_schema_refs(schema, registry=mock_registry)
 
         # Should keep the original $ref when schema not found
-        assert resolved["$ref"] == "https://dify.ai/schemas/v1/unknown.json"
+        assert resolved["$ref"] == "https://cheersai.cloud/schemas/v1/unknown.json"
 
     def test_primitive_types_unchanged(self):
         """Test that primitive types are returned unchanged"""
@@ -190,7 +190,7 @@ class TestSchemaResolver:
 
     def test_cache_functionality(self):
         """Test that caching works correctly"""
-        schema = {"$ref": "https://dify.ai/schemas/v1/file.json"}
+        schema = {"$ref": "https://cheersai.cloud/schemas/v1/file.json"}
 
         # First resolution should fetch from registry
         resolved1 = resolve_dify_schema_refs(schema)
@@ -218,7 +218,7 @@ class TestSchemaResolver:
         """Test that the resolver is thread-safe"""
         schema = {
             "type": "object",
-            "properties": {f"prop_{i}": {"$ref": "https://dify.ai/schemas/v1/file.json"} for i in range(10)},
+            "properties": {f"prop_{i}": {"$ref": "https://cheersai.cloud/schemas/v1/file.json"} for i in range(10)},
         }
 
         results = []
@@ -247,17 +247,17 @@ class TestSchemaResolver:
         complex_schema = {
             "type": "object",
             "properties": {
-                "files": {"type": "array", "items": {"$ref": "https://dify.ai/schemas/v1/file.json"}},
+                "files": {"type": "array", "items": {"$ref": "https://cheersai.cloud/schemas/v1/file.json"}},
                 "nested": {
                     "type": "object",
                     "properties": {
-                        "qa": {"$ref": "https://dify.ai/schemas/v1/qa_structure.json"},
+                        "qa": {"$ref": "https://cheersai.cloud/schemas/v1/qa_structure.json"},
                         "data": {
                             "type": "array",
                             "items": {
                                 "type": "object",
                                 "properties": {
-                                    "general": {"$ref": "https://dify.ai/schemas/v1/general_structure.json"}
+                                    "general": {"$ref": "https://cheersai.cloud/schemas/v1/general_structure.json"}
                                 },
                             },
                         },
@@ -285,14 +285,14 @@ class TestUtilityFunctions:
 
     def test_is_dify_schema_ref(self):
         """Test _is_dify_schema_ref function"""
-        # Valid Dify refs
-        assert _is_dify_schema_ref("https://dify.ai/schemas/v1/file.json")
-        assert _is_dify_schema_ref("https://dify.ai/schemas/v2/complex_name.json")
-        assert _is_dify_schema_ref("https://dify.ai/schemas/v999/test-file.json")
+        # Valid CheersAI refs
+        assert _is_dify_schema_ref("https://cheersai.cloud/schemas/v1/file.json")
+        assert _is_dify_schema_ref("https://cheersai.cloud/schemas/v2/complex_name.json")
+        assert _is_dify_schema_ref("https://cheersai.cloud/schemas/v999/test-file.json")
 
         # Invalid refs
         assert not _is_dify_schema_ref("https://example.com/schema.json")
-        assert not _is_dify_schema_ref("https://dify.ai/other/path.json")
+        assert not _is_dify_schema_ref("https://cheersai.cloud/other/path.json")
         assert not _is_dify_schema_ref("not a uri")
         assert not _is_dify_schema_ref("")
         assert not _is_dify_schema_ref(None)
@@ -301,23 +301,23 @@ class TestUtilityFunctions:
 
     def test_has_dify_refs(self):
         """Test _has_dify_refs function"""
-        # Schemas with Dify refs
-        assert _has_dify_refs({"$ref": "https://dify.ai/schemas/v1/file.json"})
+        # Schemas with CheersAI refs
+        assert _has_dify_refs({"$ref": "https://cheersai.cloud/schemas/v1/file.json"})
         assert _has_dify_refs(
-            {"type": "object", "properties": {"data": {"$ref": "https://dify.ai/schemas/v1/file.json"}}}
+            {"type": "object", "properties": {"data": {"$ref": "https://cheersai.cloud/schemas/v1/file.json"}}}
         )
-        assert _has_dify_refs([{"type": "string"}, {"$ref": "https://dify.ai/schemas/v1/file.json"}])
+        assert _has_dify_refs([{"type": "string"}, {"$ref": "https://cheersai.cloud/schemas/v1/file.json"}])
         assert _has_dify_refs(
             {
                 "type": "array",
                 "items": {
                     "type": "object",
-                    "properties": {"nested": {"$ref": "https://dify.ai/schemas/v1/qa_structure.json"}},
+                    "properties": {"nested": {"$ref": "https://cheersai.cloud/schemas/v1/qa_structure.json"}},
                 },
             }
         )
 
-        # Schemas without Dify refs
+        # Schemas without CheersAI refs
         assert not _has_dify_refs({"type": "string"})
         assert not _has_dify_refs(
             {"type": "object", "properties": {"name": {"type": "string"}, "age": {"type": "number"}}}
@@ -326,7 +326,7 @@ class TestUtilityFunctions:
             [{"type": "string"}, {"type": "number"}, {"type": "object", "properties": {"name": {"type": "string"}}}]
         )
 
-        # Schemas with non-Dify refs (should return False)
+        # Schemas with non-CheersAI refs (should return False)
         assert not _has_dify_refs({"$ref": "https://example.com/schema.json"})
         assert not _has_dify_refs(
             {"type": "object", "properties": {"external": {"$ref": "https://example.com/external.json"}}}
@@ -345,11 +345,11 @@ class TestUtilityFunctions:
             {"type": "string"},
             {"type": "object", "properties": {"name": {"type": "string"}}},
             [{"type": "string"}, {"type": "number"}],
-            # With Dify refs
-            {"$ref": "https://dify.ai/schemas/v1/file.json"},
-            {"type": "object", "properties": {"data": {"$ref": "https://dify.ai/schemas/v1/file.json"}}},
-            [{"type": "string"}, {"$ref": "https://dify.ai/schemas/v1/qa_structure.json"}],
-            # With non-Dify refs
+            # With CheersAI refs
+            {"$ref": "https://cheersai.cloud/schemas/v1/file.json"},
+            {"type": "object", "properties": {"data": {"$ref": "https://cheersai.cloud/schemas/v1/file.json"}}},
+            [{"type": "string"}, {"$ref": "https://cheersai.cloud/schemas/v1/qa_structure.json"}],
+            # With non-CheersAI refs
             {"$ref": "https://example.com/schema.json"},
             {"type": "object", "properties": {"external": {"$ref": "https://example.com/external.json"}}},
             # Complex nested
@@ -359,7 +359,7 @@ class TestUtilityFunctions:
                     "level1": {
                         "type": "object",
                         "properties": {
-                            "level2": {"type": "array", "items": {"$ref": "https://dify.ai/schemas/v1/file.json"}}
+                            "level2": {"type": "array", "items": {"$ref": "https://cheersai.cloud/schemas/v1/file.json"}}
                         },
                     }
                 },
@@ -384,9 +384,9 @@ class TestUtilityFunctions:
     def test_parse_dify_schema_uri(self):
         """Test parse_dify_schema_uri function"""
         # Valid URIs
-        assert parse_dify_schema_uri("https://dify.ai/schemas/v1/file.json") == ("v1", "file")
-        assert parse_dify_schema_uri("https://dify.ai/schemas/v2/complex_name.json") == ("v2", "complex_name")
-        assert parse_dify_schema_uri("https://dify.ai/schemas/v999/test-file.json") == ("v999", "test-file")
+        assert parse_dify_schema_uri("https://cheersai.cloud/schemas/v1/file.json") == ("v1", "file")
+        assert parse_dify_schema_uri("https://cheersai.cloud/schemas/v2/complex_name.json") == ("v2", "complex_name")
+        assert parse_dify_schema_uri("https://cheersai.cloud/schemas/v999/test-file.json") == ("v999", "test-file")
 
         # Invalid URIs
         assert parse_dify_schema_uri("https://example.com/schema.json") == ("", "")
@@ -437,7 +437,7 @@ class TestSchemaResolverClass:
         """Test that cache is shared between resolver instances"""
         SchemaResolver.clear_cache()
 
-        schema = {"$ref": "https://dify.ai/schemas/v1/file.json"}
+        schema = {"$ref": "https://cheersai.cloud/schemas/v1/file.json"}
 
         # First resolver populates cache
         resolver1 = SchemaResolver()
@@ -455,9 +455,9 @@ class TestSchemaResolverClass:
     def test_resolver_with_list_schema(self):
         """Test resolver with list as root schema"""
         list_schema = [
-            {"$ref": "https://dify.ai/schemas/v1/file.json"},
+            {"$ref": "https://cheersai.cloud/schemas/v1/file.json"},
             {"type": "string"},
-            {"$ref": "https://dify.ai/schemas/v1/qa_structure.json"},
+            {"$ref": "https://cheersai.cloud/schemas/v1/qa_structure.json"},
         ]
 
         resolver = SchemaResolver()
@@ -479,7 +479,7 @@ class TestSchemaResolverClass:
         schema = {
             "type": "object",
             "properties": {
-                f"prop_{i}": {"$ref": "https://dify.ai/schemas/v1/file.json"}
+                f"prop_{i}": {"$ref": "https://cheersai.cloud/schemas/v1/file.json"}
                 for i in range(50)  # Reduced to avoid depth issues
             },
         }
@@ -547,7 +547,7 @@ class TestSchemaResolverClass:
         with_refs_schema = {
             "type": "object",
             "properties": {
-                f"property_{i}": {"$ref": "https://dify.ai/schemas/v1/file.json"}
+                f"property_{i}": {"$ref": "https://cheersai.cloud/schemas/v1/file.json"}
                 for i in range(20)  # Fewer to avoid depth issues but still comparable
             },
         }
@@ -654,19 +654,19 @@ class TestSchemaResolverClass:
             },
             # Case 3: Large schema without refs
             {"name": "large_no_refs", "schema": {"type": "object", "properties": {}}, "expected": False},
-            # Case 4: Schema with Dify refs
+            # Case 4: Schema with CheersAI refs
             {
                 "name": "with_dify_refs",
                 "schema": {
                     "type": "object",
                     "properties": {
-                        "file": {"$ref": "https://dify.ai/schemas/v1/file.json"},
+                        "file": {"$ref": "https://cheersai.cloud/schemas/v1/file.json"},
                         "data": {"type": "string"},
                     },
                 },
                 "expected": True,
             },
-            # Case 5: Schema with non-Dify refs
+            # Case 5: Schema with non-CheersAI refs
             {
                 "name": "with_external_refs",
                 "schema": {
@@ -744,8 +744,8 @@ class TestSchemaResolverClass:
                 "config": {
                     "type": "object",
                     "properties": {
-                        "dify_url": {"type": "string", "default": "https://dify.ai/schemas/info"},
-                        "actual_ref": {"$ref": "https://dify.ai/schemas/v1/file.json"},
+                        "dify_url": {"type": "string", "default": "https://cheersai.cloud/schemas/info"},
+                        "actual_ref": {"$ref": "https://cheersai.cloud/schemas/v1/file.json"},
                     },
                 }
             },
@@ -761,7 +761,7 @@ class TestSchemaResolverClass:
         non_serializable = {
             "type": "object",
             "timestamp": datetime.datetime.now(),
-            "data": {"$ref": "https://dify.ai/schemas/v1/file.json"},
+            "data": {"$ref": "https://cheersai.cloud/schemas/v1/file.json"},
         }
 
         # Hybrid should fall back to recursive and still work

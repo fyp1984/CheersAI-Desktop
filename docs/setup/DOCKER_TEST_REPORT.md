@@ -11,12 +11,20 @@
 ## 环境信息
 
 - 运行方式：`docker/docker-compose.yaml` + `docker/docker-compose.override.yaml`
-- 本地构建镜像：`dify-api:local`、`dify-web:local`
+- 热部署模式（API 热重载）：额外叠加 `docker/docker-compose.hot.yaml`
+- 本地构建镜像：`cheersai-api:local`、`cheersai-web:local`
 - 关键对外端口：
   - `80/tcp`：Nginx（Web + API 反代）
   - `8080/tcp`：API 直连（宿主 → 容器 5001）
   - `3000/tcp`：Web 直连
   - `5003/tcp`：Plugin debug
+
+## 热更新回归
+
+- 执行：`./scripts/docker-hot-redeploy.sh`
+- 验证点：
+  - `GET /console/api/ping` 返回 200
+  - `GET /apps` 返回 200/301/302
 
 ## 功能测试（Smoke）
 
@@ -96,4 +104,3 @@
 cd docker
 docker compose -f docker-compose.yaml -f docker-compose.override.yaml restart nginx
 ```
-

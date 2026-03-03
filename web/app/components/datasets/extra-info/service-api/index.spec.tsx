@@ -32,7 +32,7 @@ vi.mock('next/link', () => ({
 
 // Mock API access URL hook
 vi.mock('@/hooks/use-api-access-url', () => ({
-  useDatasetApiAccessUrl: vi.fn(() => 'https://docs.dify.ai/api-reference/datasets'),
+  useDatasetApiAccessUrl: vi.fn(() => 'https://docs.cheersai.cloud/api-reference/datasets'),
 }))
 
 // Mock SecretKeyModal to avoid complex modal rendering
@@ -470,7 +470,7 @@ describe('Card (service-api)', () => {
       render(<Card apiBaseUrl="https://api.example.com" />)
 
       const apiRefLink = screen.getByText(/serviceApi\.card\.apiReference/i).closest('a')
-      expect(apiRefLink).toHaveAttribute('href', 'https://docs.dify.ai/api-reference/datasets')
+      expect(apiRefLink).toHaveAttribute('href', 'https://docs.cheersai.cloud/api-reference/datasets')
     })
 
     it('should open API Reference in new tab', () => {
@@ -757,7 +757,7 @@ describe('ServiceApi Integration', () => {
 
     // Verify link
     const apiRefLink = screen.getByText(/serviceApi\.card\.apiReference/i).closest('a')
-    expect(apiRefLink).toHaveAttribute('href', 'https://docs.dify.ai/api-reference/datasets')
+    expect(apiRefLink).toHaveAttribute('href', 'https://docs.cheersai.cloud/api-reference/datasets')
   })
 
   it('should reflect apiBaseUrl status in Indicator color', () => {

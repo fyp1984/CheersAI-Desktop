@@ -1,4 +1,4 @@
-# Dify Code of Conduct
+# CheersAI Code of Conduct
 
 ## Our Pledge
 

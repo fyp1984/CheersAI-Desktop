@@ -2,7 +2,7 @@ name: Translate i18n Files with Claude Code
 
 # Note: claude-code-action doesn't support push events directly.
 # Push events are handled by trigger-i18n-sync.yml which sends repository_dispatch.
-# See: https://github.com/langgenius/dify/issues/30743
+# See: https://github.com/CheersAI/CheersAI-Desktop/issues/30743
 
 on:
   repository_dispatch:
@@ -32,7 +32,7 @@ permissions:
 
 jobs:
   translate:
-    if: github.repository == 'langgenius/dify'
+    if: github.repository == 'CheersAI/CheersAI-Desktop'
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -138,7 +138,7 @@ jobs:
           # See: https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           allowed_bots: 'github-actions[bot]'
           prompt: |
-            You are a professional i18n synchronization engineer for the Dify project.
+            You are a professional i18n synchronization engineer for the CheersAI project.
             Your task is to keep all language translations in sync with the English source (en-US).
 
             ## CRITICAL TOOL RESTRICTIONS

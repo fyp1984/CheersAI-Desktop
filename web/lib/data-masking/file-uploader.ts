@@ -2,7 +2,7 @@
  * 文件上传器
  * File Uploader
  *
- * 负责将脱敏文件上传到 Dify 后端
+ * 负责将脱敏文件上传到 CheersAI 后端
  */
 
 import type { SandboxManager } from './sandbox-manager'
@@ -28,7 +28,7 @@ export class FileUploader {
   }
 
   /**
-   * 上传文件到 Dify 后端
+   * 上传文件到 CheersAI 后端
    * @param filePath - 文件路径
    * @param mappingId - 关联的映射ID
    * @param onProgress - 进度回调

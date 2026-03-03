@@ -71,7 +71,7 @@ class DifyConfig(
     # Remote source configs
     RemoteSettingsSourceConfig,
     # Enterprise feature configs
-    # **Before using, please contact business@dify.ai by email to inquire about licensing matters.**
+    # **Before using, please contact business@cheersai.cloud by email to inquire about licensing matters.**
     EnterpriseFeatureConfig,
 ):
     model_config = SettingsConfigDict(

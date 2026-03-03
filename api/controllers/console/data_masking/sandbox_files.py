@@ -6,7 +6,8 @@ developer tool that reads/writes files on the machine running the API server.
 
 import os
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from operator import itemgetter
 from pathlib import Path
 
 from flask import Blueprint, request
@@ -72,13 +73,15 @@ def list_files():
         for entry in dir_path.iterdir():
             if entry.is_file():
                 stat = entry.stat()
-                created = datetime.fromtimestamp(stat.st_ctime, tz=timezone.utc).isoformat()
-                files.append({
-                    "name": entry.name,
-                    "size": stat.st_size,
-                    "created_at": created,
-                })
-        files.sort(key=lambda f: f["created_at"], reverse=True)
+                created = datetime.fromtimestamp(stat.st_ctime, tz=UTC).isoformat()
+                files.append(
+                    {
+                        "name": entry.name,
+                        "size": stat.st_size,
+                        "created_at": created,
+                    }
+                )
+        files.sort(key=itemgetter("created_at"), reverse=True)
         return {"files": files, "total": len(files)}
     except OSError as e:
         return {"error": f"Failed to list files: {e}"}, 500
@@ -122,7 +125,7 @@ def delete_file():
         if not file_path.exists():
             return {"error": "File not found"}, 404
         file_path.unlink()
-        
+
         # 记录审计日志
         log_operation(
             action="file_delete",
@@ -132,7 +135,7 @@ def delete_file():
             },
             resource_type="file",
         )
-        
+
         return {"result": "success"}
     except ValueError as e:
         return {"error": str(e)}, 400

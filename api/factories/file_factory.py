@@ -480,11 +480,10 @@ def _is_file_valid_with_config(
     if (
         config.allowed_file_types
         and input_file_type not in config.allowed_file_types
-        and input_file_type != FileType.CUSTOM
+        and input_file_type not in {FileType.CUSTOM, FileType.DOCUMENT}
         # Always allow document type when file upload is enabled — the frontend
         # feature store may not persist the allowed_file_types correctly during
         # auto-save, causing document uploads to be rejected unexpectedly.
-        and input_file_type != FileType.DOCUMENT
     ):
         return False
 

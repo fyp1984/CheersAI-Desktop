@@ -67,7 +67,7 @@ web/lib/data-masking/
 - 支持多种响应格式
 
 ### 5. 文件上传器 (FileUploader)
-上传文件到 Dify 后端。
+上传文件到 CheersAI 后端。
 
 **主要功能**:
 - 验证文件在沙箱内
@@ -272,4 +272,4 @@ if (encryptedMappingFile.encrypted) {
 
 ## 📄 许可证
 
-本项目遵循 [Dify Open Source License](../../../LICENSE)。
+本项目遵循 [CheersAI Open Source License](../../../LICENSE)。

@@ -7,7 +7,7 @@
 ## ✅ 已完成的工作
 
 ### 1. 品牌和主题应用
-- ✅ 替换了所有 Dify logo 为 CheersAI logo
+- ✅ 替换了所有 CheersAI logo 为 CheersAI logo
 - ✅ 应用了完整的 CheersAI UI 规范（颜色、字体、间距等）
 - ✅ 更新了所有用户可见的文本（中英文）
 - ✅ 创建了主题 CSS 文件 (`web/themes/cheersai-theme.css`)

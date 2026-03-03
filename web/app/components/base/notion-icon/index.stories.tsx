@@ -15,7 +15,7 @@ const meta = {
   args: {
     type: 'workspace',
     name: 'Knowledge Base',
-    src: 'https://cloud.dify.ai/logo/logo.svg',
+    src: 'https://cloud.cheersai.cloud/logo/logo.svg',
   },
 } satisfies Meta<typeof NotionIcon>
 
@@ -37,7 +37,7 @@ export const WorkspaceIcon: Story = {
 <NotionIcon
   type="workspace"
   name="Knowledge Base"
-  src="https://cloud.dify.ai/logo/logo.svg"
+  src="https://cloud.cheersai.cloud/logo/logo.svg"
 />`
           .trim(),
       },

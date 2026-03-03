@@ -1,6 +1,6 @@
 # Model Runtime
 
-This module provides the interface for invoking and authenticating various models, and offers Dify a unified information and credentials form rule for model providers.
+This module provides the interface for invoking and authenticating various models, and offers CheersAI a unified information and credentials form rule for model providers.
 
 - On one hand, it decouples models from upstream and downstream processes, facilitating horizontal expansion for developers,
 - On the other hand, it allows for direct display of providers and models in the frontend interface by simply defining them in the backend, eliminating the need to modify frontend logic.
@@ -48,4 +48,4 @@ Model Runtime is divided into three layers:
 
 ## Documentation
 
-For detailed documentation on how to add new providers or models, please refer to the [Dify documentation](https://docs.dify.ai/).
+For detailed documentation on how to add new providers or models, please refer to the [CheersAI documentation](https://docs.cheersai.cloud/).

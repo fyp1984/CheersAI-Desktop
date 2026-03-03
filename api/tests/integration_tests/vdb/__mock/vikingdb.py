@@ -38,7 +38,7 @@ class MockVikingDBClass:
     def get_collection(self, collection_name) -> Collection:
         return Collection(
             collection_name=collection_name,
-            description="Collection For Dify",
+            description="Collection For CheersAI",
             viking_db_service=self._viking_db_service,
             primary_key=vdb_Field.PRIMARY_KEY,
             fields=[

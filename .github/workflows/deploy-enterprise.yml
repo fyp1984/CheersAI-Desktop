@@ -25,7 +25,7 @@ jobs:
           DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
         run: |
           IFS=',' read -ra ENDPOINTS <<< "${DEV_ENV_ADDRS:-}"
-          BODY='{"project":"dify-api","tag":"deploy-enterprise"}'
+          BODY='{"project":"cheersai-api","tag":"deploy-enterprise"}'
 
           for ENDPOINT in "${ENDPOINTS[@]}"; do
             ENDPOINT="$(echo "$ENDPOINT" | xargs)"

@@ -25,7 +25,7 @@ This test suite ensures:
 ARCHITECTURE OVERVIEW
 ================================================================================
 
-The DatasetCollectionBindingService is a critical component in the Dify platform's
+The DatasetCollectionBindingService is a critical component in the CheersAI platform's
 vector database management system. It serves as an abstraction layer between the
 application logic and the underlying vector database collections.
 

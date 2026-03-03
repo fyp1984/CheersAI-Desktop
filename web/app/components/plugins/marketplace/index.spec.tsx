@@ -154,12 +154,12 @@ vi.mock('@/config', () => ({
   API_PREFIX: '/api',
   APP_VERSION: '1.0.0',
   IS_MARKETPLACE: false,
-  MARKETPLACE_API_PREFIX: 'https://marketplace.dify.ai/api/v1',
+  MARKETPLACE_API_PREFIX: 'https://marketplace.cheersai.cloud/api/v1',
 }))
 
 // Mock var utils
 vi.mock('@/utils/var', () => ({
-  getMarketplaceUrl: (path: string, _params?: Record<string, string | undefined>) => `https://marketplace.dify.ai${path}`,
+  getMarketplaceUrl: (path: string, _params?: Record<string, string | undefined>) => `https://marketplace.cheersai.cloud${path}`,
 }))
 
 // Mock marketplace client used by marketplace utils
@@ -467,14 +467,14 @@ describe('utils', () => {
       const plugin = createMockPlugin({ org: 'test-org', name: 'test-plugin', type: 'plugin' })
       const iconUrl = getPluginIconInMarketplace(plugin)
 
-      expect(iconUrl).toBe('https://marketplace.dify.ai/api/v1/plugins/test-org/test-plugin/icon')
+      expect(iconUrl).toBe('https://marketplace.cheersai.cloud/api/v1/plugins/test-org/test-plugin/icon')
     })
 
     it('should return correct icon URL for bundle', () => {
       const bundle = createMockPlugin({ org: 'test-org', name: 'test-bundle', type: 'bundle' })
       const iconUrl = getPluginIconInMarketplace(bundle)
 
-      expect(iconUrl).toBe('https://marketplace.dify.ai/api/v1/bundles/test-org/test-bundle/icon')
+      expect(iconUrl).toBe('https://marketplace.cheersai.cloud/api/v1/bundles/test-org/test-bundle/icon')
     })
   })
 
@@ -489,7 +489,7 @@ describe('utils', () => {
 
       const formatted = getFormattedPlugin(rawPlugin)
 
-      expect(formatted.icon).toBe('https://marketplace.dify.ai/api/v1/plugins/test-org/test-plugin/icon')
+      expect(formatted.icon).toBe('https://marketplace.cheersai.cloud/api/v1/plugins/test-org/test-plugin/icon')
     })
 
     it('should format bundle with additional properties', () => {
@@ -503,7 +503,7 @@ describe('utils', () => {
 
       const formatted = getFormattedPlugin(rawBundle)
 
-      expect(formatted.icon).toBe('https://marketplace.dify.ai/api/v1/bundles/test-org/test-bundle/icon')
+      expect(formatted.icon).toBe('https://marketplace.cheersai.cloud/api/v1/bundles/test-org/test-bundle/icon')
       expect(formatted.brief).toBe('Bundle description')
       expect(formatted.label).toEqual({ 'en-US': 'Test Bundle' })
     })
@@ -514,14 +514,14 @@ describe('utils', () => {
       const plugin = createMockPlugin({ org: 'test-org', name: 'test-plugin', type: 'plugin' })
       const link = getPluginLinkInMarketplace(plugin)
 
-      expect(link).toBe('https://marketplace.dify.ai/plugins/test-org/test-plugin')
+      expect(link).toBe('https://marketplace.cheersai.cloud/plugins/test-org/test-plugin')
     })
 
     it('should return correct link for bundle', () => {
       const bundle = createMockPlugin({ org: 'test-org', name: 'test-bundle', type: 'bundle' })
       const link = getPluginLinkInMarketplace(bundle)
 
-      expect(link).toBe('https://marketplace.dify.ai/bundles/test-org/test-bundle')
+      expect(link).toBe('https://marketplace.cheersai.cloud/bundles/test-org/test-bundle')
     })
   })
 

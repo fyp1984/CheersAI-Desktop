@@ -48,7 +48,7 @@ def flask_app() -> Flask:
 
 @pytest.fixture(scope="session")
 def setup_account(request) -> Generator[Account, None, None]:
-    """`dify_setup` completes the setup process for the Dify application.
+    """`dify_setup` completes the setup process for the CheersAI application.
 
     It creates `Account` and `Tenant`, and inserts a `DifySetup` record into the database.
 

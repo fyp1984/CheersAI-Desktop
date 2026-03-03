@@ -253,7 +253,7 @@ Workflow applications offers non-session support and is ideal for translation, a
       import json
 
       def upload_file(file_path, user):
-          upload_url = "https://api.dify.ai/v1/files/upload"
+          upload_url = "https://api.cheersai.cloud/v1/files/upload"
           headers = {
               "Authorization": "Bearer app-xxxxxxxx",
           }
@@ -281,7 +281,7 @@ Workflow applications offers non-session support and is ideal for translation, a
               return None
 
       def run_workflow(file_id, user, response_mode="blocking"):
-          workflow_url = "https://api.dify.ai/v1/workflows/run"
+          workflow_url = "https://api.cheersai.cloud/v1/workflows/run"
           headers = {
               "Authorization": "Bearer app-xxxxxxxxx",
               "Content-Type": "application/json"
@@ -885,7 +885,7 @@ Workflow applications offers non-session support and is ideal for translation, a
         "tag2"
       ],
       "mode": "workflow",
-      "author_name": "Dify"
+      "author_name": "CheersAI"
     }
     ```
     </CodeGroup>

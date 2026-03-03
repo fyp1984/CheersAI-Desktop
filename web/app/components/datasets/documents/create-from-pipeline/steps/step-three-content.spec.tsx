@@ -20,7 +20,7 @@ vi.mock('@/context/dataset-detail', () => ({
 }))
 
 vi.mock('@/context/i18n', () => ({
-  useDocLink: () => (path: string) => `https://docs.dify.ai${path}`,
+  useDocLink: () => (path: string) => `https://docs.cheersai.cloud${path}`,
 }))
 
 // Mock EmbeddingProcess component as it has complex dependencies

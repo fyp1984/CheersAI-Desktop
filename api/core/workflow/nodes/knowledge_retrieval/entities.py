@@ -128,7 +128,7 @@ class KnowledgeRetrievalNodeData(BaseNodeData):
     @property
     def structured_output_enabled(self) -> bool:
         # NOTE(QuantumGhost): Temporary workaround for issue #20725
-        # (https://github.com/langgenius/dify/issues/20725).
+        # (https://github.com/CheersAI/CheersAI-Desktop/issues/20725).
         #
         # The proper fix would be to make `KnowledgeRetrievalNode` inherit
         # from `BaseNode` instead of `LLMNode`.

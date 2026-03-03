@@ -26,7 +26,7 @@ def handle_mcp_request(
     Handle MCP request and return JSON-RPC response
 
     Args:
-        app: The Dify app instance
+        app: The CheersAI app instance
         request: The JSON-RPC request message
         user_input_form: List of variable entities for the app
         mcp_server: The MCP server configuration
@@ -98,7 +98,7 @@ def handle_initialize(description: str) -> mcp_types.InitializeResult:
     return mcp_types.InitializeResult(
         protocolVersion=mcp_types.SERVER_LATEST_PROTOCOL_VERSION,
         capabilities=capabilities,
-        serverInfo=mcp_types.Implementation(name="Dify", version=dify_config.project.version),
+        serverInfo=mcp_types.Implementation(name="CheersAI", version=dify_config.project.version),
         instructions=description,
     )
 

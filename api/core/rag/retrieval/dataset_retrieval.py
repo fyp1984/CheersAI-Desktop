@@ -1305,7 +1305,7 @@ class DatasetRetrieval:
         if provider_model.status == ModelStatus.NO_CONFIGURE:
             raise ValueError(f"Model {model_name} credentials is not initialized.")
         elif provider_model.status == ModelStatus.NO_PERMISSION:
-            raise ValueError(f"Dify Hosted OpenAI {model_name} currently not support.")
+            raise ValueError(f"CheersAI Hosted OpenAI {model_name} currently not support.")
         elif provider_model.status == ModelStatus.QUOTA_EXCEEDED:
             raise ValueError(f"Model provider {provider_name} quota exceeded.")
 

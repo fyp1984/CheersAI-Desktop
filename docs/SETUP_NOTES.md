@@ -1,4 +1,4 @@
-# Dify Development Setup Notes
+# CheersAI Development Setup Notes
 
 ## Issue Resolved
 
@@ -46,6 +46,6 @@ docker-compose -f docker-compose.dev.yaml down
 
 ## Notes
 
-- The plugin daemon requires a separate database (`dify_plugin`) which is automatically created
+- The plugin daemon requires a separate database (`cheersai_plugin`) which is automatically created
 - The backend connects to the plugin daemon at `http://127.0.0.1:5002`
 - All services are configured to work with the local development setup

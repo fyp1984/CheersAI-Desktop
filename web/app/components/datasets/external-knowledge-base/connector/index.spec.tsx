@@ -19,7 +19,7 @@ vi.mock('next/navigation', () => ({
 
 // Mock useDocLink hook
 vi.mock('@/context/i18n', () => ({
-  useDocLink: () => (path?: string) => `https://docs.dify.ai/en${path || ''}`,
+  useDocLink: () => (path?: string) => `https://docs.cheersai.cloud/en${path || ''}`,
 }))
 
 // Mock toast context

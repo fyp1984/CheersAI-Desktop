@@ -1,7 +1,7 @@
 """
 Comprehensive unit tests for ConversationService.
 
-This test suite provides complete coverage of conversation management operations in Dify,
+This test suite provides complete coverage of conversation management operations in CheersAI,
 following TDD principles with the Arrange-Act-Assert pattern.
 
 ## Test Coverage

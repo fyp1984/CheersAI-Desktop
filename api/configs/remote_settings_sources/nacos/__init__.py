@@ -21,8 +21,8 @@ class NacosSettingsSource(RemoteSettingsSource):
         self.async_init()
 
     def async_init(self) -> None:
-        data_id = os.getenv("DIFY_ENV_NACOS_DATA_ID", "dify-api-env.properties")
-        group = os.getenv("DIFY_ENV_NACOS_GROUP", "nacos-dify")
+        data_id = os.getenv("DIFY_ENV_NACOS_DATA_ID", "cheersai-api-env.properties")
+        group = os.getenv("DIFY_ENV_NACOS_GROUP", "nacos-cheersai")
         tenant = os.getenv("DIFY_ENV_NACOS_NAMESPACE", "")
 
         params = {"dataId": data_id, "group": group, "tenant": tenant}

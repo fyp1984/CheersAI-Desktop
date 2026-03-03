@@ -1,20 +1,20 @@
 # CONTRIBUTING
 
-So you're looking to contribute to Dify - that's awesome, we can't wait to see what you do. As a startup with limited headcount and funding, we have grand ambitions to design the most intuitive workflow for building and managing LLM applications. Any help from the community counts, truly.
+So you're looking to contribute to CheersAI - that's awesome, we can't wait to see what you do. As a startup with limited headcount and funding, we have grand ambitions to design the most intuitive workflow for building and managing LLM applications. Any help from the community counts, truly.
 
 We need to be nimble and ship fast given where we are, but we also want to make sure that contributors like you get as smooth an experience at contributing as possible. We've assembled this contribution guide for that purpose, aiming at getting you familiarized with the codebase & how we work with contributors, so you could quickly jump to the fun part.
 
-This guide, like Dify itself, is a constant work in progress. We highly appreciate your understanding if at times it lags behind the actual project, and welcome any feedback for us to improve.
+This guide, like CheersAI itself, is a constant work in progress. We highly appreciate your understanding if at times it lags behind the actual project, and welcome any feedback for us to improve.
 
 In terms of licensing, please take a minute to read our short [License and Contributor Agreement](./LICENSE). The community also adheres to the [code of conduct](https://github.com/langgenius/.github/blob/main/CODE_OF_CONDUCT.md).
 
 ## Before you jump in
 
-Looking for something to tackle? Browse our [good first issues](https://github.com/langgenius/dify/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22) and pick one to get started!
+Looking for something to tackle? Browse our [good first issues](https://github.com/CheersAI/CheersAI-Desktop/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22) and pick one to get started!
 
-Got a cool new model runtime or tool to add? Open a PR in our [plugin repo](https://github.com/langgenius/dify-plugins) and show us what you've built.
+Got a cool new model runtime or tool to add? Open a PR in our [plugin repo](https://github.com/CheersAI/CheersAI-Desktop-plugins) and show us what you've built.
 
-Need to update an existing model runtime, tool, or squash some bugs? Head over to our [official plugin repo](https://github.com/langgenius/dify-official-plugins) and make your magic happen!
+Need to update an existing model runtime, tool, or squash some bugs? Head over to our [official plugin repo](https://github.com/CheersAI/CheersAI-Desktop-official-plugins) and make your magic happen!
 
 Join the fun, contribute, and let's build something awesome together! 💡✨
 
@@ -55,7 +55,7 @@ How we prioritize:
 | Feature Type | Priority |
 | ------------------------------------------------------------ | --------------- |
 | High-Priority Features as being labeled by a team member | High Priority |
-| Popular feature requests from our [community feedback board](https://github.com/langgenius/dify/discussions/categories/feedbacks) | Medium Priority |
+| Popular feature requests from our [community feedback board](https://github.com/CheersAI/CheersAI-Desktop/discussions/categories/feedbacks) | Medium Priority |
 | Non-core features and minor enhancements | Low Priority |
 | Valuable but not immediate | Future-Feature |
 
@@ -75,13 +75,13 @@ How we prioritize:
 
 #### Frontend
 
-For setting up the frontend service, please refer to our comprehensive [guide](https://github.com/langgenius/dify/blob/main/web/README.md) in the `web/README.md` file. This document provides detailed instructions to help you set up the frontend environment properly.
+For setting up the frontend service, please refer to our comprehensive [guide](https://github.com/CheersAI/CheersAI-Desktop/blob/main/web/README.md) in the `web/README.md` file. This document provides detailed instructions to help you set up the frontend environment properly.
 
-**Testing**: All React components must have comprehensive test coverage. See [web/docs/test.md](https://github.com/langgenius/dify/blob/main/web/docs/test.md) for the canonical frontend testing guidelines and follow every requirement described there.
+**Testing**: All React components must have comprehensive test coverage. See [web/docs/test.md](https://github.com/CheersAI/CheersAI-Desktop/blob/main/web/docs/test.md) for the canonical frontend testing guidelines and follow every requirement described there.
 
 #### Backend
 
-For setting up the backend service, kindly refer to our detailed [instructions](https://github.com/langgenius/dify/blob/main/api/README.md) in the `api/README.md` file. This document contains step-by-step guidance to help you get the backend up and running smoothly.
+For setting up the backend service, kindly refer to our detailed [instructions](https://github.com/CheersAI/CheersAI-Desktop/blob/main/api/README.md) in the `api/README.md` file. This document contains step-by-step guidance to help you get the backend up and running smoothly.
 
 #### Other things to note
 

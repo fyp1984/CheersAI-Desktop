@@ -49,7 +49,7 @@
   "sandbox.helpTitle": "About Sandbox Directory",
   "sandbox.helpItems.storage": "All masked files will be stored in this directory",
   "sandbox.helpItems.encryption": "Mapping data will be encrypted and stored locally",
-  "sandbox.helpItems.restriction": "Only files within this directory can be uploaded to Dify",
+  "sandbox.helpItems.restriction": "Only files within this directory can be uploaded to CheersAI",
   "sandbox.helpItems.space": "Choose a location with sufficient storage space",
   "sandbox.errors.empty": "Please enter sandbox path",
   "sandbox.errors.invalid": "Invalid sandbox path",
