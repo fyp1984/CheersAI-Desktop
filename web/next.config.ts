@@ -2,7 +2,6 @@ import type { NextConfig } from 'next'
 import process from 'node:process'
 import withBundleAnalyzerInit from '@next/bundle-analyzer'
 import createMDX from '@next/mdx'
-import { codeInspectorPlugin } from 'code-inspector-plugin'
 
 const isDev = process.env.NODE_ENV === 'development'
 const withMDX = createMDX({
@@ -32,11 +31,11 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ['esbuild-wasm'],
   transpilePackages: ['echarts', 'zrender'],
-  turbopack: {
-    rules: codeInspectorPlugin({
-      bundler: 'turbopack',
-    }),
-  },
+  // turbopack: {
+  //   rules: codeInspectorPlugin({
+  //     bundler: 'turbopack',
+  //   }),
+  // },
   productionBrowserSourceMaps: false, // enable browser source map generation during the production build
   // Configure pageExtensions to include md and mdx
   pageExtensions: ['ts', 'tsx', 'js', 'jsx', 'md', 'mdx'],

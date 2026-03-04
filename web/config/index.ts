@@ -60,6 +60,8 @@ const normalizeUrlPrefix = (value: string) => {
   if (/^https?:\/\//i.test(trimmed))
     return trimmed
   if (trimmed.startsWith('/')) {
+    if (typeof window === 'undefined')
+      return `http://127.0.0.1:3000${trimmed}`
     const origin = globalThis.location?.origin
     if (origin)
       return new URL(trimmed, origin).toString()

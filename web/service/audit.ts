@@ -1,5 +1,6 @@
-import type { Fetcher } from 'swr'
-import { del, get, post, put } from './base'
+import { get } from './base'
+
+export type Fetcher<Data = unknown, Key = string> = (arg: Key) => Promise<Data>
 
 export type OperationLog = {
   id: string
@@ -8,6 +9,7 @@ export type OperationLog = {
   account_name: string
   account_email: string
   action: string
+  // eslint-disable-next-line ts/no-explicit-any
   content: any
   created_at: number
   created_ip: string
@@ -40,13 +42,20 @@ export type OperationLogFilters = {
 
 export const fetchOperationLogs: Fetcher<OperationLogListResponse, OperationLogFilters> = (filters) => {
   const params = new URLSearchParams()
-  if (filters.page) params.append('page', String(filters.page))
-  if (filters.limit) params.append('limit', String(filters.limit))
-  if (filters.action) params.append('action', filters.action)
-  if (filters.account_id) params.append('account_id', filters.account_id)
-  if (filters.keyword) params.append('keyword', filters.keyword)
-  if (filters.start_date) params.append('start_date', filters.start_date)
-  if (filters.end_date) params.append('end_date', filters.end_date)
+  if (filters.page)
+    params.append('page', String(filters.page))
+  if (filters.limit)
+    params.append('limit', String(filters.limit))
+  if (filters.action)
+    params.append('action', filters.action)
+  if (filters.account_id)
+    params.append('account_id', filters.account_id)
+  if (filters.keyword)
+    params.append('keyword', filters.keyword)
+  if (filters.start_date)
+    params.append('start_date', filters.start_date)
+  if (filters.end_date)
+    params.append('end_date', filters.end_date)
 
   return get<OperationLogListResponse>(`/operation-logs?${params.toString()}`)
 }
