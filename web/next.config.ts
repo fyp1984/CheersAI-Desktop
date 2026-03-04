@@ -64,6 +64,18 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  async rewrites() {
+    return [
+      {
+        source: '/console/api/:path*',
+        destination: 'http://api:5001/console/api/:path*',
+      },
+      {
+        source: '/api/:path*',
+        destination: 'http://api:5001/api/:path*',
+      },
+    ]
+  },
   output: 'standalone',
   compiler: {
     removeConsole: isDev ? false : { exclude: ['warn', 'error'] },
