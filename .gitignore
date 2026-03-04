@@ -242,4 +242,4 @@ scripts/stress-test/reports/
 
 *.eslintcache
 .eslintcache
-web/.pnpm-store/v10/projects/5fd2d3df2cd7035c08bec2d1c432fbcc
+web/.pnpm-store/
