@@ -101,6 +101,18 @@ const SideNav = () => {
 
   const navItems: NavItemConfig[] = []
 
+  // 对话应用
+  if (!isCurrentWorkspaceDatasetOperator) {
+    navItems.push({
+      id: 'chat',
+      href: '/chat',
+      icon: <RiMessage3Line className="h-5 w-5" />,
+      activeIcon: <RiMessage3Line className="h-5 w-5" />,
+      label: '对话应用',
+      segments: ['chat'],
+    })
+  }
+
   // 工作台 (原 apps)
   if (!isCurrentWorkspaceDatasetOperator) {
     navItems.push({
