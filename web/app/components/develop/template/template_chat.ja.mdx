@@ -209,7 +209,7 @@ import { Row, Col, Properties, Property, Heading, SubProperty, Paragraph } from 
         {
           "type": "image",
         "transfer_method": "remote_url",
-        "url": "https://cloud.cheersai.cloud/logo/logo-site.png"
+        "url": "https://cloud.dify.ai/logo/logo-site.png"
       }
     ]
 }'`}
@@ -1295,7 +1295,7 @@ import { Row, Col, Properties, Property, Heading, SubProperty, Paragraph } from 
 
     <Properties>
       <Property name='message_id' type='str' key='message_id'>
-        CheersAIによって生成されたテキストメッセージの場合、生成されたメッセージIDを直接渡します。バックエンドはメッセージIDを使用して対応するコンテンツを検索し、音声情報を直接合成します。message_idとtextが同時に提供される場合、message_idが優先されます。
+        Difyによって生成されたテキストメッセージの場合、生成されたメッセージIDを直接渡します。バックエンドはメッセージIDを使用して対応するコンテンツを検索し、音声情報を直接合成します。message_idとtextが同時に提供される場合、message_idが優先されます。
       </Property>
       <Property name='text' type='str' key='text'>
         音声生成コンテンツ。
@@ -1313,7 +1313,7 @@ import { Row, Col, Properties, Property, Heading, SubProperty, Paragraph } from 
       label="/text-to-audio"
       targetCode={`curl --location --request POST '${props.appDetail.api_base_url}/text-to-audio' \\
 --header 'Authorization: Bearer ENTER-YOUR-SECRET-KEY' \\
---form 'text=Hello CheersAI;user=abc-123;message_id=5ad4cb98-f0c7-4085-b384-88c403be6290`}
+--form 'text=Hello Dify;user=abc-123;message_id=5ad4cb98-f0c7-4085-b384-88c403be6290`}
     />
 
     <CodeGroup title="ヘッダー">
@@ -1362,7 +1362,7 @@ import { Row, Col, Properties, Property, Heading, SubProperty, Paragraph } from 
         "tag2"
       ],
       "mode": "chat",
-      "author_name": "CheersAI"
+      "author_name": "Dify"
     }
     ```
     </CodeGroup>
@@ -1545,7 +1545,7 @@ import { Row, Col, Properties, Property, Heading, SubProperty, Paragraph } from 
     ```json {{ title: '応答' }}
     {
       "tool_icons": {
-        "dalle2": "https://cloud.cheersai.cloud/console/api/workspaces/current/tool-provider/builtin/dalle/icon",
+        "dalle2": "https://cloud.dify.ai/console/api/workspaces/current/tool-provider/builtin/dalle/icon",
         "api_tool": {
           "background": "#252525",
           "content": "\ud83d\ude01"

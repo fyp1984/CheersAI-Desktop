@@ -1,4 +1,4 @@
-"""InterSystems IRIS vector database implementation for CheersAI.
+"""InterSystems IRIS vector database implementation for Dify.
 
 This module provides vector storage and retrieval using IRIS native VECTOR type
 with HNSW indexing for efficient similarity search.

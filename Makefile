@@ -1,7 +1,7 @@
 # Variables
-DOCKER_REGISTRY=cheersai
-WEB_IMAGE=$(DOCKER_REGISTRY)/cheersai-web
-API_IMAGE=$(DOCKER_REGISTRY)/cheersai-api
+DOCKER_REGISTRY=langgenius
+WEB_IMAGE=$(DOCKER_REGISTRY)/dify-web
+API_IMAGE=$(DOCKER_REGISTRY)/dify-api
 VERSION=latest
 
 # Default target - show help
@@ -18,7 +18,7 @@ dev-setup: prepare-docker prepare-web prepare-api
 prepare-docker:
 	@echo "🐳 Setting up Docker middleware..."
 	@cp -n docker/middleware.env.example docker/middleware.env 2>/dev/null || echo "Docker middleware.env already exists"
-	@cd docker && docker compose -f docker-compose.middleware.yaml --env-file middleware.env -p cheersai-middlewares-dev up -d
+	@cd docker && docker compose -f docker-compose.middleware.yaml --env-file middleware.env -p dify-middlewares-dev up -d
 	@echo "✅ Docker middleware started"
 
 # Step 2: Prepare web environment
@@ -39,7 +39,7 @@ prepare-api:
 # Clean dev environment
 dev-clean:
 	@echo "⚠️  Stopping Docker containers..."
-	@cd docker && docker compose -f docker-compose.middleware.yaml --env-file middleware.env -p cheersai-middlewares-dev down
+	@cd docker && docker compose -f docker-compose.middleware.yaml --env-file middleware.env -p dify-middlewares-dev down
 	@echo "🗑️  Removing volumes..."
 	@rm -rf docker/volumes/db
 	@rm -rf docker/volumes/redis

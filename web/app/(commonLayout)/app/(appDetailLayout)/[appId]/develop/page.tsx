@@ -1,3 +1,9 @@
+export const dynamicParams = false
+
+export async function generateStaticParams() {
+  return []
+}
+
 import type { Locale } from '@/i18n-config'
 import * as React from 'react'
 import DevelopMain from '@/app/components/develop'

@@ -54,17 +54,17 @@ export default function AccountAbout({
               ©
               {dayjs().year()}
               {' '}
-              CheersAI, Contributors.
+              LangGenius, Inc., Contributors.
             </div>
             <div className="text-text-accent">
               {
                 IS_CE_EDITION
-                  ? <Link href="https://github.com/CheersAI/CheersAI-Desktop/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Open Source License</Link>
+                  ? <Link href="https://github.com/langgenius/dify/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Open Source License</Link>
                   : (
                       <>
-                        <Link href="https://cheersai.cloud/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
+                        <Link href="https://dify.ai/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
                         ,&nbsp;
-                        <Link href="https://cheersai.cloud/terms" target="_blank" rel="noopener noreferrer">Terms of Service</Link>
+                        <Link href="https://dify.ai/terms" target="_blank" rel="noopener noreferrer">Terms of Service</Link>
                       </>
                     )
               }
@@ -83,7 +83,7 @@ export default function AccountAbout({
           <div className="flex items-center">
             <Button className="mr-2" size="small">
               <Link
-                href="https://github.com/CheersAI/CheersAI-Desktop/releases"
+                href="https://github.com/langgenius/dify/releases"
                 target="_blank"
                 rel="noopener noreferrer"
               >

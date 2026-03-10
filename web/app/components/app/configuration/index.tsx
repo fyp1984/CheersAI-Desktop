@@ -549,188 +549,183 @@ const Configuration: FC = () => {
 
   useEffect(() => {
     (async () => {
-      try {
-        const collectionList = await fetchCollectionList()
-        if (basePath) {
-          collectionList.forEach((item) => {
-            if (typeof item.icon == 'string' && !item.icon.includes(basePath))
-              item.icon = `${basePath}${item.icon}`
-          })
+      const collectionList = await fetchCollectionList()
+      if (basePath) {
+        collectionList.forEach((item) => {
+          if (typeof item.icon == 'string' && !item.icon.includes(basePath))
+            item.icon = `${basePath}${item.icon}`
+        })
+      }
+      setCollectionList(collectionList)
+      const res = await fetchAppDetailDirect({ url: '/apps', id: appId })
+      setMode(res.mode as AppModeEnum)
+      const modelConfig = res.model_config as BackendModelConfig
+      const promptMode = modelConfig.prompt_type === PromptMode.advanced ? PromptMode.advanced : PromptMode.simple
+      doSetPromptMode(promptMode)
+      if (promptMode === PromptMode.advanced) {
+        if (modelConfig.chat_prompt_config && modelConfig.chat_prompt_config.prompt.length > 0)
+          setChatPromptConfig(modelConfig.chat_prompt_config)
+        else
+          setChatPromptConfig(clone(DEFAULT_CHAT_PROMPT_CONFIG))
+        setCompletionPromptConfig(modelConfig.completion_prompt_config || clone(DEFAULT_COMPLETION_PROMPT_CONFIG) as any)
+        setCanReturnToSimpleMode(false)
+      }
+
+      const model = modelConfig.model
+
+      let datasets: any = null
+      // old dataset struct
+      if (modelConfig.agent_mode?.tools?.find(({ dataset }: any) => dataset?.enabled))
+        datasets = modelConfig.agent_mode?.tools.filter(({ dataset }: any) => dataset?.enabled)
+        // new dataset struct
+      else if (modelConfig.dataset_configs.datasets?.datasets?.length > 0)
+        datasets = modelConfig.dataset_configs?.datasets?.datasets
+
+      if (dataSets && datasets?.length && datasets?.length > 0) {
+        const { data: dataSetsWithDetail } = await fetchDatasets({ url: '/datasets', params: { page: 1, ids: datasets.map(({ dataset }: any) => dataset.id) } })
+        datasets = dataSetsWithDetail
+        setDataSets(datasets)
+      }
+
+      setIntroduction(modelConfig.opening_statement)
+      setSuggestedQuestions(modelConfig.suggested_questions || [])
+      if (modelConfig.more_like_this)
+        setMoreLikeThisConfig(modelConfig.more_like_this)
+
+      if (modelConfig.suggested_questions_after_answer)
+        setSuggestedQuestionsAfterAnswerConfig(modelConfig.suggested_questions_after_answer)
+
+      if (modelConfig.speech_to_text)
+        setSpeechToTextConfig(modelConfig.speech_to_text)
+
+      if (modelConfig.text_to_speech)
+        setTextToSpeechConfig(modelConfig.text_to_speech)
+
+      if (modelConfig.retriever_resource)
+        setCitationConfig(modelConfig.retriever_resource)
+
+      if (modelConfig.annotation_reply) {
+        let annotationConfig = modelConfig.annotation_reply
+        if (modelConfig.annotation_reply.enabled) {
+          annotationConfig = {
+            ...modelConfig.annotation_reply,
+            embedding_model: {
+              ...modelConfig.annotation_reply.embedding_model,
+              embedding_provider_name: correctModelProvider(modelConfig.annotation_reply.embedding_model.embedding_provider_name),
+            },
+          }
         }
-        setCollectionList(collectionList)
-        const res = await fetchAppDetailDirect({ url: '/apps', id: appId })
-        setMode(res.mode as AppModeEnum)
-        const modelConfig = res.model_config as BackendModelConfig
-        const promptMode = modelConfig.prompt_type === PromptMode.advanced ? PromptMode.advanced : PromptMode.simple
-        doSetPromptMode(promptMode)
-        if (promptMode === PromptMode.advanced) {
-          if (modelConfig.chat_prompt_config && modelConfig.chat_prompt_config.prompt.length > 0)
-            setChatPromptConfig(modelConfig.chat_prompt_config)
-          else
-            setChatPromptConfig(clone(DEFAULT_CHAT_PROMPT_CONFIG))
-          setCompletionPromptConfig(modelConfig.completion_prompt_config || clone(DEFAULT_COMPLETION_PROMPT_CONFIG) as any)
-          setCanReturnToSimpleMode(false)
-        }
+        setAnnotationConfig(annotationConfig, true)
+      }
 
-        const model = modelConfig.model
+      if (modelConfig.sensitive_word_avoidance)
+        setModerationConfig(modelConfig.sensitive_word_avoidance)
 
-        let datasets: any = null
-        // old dataset struct
-        if (modelConfig.agent_mode?.tools?.find(({ dataset }: any) => dataset?.enabled))
-          datasets = modelConfig.agent_mode?.tools.filter(({ dataset }: any) => dataset?.enabled)
-          // new dataset struct
-        else if (modelConfig.dataset_configs.datasets?.datasets?.length > 0)
-          datasets = modelConfig.dataset_configs?.datasets?.datasets
+      if (modelConfig.external_data_tools)
+        setExternalDataToolsConfig(modelConfig.external_data_tools)
 
-        if (dataSets && datasets?.length && datasets?.length > 0) {
-          const { data: dataSetsWithDetail } = await fetchDatasets({ url: '/datasets', params: { page: 1, ids: datasets.map(({ dataset }: any) => dataset.id) } })
-          datasets = dataSetsWithDetail
-          setDataSets(datasets)
-        }
+      const config: PublishConfig = {
+        modelConfig: {
+          provider: correctModelProvider(model.provider),
+          model_id: model.name,
+          mode: model.mode,
+          configs: {
+            prompt_template: modelConfig.pre_prompt || '',
+            prompt_variables: userInputsFormToPromptVariables(
+              ([
+                ...modelConfig.user_input_form,
+                ...(
+                  modelConfig.external_data_tools?.length
+                    ? modelConfig.external_data_tools.map((item: any) => {
+                        return {
+                          external_data_tool: {
+                            variable: item.variable as string,
+                            label: item.label as string,
+                            enabled: item.enabled,
+                            type: item.type as string,
+                            config: item.config,
+                            required: true,
+                            icon: item.icon,
+                            icon_background: item.icon_background,
+                          },
+                        }
+                      })
+                    : []
+                ),
+              ]) as unknown as UserInputFormItem[],
+              modelConfig.dataset_query_variable,
+            ),
+          },
+          more_like_this: modelConfig.more_like_this ?? { enabled: false },
+          opening_statement: modelConfig.opening_statement,
+          suggested_questions: modelConfig.suggested_questions ?? [],
+          sensitive_word_avoidance: modelConfig.sensitive_word_avoidance,
+          speech_to_text: modelConfig.speech_to_text,
+          text_to_speech: modelConfig.text_to_speech,
+          file_upload: modelConfig.file_upload ?? null,
+          suggested_questions_after_answer: modelConfig.suggested_questions_after_answer ?? { enabled: false },
+          retriever_resource: modelConfig.retriever_resource,
+          annotation_reply: modelConfig.annotation_reply ?? null,
+          external_data_tools: modelConfig.external_data_tools ?? [],
+          system_parameters: modelConfig.system_parameters,
+          dataSets: datasets || [],
+          agentConfig: res.mode === AppModeEnum.AGENT_CHAT ? {
+            max_iteration: DEFAULT_AGENT_SETTING.max_iteration,
+            ...modelConfig.agent_mode,
+            // remove dataset
+            enabled: true, // modelConfig.agent_mode?.enabled is not correct. old app: the value of app with dataset's is always true
+            tools: (modelConfig.agent_mode?.tools ?? []).filter((tool: any) => {
+              return !tool.dataset
+            }).map((tool: any) => {
+              const toolInCollectionList = collectionList.find(c => tool.provider_id === c.id)
+              return {
+                ...tool,
+                isDeleted: res.deleted_tools?.some((deletedTool: any) => deletedTool.provider_id === tool.provider_id && deletedTool.tool_name === tool.tool_name) ?? false,
+                notAuthor: toolInCollectionList?.is_team_authorization === false,
+                ...(tool.provider_type === 'builtin'
+                  ? {
+                      provider_id: correctToolProvider(tool.provider_name, !!toolInCollectionList),
+                      provider_name: correctToolProvider(tool.provider_name, !!toolInCollectionList),
+                    }
+                  : {}),
+              }
+            }),
+            strategy: modelConfig.agent_mode?.strategy ?? AgentStrategy.react,
+          } : DEFAULT_AGENT_SETTING,
+        },
+        completionParams: model.completion_params,
+      }
 
-        setIntroduction(modelConfig.opening_statement)
-        setSuggestedQuestions(modelConfig.suggested_questions || [])
-        if (modelConfig.more_like_this)
-          setMoreLikeThisConfig(modelConfig.more_like_this)
+      if (modelConfig.file_upload)
+        handleSetVisionConfig(modelConfig.file_upload.image, true)
 
-        if (modelConfig.suggested_questions_after_answer)
-          setSuggestedQuestionsAfterAnswerConfig(modelConfig.suggested_questions_after_answer)
-
-        if (modelConfig.speech_to_text)
-          setSpeechToTextConfig(modelConfig.speech_to_text)
-
-        if (modelConfig.text_to_speech)
-          setTextToSpeechConfig(modelConfig.text_to_speech)
-
-        if (modelConfig.retriever_resource)
-          setCitationConfig(modelConfig.retriever_resource)
-
-        if (modelConfig.annotation_reply) {
-          let annotationConfig = modelConfig.annotation_reply
-          if (modelConfig.annotation_reply.enabled) {
-            annotationConfig = {
-              ...modelConfig.annotation_reply,
-              embedding_model: {
-                ...modelConfig.annotation_reply.embedding_model,
-                embedding_provider_name: correctModelProvider(modelConfig.annotation_reply.embedding_model.embedding_provider_name),
+      syncToPublishedConfig(config)
+      setPublishedConfig(config)
+      const retrievalConfig = getMultipleRetrievalConfig({
+        ...modelConfig.dataset_configs,
+        reranking_model: modelConfig.dataset_configs.reranking_model && {
+          provider: modelConfig.dataset_configs.reranking_model.reranking_provider_name,
+          model: modelConfig.dataset_configs.reranking_model.reranking_model_name,
+        },
+      }, datasets, datasets, {
+        provider: currentRerankProvider?.provider,
+        model: currentRerankModel?.model,
+      })
+      const datasetConfigsToSet = {
+        ...modelConfig.dataset_configs,
+        ...retrievalConfig,
+        ...(retrievalConfig.reranking_model
+          ? {
+              reranking_model: {
+                reranking_model_name: retrievalConfig.reranking_model.model,
+                reranking_provider_name: correctModelProvider(retrievalConfig.reranking_model.provider),
               },
             }
-          }
-          setAnnotationConfig(annotationConfig, true)
-        }
-
-        if (modelConfig.sensitive_word_avoidance)
-          setModerationConfig(modelConfig.sensitive_word_avoidance)
-
-        if (modelConfig.external_data_tools)
-          setExternalDataToolsConfig(modelConfig.external_data_tools)
-
-        const config: PublishConfig = {
-          modelConfig: {
-            provider: correctModelProvider(model.provider),
-            model_id: model.name,
-            mode: model.mode,
-            configs: {
-              prompt_template: modelConfig.pre_prompt || '',
-              prompt_variables: userInputsFormToPromptVariables(
-                ([
-                  ...modelConfig.user_input_form,
-                  ...(
-                    modelConfig.external_data_tools?.length
-                      ? modelConfig.external_data_tools.map((item: any) => {
-                          return {
-                            external_data_tool: {
-                              variable: item.variable as string,
-                              label: item.label as string,
-                              enabled: item.enabled,
-                              type: item.type as string,
-                              config: item.config,
-                              required: true,
-                              icon: item.icon,
-                              icon_background: item.icon_background,
-                            },
-                          }
-                        })
-                      : []
-                  ),
-                ]) as unknown as UserInputFormItem[],
-                modelConfig.dataset_query_variable,
-              ),
-            },
-            more_like_this: modelConfig.more_like_this ?? { enabled: false },
-            opening_statement: modelConfig.opening_statement,
-            suggested_questions: modelConfig.suggested_questions ?? [],
-            sensitive_word_avoidance: modelConfig.sensitive_word_avoidance,
-            speech_to_text: modelConfig.speech_to_text,
-            text_to_speech: modelConfig.text_to_speech,
-            file_upload: modelConfig.file_upload ?? null,
-            suggested_questions_after_answer: modelConfig.suggested_questions_after_answer ?? { enabled: false },
-            retriever_resource: modelConfig.retriever_resource,
-            annotation_reply: modelConfig.annotation_reply ?? null,
-            external_data_tools: modelConfig.external_data_tools ?? [],
-            system_parameters: modelConfig.system_parameters,
-            dataSets: datasets || [],
-            agentConfig: res.mode === AppModeEnum.AGENT_CHAT ? {
-              max_iteration: DEFAULT_AGENT_SETTING.max_iteration,
-              ...modelConfig.agent_mode,
-              // remove dataset
-              enabled: true, // modelConfig.agent_mode?.enabled is not correct. old app: the value of app with dataset's is always true
-              tools: (modelConfig.agent_mode?.tools ?? []).filter((tool: any) => {
-                return !tool.dataset
-              }).map((tool: any) => {
-                const toolInCollectionList = collectionList.find(c => tool.provider_id === c.id)
-                return {
-                  ...tool,
-                  isDeleted: res.deleted_tools?.some((deletedTool: any) => deletedTool.provider_id === tool.provider_id && deletedTool.tool_name === tool.tool_name) ?? false,
-                  notAuthor: toolInCollectionList?.is_team_authorization === false,
-                  ...(tool.provider_type === 'builtin'
-                    ? {
-                        provider_id: correctToolProvider(tool.provider_name, !!toolInCollectionList),
-                        provider_name: correctToolProvider(tool.provider_name, !!toolInCollectionList),
-                      }
-                    : {}),
-                }
-              }),
-              strategy: modelConfig.agent_mode?.strategy ?? AgentStrategy.react,
-            } : DEFAULT_AGENT_SETTING,
-          },
-          completionParams: model.completion_params,
-        }
-
-        if (modelConfig.file_upload)
-          handleSetVisionConfig(modelConfig.file_upload.image, true)
-
-        syncToPublishedConfig(config)
-        setPublishedConfig(config)
-        const retrievalConfig = getMultipleRetrievalConfig({
-          ...modelConfig.dataset_configs,
-          reranking_model: modelConfig.dataset_configs.reranking_model && {
-            provider: modelConfig.dataset_configs.reranking_model.reranking_provider_name,
-            model: modelConfig.dataset_configs.reranking_model.reranking_model_name,
-          },
-        }, datasets, datasets, {
-          provider: currentRerankProvider?.provider,
-          model: currentRerankModel?.model,
-        })
-        const datasetConfigsToSet = {
-          ...modelConfig.dataset_configs,
-          ...retrievalConfig,
-          ...(retrievalConfig.reranking_model
-            ? {
-                reranking_model: {
-                  reranking_model_name: retrievalConfig.reranking_model.model,
-                  reranking_provider_name: correctModelProvider(retrievalConfig.reranking_model.provider),
-                },
-              }
-            : {}),
-        } as DatasetConfigs
-        datasetConfigsToSet.retrieval_model = datasetConfigsToSet.retrieval_model ?? RETRIEVE_TYPE.multiWay
-        setDatasetConfigs(datasetConfigsToSet)
-        setHasFetchedDetail(true)
-      }
-      catch (e) {
-        console.error('Failed to fetch app detail', e)
-      }
+          : {}),
+      } as DatasetConfigs
+      datasetConfigsToSet.retrieval_model = datasetConfigsToSet.retrieval_model ?? RETRIEVE_TYPE.multiWay
+      setDatasetConfigs(datasetConfigsToSet)
+      setHasFetchedDetail(true)
     })()
   }, [appId])
 

@@ -11,7 +11,7 @@ def test_orjson_dumps_round_trip_basic():
 
 
 def test_orjson_dumps_with_unicode_and_indent():
-    obj = {"msg": "你好，CheersAI"}
+    obj = {"msg": "你好，Dify"}
     s = orjson_dumps(obj, option=orjson.OPT_INDENT_2)
     # contains indentation newline/spaces
     assert "\n" in s

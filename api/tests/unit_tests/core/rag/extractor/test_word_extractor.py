@@ -227,7 +227,7 @@ def test_extract_hyperlinks(monkeypatch):
 
     new_run = OxmlElement("w:r")
     t = OxmlElement("w:t")
-    t.text = "CheersAI"
+    t.text = "Dify"
     new_run.append(t)
     hyperlink.append(new_run)
     p._p.append(hyperlink)
@@ -235,7 +235,7 @@ def test_extract_hyperlinks(monkeypatch):
     # Add relationship to the part
     doc.part.rels.add_relationship(
         "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
-        "https://cheersai.cloud",
+        "https://dify.ai",
         r_id,
         is_external=True,
     )
@@ -248,7 +248,7 @@ def test_extract_hyperlinks(monkeypatch):
         extractor = WordExtractor(tmp_path, "tenant_id", "user_id")
         docs = extractor.extract()
         # Verify modern hyperlink extraction
-        assert "Visit[CheersAI](https://cheersai.cloud)" in docs[0].page_content
+        assert "Visit[Dify](https://dify.ai)" in docs[0].page_content
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)

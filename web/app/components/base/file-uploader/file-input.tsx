@@ -1,9 +1,6 @@
-import { useCallback, useState } from 'react'
 import type { FileUpload } from '@/app/components/base/features/types'
 import { FILE_EXTS } from '@/app/components/base/prompt-editor/constants'
 import { SupportUploadFileTypes } from '@/app/components/workflow/types'
-import { SandboxFilePicker } from '@/app/components/base/sandbox-file-picker'
-import { useSandboxSecurity } from '@/context/sandbox-security-context'
 import { useFile } from './hooks'
 import { useStore } from './store'
 
@@ -15,11 +12,9 @@ const FileInput = ({
 }: FileInputProps) => {
   const files = useStore(s => s.files)
   const { handleLocalFileUpload } = useFile(fileConfig)
-  const { enabled: sandboxEnabled, isConfigured } = useSandboxSecurity()
-  const [showPicker, setShowPicker] = useState(false)
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const targetFiles = e.target.files
+
     if (targetFiles) {
       if (fileConfig.number_limits) {
         for (let i = 0; i < targetFiles.length; i++) {
@@ -33,36 +28,10 @@ const FileInput = ({
     }
   }
 
-  const handleSandboxSelect = useCallback((selectedFiles: File[]) => {
-    for (const file of selectedFiles)
-      handleLocalFileUpload(file)
-  }, [handleLocalFileUpload])
-
   const allowedFileTypes = fileConfig.allowed_file_types
   const isCustom = allowedFileTypes?.includes(SupportUploadFileTypes.custom)
   const exts = isCustom ? (fileConfig.allowed_file_extensions || []) : (allowedFileTypes?.map(type => FILE_EXTS[type]) || []).flat().map(item => `.${item}`)
   const accept = exts.join(',')
-
-  const useSandbox = sandboxEnabled && isConfigured
-
-  // When sandbox mode is on, intercept click to show sandbox picker instead
-  if (useSandbox) {
-    return (
-      <>
-        <div
-          className="absolute inset-0 block w-full cursor-pointer"
-          onClick={() => setShowPicker(true)}
-        />
-        <SandboxFilePicker
-          open={showPicker}
-          onClose={() => setShowPicker(false)}
-          onSelect={handleSandboxSelect}
-          accept={accept}
-          multiple={!!fileConfig.number_limits && fileConfig.number_limits > 1}
-        />
-      </>
-    )
-  }
 
   return (
     <input

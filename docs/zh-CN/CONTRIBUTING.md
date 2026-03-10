@@ -1,20 +1,20 @@
 # 贡献指南
 
-非常感谢你考虑为 CheersAI 做出贡献！作为一家资源有限的创业公司，我们希望打造最直观的 LLM 应用开发和管理工作流程。社区的每一份贡献对我们来说都弥足珍贵。
+非常感谢你考虑为 Dify 做出贡献！作为一家资源有限的创业公司，我们希望打造最直观的 LLM 应用开发和管理工作流程。社区的每一份贡献对我们来说都弥足珍贵。
 
 我们需要保持敏捷和快速迭代，同时也希望确保贡献者能获得尽可能流畅的参与体验。这份贡献指南旨在帮助你熟悉代码库和我们的工作方式，让你可以尽快进入有趣的开发环节。
 
-本指南和 CheersAI 一样在不断完善中。如果有任何滞后于项目实际情况的地方，恳请谅解，我们也欢迎任何改进建议。
+本指南和 Dify 一样在不断完善中。如果有任何滞后于项目实际情况的地方，恳请谅解，我们也欢迎任何改进建议。
 
 关于许可证，请花一分钟阅读我们简短的[许可和贡献者协议](../../LICENSE)。同时也请遵循社区[行为准则](https://github.com/langgenius/.github/blob/main/CODE_OF_CONDUCT.md)。
 
 ## 开始之前
 
-想寻找可以着手的任务？浏览我们的[新手友好议题](https://github.com/CheersAI/CheersAI-Desktop/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22)并选择一个开始！
+想寻找可以着手的任务？浏览我们的[新手友好议题](https://github.com/langgenius/dify/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22)并选择一个开始！
 
-有酷炫的新模型运行时或工具要添加？在我们的[插件仓库](https://github.com/CheersAI/CheersAI-Desktop-plugins)开启 PR，展示你的作品。
+有酷炫的新模型运行时或工具要添加？在我们的[插件仓库](https://github.com/langgenius/dify-plugins)开启 PR，展示你的作品。
 
-需要更新现有模型运行时、工具或修复 bug？前往我们的[官方插件仓库](https://github.com/CheersAI/CheersAI-Desktop-official-plugins)大展身手！
+需要更新现有模型运行时、工具或修复 bug？前往我们的[官方插件仓库](https://github.com/langgenius/dify-official-plugins)大展身手！
 
 加入我们，一起贡献，共同打造精彩项目！💡✨
 
@@ -55,7 +55,7 @@
 | 功能类型 | 优先级 |
 | -------------------------------------------------- | ---------- |
 | 被团队成员标记为高优先级的功能 | 高优先级 |
-| 来自[社区反馈板](https://github.com/CheersAI/CheersAI-Desktop/discussions/categories/feedbacks)的热门功能请求 | 中等优先级 |
+| 来自[社区反馈板](https://github.com/langgenius/dify/discussions/categories/feedbacks)的热门功能请求 | 中等优先级 |
 | 非核心功能和小改进 | 低优先级 |
 | 有价值但非紧急的功能 | 未来特性 |
 
@@ -75,11 +75,11 @@
 
 #### 前端
 
-关于前端服务的设置，请参考 `web/README.md` 文件中的[详细指南](https://github.com/CheersAI/CheersAI-Desktop/blob/main/web/README.md)。该文档提供了帮助你正确配置前端环境的详细说明。
+关于前端服务的设置，请参考 `web/README.md` 文件中的[详细指南](https://github.com/langgenius/dify/blob/main/web/README.md)。该文档提供了帮助你正确配置前端环境的详细说明。
 
 #### 后端
 
-关于后端服务的设置，请参考 `api/README.md` 文件中的[详细说明](https://github.com/CheersAI/CheersAI-Desktop/blob/main/api/README.md)。该文档包含了帮助你顺利运行后端的步骤说明。
+关于后端服务的设置，请参考 `api/README.md` 文件中的[详细说明](https://github.com/langgenius/dify/blob/main/api/README.md)。该文档包含了帮助你顺利运行后端的步骤说明。
 
 #### 其他注意事项
 

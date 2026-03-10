@@ -1,1 +1,1 @@
-export const LICENSE_LINK = 'https://github.com/CheersAI/CheersAI-Desktop?tab=License-1-ov-file#readme'
+export const LICENSE_LINK = 'https://github.com/langgenius/dify?tab=License-1-ov-file#readme'

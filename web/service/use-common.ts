@@ -86,7 +86,9 @@ export const useUserProfile = () => {
         profile,
         meta: {
           currentVersion: response.headers.get('x-version'),
-          currentEnv: response.headers.get('x-env'),
+          currentEnv: IS_DEV
+            ? 'DEVELOPMENT'
+            : response.headers.get('x-env'),
         },
       }
     },

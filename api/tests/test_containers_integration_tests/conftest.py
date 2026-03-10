@@ -1,5 +1,5 @@
 """
-TestContainers-based integration test configuration for CheersAI API.
+TestContainers-based integration test configuration for Dify API.
 
 This module provides containerized test infrastructure using TestContainers library
 to spin up real database and service instances for integration testing. This approach
@@ -31,9 +31,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 
-class CheersAITestContainers:
+class DifyTestContainers:
     """
-    Manages all test containers required for CheersAI integration tests.
+    Manages all test containers required for Dify integration tests.
 
     This class provides a centralized way to manage multiple containers
     needed for comprehensive integration testing, including databases,
@@ -45,24 +45,24 @@ class CheersAITestContainers:
         self.network: Network | None = None
         self.postgres: PostgresContainer | None = None
         self.redis: RedisContainer | None = None
-        self.cheersai_sandbox: DockerContainer | None = None
-        self.cheersai_plugin_daemon: DockerContainer | None = None
+        self.dify_sandbox: DockerContainer | None = None
+        self.dify_plugin_daemon: DockerContainer | None = None
         self._containers_started = False
-        logger.info("CheersAITestContainers initialized - ready to manage test containers")
+        logger.info("DifyTestContainers initialized - ready to manage test containers")
 
     def start_containers_with_env(self):
         """
         Start all required containers for integration testing.
 
         This method initializes and starts PostgreSQL, Redis
-        containers with appropriate configurations for CheersAI testing. Containers
+        containers with appropriate configurations for Dify testing. Containers
         are started in dependency order to ensure proper initialization.
         """
         if self._containers_started:
             logger.info("Containers already started - skipping container startup")
             return
 
-        logger.info("Starting test containers for CheersAI integration tests...")
+        logger.info("Starting test containers for Dify integration tests...")
 
         # Create Docker network for container communication
         logger.info("Creating Docker network for container communication...")
@@ -118,7 +118,7 @@ class CheersAITestContainers:
         except Exception as e:
             logger.warning("Failed to install uuid-ossp extension: %s", e)
 
-        # Create plugin database for plugin daemon
+        # Create plugin database for dify-plugin-daemon
         logger.info("Creating plugin database...")
         try:
             conn = psycopg2.connect(
@@ -130,7 +130,7 @@ class CheersAITestContainers:
             )
             conn.autocommit = True
             cursor = conn.cursor()
-            cursor.execute("CREATE DATABASE cheersai_plugin;")
+            cursor.execute("CREATE DATABASE dify_plugin;")
             cursor.close()
             conn.close()
             logger.info("Plugin database created successfully")
@@ -140,7 +140,7 @@ class CheersAITestContainers:
         # Set up storage environment variables
         os.environ.setdefault("STORAGE_TYPE", "opendal")
         os.environ.setdefault("OPENDAL_SCHEME", "fs")
-        os.environ.setdefault("OPENDAL_FS_ROOT", "/tmp/cheersai-storage")
+        os.environ.setdefault("OPENDAL_FS_ROOT", "/tmp/dify-storage")
 
         # Start Redis container for caching and session management
         # Redis is used for storing session data, cache entries, and temporary data
@@ -158,43 +158,43 @@ class CheersAITestContainers:
         wait_for_logs(self.redis, "Ready to accept connections", timeout=30)
         logger.info("Redis container is ready and accepting connections")
 
-        # Start CheersAI Sandbox container for code execution environment
-        # CheersAI Sandbox provides a secure environment for executing user code
-        logger.info("Initializing CheersAI Sandbox container...")
-        self.cheersai_sandbox = DockerContainer(image="cheersai/cheersai-sandbox:latest").with_network(self.network)
-        self.cheersai_sandbox.with_exposed_ports(8194)
-        self.cheersai_sandbox.env = {
+        # Start Dify Sandbox container for code execution environment
+        # Dify Sandbox provides a secure environment for executing user code
+        logger.info("Initializing Dify Sandbox container...")
+        self.dify_sandbox = DockerContainer(image="langgenius/dify-sandbox:latest").with_network(self.network)
+        self.dify_sandbox.with_exposed_ports(8194)
+        self.dify_sandbox.env = {
             "API_KEY": "test_api_key",
         }
-        self.cheersai_sandbox.start()
-        sandbox_host = self.cheersai_sandbox.get_container_host_ip()
-        sandbox_port = self.cheersai_sandbox.get_exposed_port(8194)
+        self.dify_sandbox.start()
+        sandbox_host = self.dify_sandbox.get_container_host_ip()
+        sandbox_port = self.dify_sandbox.get_exposed_port(8194)
         os.environ["CODE_EXECUTION_ENDPOINT"] = f"http://{sandbox_host}:{sandbox_port}"
         os.environ["CODE_EXECUTION_API_KEY"] = "test_api_key"
-        logger.info("CheersAI Sandbox container started successfully - Host: %s, Port: %s", sandbox_host, sandbox_port)
+        logger.info("Dify Sandbox container started successfully - Host: %s, Port: %s", sandbox_host, sandbox_port)
 
-        # Wait for CheersAI Sandbox to be ready
-        logger.info("Waiting for CheersAI Sandbox to be ready to accept connections...")
-        wait_for_logs(self.cheersai_sandbox, "config init success", timeout=60)
-        logger.info("CheersAI Sandbox container is ready and accepting connections")
+        # Wait for Dify Sandbox to be ready
+        logger.info("Waiting for Dify Sandbox to be ready to accept connections...")
+        wait_for_logs(self.dify_sandbox, "config init success", timeout=60)
+        logger.info("Dify Sandbox container is ready and accepting connections")
 
-        # Start CheersAI Plugin Daemon container for plugin management
-        # CheersAI Plugin Daemon provides plugin lifecycle management and execution
-        logger.info("Initializing CheersAI Plugin Daemon container...")
-        self.cheersai_plugin_daemon = DockerContainer(image="cheersai/cheersai-plugin-daemon:0.3.0-local").with_network(
+        # Start Dify Plugin Daemon container for plugin management
+        # Dify Plugin Daemon provides plugin lifecycle management and execution
+        logger.info("Initializing Dify Plugin Daemon container...")
+        self.dify_plugin_daemon = DockerContainer(image="langgenius/dify-plugin-daemon:0.3.0-local").with_network(
             self.network
         )
-        self.cheersai_plugin_daemon.with_exposed_ports(5002)
+        self.dify_plugin_daemon.with_exposed_ports(5002)
         # Get container internal network addresses
         postgres_container_name = self.postgres.get_wrapped_container().name
         redis_container_name = self.redis.get_wrapped_container().name
 
-        self.cheersai_plugin_daemon.env = {
+        self.dify_plugin_daemon.env = {
             "DB_HOST": postgres_container_name,  # Use container name for internal network communication
             "DB_PORT": "5432",  # Use internal port
             "DB_USERNAME": self.postgres.username,
             "DB_PASSWORD": self.postgres.password,
-            "DB_DATABASE": "cheersai_plugin",
+            "DB_DATABASE": "dify_plugin",
             "REDIS_HOST": redis_container_name,  # Use container name for internal network communication
             "REDIS_PORT": "6379",  # Use internal port
             "REDIS_PASSWORD": "",
@@ -220,25 +220,25 @@ class CheersAITestContainers:
         }
 
         try:
-            self.cheersai_plugin_daemon.start()
-            plugin_daemon_host = self.cheersai_plugin_daemon.get_container_host_ip()
-            plugin_daemon_port = self.cheersai_plugin_daemon.get_exposed_port(5002)
+            self.dify_plugin_daemon.start()
+            plugin_daemon_host = self.dify_plugin_daemon.get_container_host_ip()
+            plugin_daemon_port = self.dify_plugin_daemon.get_exposed_port(5002)
             os.environ["PLUGIN_DAEMON_URL"] = f"http://{plugin_daemon_host}:{plugin_daemon_port}"
             os.environ["PLUGIN_DAEMON_KEY"] = "test_plugin_daemon_key"
             logger.info(
-                "CheersAI Plugin Daemon container started successfully - Host: %s, Port: %s",
+                "Dify Plugin Daemon container started successfully - Host: %s, Port: %s",
                 plugin_daemon_host,
                 plugin_daemon_port,
             )
 
-            # Wait for CheersAI Plugin Daemon to be ready
-            logger.info("Waiting for CheersAI Plugin Daemon to be ready to accept connections...")
-            wait_for_logs(self.cheersai_plugin_daemon, "start plugin manager daemon", timeout=60)
-            logger.info("CheersAI Plugin Daemon container is ready and accepting connections")
+            # Wait for Dify Plugin Daemon to be ready
+            logger.info("Waiting for Dify Plugin Daemon to be ready to accept connections...")
+            wait_for_logs(self.dify_plugin_daemon, "start plugin manager daemon", timeout=60)
+            logger.info("Dify Plugin Daemon container is ready and accepting connections")
         except Exception as e:
-            logger.warning("Failed to start CheersAI Plugin Daemon container: %s", e)
+            logger.warning("Failed to start Dify Plugin Daemon container: %s", e)
             logger.info("Continuing without plugin daemon - some tests may be limited")
-            self.cheersai_plugin_daemon = None
+            self.dify_plugin_daemon = None
 
         self._containers_started = True
         logger.info("All test containers started successfully")
@@ -255,7 +255,7 @@ class CheersAITestContainers:
             return
 
         logger.info("Stopping and cleaning up test containers...")
-        containers = [self.redis, self.postgres, self.cheersai_sandbox, self.cheersai_plugin_daemon]
+        containers = [self.redis, self.postgres, self.dify_sandbox, self.dify_plugin_daemon]
         for container in containers:
             if container:
                 try:
@@ -281,7 +281,7 @@ class CheersAITestContainers:
 
 
 # Global container manager instance
-_container_manager = CheersAITestContainers()
+_container_manager = DifyTestContainers()
 
 
 def _get_migration_dir() -> Path:
@@ -387,7 +387,7 @@ def _create_app_with_containers() -> Flask:
 
 
 @pytest.fixture(scope="session")
-def set_up_containers_and_env() -> Generator[CheersAITestContainers, None, None]:
+def set_up_containers_and_env() -> Generator[DifyTestContainers, None, None]:
     """
     Session-scoped fixture to manage test containers.
 
@@ -396,7 +396,7 @@ def set_up_containers_and_env() -> Generator[CheersAITestContainers, None, None]
     improves test performance by reusing containers across multiple tests.
 
     Yields:
-        CheersAITestContainers: Container manager instance
+        DifyTestContainers: Container manager instance
     """
     logger.info("=== Starting test session container management ===")
     _container_manager.start_containers_with_env()

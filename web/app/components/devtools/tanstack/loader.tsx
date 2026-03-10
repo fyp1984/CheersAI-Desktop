@@ -10,5 +10,12 @@ const TanStackDevtoolsWrapper = lazy(() =>
 )
 
 export const TanStackDevtoolsLoader = () => {
-  return null
+  if (!IS_DEV)
+    return null
+
+  return (
+    <Suspense fallback={null}>
+      <TanStackDevtoolsWrapper />
+    </Suspense>
+  )
 }

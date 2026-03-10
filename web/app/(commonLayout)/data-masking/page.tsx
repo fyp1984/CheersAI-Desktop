@@ -1,282 +1,489 @@
 'use client'
+import type { FC } from 'react'
 import * as React from 'react'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { PlusIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon } from '@heroicons/react/24/solid'
 import {
+  RiCheckLine,
+  RiEyeOffLine,
+  RiMailLine,
+  RiPhoneLine,
   RiShieldCheckLine,
-  RiSettings4Line,
-  RiAddLine,
-  RiDeleteBinLine,
-  RiToggleLine,
-  RiToggleFill,
-  RiEditLine,
-  RiRefreshLine,
-  RiFolderLine,
+  RiUserLine,
+  RiIdCardLine,
 } from '@remixicon/react'
-import { useSearchParams } from 'next/navigation'
+import Button from '@/app/components/base/button'
+import Modal from '@/app/components/base/modal'
+import Input from '@/app/components/base/input'
+import Select from '@/app/components/base/select'
 import useDocumentTitle from '@/hooks/use-document-title'
-import { RulesManager } from '@/lib/data-masking/rules-manager'
-import type { MaskingRule } from '@/lib/data-masking/types'
-import { FileMasking } from '@/app/components/data-masking/file-masking'
-import { FileList } from '@/app/components/data-masking/file-list'
-import { FileRestore } from '@/app/components/data-masking/file-restore'
-import { SandboxTransfer } from '@/app/components/data-masking/sandbox-transfer'
-import { RuleForm } from '@/app/components/data-masking/rule-form'
+import type { MaskingRule } from '@/service/data-masking'
 
-type TabType = 'mask' | 'restore' | 'rules' | 'files' | 'transfer'
+const DataMaskingPage: FC = () => {
+  const { t } = useTranslation()
+  useDocumentTitle(t('menus.dataMasking', { ns: 'common' }))
+  
+  const [rules] = useState<MaskingRule[]>([])
+  const isLoading = false
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    type: 'phone',
+    pattern: '',
+    maskChar: '*',
+  })
 
-function NeedSandbox() {
-  return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <RiSettings4Line className="w-12 h-12 text-text-quaternary mb-4" />
-      <h3 className="text-sm font-medium text-text-primary mb-1">请先配置沙箱路径</h3>
-      <p className="text-xs text-text-tertiary mb-4">请在「设置 → 数据安全」中配置沙箱目录</p>
-    </div>
-  )
-}
+  // 预设的正则表达式模板
+  const patternTemplates = {
+    phone: {
+      name: '手机号',
+      pattern: '1[3-9]\\d{9}',
+      example: '13812345678',
+      description: '匹配中国大陆手机号',
+    },
+    email: {
+      name: '邮箱',
+      pattern: '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}',
+      example: 'user@example.com',
+      description: '匹配标准邮箱地址',
+    },
+    id_card: {
+      name: '身份证',
+      pattern: '[1-9]\\d{5}(18|19|20)\\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\\d|3[01])\\d{3}[0-9Xx]',
+      example: '110101199001011234',
+      description: '匹配18位身份证号',
+    },
+    bank_card: {
+      name: '银行卡号',
+      pattern: '\\d{16,19}',
+      example: '6222021234567890123',
+      description: '匹配16-19位银行卡号',
+    },
+    ip_address: {
+      name: 'IP地址',
+      pattern: '\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}',
+      example: '192.168.1.1',
+      description: '匹配IPv4地址',
+    },
+    address: {
+      name: '地址',
+      pattern: '.*省.*市.*区.*',
+      example: '北京市朝阳区xxx街道',
+      description: '匹配包含省市区的地址',
+    },
+    name: {
+      name: '姓名',
+      pattern: '[\\u4e00-\\u9fa5]{2,4}',
+      example: '张三',
+      description: '匹配2-4个中文字符的姓名',
+    },
+    custom: {
+      name: '自定义',
+      pattern: '',
+      example: '',
+      description: '自定义正则表达式',
+    },
+  }
 
-function RulesPanel({
-  rules,
-  isLoading,
-  onAdd,
-  onEdit,
-  onDelete,
-  onToggle,
-  onRefresh,
-}: {
-  rules: MaskingRule[]
-  isLoading: boolean
-  onAdd: () => void
-  onEdit: (rule: MaskingRule) => void
-  onDelete: (id: string) => void
-  onToggle: (id: string) => void
-  onRefresh: () => void
-}) {
-  if (isLoading) {
-    return <div className="flex items-center justify-center py-12 text-sm text-text-tertiary">加载中...</div>
+  // 脱敏策略
+  const maskingStrategies = [
+    { value: 'partial', name: '部分脱敏', description: '保留部分字符，其余用*替换' },
+    { value: 'full', name: '完全脱敏', description: '全部替换为*' },
+    { value: 'hash', name: '哈希脱敏', description: '使用哈希算法加密' },
+    { value: 'replace', name: '替换脱敏', description: '替换为固定文本' },
+  ]
+
+  const [maskingStrategy, setMaskingStrategy] = useState('partial')
+  const [keepStart, setKeepStart] = useState(3)
+  const [keepEnd, setKeepEnd] = useState(4)
+  const [applyToApps, setApplyToApps] = useState<string[]>([])
+  const [testInput, setTestInput] = useState('')
+
+  // 脱敏预览函数
+  const getMaskingPreview = (input: string, strategy: string) => {
+    if (!input) return ''
+    
+    switch (strategy) {
+      case 'partial':
+        if (input.length <= keepStart + keepEnd) return input
+        const start = input.substring(0, keepStart)
+        const end = input.substring(input.length - keepEnd)
+        const middle = '*'.repeat(input.length - keepStart - keepEnd)
+        return `${start}${middle}${end}`
+      case 'full':
+        return '*'.repeat(input.length)
+      case 'hash':
+        return `[HASH:${input.length}位]`
+      case 'replace':
+        return '[已脱敏]'
+      default:
+        return input
+    }
+  }
+
+  // 当规则类型改变时，自动填充对应的正则表达式
+  const handleTypeChange = (type: string) => {
+    const template = patternTemplates[type as keyof typeof patternTemplates]
+    setFormData({
+      ...formData,
+      type,
+      pattern: template.pattern,
+      name: formData.name || template.name,
+    })
+  }
+
+  const handleCreate = () => {
+    // TODO: 调用后端 API 创建规则
+    console.log('Creating rule:', formData)
+    setShowCreateModal(false)
+    // 重置表单
+    setFormData({
+      name: '',
+      type: 'phone',
+      pattern: '',
+      maskChar: '*',
+    })
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-text-tertiary">{rules.length} 条规则</span>
-        <div className="flex items-center gap-2">
-          <button onClick={onRefresh} className="p-1.5 rounded hover:bg-state-base-hover" title="刷新">
-            <RiRefreshLine className="w-4 h-4 text-text-tertiary" />
-          </button>
-          <button
-            onClick={onAdd}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-components-button-primary-text bg-components-button-primary-bg rounded-lg hover:bg-components-button-primary-bg-hover"
+    <>
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="flex items-center justify-between px-12 pt-8 pb-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              {t('dataMasking.title', { ns: 'common' })}
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              {t('dataMasking.description', { ns: 'common' })}
+            </p>
+          </div>
+          <Button
+            variant="primary"
+            className="flex items-center gap-2"
+            onClick={() => setShowCreateModal(true)}
           >
-            <RiAddLine className="w-4 h-4" />新建规则
-          </button>
+            <PlusIcon className="w-4 h-4" />
+            {t('dataMasking.createRule', { ns: 'common' })}
+          </Button>
         </div>
-      </div>
 
-      {rules.length === 0 ? (
-        <div className="text-center py-12">
-          <RiShieldCheckLine className="mx-auto w-12 h-12 text-text-quaternary mb-3" />
-          <p className="text-sm text-text-tertiary">暂无脱敏规则</p>
-          <p className="text-xs text-text-quaternary mt-1">点击「新建规则」或使用预设模板快速创建</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {rules.map(rule => (
-            <div
-              key={rule.id}
-              className={`border rounded-lg p-3 transition-colors ${rule.enabled ? 'border-divider-regular bg-components-panel-bg' : 'border-divider-subtle bg-background-section opacity-60'}`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-text-primary truncate">{rule.name}</span>
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-background-section text-text-tertiary">
-                      {rule.strategy.type}
-                    </span>
-                  </div>
-                  {rule.description && (
-                    <p className="text-xs text-text-tertiary mt-0.5 truncate">{rule.description}</p>
-                  )}
-                  <p className="text-xs text-text-quaternary mt-1 font-mono truncate">
-                    {typeof rule.pattern === 'string' ? rule.pattern : rule.pattern.source}
-                  </p>
+        <div className="flex-1 px-12 pb-8 overflow-y-auto">
+          {/* 统计卡片 */}
+          <div className="grid grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">总规则数</p>
+                  <p className="text-2xl font-semibold text-gray-900 mt-1">{rules.length}</p>
                 </div>
-                <div className="flex items-center gap-1 ml-3 shrink-0">
-                  <button onClick={() => onToggle(rule.id)} className="p-1 rounded hover:bg-state-base-hover" title={rule.enabled ? '禁用' : '启用'}>
-                    {rule.enabled
-                      ? <RiToggleFill className="w-5 h-5 text-text-accent" />
-                      : <RiToggleLine className="w-5 h-5 text-text-quaternary" />}
-                  </button>
-                  <button onClick={() => onEdit(rule)} className="p-1 rounded hover:bg-state-base-hover" title="编辑">
-                    <RiEditLine className="w-4 h-4 text-text-tertiary" />
-                  </button>
-                  <button onClick={() => onDelete(rule.id)} className="p-1 rounded hover:bg-state-base-hover" title="删除">
-                    <RiDeleteBinLine className="w-4 h-4 text-text-destructive" />
-                  </button>
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <RiShieldCheckLine className="w-5 h-5 text-blue-600" />
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
-function DataMaskingPage() {
-  useDocumentTitle('数据脱敏')
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">已启用</p>
+                  <p className="text-2xl font-semibold text-green-600 mt-1">
+                    {rules.filter(r => r.enabled).length}
+                  </p>
+                </div>
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <RiCheckLine className="w-5 h-5 text-green-600" />
+                </div>
+              </div>
+            </div>
 
-  const searchParams = useSearchParams()
-  const activeTab = (searchParams.get('tab') as TabType) || 'mask'
-  const [sandboxPath, setSandboxPath] = useState('')
-  const [rules, setRules] = useState<MaskingRule[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [showForm, setShowForm] = useState(false)
-  const [editingRule, setEditingRule] = useState<MaskingRule | undefined>()
-  const rulesManagerRef = useRef<RulesManager | null>(null)
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">已禁用</p>
+                  <p className="text-2xl font-semibold text-gray-400 mt-1">
+                    {rules.filter(r => !r.enabled).length}
+                  </p>
+                </div>
+                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <XMarkIcon className="w-5 h-5 text-gray-400" />
+                </div>
+              </div>
+            </div>
 
-  useEffect(() => {
-    const saved = localStorage.getItem('sandbox_path')
-    if (saved && !saved.startsWith('['))
-      setSandboxPath(saved)
-  }, [])
-
-  useEffect(() => {
-    const mgr = new RulesManager()
-    rulesManagerRef.current = mgr
-    mgr.initialize().then(() => loadRules(mgr)).catch(console.error)
-    return () => mgr.close()
-  }, [])
-
-  const loadRules = useCallback(async (mgr?: RulesManager) => {
-    const manager = mgr || rulesManagerRef.current
-    if (!manager) return
-    setIsLoading(true)
-    try {
-      const all = await manager.getAllRules()
-      setRules(all.sort((a, b) => a.priority - b.priority))
-    }
-    catch (err) { console.error('Failed to load rules:', err) }
-    finally { setIsLoading(false) }
-  }, [])
-
-  const handleCreateRule = useCallback(async (data: Omit<MaskingRule, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const mgr = rulesManagerRef.current
-    if (!mgr) return
-    try {
-      await mgr.createRule(data)
-      await loadRules(mgr)
-      setShowForm(false)
-      setEditingRule(undefined)
-    }
-    catch (err) { console.error('Failed to create rule:', err) }
-  }, [loadRules])
-
-  const handleUpdateRule = useCallback(async (data: Omit<MaskingRule, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const mgr = rulesManagerRef.current
-    if (!mgr || !editingRule) return
-    try {
-      await mgr.updateRule(editingRule.id, data)
-      await loadRules(mgr)
-      setShowForm(false)
-      setEditingRule(undefined)
-    }
-    catch (err) { console.error('Failed to update rule:', err) }
-  }, [editingRule, loadRules])
-
-  const handleDeleteRule = useCallback(async (id: string) => {
-    const mgr = rulesManagerRef.current
-    if (!mgr) return
-    if (!confirm('确定删除该规则？')) return
-    try {
-      await mgr.deleteRule(id)
-      await loadRules(mgr)
-    }
-    catch (err) { console.error('Failed to delete rule:', err) }
-  }, [loadRules])
-
-  const handleToggleRule = useCallback(async (id: string) => {
-    const mgr = rulesManagerRef.current
-    if (!mgr) return
-    const rule = rules.find(r => r.id === id)
-    if (!rule) return
-    try {
-      await mgr.updateRule(id, { enabled: !rule.enabled })
-      await loadRules(mgr)
-    }
-    catch (err) { console.error('Failed to toggle rule:', err) }
-  }, [rules, loadRules])
-
-  const needsSandbox = !sandboxPath && (activeTab === 'mask' || activeTab === 'files' || activeTab === 'restore' || activeTab === 'transfer')
-
-  const TAB_TITLES: Record<TabType, string> = {
-    mask: '文件脱敏',
-    restore: '脱敏还原',
-    rules: '脱敏规则',
-    files: '文件管理',
-    transfer: '导出导入',
-  }
-
-  return (
-    <div className="relative flex h-0 shrink-0 grow flex-col overflow-y-auto bg-background-body">
-      {/* Top header bar */}
-      <div className="sticky top-0 z-10 flex items-center justify-between bg-background-body px-12 pb-4 pt-7">
-        <h2 className="text-lg font-semibold text-text-primary">{TAB_TITLES[activeTab]}</h2>
-        {sandboxPath && (
-          <div className="flex items-center gap-1.5 text-xs text-text-quaternary bg-background-section rounded-lg px-3 py-1.5 border border-divider-subtle">
-            <RiFolderLine className="w-3.5 h-3.5 text-text-quaternary" />
-            <span className="truncate max-w-[300px]" title={sandboxPath}>{sandboxPath}</span>
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">本月脱敏</p>
+                  <p className="text-2xl font-semibold text-purple-600 mt-1">1.2K</p>
+                </div>
+                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <RiEyeOffLine className="w-5 h-5 text-purple-600" />
+                </div>
+              </div>
+            </div>
           </div>
-        )}
+
+          {/* 快速操作和使用指南 */}
+          {rules.length === 0 && (
+            <div className="grid grid-cols-3 gap-6 mb-6">
+              {/* 快速创建模板 */}
+              <div className="col-span-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">快速创建常用规则</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { type: 'phone', name: '手机号脱敏', icon: RiPhoneLine, desc: '保护用户手机号隐私', bgColor: 'bg-blue-100', hoverBgColor: 'group-hover:bg-blue-200', iconColor: 'text-blue-600' },
+                    { type: 'email', name: '邮箱脱敏', icon: RiMailLine, desc: '隐藏邮箱地址信息', bgColor: 'bg-green-100', hoverBgColor: 'group-hover:bg-green-200', iconColor: 'text-green-600' },
+                    { type: 'id_card', name: '身份证脱敏', icon: RiIdCardLine, desc: '保护身份证号安全', bgColor: 'bg-purple-100', hoverBgColor: 'group-hover:bg-purple-200', iconColor: 'text-purple-600' },
+                    { type: 'name', name: '姓名脱敏', icon: RiUserLine, desc: '隐藏真实姓名', bgColor: 'bg-orange-100', hoverBgColor: 'group-hover:bg-orange-200', iconColor: 'text-orange-600' },
+                  ].map((template) => {
+                    const IconComponent = template.icon
+                    return (
+                      <button
+                        key={template.type}
+                        onClick={() => {
+                          handleTypeChange(template.type)
+                          setShowCreateModal(true)
+                        }}
+                        className="flex items-start p-4 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-left group"
+                      >
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 mr-3 ${template.bgColor} ${template.hoverBgColor} transition-colors`}>
+                          <IconComponent className={`w-5 h-5 ${template.iconColor}`} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{template.name}</p>
+                          <p className="text-xs text-gray-500 mt-1">{template.desc}</p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* 使用指南 */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">使用指南</h3>
+                <div className="space-y-4">
+                  <div className="flex items-start">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-semibold text-blue-600">1</span>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-900">创建规则</p>
+                      <p className="text-xs text-gray-500 mt-1">选择数据类型并配置脱敏策略</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-semibold text-blue-600">2</span>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-900">测试预览</p>
+                      <p className="text-xs text-gray-500 mt-1">验证脱敏效果是否符合预期</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-semibold text-blue-600">3</span>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-900">启用规则</p>
+                      <p className="text-xs text-gray-500 mt-1">规则将自动应用到相关场景</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 规则列表 */}
+          {isLoading
+            ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-gray-400">
+                  {t('loading', { ns: 'common' })}
+                </div>
+              </div>
+              )
+            : rules.length === 0
+              ? (
+                <div className="flex flex-col items-center justify-center h-48 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                  <RiShieldCheckLine className="w-12 h-12 text-gray-300 mb-4" />
+                  <h3 className="text-sm font-medium text-gray-900">
+                    {t('dataMasking.noRules', { ns: 'common' })}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {t('dataMasking.noRulesDescription', { ns: 'common' })}
+                  </p>
+                </div>
+                )
+              : (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-4">脱敏规则列表</h3>
+                  <div className="space-y-3">
+                    {rules.map(rule => (
+                      <div
+                        key={rule.id}
+                        className="p-4 bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3">
+                              <h3 className="text-sm font-medium text-gray-900">
+                                {rule.name}
+                              </h3>
+                              <span className={`px-2 py-0.5 text-xs rounded ${rule.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                                {rule.enabled ? t('dataMasking.enabled', { ns: 'common' }) : t('dataMasking.disabled', { ns: 'common' })}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-gray-500">
+                              {rule.type} • {rule.pattern}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="small">编辑</Button>
+                            <Button variant="ghost" size="small">删除</Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                )}
+        </div>
       </div>
 
-      {/* Content area */}
-      <div className="px-12 pb-8">
-        {activeTab === 'mask' && (
-          needsSandbox
-            ? <NeedSandbox />
-            : <FileMasking sandboxPath={sandboxPath} />
-        )}
+      {/* 创建规则弹窗 - 简化版 */}
+      <Modal
+        isShow={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title={t('dataMasking.createRule', { ns: 'common' })}
+        className="max-w-[520px]"
+        closable
+      >
+        <div className="mt-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('dataMasking.ruleName', { ns: 'common' })}
+            </label>
+            <Input
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="请输入规则名称"
+            />
+          </div>
 
-        {activeTab === 'restore' && (
-          needsSandbox
-            ? <NeedSandbox />
-            : <FileRestore sandboxPath={sandboxPath} />
-        )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('dataMasking.ruleType', { ns: 'common' })}
+            </label>
+            <Select
+              items={[
+                { value: 'phone', name: '手机号' },
+                { value: 'email', name: '邮箱' },
+                { value: 'id_card', name: '身份证' },
+                { value: 'bank_card', name: '银行卡号' },
+                { value: 'ip_address', name: 'IP地址' },
+                { value: 'address', name: '地址' },
+                { value: 'name', name: '姓名' },
+                { value: 'custom', name: '自定义' },
+              ]}
+              defaultValue={formData.type}
+              onSelect={(item) => handleTypeChange(item.value as string)}
+            />
+            {formData.type !== 'custom' && patternTemplates[formData.type as keyof typeof patternTemplates] && (
+              <div className="mt-2 p-3 bg-blue-50 rounded-lg">
+                <p className="text-xs text-blue-600">
+                  <span className="font-medium">示例：</span>
+                  {patternTemplates[formData.type as keyof typeof patternTemplates].example}
+                </p>
+              </div>
+            )}
+          </div>
 
-        {activeTab === 'rules' && (
-          <RulesPanel
-            rules={rules}
-            isLoading={isLoading}
-            onAdd={() => { setEditingRule(undefined); setShowForm(true) }}
-            onEdit={(rule) => { setEditingRule(rule); setShowForm(true) }}
-            onDelete={handleDeleteRule}
-            onToggle={handleToggleRule}
-            onRefresh={() => loadRules()}
-          />
-        )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('dataMasking.pattern', { ns: 'common' })}
+            </label>
+            <Input
+              value={formData.pattern}
+              onChange={(e) => setFormData({ ...formData, pattern: e.target.value })}
+              placeholder={formData.type === 'custom' ? '请输入正则表达式' : '已自动填充'}
+            />
+          </div>
 
-        {activeTab === 'files' && (
-          needsSandbox
-            ? <NeedSandbox />
-            : <FileList sandboxPath={sandboxPath} />
-        )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              脱敏策略
+            </label>
+            <Select
+              items={maskingStrategies.map(s => ({ value: s.value, name: s.name }))}
+              defaultValue={maskingStrategy}
+              onSelect={(item) => setMaskingStrategy(item.value as string)}
+            />
+          </div>
 
-        {activeTab === 'transfer' && (
-          needsSandbox
-            ? <NeedSandbox />
-            : <SandboxTransfer sandboxPath={sandboxPath} />
-        )}
-      </div>
+          {maskingStrategy === 'partial' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  保留前几位
+                </label>
+                <Input
+                  type="number"
+                  value={keepStart}
+                  onChange={(e) => setKeepStart(Number(e.target.value))}
+                  min={0}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  保留后几位
+                </label>
+                <Input
+                  type="number"
+                  value={keepEnd}
+                  onChange={(e) => setKeepEnd(Number(e.target.value))}
+                  min={0}
+                />
+              </div>
+            </div>
+          )}
 
-      {/* Rule form modal */}
-      {showForm && (
-        <RuleForm
-          rule={editingRule}
-          onSave={editingRule ? handleUpdateRule : handleCreateRule}
-          onCancel={() => { setShowForm(false); setEditingRule(undefined) }}
-        />
-      )}
-    </div>
+          {/* 脱敏预览 */}
+          {testInput && (
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-xs text-gray-500 mb-2">预览效果</p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-mono text-gray-900">{testInput}</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-sm font-mono text-blue-600">{getMaskingPreview(testInput, maskingStrategy)}</span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
+            <Button
+              variant="secondary"
+              onClick={() => setShowCreateModal(false)}
+            >
+              <XMarkIcon className="w-4 h-4 mr-1" />
+              {t('operation.cancel', { ns: 'common' })}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleCreate}
+              disabled={!formData.name || !formData.pattern}
+            >
+              <PlusIcon className="w-4 h-4 mr-1" />
+              {t('operation.create', { ns: 'common' })}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </>
   )
 }
 

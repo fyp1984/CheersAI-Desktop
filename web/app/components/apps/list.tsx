@@ -2,7 +2,12 @@
 
 import type { FC } from 'react'
 import {
+  RiApps2Line,
   RiDragDropLine,
+  RiExchange2Line,
+  RiFile4Line,
+  RiMessage3Line,
+  RiRobot3Line,
 } from '@remixicon/react'
 import { useDebounceFn } from 'ahooks'
 import dynamic from 'next/dynamic'
@@ -13,12 +18,13 @@ import { parseAsString, useQueryState } from 'nuqs'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Input from '@/app/components/base/input'
+import TabSliderNew from '@/app/components/base/tab-slider-new'
 import TagFilter from '@/app/components/base/tag-management/filter'
 import { useStore as useTagStore } from '@/app/components/base/tag-management/store'
 import CheckboxWithLabel from '@/app/components/datasets/create/website/base/checkbox-with-label'
 import { NEED_REFRESH_APP_LIST_KEY } from '@/config'
 import { useAppContext } from '@/context/app-context'
-
+import { useGlobalPublicStore } from '@/context/global-public-context'
 import { CheckModal } from '@/hooks/use-pay'
 import { useInfiniteAppList } from '@/service/use-apps'
 import { AppModeEnum } from '@/types/app'
@@ -26,7 +32,7 @@ import { cn } from '@/utils/classnames'
 import AppCard from './app-card'
 import { AppCardSkeleton } from './app-card-skeleton'
 import Empty from './empty'
-
+import Footer from './footer'
 import useAppsQueryState from './hooks/use-apps-query-state'
 import { useDSLDragDrop } from './hooks/use-dsl-drag-drop'
 import NewAppCard from './new-app-card'
@@ -55,7 +61,7 @@ const List: FC<Props> = ({
   controlRefreshList = 0,
 }) => {
   const { t } = useTranslation()
-
+  const { systemFeatures } = useGlobalPublicStore()
   const router = useRouter()
   const { isCurrentWorkspaceEditor, isCurrentWorkspaceDatasetOperator, isLoadingCurrentWorkspace } = useAppContext()
   const showTagManagementModal = useTagStore(s => s.showTagManagementModal)
@@ -118,6 +124,14 @@ const List: FC<Props> = ({
   }, [controlRefreshList])
 
   const anchorRef = useRef<HTMLDivElement>(null)
+  const options = [
+    { value: 'all', text: t('types.all', { ns: 'app' }), icon: <RiApps2Line className="mr-1 h-[14px] w-[14px]" /> },
+    { value: AppModeEnum.WORKFLOW, text: t('types.workflow', { ns: 'app' }), icon: <RiExchange2Line className="mr-1 h-[14px] w-[14px]" /> },
+    { value: AppModeEnum.ADVANCED_CHAT, text: t('types.advanced', { ns: 'app' }), icon: <RiMessage3Line className="mr-1 h-[14px] w-[14px]" /> },
+    { value: AppModeEnum.CHAT, text: t('types.chatbot', { ns: 'app' }), icon: <RiMessage3Line className="mr-1 h-[14px] w-[14px]" /> },
+    { value: AppModeEnum.AGENT_CHAT, text: t('types.agent', { ns: 'app' }), icon: <RiRobot3Line className="mr-1 h-[14px] w-[14px]" /> },
+    { value: AppModeEnum.COMPLETION, text: t('types.completion', { ns: 'app' }), icon: <RiFile4Line className="mr-1 h-[14px] w-[14px]" /> },
+  ]
 
   useEffect(() => {
     if (localStorage.getItem(NEED_REFRESH_APP_LIST_KEY) === '1') {
@@ -196,7 +210,12 @@ const List: FC<Props> = ({
           </div>
         )}
 
-        <div className="sticky top-0 z-10 flex flex-wrap items-center justify-end gap-y-2 bg-background-body px-12 pb-5 pt-7">
+        <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-y-2 bg-background-body px-12 pb-5 pt-7">
+          <TabSliderNew
+            value={activeTab}
+            onChange={setActiveTab}
+            options={options}
+          />
           <div className="flex items-center gap-2">
             <CheckboxWithLabel
               className="mr-2"
@@ -257,7 +276,9 @@ const List: FC<Props> = ({
             <span className="system-xs-regular">{t('newApp.dropDSLToCreateApp', { ns: 'app' })}</span>
           </div>
         )}
-
+        {!systemFeatures.branding.enabled && (
+          <Footer />
+        )}
         <CheckModal />
         <div ref={anchorRef} className="h-0"> </div>
         {showTagManagementModal && (

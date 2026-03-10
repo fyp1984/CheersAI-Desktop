@@ -21,7 +21,7 @@ export const useGetPricingPageLanguage = () => {
   return getPricingPageLanguage(locale)
 }
 
-export const defaultDocBaseUrl = 'https://docs.cheersai.cloud'
+export const defaultDocBaseUrl = 'https://docs.dify.ai'
 export type DocPathMap = Partial<Record<Locale, DocPathWithoutLang>>
 
 export const useDocLink = (baseUrl?: string): ((path?: DocPathWithoutLang, pathMap?: DocPathMap) => string) => {

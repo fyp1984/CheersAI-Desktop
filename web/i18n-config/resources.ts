@@ -8,7 +8,6 @@ import app from '../i18n/en-US/app.json'
 import billing from '../i18n/en-US/billing.json'
 import common from '../i18n/en-US/common.json'
 import custom from '../i18n/en-US/custom.json'
-import dataMasking from '../i18n/en-US/data-masking.json'
 import datasetCreation from '../i18n/en-US/dataset-creation.json'
 import datasetDocuments from '../i18n/en-US/dataset-documents.json'
 import datasetHitTesting from '../i18n/en-US/dataset-hit-testing.json'
@@ -42,7 +41,6 @@ const resources = {
   billing,
   common,
   custom,
-  dataMasking,
   dataset,
   datasetCreation,
   datasetDocuments,

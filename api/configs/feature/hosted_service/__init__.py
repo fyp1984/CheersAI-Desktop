@@ -448,7 +448,7 @@ class HostedFetchAppTemplateConfig(BaseSettings):
 
     HOSTED_FETCH_APP_TEMPLATES_REMOTE_DOMAIN: str = Field(
         description="Domain for fetching remote app templates",
-        default="https://tmpl.cheersai.cloud",
+        default="https://tmpl.dify.ai",
     )
 
 
@@ -464,7 +464,7 @@ class HostedFetchPipelineTemplateConfig(BaseSettings):
 
     HOSTED_FETCH_PIPELINE_TEMPLATES_REMOTE_DOMAIN: str = Field(
         description="Domain for fetching remote pipeline templates",
-        default="https://tmpl.cheersai.cloud",
+        default="https://tmpl.dify.ai",
     )
 
 

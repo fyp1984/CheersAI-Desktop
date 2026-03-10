@@ -10,7 +10,7 @@ from grpc.experimental import gevent as grpc_gevent  # type: ignore
 # To ensure correct behavior, defer any initialization or imports that depend on monkey-patching
 # to the `post_patch` hook below, or use a gevent_events subscriber as shown.
 #
-# For further context, see: https://github.com/CheersAI/CheersAI-Desktop/issues/26689
+# For further context, see: https://github.com/langgenius/dify/issues/26689
 #
 # Note: The `post_fork` hook is also executed before monkey-patching,
 # so moving imports there does not resolve this issue.

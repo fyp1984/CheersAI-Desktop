@@ -149,7 +149,7 @@ class TriggerLogResponse(BaseModel):
 class WorkflowScheduleCFSPlanEntity(BaseModel):
     """
     CFS plan entity.
-    Ensure each workflow run inside CheersAI is associated with a CFS(Completely Fair Scheduler) plan.
+    Ensure each workflow run inside Dify is associated with a CFS(Completely Fair Scheduler) plan.
 
     """
 

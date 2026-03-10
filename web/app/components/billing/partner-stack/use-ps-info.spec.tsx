@@ -69,7 +69,7 @@ describe('usePSInfo', () => {
 
   beforeAll(() => {
     Object.defineProperty(globalThis, 'location', {
-      value: { hostname: 'cloud.cheersai.cloud' },
+      value: { hostname: 'cloud.dify.ai' },
       configurable: true,
     })
   })
@@ -117,7 +117,7 @@ describe('usePSInfo', () => {
       {
         expires: PARTNER_STACK_CONFIG.saveCookieDays,
         path: '/',
-        domain: '.cheersai.cloud',
+        domain: '.dify.ai',
       },
     )
   })
@@ -163,7 +163,7 @@ describe('usePSInfo', () => {
     })
     expect(remove).toHaveBeenCalledWith(PARTNER_STACK_CONFIG.cookieName, {
       path: '/',
-      domain: '.cheersai.cloud',
+      domain: '.dify.ai',
     })
 
     await act(async () => {
@@ -190,7 +190,7 @@ describe('usePSInfo', () => {
     const { remove } = ensureCookieMocks()
     expect(remove).toHaveBeenCalledWith(PARTNER_STACK_CONFIG.cookieName, {
       path: '/',
-      domain: '.cheersai.cloud',
+      domain: '.dify.ai',
     })
   })
 })

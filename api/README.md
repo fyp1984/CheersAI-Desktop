@@ -1,4 +1,4 @@
-# CheersAI Backend API
+# Dify Backend API
 
 ## Setup and Run
 
@@ -6,7 +6,7 @@
 >
 > In the v1.3.0 release, `poetry` has been replaced with
 > [`uv`](https://docs.astral.sh/uv/) as the package manager
-> for CheersAI API backend service.
+> for Dify API backend service.
 
 `uv` and `pnpm` are required to run the setup and development commands below.
 
@@ -34,7 +34,7 @@ The scripts resolve paths relative to their location, so you can run them from a
    ./dev/start-api
    ```
 
-1. Start CheersAI [web](../web) service.
+1. Start Dify [web](../web) service.
 
    ```bash
    ./dev/start-web
@@ -109,7 +109,7 @@ These commands assume you start from the repository root.
    uv run flask run --host 0.0.0.0 --port=5001 --debug
    ```
 
-1. Start CheersAI [web](../web) service (in a new terminal).
+1. Start Dify [web](../web) service (in a new terminal).
 
    ```bash
    cd web

@@ -1,20 +1,20 @@
 # 기여하기
 
-CheersAI에 기여하려고 하시는군요 - 정말 멋집니다, 당신이 무엇을 할지 기대가 됩니다. 인력과 자금이 제한된 스타트업으로서, 우리는 LLM 애플리케이션을 구축하고 관리하기 위한 가장 직관적인 워크플로우를 설계하고자 하는 큰 야망을 가지고 있습니다. 커뮤니티의 모든 도움은 정말 중요합니다.
+Dify에 기여하려고 하시는군요 - 정말 멋집니다, 당신이 무엇을 할지 기대가 됩니다. 인력과 자금이 제한된 스타트업으로서, 우리는 LLM 애플리케이션을 구축하고 관리하기 위한 가장 직관적인 워크플로우를 설계하고자 하는 큰 야망을 가지고 있습니다. 커뮤니티의 모든 도움은 정말 중요합니다.
 
 우리는 현재 상황에서 민첩하게 빠르게 배포해야 하지만, 동시에 당신과 같은 기여자들이 기여하는 과정에서 최대한 원활한 경험을 얻을 수 있도록 하고 싶습니다. 우리는 이러한 목적으로 이 기여 가이드를 작성했으며, 여러분이 코드베이스와 우리가 기여자들과 어떻게 협업하는지에 대해 친숙해질 수 있도록 돕고, 빠르게 재미있는 부분으로 넘어갈 수 있도록 하고자 합니다.
 
-이 가이드는 CheersAI 자체와 마찬가지로 끊임없이 진행 중인 작업입니다. 때로는 실제 프로젝트보다 뒤처질 수 있다는 점을 이해해 주시면 감사하겠으며, 개선을 위한 피드백은 언제든지 환영합니다.
+이 가이드는 Dify 자체와 마찬가지로 끊임없이 진행 중인 작업입니다. 때로는 실제 프로젝트보다 뒤처질 수 있다는 점을 이해해 주시면 감사하겠으며, 개선을 위한 피드백은 언제든지 환영합니다.
 
 라이센스 측면에서, 간략한 [라이센스 및 기여자 동의서](../../LICENSE)를 읽어보는 시간을 가져주세요. 커뮤니티는 또한 [행동 강령](https://github.com/langgenius/.github/blob/main/CODE_OF_CONDUCT.md)을 준수합니다.
 
 ## 시작하기 전에
 
-처리할 작업을 찾고 계신가요? [초보자를 위한 이슈](https://github.com/CheersAI/CheersAI-Desktop/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22)를 살펴보고 시작할 것을 선택하세요!
+처리할 작업을 찾고 계신가요? [초보자를 위한 이슈](https://github.com/langgenius/dify/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22)를 살펴보고 시작할 것을 선택하세요!
 
-추가할 새로운 모델 런타임이나 도구가 있나요? 우리의 [플러그인 저장소](https://github.com/CheersAI/CheersAI-Desktop-plugins)에 PR을 열고 당신이 만든 것을 보여주세요.
+추가할 새로운 모델 런타임이나 도구가 있나요? 우리의 [플러그인 저장소](https://github.com/langgenius/dify-plugins)에 PR을 열고 당신이 만든 것을 보여주세요.
 
-기존 모델 런타임, 도구를 업데이트하거나 버그를 수정해야 하나요? 우리의 [공식 플러그인 저장소](https://github.com/CheersAI/CheersAI-Desktop-official-plugins)로 가서 당신의 마법을 펼치세요!
+기존 모델 런타임, 도구를 업데이트하거나 버그를 수정해야 하나요? 우리의 [공식 플러그인 저장소](https://github.com/langgenius/dify-official-plugins)로 가서 당신의 마법을 펼치세요!
 
 함께 즐기고, 기여하고, 멋진 것을 함께 만들어 봅시다! 💡✨
 
@@ -55,7 +55,7 @@ PR 설명에 기존 이슈를 연결하거나 새 이슈를 여는 것을 잊지
 | 기능 유형 | 우선순위 |
 | ------------------------------------------------------------ | --------------- |
 | 팀 구성원에 의해 레이블이 지정된 고우선순위 기능 | 높은 우선순위 |
-| 우리의 [커뮤니티 피드백 보드](https://github.com/CheersAI/CheersAI-Desktop/discussions/categories/feedbacks)에서 인기 있는 기능 요청 | 중간 우선순위 |
+| 우리의 [커뮤니티 피드백 보드](https://github.com/langgenius/dify/discussions/categories/feedbacks)에서 인기 있는 기능 요청 | 중간 우선순위 |
 | 비핵심 기능 및 사소한 개선 | 낮은 우선순위 |
 | 가치 있지만 즉시 필요하지 않은 기능 | 미래 기능 |
 
@@ -75,11 +75,11 @@ PR 설명에 기존 이슈를 연결하거나 새 이슈를 여는 것을 잊지
 
 #### 프론트엔드
 
-프론트엔드 서비스를 설정하려면, `web/README.md` 파일에 있는 우리의 [종합 가이드](https://github.com/CheersAI/CheersAI-Desktop/blob/main/web/README.md)를 참조하세요. 이 문서는 프론트엔드 환경을 적절히 설정하는 데 도움이 되는 자세한 지침을 제공합니다.
+프론트엔드 서비스를 설정하려면, `web/README.md` 파일에 있는 우리의 [종합 가이드](https://github.com/langgenius/dify/blob/main/web/README.md)를 참조하세요. 이 문서는 프론트엔드 환경을 적절히 설정하는 데 도움이 되는 자세한 지침을 제공합니다.
 
 #### 백엔드
 
-백엔드 서비스를 설정하려면, `api/README.md` 파일에 있는 우리의 [상세 지침](https://github.com/CheersAI/CheersAI-Desktop/blob/main/api/README.md)을 참조하세요. 이 문서는 백엔드를 원활하게 실행하는 데 도움이 되는 단계별 가이드를 포함하고 있습니다.
+백엔드 서비스를 설정하려면, `api/README.md` 파일에 있는 우리의 [상세 지침](https://github.com/langgenius/dify/blob/main/api/README.md)을 참조하세요. 이 문서는 백엔드를 원활하게 실행하는 데 도움이 되는 단계별 가이드를 포함하고 있습니다.
 
 #### 기타 참고 사항
 

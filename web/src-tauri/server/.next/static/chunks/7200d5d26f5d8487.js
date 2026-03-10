@@ -1,1 +1,0 @@
-(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,246861,e=>{e.v({"sidebar.collapseSidebar":"ยุบแถบด้านข้าง","sidebar.expandSidebar":"ขยายแถบด้านข้าง"})}]);

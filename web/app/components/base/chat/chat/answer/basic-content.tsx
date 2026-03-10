@@ -3,7 +3,6 @@ import type { ChatItem } from '../../types'
 import { memo } from 'react'
 import { Markdown } from '@/app/components/base/markdown'
 import { cn } from '@/utils/classnames'
-import { useReverseMask } from './use-reverse-mask'
 
 type BasicContentProps = {
   item: ChatItem
@@ -26,15 +25,12 @@ const BasicContent: FC<BasicContentProps> = ({
     displayContent = `\`${content}\``
   }
 
-  // 反脱敏：将 AI 回复中的脱敏占位符还原为真实值
-  const reversedContent = useReverseMask(typeof displayContent === 'string' ? displayContent : '')
-
   return (
     <Markdown
       className={cn(
         item.isError && '!text-[#F04438]',
       )}
-      content={typeof displayContent === 'string' ? reversedContent : displayContent}
+      content={displayContent}
     />
   )
 }

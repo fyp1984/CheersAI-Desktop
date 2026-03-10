@@ -110,7 +110,7 @@ class PluginInstallationScope(StrEnum):
 class PluginInstallationPermissionModel(BaseModel):
     # Plugin installation scope – possible values:
     #   none: prohibit all plugin installations
-    #   official_only: allow only CheersAI official plugins
+    #   official_only: allow only Dify official plugins
     #   official_and_specific_partners: allow official and specific partner plugins
     #   all: allow installation of all plugins
     plugin_installation_scope: PluginInstallationScope = PluginInstallationScope.ALL

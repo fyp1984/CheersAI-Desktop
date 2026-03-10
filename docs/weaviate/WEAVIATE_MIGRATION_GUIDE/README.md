@@ -2,7 +2,7 @@
 
 ## Overview
 
-CheersAI has upgraded from Weaviate v1.19 to v1.27 with the Python client updated from v3.24 to v4.17.
+Dify has upgraded from Weaviate v1.19 to v1.27 with the Python client updated from v3.24 to v4.17.
 
 ## What Changed
 
@@ -31,7 +31,7 @@ docker compose down
 sudo cp -r ./volumes/weaviate ./volumes/weaviate_backup_$(date +%Y%m%d)
 ```
 
-#### Step 2: Update CheersAI
+#### Step 2: Update Dify
 
 ```bash
 git pull origin main
@@ -53,7 +53,7 @@ curl http://localhost:8080/v1/meta
 curl http://localhost:8080/v1/meta
 netstat -tulpn | grep 50051
 
-# Test in CheersAI UI:
+# Test in Dify UI:
 # 1. Go to Knowledge Base
 # 2. Test search functionality
 # 3. Upload a test document
@@ -172,16 +172,16 @@ Before deploying to production:
 
 If you encounter issues:
 
-1. Check GitHub Issues: https://github.com/CheersAI/CheersAI-Desktop/issues
+1. Check GitHub Issues: https://github.com/langgenius/dify/issues
 1. Create a bug report with:
    - Error messages
    - Docker logs: `docker compose logs weaviate`
-   - CheersAI version
+   - Dify version
    - Migration steps attempted
 
 ## Important Notes
 
 - **Data Safety**: Existing vector data remains fully compatible
 - **No Re-indexing**: No need to rebuild vector indexes
-- **Temporary Workaround**: The entrypoint overrides are temporary until next CheersAI release
+- **Temporary Workaround**: The entrypoint overrides are temporary until next Dify release
 - **Performance**: May see improved performance due to gRPC usage

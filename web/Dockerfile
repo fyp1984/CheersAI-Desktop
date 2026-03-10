@@ -3,7 +3,7 @@ FROM node:24-alpine AS base
 LABEL maintainer="takatost@gmail.com"
 
 # if you located in China, you can use aliyun mirror to speed up
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+# RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 
 # if you located in China, you can use taobao registry to speed up
 # RUN npm config set registry https://registry.npmmirror.com
@@ -37,14 +37,6 @@ COPY . .
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN pnpm build:docker
 
-FROM base AS dev
-WORKDIR /app/web
-COPY --from=packages /app/web/ .
-COPY . .
-ENV NODE_ENV=development
-ENV PORT=3000
-CMD ["pnpm","dev","-H","0.0.0.0","-p","3000"]
-
 
 # production stage
 FROM base AS production
@@ -54,8 +46,8 @@ ENV EDITION=SELF_HOSTED
 ENV DEPLOY_ENV=PRODUCTION
 ENV CONSOLE_API_URL=http://127.0.0.1:5001
 ENV APP_API_URL=http://127.0.0.1:5001
-ENV MARKETPLACE_API_URL=https://marketplace.cheersai.cloud
-ENV MARKETPLACE_URL=https://marketplace.cheersai.cloud
+ENV MARKETPLACE_API_URL=https://marketplace.dify.ai
+ENV MARKETPLACE_URL=https://marketplace.dify.ai
 ENV PORT=3000
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PM2_INSTANCES=2
@@ -70,25 +62,25 @@ RUN pnpm add -g pm2
 
 
 # Create non-root user
-ARG cheersai_uid=1001
-RUN addgroup -S -g ${cheersai_uid} cheersai && \
-    adduser -S -u ${cheersai_uid} -G cheersai -s /bin/ash -h /home/cheersai cheersai && \
+ARG dify_uid=1001
+RUN addgroup -S -g ${dify_uid} dify && \
+    adduser -S -u ${dify_uid} -G dify -s /bin/ash -h /home/dify dify && \
     mkdir /app && \
     mkdir /.pm2 && \
-    chown -R cheersai:cheersai /app /.pm2
+    chown -R dify:dify /app /.pm2
 
 
 WORKDIR /app/web
 
-COPY --from=builder --chown=cheersai:cheersai /app/web/public ./public
-COPY --from=builder --chown=cheersai:cheersai /app/web/.next/standalone ./
-COPY --from=builder --chown=cheersai:cheersai /app/web/.next/static ./.next/static
+COPY --from=builder --chown=dify:dify /app/web/public ./public
+COPY --from=builder --chown=dify:dify /app/web/.next/standalone ./
+COPY --from=builder --chown=dify:dify /app/web/.next/static ./.next/static
 
-COPY --chown=cheersai:cheersai --chmod=755 docker/entrypoint.sh ./entrypoint.sh
+COPY --chown=dify:dify --chmod=755 docker/entrypoint.sh ./entrypoint.sh
 
 ARG COMMIT_SHA
 ENV COMMIT_SHA=${COMMIT_SHA}
 
-USER cheersai
+USER dify
 EXPOSE 3000
 ENTRYPOINT ["/bin/sh", "./entrypoint.sh"]

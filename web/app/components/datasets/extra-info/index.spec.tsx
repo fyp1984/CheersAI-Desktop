@@ -90,7 +90,7 @@ vi.mock('@/service/knowledge/use-dataset', () => ({
 
 // Mock API access URL hook
 vi.mock('@/hooks/use-api-access-url', () => ({
-  useDatasetApiAccessUrl: vi.fn(() => 'https://docs.cheersai.cloud/api-reference/datasets'),
+  useDatasetApiAccessUrl: vi.fn(() => 'https://docs.dify.ai/api-reference/datasets'),
 }))
 
 // Mock docLink hook
@@ -673,7 +673,7 @@ describe('ApiAccessCard', () => {
       )
 
       const apiRefLink = screen.getByText(/overview\.apiInfo\.doc/i).closest('a')
-      expect(apiRefLink).toHaveAttribute('href', 'https://docs.cheersai.cloud/api-reference/datasets')
+      expect(apiRefLink).toHaveAttribute('href', 'https://docs.dify.ai/api-reference/datasets')
     })
   })
 

@@ -1,8 +1,8 @@
-"""CheersAI-specific semantic convention definitions."""
+"""Dify-specific semantic convention definitions."""
 
 
 class DifySpanAttributes:
-    """Attribute names for CheersAI-specific spans."""
+    """Attribute names for Dify-specific spans."""
 
     APP_ID = "dify.app_id"
     """Application identifier."""

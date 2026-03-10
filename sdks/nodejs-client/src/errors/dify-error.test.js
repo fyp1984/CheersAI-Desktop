@@ -10,7 +10,7 @@ import {
   ValidationError,
 } from "./dify-error";
 
-describe("CheersAI errors", () => {
+describe("Dify errors", () => {
   it("sets base error fields", () => {
     const err = new DifyError("base", {
       statusCode: 400,

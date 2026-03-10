@@ -6,13 +6,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useContext } from 'use-context-selector'
 import { getFileUploadErrorMessage } from '@/app/components/base/file-uploader/utils'
-import { SandboxFilePicker } from '@/app/components/base/sandbox-file-picker'
 import SimplePieChart from '@/app/components/base/simple-pie-chart'
 import { ToastContext } from '@/app/components/base/toast'
 import { IS_CE_EDITION } from '@/config'
 
 import { useLocale } from '@/context/i18n'
-import { useSandboxSecurity } from '@/context/sandbox-security-context'
 import useTheme from '@/hooks/use-theme'
 import { LanguagesSupported } from '@/i18n-config/language'
 import { upload } from '@/service/base'
@@ -43,8 +41,6 @@ const FileUploader = ({
   const { t } = useTranslation()
   const { notify } = useContext(ToastContext)
   const locale = useLocale()
-  const { enabled: sandboxEnabled, isConfigured: sandboxConfigured } = useSandboxSecurity()
-  const [showSandboxPicker, setShowSandboxPicker] = useState(false)
   const [dragging, setDragging] = useState(false)
   const dropRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<HTMLDivElement>(null)
@@ -270,18 +266,9 @@ const FileUploader = ({
     [initialUpload, isValid, supportBatchUpload, traverseFileEntry, fileUploadConfig],
   )
   const selectHandle = () => {
-    if (sandboxEnabled && sandboxConfigured) {
-      setShowSandboxPicker(true)
-      return
-    }
     if (fileUploader.current)
       fileUploader.current.click()
   }
-
-  const handleSandboxFilesSelected = useCallback((selectedFiles: globalThis.File[]) => {
-    const valid = (selectedFiles as unknown as globalThis.File[]).filter(f => isValid(f as unknown as globalThis.File))
-    initialUpload(valid as unknown as globalThis.File[])
-  }, [isValid, initialUpload])
 
   const removeFile = (fileID: string) => {
     if (fileUploader.current)
@@ -404,13 +391,6 @@ const FileUploader = ({
           </div>
         ))}
       </div>
-      <SandboxFilePicker
-        open={showSandboxPicker}
-        onClose={() => setShowSandboxPicker(false)}
-        onSelect={handleSandboxFilesSelected}
-        accept={supportTypes.map(t => `.${t}`).join(',')}
-        multiple={supportBatchUpload}
-      />
     </div>
   )
 }

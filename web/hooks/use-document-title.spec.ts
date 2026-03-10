@@ -5,7 +5,7 @@ import { useGlobalPublicStore, useIsSystemFeaturesPending } from '@/context/glob
  *
  * This hook manages the browser document title with support for:
  * - Custom branding (when enabled in system features)
- * - Default "CheersAI-Desktop" branding
+ * - Default "Dify" branding
  * - Pending state handling (prevents title flicker during loading)
  * - Page-specific titles with automatic suffix
  *
@@ -53,8 +53,8 @@ describe('title should be empty if systemFeatures is pending', () => {
 })
 
 /**
- * Test default branding behavior
- * When custom branding is disabled, should use "CheersAI-Desktop" as the brand name
+ * Test default Dify branding behavior
+ * When custom branding is disabled, should use "Dify" as the brand name
  */
 describe('use default branding', () => {
   beforeEach(() => {
@@ -67,20 +67,20 @@ describe('use default branding', () => {
   })
   /**
    * Test title format with page title and default branding
-   * Format: "[page] - CheersAI-Desktop"
+   * Format: "[page] - Dify"
    */
-  it('document title should be test-CheersAI if set title', () => {
+  it('document title should be test-Dify if set title', () => {
     renderHook(() => useDocumentTitle('test'))
-    expect(document.title).toBe('test - CheersAI-Desktop')
+    expect(document.title).toBe('test - Dify')
   })
 
   /**
    * Test title with only default branding (no page title)
-   * Format: "CheersAI-Desktop"
+   * Format: "Dify"
    */
-  it('document title should be CheersAI if not set title', () => {
+  it('document title should be Dify if not set title', () => {
     renderHook(() => useDocumentTitle(''))
-    expect(document.title).toBe('CheersAI-Desktop')
+    expect(document.title).toBe('Dify')
   })
 })
 

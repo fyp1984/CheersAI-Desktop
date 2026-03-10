@@ -90,7 +90,7 @@ class TestMailRegisterTask:
         account_name = fake.name()
 
         with patch("tasks.mail_register_task.dify_config") as mock_config:
-            mock_config.CONSOLE_WEB_URL = "https://console.cheersai.cloud"
+            mock_config.CONSOLE_WEB_URL = "https://console.dify.ai"
 
             send_email_register_mail_task_when_account_exist(language=language, to=to_email, account_name=account_name)
 
@@ -100,8 +100,8 @@ class TestMailRegisterTask:
                 to=to_email,
                 template_context={
                     "to": to_email,
-                    "login_url": "https://console.cheersai.cloud/signin",
-                    "reset_password_url": "https://console.cheersai.cloud/reset-password",
+                    "login_url": "https://console.dify.ai/signin",
+                    "reset_password_url": "https://console.dify.ai/reset-password",
                     "account_name": account_name,
                 },
             )

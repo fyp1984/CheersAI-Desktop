@@ -69,9 +69,6 @@ from .app import (
     workflow_trigger,
 )
 
-# Import audit controllers
-from .audit import operation_logs
-
 # Import auth controllers
 from .auth import (
     activate,
@@ -86,10 +83,6 @@ from .auth import (
 
 # Import billing controllers
 from .billing import billing, compliance
-
-# Data masking sandbox_files uses its own Blueprint (registered in ext_blueprints)
-# sandbox_knowledge and user_config use console_ns (authenticated)
-from .data_masking import sandbox_files, sandbox_knowledge, user_config
 
 # Import datasets controllers
 from .datasets import (
@@ -201,7 +194,6 @@ __all__ = [
     "rag_pipeline_import",
     "rag_pipeline_workflow",
     "recommended_app",
-    "sandbox_files",
     "saved_message",
     "setup",
     "site",

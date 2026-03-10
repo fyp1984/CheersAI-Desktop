@@ -1,20 +1,20 @@
 # CONTRIBUIR
 
-Así que estás buscando contribuir a CheersAI - eso es fantástico, estamos ansiosos por ver lo que haces. Como una startup con personal y financiación limitados, tenemos grandes ambiciones de diseñar el flujo de trabajo más intuitivo para construir y gestionar aplicaciones LLM. Cualquier ayuda de la comunidad cuenta, realmente.
+Así que estás buscando contribuir a Dify - eso es fantástico, estamos ansiosos por ver lo que haces. Como una startup con personal y financiación limitados, tenemos grandes ambiciones de diseñar el flujo de trabajo más intuitivo para construir y gestionar aplicaciones LLM. Cualquier ayuda de la comunidad cuenta, realmente.
 
 Necesitamos ser ágiles y enviar rápidamente dado donde estamos, pero también queremos asegurarnos de que colaboradores como tú obtengan una experiencia lo más fluida posible al contribuir. Hemos elaborado esta guía de contribución con ese propósito, con el objetivo de familiarizarte con la base de código y cómo trabajamos con los colaboradores, para que puedas pasar rápidamente a la parte divertida.
 
-Esta guía, como CheersAI mismo, es un trabajo en constante progreso. Agradecemos mucho tu comprensión si a veces se queda atrás del proyecto real, y damos la bienvenida a cualquier comentario para que podamos mejorar.
+Esta guía, como Dify mismo, es un trabajo en constante progreso. Agradecemos mucho tu comprensión si a veces se queda atrás del proyecto real, y damos la bienvenida a cualquier comentario para que podamos mejorar.
 
 En términos de licencia, por favor tómate un minuto para leer nuestro breve [Acuerdo de Licencia y Colaborador](../../LICENSE). La comunidad también se adhiere al [código de conducta](https://github.com/langgenius/.github/blob/main/CODE_OF_CONDUCT.md).
 
 ## Antes de empezar
 
-¿Buscas algo en lo que trabajar? Explora nuestros [buenos primeros issues](https://github.com/CheersAI/CheersAI-Desktop/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22) y elige uno para comenzar.
+¿Buscas algo en lo que trabajar? Explora nuestros [buenos primeros issues](https://github.com/langgenius/dify/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22) y elige uno para comenzar.
 
-¿Tienes un nuevo modelo o herramienta genial para añadir? Abre un PR en nuestro [repositorio de plugins](https://github.com/CheersAI/CheersAI-Desktop-plugins) y muéstranos lo que has construido.
+¿Tienes un nuevo modelo o herramienta genial para añadir? Abre un PR en nuestro [repositorio de plugins](https://github.com/langgenius/dify-plugins) y muéstranos lo que has construido.
 
-¿Necesitas actualizar un modelo existente, herramienta o corregir algunos errores? Dirígete a nuestro [repositorio oficial de plugins](https://github.com/CheersAI/CheersAI-Desktop-official-plugins) y haz tu magia.
+¿Necesitas actualizar un modelo existente, herramienta o corregir algunos errores? Dirígete a nuestro [repositorio oficial de plugins](https://github.com/langgenius/dify-official-plugins) y haz tu magia.
 
 ¡Únete a la diversión, contribuye y construyamos algo increíble juntos! 💡✨
 
@@ -55,7 +55,7 @@ Cómo priorizamos:
 | Tipo de Funcionalidad | Prioridad |
 | ------------------------------------------------------------ | --------------- |
 | Funcionalidades de alta prioridad etiquetadas por un miembro del equipo | Prioridad Alta |
-| Solicitudes populares de funcionalidades de nuestro [tablero de comentarios de la comunidad](https://github.com/CheersAI/CheersAI-Desktop/discussions/categories/feedbacks) | Prioridad Media |
+| Solicitudes populares de funcionalidades de nuestro [tablero de comentarios de la comunidad](https://github.com/langgenius/dify/discussions/categories/feedbacks) | Prioridad Media |
 | Funcionalidades no principales y mejoras menores | Prioridad Baja |
 | Valiosas pero no inmediatas | Futura-Funcionalidad |
 
@@ -75,11 +75,11 @@ Cómo priorizamos:
 
 #### Frontend
 
-Para configurar el servicio frontend, por favor consulta nuestra [guía completa](https://github.com/CheersAI/CheersAI-Desktop/blob/main/web/README.md) en el archivo `web/README.md`. Este documento proporciona instrucciones detalladas para ayudarte a configurar el entorno frontend correctamente.
+Para configurar el servicio frontend, por favor consulta nuestra [guía completa](https://github.com/langgenius/dify/blob/main/web/README.md) en el archivo `web/README.md`. Este documento proporciona instrucciones detalladas para ayudarte a configurar el entorno frontend correctamente.
 
 #### Backend
 
-Para configurar el servicio backend, por favor consulta nuestras [instrucciones detalladas](https://github.com/CheersAI/CheersAI-Desktop/blob/main/api/README.md) en el archivo `api/README.md`. Este documento contiene una guía paso a paso para ayudarte a poner en marcha el backend sin problemas.
+Para configurar el servicio backend, por favor consulta nuestras [instrucciones detalladas](https://github.com/langgenius/dify/blob/main/api/README.md) en el archivo `api/README.md`. Este documento contiene una guía paso a paso para ayudarte a poner en marcha el backend sin problemas.
 
 #### Otras cosas a tener en cuenta
 

@@ -143,7 +143,7 @@ vi.mock('@/app/components/base/toast', () => ({
 
 // Mock API access URL hook
 vi.mock('@/hooks/use-api-access-url', () => ({
-  useDatasetApiAccessUrl: () => 'https://api.cheersai.cloud/v1/datasets/test-dataset-id',
+  useDatasetApiAccessUrl: () => 'https://api.dify.ai/v1/datasets/test-dataset-id',
 }))
 
 // Mock format time hook
@@ -993,7 +993,7 @@ describe('publisher', () => {
 
         // Assert
         const apiLink = screen.getByRole('link')
-        expect(apiLink).toHaveAttribute('href', 'https://api.cheersai.cloud/v1/datasets/test-dataset-id')
+        expect(apiLink).toHaveAttribute('href', 'https://api.dify.ai/v1/datasets/test-dataset-id')
         expect(apiLink).toHaveAttribute('target', '_blank')
       })
     })

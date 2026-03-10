@@ -5,14 +5,14 @@
   "identifier": "com.cheersai.desktop",
   "build": {
     "frontendDist": "../out",
-    "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "echo 'Please ensure dev server is running on port 3000'",
-    "beforeBuildCommand": ""
+    "devUrl": "http://localhost:3500",
+    "beforeDevCommand": "echo 'Please ensure dev server is running on port 3500'",
+    "beforeBuildCommand": "pnpm build"
   },
   "app": {
     "windows": [
       {
-        "title": "CheersAI Desktop - 智享AI，安全随行",
+        "title": "CheersAI",
         "width": 1280,
         "height": 800,
         "minWidth": 1024,

@@ -1,4 +1,4 @@
-"""Structured JSON log formatter for CheersAI."""
+"""Structured JSON log formatter for Dify."""
 
 import logging
 import traceback

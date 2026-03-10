@@ -75,7 +75,7 @@ export class ComponentAnalyzer {
       return 'layout'
     if (/\/providers?\//.test(normalizedPath))
       return 'provider'
-    // CheersAI-specific types
+    // Dify-specific types
     if (normalizedPath.includes('/components/base/'))
       return 'base-component'
     if (normalizedPath.includes('/context/'))

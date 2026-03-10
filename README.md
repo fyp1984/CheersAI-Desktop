@@ -1,132 +1,245 @@
-# CheersAI-Desktop
+![cover-v5-optimized](./images/GitHub_README_if.png)
 
-基于 [CheersAI](https://github.com/CheersAI/CheersAI-Desktop) 开源平台的定制版本，新增数据脱敏功能和 Tauri 桌面应用支持。
+<p align="center">
+  📌 <a href="https://dify.ai/blog/introducing-dify-workflow-file-upload-a-demo-on-ai-podcast">Introducing Dify Workflow File Upload: Recreate Google NotebookLM Podcast</a>
+</p>
 
-## 功能特性
+<p align="center">
+  <a href="https://cloud.dify.ai">Dify Cloud</a> ·
+  <a href="https://docs.dify.ai/getting-started/install-self-hosted">Self-hosting</a> ·
+  <a href="https://docs.dify.ai">Documentation</a> ·
+  <a href="https://dify.ai/pricing">Dify edition overview</a>
+</p>
 
-- CheersAI 全部原生功能（AI 工作流、RAG、Agent、模型管理等）
-- 数据脱敏模块：可配置规则的敏感数据脱敏，支持 Markdown 文件处理
-- Tauri 桌面应用：一键打包为 Windows 桌面 exe
-- 脱敏文件本地存储：通过 Tauri 后端直接写入本地沙箱目录
+<p align="center">
+    <a href="https://dify.ai" target="_blank">
+        <img alt="Static Badge" src="https://img.shields.io/badge/Product-F04438"></a>
+    <a href="https://dify.ai/pricing" target="_blank">
+        <img alt="Static Badge" src="https://img.shields.io/badge/free-pricing?logo=free&color=%20%23155EEF&label=pricing&labelColor=%20%23528bff"></a>
+    <a href="https://discord.gg/FngNHpbcY7" target="_blank">
+        <img src="https://img.shields.io/discord/1082486657678311454?logo=discord&labelColor=%20%235462eb&logoColor=%20%23f5f5f5&color=%20%235462eb"
+            alt="chat on Discord"></a>
+    <a href="https://reddit.com/r/difyai" target="_blank">  
+        <img src="https://img.shields.io/reddit/subreddit-subscribers/difyai?style=plastic&logo=reddit&label=r%2Fdifyai&labelColor=white"
+            alt="join Reddit"></a>
+    <a href="https://twitter.com/intent/follow?screen_name=dify_ai" target="_blank">
+        <img src="https://img.shields.io/twitter/follow/dify_ai?logo=X&color=%20%23f5f5f5"
+            alt="follow on X(Twitter)"></a>
+    <a href="https://www.linkedin.com/company/langgenius/" target="_blank">
+        <img src="https://custom-icon-badges.demolab.com/badge/LinkedIn-0A66C2?logo=linkedin-white&logoColor=fff"
+            alt="follow on LinkedIn"></a>
+    <a href="https://hub.docker.com/u/langgenius" target="_blank">
+        <img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/langgenius/dify-web?labelColor=%20%23FDB062&color=%20%23f79009"></a>
+    <a href="https://github.com/langgenius/dify/graphs/commit-activity" target="_blank">
+        <img alt="Commits last month" src="https://img.shields.io/github/commit-activity/m/langgenius/dify?labelColor=%20%2332b583&color=%20%2312b76a"></a>
+    <a href="https://github.com/langgenius/dify/" target="_blank">
+        <img alt="Issues closed" src="https://img.shields.io/github/issues-search?query=repo%3Alanggenius%2Fdify%20is%3Aclosed&label=issues%20closed&labelColor=%20%237d89b0&color=%20%235d6b98"></a>
+    <a href="https://github.com/langgenius/dify/discussions/" target="_blank">
+        <img alt="Discussion posts" src="https://img.shields.io/github/discussions/langgenius/dify?labelColor=%20%239b8afb&color=%20%237a5af8"></a>
+    <a href="https://insights.linuxfoundation.org/project/langgenius-dify" target="_blank">
+        <img alt="LFX Health Score" src="https://insights.linuxfoundation.org/api/badge/health-score?project=langgenius-dify"></a>
+    <a href="https://insights.linuxfoundation.org/project/langgenius-dify" target="_blank">
+        <img alt="LFX Contributors" src="https://insights.linuxfoundation.org/api/badge/contributors?project=langgenius-dify"></a>
+    <a href="https://insights.linuxfoundation.org/project/langgenius-dify" target="_blank">
+        <img alt="LFX Active Contributors" src="https://insights.linuxfoundation.org/api/badge/active-contributors?project=langgenius-dify"></a>
+</p>
 
-## 技术栈
+<p align="center">
+  <a href="./README.md"><img alt="README in English" src="https://img.shields.io/badge/English-d9d9d9"></a>
+  <a href="./docs/zh-TW/README.md"><img alt="繁體中文文件" src="https://img.shields.io/badge/繁體中文-d9d9d9"></a>
+  <a href="./docs/zh-CN/README.md"><img alt="简体中文文件" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
+  <a href="./docs/ja-JP/README.md"><img alt="日本語のREADME" src="https://img.shields.io/badge/日本語-d9d9d9"></a>
+  <a href="./docs/es-ES/README.md"><img alt="README en Español" src="https://img.shields.io/badge/Español-d9d9d9"></a>
+  <a href="./docs/fr-FR/README.md"><img alt="README en Français" src="https://img.shields.io/badge/Français-d9d9d9"></a>
+  <a href="./docs/tlh/README.md"><img alt="README tlhIngan Hol" src="https://img.shields.io/badge/Klingon-d9d9d9"></a>
+  <a href="./docs/ko-KR/README.md"><img alt="README in Korean" src="https://img.shields.io/badge/한국어-d9d9d9"></a>
+  <a href="./docs/ar-SA/README.md"><img alt="README بالعربية" src="https://img.shields.io/badge/العربية-d9d9d9"></a>
+  <a href="./docs/tr-TR/README.md"><img alt="Türkçe README" src="https://img.shields.io/badge/Türkçe-d9d9d9"></a>
+  <a href="./docs/vi-VN/README.md"><img alt="README Tiếng Việt" src="https://img.shields.io/badge/Ti%E1%BA%BFng%20Vi%E1%BB%87t-d9d9d9"></a>
+  <a href="./docs/de-DE/README.md"><img alt="README in Deutsch" src="https://img.shields.io/badge/German-d9d9d9"></a>
+  <a href="./docs/bn-BD/README.md"><img alt="README in বাংলা" src="https://img.shields.io/badge/বাংলা-d9d9d9"></a>
+</p>
 
-| 层 | 技术 |
-|----|------|
-| 后端 | Python 3.12 + Flask + PostgreSQL + Redis + Celery |
-| 前端 | Next.js + TypeScript + React + Tailwind CSS |
-| 桌面 | Tauri 2 (Rust) |
-| 向量库 | Weaviate |
-| 包管理 | uv (Python) / pnpm (Node.js) |
+Dify is an open-source platform for developing LLM applications. Its intuitive interface combines agentic AI workflows, RAG pipelines, agent capabilities, model management, observability features, and more—allowing you to quickly move from prototype to production.
 
-## 快速启动
+## 📚 Documentation Index
 
-详细步骤见 [QUICK_START.md](QUICK_START.md)。
+**Looking for specific documentation?** Check out our comprehensive [Documentation Index](DOCS_INDEX.md) for quick navigation to:
+- 🚀 Quick Start Guides
+- 📋 Project Requirements & Specifications
+- 🎨 UI/UX Design Guidelines
+- 🖥️ Desktop App Development
+- 🏗️ Build & Deployment Guides
+- 💡 Feature Implementation Guides
 
-### 环境要求
+## Quick start
 
-- Docker Desktop
-- Node.js >= 24 + pnpm >= 10
-- Python 3.12 + uv
-- Rust（打包桌面应用时需要）
+> Before installing Dify, make sure your machine meets the following minimum system requirements:
+>
+> - CPU >= 2 Core
+> - RAM >= 4 GiB
 
-### 启动命令
+<br/>
 
-```powershell
-# 1. 一键启动后端（Docker 服务 + 数据库迁移 + Flask API）
-.\start-backend.ps1
-
-# 2. 启动前端（另开终端）
-cd web
-pnpm dev
-```
-
-### 访问
-
-| 服务 | 地址 |
-|------|------|
-| 前端 | http://localhost:3000 |
-| 后端 API | http://localhost:5001 |
-| 数据脱敏 | http://localhost:3000/data-masking |
-
-登录：`1@qq.com` / `password123`
-
-## 桌面应用
-
-```bash
-cd web
-pnpm tauri build
-```
-
-产物位置：
-- exe：`web/src-tauri/target/release/app.exe`
-- 安装包：`web/src-tauri/target/release/bundle/nsis/CheersAI_1.12.0_x64-setup.exe`
-
-桌面应用会自动启动前端 dev server，关闭时自动清理进程。
-
-## 数据脱敏模块
-
-位于 `web/app/(commonLayout)/data-masking/`，包含四个功能标签页：
-
-| 标签 | 功能 |
-|------|------|
-| 脱敏规则 | 创建/编辑/删除脱敏规则，内置 7 种模板（手机号、邮箱、身份证等） |
-| 沙箱配置 | 配置本地沙箱目录，脱敏文件将写入该目录 |
-| 文件脱敏 | 选择 .md 文件 → 选择规则 → 预览 → 执行脱敏并下载 |
-| 文件管理 | 查看/预览/下载/删除已脱敏的文件（Tauri 环境读取本地目录） |
-
-## 项目结构
-
-```
-CheersAI/
-├── start-backend.ps1/.bat      # 一键启动后端
-├── docker-compose.dev.yaml     # Docker 服务（PG、Redis、Weaviate、Plugin）
-├── scripts/                    # 工具脚本
-├── api/                        # 后端 Flask API
-├── web/                        # 前端 Next.js
-│   ├── app/components/data-masking/  # 数据脱敏 UI 组件
-│   ├── lib/data-masking/             # 数据脱敏核心逻辑
-│   └── src-tauri/                    # Tauri 桌面应用
-├── QUICK_START.md              # 启动说明
-├── SETUP_GUIDE.md              # 环境搭建指南
-└── PROJECT_STATUS.md           # 项目状态
-```
-
-## Docker 服务
-
-| 服务 | 端口 | 说明 |
-|------|------|------|
-| PostgreSQL | 5432 | 主数据库 |
-| Redis | 6700 | 缓存/消息队列 |
-| Weaviate | 8080 | 向量数据库 |
-| Plugin Daemon | 5002 | 插件服务 |
-
-## 开发命令
+The easiest way to start the Dify server is through [Docker Compose](docker/docker-compose.yaml). Before running Dify with the following commands, make sure that [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) are installed on your machine:
 
 ```bash
-# 前端
-cd web
-pnpm dev              # 开发服务器
-pnpm lint:fix         # 代码检查
-pnpm type-check:tsgo  # 类型检查
-pnpm test data-masking # 数据脱敏测试
-pnpm tauri build      # 打包桌面应用
-
-# 后端
-cd api
-uv run flask run --host 0.0.0.0 --port 5001 --debug
-uv run pytest         # 运行测试
-uv run flask db upgrade  # 数据库迁移
+cd dify
+cd docker
+cp .env.example .env
+docker compose up -d
 ```
 
-## 停止服务
+After running, you can access the Dify dashboard in your browser at [http://localhost/install](http://localhost/install) and start the initialization process.
+
+#### Seeking help
+
+Please refer to our [FAQ](https://docs.dify.ai/getting-started/install-self-hosted/faqs) if you encounter problems setting up Dify. Reach out to [the community and us](#community--contact) if you are still having issues.
+
+> If you'd like to contribute to Dify or do additional development, refer to our [guide to deploying from source code](https://docs.dify.ai/getting-started/install-self-hosted/local-source-code)
+
+## Key features
+
+**1. Workflow**:
+Build and test powerful AI workflows on a visual canvas, leveraging all the following features and beyond.
+
+**2. Comprehensive model support**:
+Seamless integration with hundreds of proprietary / open-source LLMs from dozens of inference providers and self-hosted solutions, covering GPT, Mistral, Llama3, and any OpenAI API-compatible models. A full list of supported model providers can be found [here](https://docs.dify.ai/getting-started/readme/model-providers).
+
+![providers-v5](https://github.com/langgenius/dify/assets/13230914/5a17bdbe-097a-4100-8363-40255b70f6e3)
+
+**3. Prompt IDE**:
+Intuitive interface for crafting prompts, comparing model performance, and adding additional features such as text-to-speech to a chat-based app.
+
+**4. RAG Pipeline**:
+Extensive RAG capabilities that cover everything from document ingestion to retrieval, with out-of-box support for text extraction from PDFs, PPTs, and other common document formats.
+
+**5. Agent capabilities**:
+You can define agents based on LLM Function Calling or ReAct, and add pre-built or custom tools for the agent. Dify provides 50+ built-in tools for AI agents, such as Google Search, DALL·E, Stable Diffusion and WolframAlpha.
+
+**6. LLMOps**:
+Monitor and analyze application logs and performance over time. You could continuously improve prompts, datasets, and models based on production data and annotations.
+
+**7. Backend-as-a-Service**:
+All of Dify's offerings come with corresponding APIs, so you could effortlessly integrate Dify into your own business logic.
+
+## Using Dify
+
+- **Cloud <br/>**
+  We host a [Dify Cloud](https://dify.ai) service for anyone to try with zero setup. It provides all the capabilities of the self-deployed version, and includes 200 free GPT-4 calls in the sandbox plan.
+
+- **Self-hosting Dify Community Edition<br/>**
+  Quickly get Dify running in your environment with this [starter guide](#quick-start).
+  Use our [documentation](https://docs.dify.ai) for further references and more in-depth instructions.
+
+- **Dify for enterprise / organizations<br/>**
+  We provide additional enterprise-centric features. [Send us an email](mailto:business@dify.ai?subject=%5BGitHub%5DBusiness%20License%20Inquiry) to discuss your enterprise needs. <br/>
+
+  > For startups and small businesses using AWS, check out [Dify Premium on AWS Marketplace](https://aws.amazon.com/marketplace/pp/prodview-t22mebxzwjhu6) and deploy it to your own AWS VPC with one click. It's an affordable AMI offering with the option to create apps with custom logo and branding.
+
+## Staying ahead
+
+Star Dify on GitHub and be instantly notified of new releases.
+
+![star-us](https://github.com/langgenius/dify/assets/13230914/b823edc1-6388-4e25-ad45-2f6b187adbb4)
+
+## Advanced Setup
+
+### Custom configurations
+
+If you need to customize the configuration, please refer to the comments in our [.env.example](docker/.env.example) file and update the corresponding values in your `.env` file. Additionally, you might need to make adjustments to the `docker-compose.yaml` file itself, such as changing image versions, port mappings, or volume mounts, based on your specific deployment environment and requirements. After making any changes, please re-run `docker-compose up -d`. You can find the full list of available environment variables [here](https://docs.dify.ai/getting-started/install-self-hosted/environments).
+
+#### Customizing Suggested Questions
+
+You can now customize the "Suggested Questions After Answer" feature to better fit your use case. For example, to generate longer, more technical questions:
 
 ```bash
-# Ctrl+C 停止前后端进程
-# 停止 Docker 服务
-docker-compose -f docker-compose.dev.yaml down
+# In your .env file
+SUGGESTED_QUESTIONS_PROMPT='Please help me predict the five most likely technical follow-up questions a developer would ask. Focus on implementation details, best practices, and architecture considerations. Keep each question between 40-60 characters. Output must be JSON array: ["question1","question2","question3","question4","question5"]'
+SUGGESTED_QUESTIONS_MAX_TOKENS=512
+SUGGESTED_QUESTIONS_TEMPERATURE=0.3
 ```
 
-## 基于
+See the [Suggested Questions Configuration Guide](docs/suggested-questions-configuration.md) for detailed examples and usage instructions.
 
-[CheersAI](https://github.com/CheersAI/CheersAI-Desktop) - 开源 LLM 应用开发平台，Apache 2.0 协议。
+### Metrics Monitoring with Grafana
+
+Import the dashboard to Grafana, using Dify's PostgreSQL database as data source, to monitor metrics in granularity of apps, tenants, messages, and more.
+
+- [Grafana Dashboard by @bowenliang123](https://github.com/bowenliang123/dify-grafana-dashboard)
+
+### Deployment with Kubernetes
+
+If you'd like to configure a highly-available setup, there are community-contributed [Helm Charts](https://helm.sh/) and YAML files which allow Dify to be deployed on Kubernetes.
+
+- [Helm Chart by @LeoQuote](https://github.com/douban/charts/tree/master/charts/dify)
+- [Helm Chart by @BorisPolonsky](https://github.com/BorisPolonsky/dify-helm)
+- [Helm Chart by @magicsong](https://github.com/magicsong/ai-charts)
+- [YAML file by @Winson-030](https://github.com/Winson-030/dify-kubernetes)
+- [YAML file by @wyy-holding](https://github.com/wyy-holding/dify-k8s)
+- [🚀 NEW! YAML files (Supports Dify v1.6.0) by @Zhoneym](https://github.com/Zhoneym/DifyAI-Kubernetes)
+
+#### Using Terraform for Deployment
+
+Deploy Dify to Cloud Platform with a single click using [terraform](https://www.terraform.io/)
+
+##### Azure Global
+
+- [Azure Terraform by @nikawang](https://github.com/nikawang/dify-azure-terraform)
+
+##### Google Cloud
+
+- [Google Cloud Terraform by @sotazum](https://github.com/DeNA/dify-google-cloud-terraform)
+
+#### Using AWS CDK for Deployment
+
+Deploy Dify to AWS with [CDK](https://aws.amazon.com/cdk/)
+
+##### AWS
+
+- [AWS CDK by @KevinZhao (EKS based)](https://github.com/aws-samples/solution-for-deploying-dify-on-aws)
+- [AWS CDK by @tmokmss (ECS based)](https://github.com/aws-samples/dify-self-hosted-on-aws)
+
+#### Using Alibaba Cloud Computing Nest
+
+Quickly deploy Dify to Alibaba cloud with [Alibaba Cloud Computing Nest](https://computenest.console.aliyun.com/service/instance/create/default?type=user&ServiceName=Dify%E7%A4%BE%E5%8C%BA%E7%89%88)
+
+#### Using Alibaba Cloud Data Management
+
+One-Click deploy Dify to Alibaba Cloud with [Alibaba Cloud Data Management](https://www.alibabacloud.com/help/en/dms/dify-in-invitational-preview/)
+
+#### Deploy to AKS with Azure Devops Pipeline
+
+One-Click deploy Dify to AKS with [Azure Devops Pipeline Helm Chart by @LeoZhang](https://github.com/Ruiruiz30/Dify-helm-chart-AKS)
+
+## Contributing
+
+For those who'd like to contribute code, see our [Contribution Guide](https://github.com/langgenius/dify/blob/main/CONTRIBUTING.md).
+At the same time, please consider supporting Dify by sharing it on social media and at events and conferences.
+
+> We are looking for contributors to help translate Dify into languages other than Mandarin or English. If you are interested in helping, please see the [i18n README](https://github.com/langgenius/dify/blob/main/web/i18n-config/README.md) for more information, and leave us a comment in the `global-users` channel of our [Discord Community Server](https://discord.gg/8Tpq4AcN9c).
+
+## Community & contact
+
+- [GitHub Discussion](https://github.com/langgenius/dify/discussions). Best for: sharing feedback and asking questions.
+- [GitHub Issues](https://github.com/langgenius/dify/issues). Best for: bugs you encounter using Dify.AI, and feature proposals. See our [Contribution Guide](https://github.com/langgenius/dify/blob/main/CONTRIBUTING.md).
+- [Discord](https://discord.gg/FngNHpbcY7). Best for: sharing your applications and hanging out with the community.
+- [X(Twitter)](https://twitter.com/dify_ai). Best for: sharing your applications and hanging out with the community.
+
+**Contributors**
+
+<a href="https://github.com/langgenius/dify/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=langgenius/dify" />
+</a>
+
+## Star history
+
+[![Star History Chart](https://api.star-history.com/svg?repos=langgenius/dify&type=Date)](https://star-history.com/#langgenius/dify&Date)
+
+## Security disclosure
+
+To protect your privacy, please avoid posting security issues on GitHub. Instead, report issues to security@dify.ai, and our team will respond with detailed answer.
+
+## License
+
+This repository is licensed under the [Dify Open Source License](LICENSE), based on Apache 2.0 with additional conditions.

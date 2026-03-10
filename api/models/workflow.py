@@ -294,10 +294,6 @@ class Workflow(Base):  # bug
             )
             features["file_upload"]["enabled"] = image_enabled
             features["file_upload"]["number_limits"] = image_number_limits
-            # Ensure local_file is always allowed — the old image config should not
-            # restrict document/audio/video upload methods.
-            if "local_file" not in image_transfer_methods:
-                image_transfer_methods = list(image_transfer_methods) + ["local_file"]
             features["file_upload"]["allowed_file_upload_methods"] = image_transfer_methods
             features["file_upload"]["allowed_file_types"] = features["file_upload"].get("allowed_file_types", ["image"])
             features["file_upload"]["allowed_file_extensions"] = features["file_upload"].get(

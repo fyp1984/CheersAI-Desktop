@@ -66,7 +66,7 @@ vi.mock('@/context/event-emitter', () => ({
 
 // Mock i18n docLink
 vi.mock('@/context/i18n', () => ({
-  useDocLink: () => (path: string) => `https://docs.cheersai.cloud${path}`,
+  useDocLink: () => (path: string) => `https://docs.dify.ai${path}`,
 }))
 
 // Mock workflow constants

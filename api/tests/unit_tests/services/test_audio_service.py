@@ -1,7 +1,7 @@
 """
 Comprehensive unit tests for AudioService.
 
-This test suite provides complete coverage of audio processing operations in CheersAI,
+This test suite provides complete coverage of audio processing operations in Dify,
 following TDD principles with the Arrange-Act-Assert pattern.
 
 ## Test Coverage

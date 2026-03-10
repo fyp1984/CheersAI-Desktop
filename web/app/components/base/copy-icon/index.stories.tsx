@@ -13,7 +13,7 @@ const meta = {
   },
   tags: ['autodocs'],
   args: {
-    content: 'https://console.cheersai.cloud/apps/12345',
+    content: 'https://console.dify.ai/apps/12345',
   },
 } satisfies Meta<typeof CopyIcon>
 
@@ -34,7 +34,7 @@ export const Default: Story = {
         code: `
 <div className="flex items-center gap-2">
   <span>Hover or click to copy the app link:</span>
-  <CopyIcon content="https://console.cheersai.cloud/apps/12345" />
+  <CopyIcon content="https://console.dify.ai/apps/12345" />
 </div>
         `.trim(),
       },

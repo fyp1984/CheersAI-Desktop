@@ -10,5 +10,12 @@ const ReactScan = lazy(() =>
 )
 
 export const ReactScanLoader = () => {
-  return null
+  if (!IS_DEV)
+    return null
+
+  return (
+    <Suspense fallback={null}>
+      <ReactScan />
+    </Suspense>
+  )
 }

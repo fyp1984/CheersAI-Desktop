@@ -97,7 +97,6 @@ from .trigger import (
     TriggerSubscription,
     WorkflowSchedulePlan,
 )
-from .user_config import UserConfig
 from .web import PinnedConversation, SavedMessage
 from .workflow import (
     ConversationVariable,
@@ -200,7 +199,6 @@ __all__ = [
     "TriggerOAuthTenantClient",
     "TriggerSubscription",
     "UploadFile",
-    "UserConfig",
     "UserFrom",
     "Whitelist",
     "Workflow",

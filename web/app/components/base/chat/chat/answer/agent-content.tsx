@@ -7,13 +7,6 @@ import Thought from '@/app/components/base/chat/chat/thought'
 import { FileList } from '@/app/components/base/file-uploader'
 import { getProcessedFilesFromResponse } from '@/app/components/base/file-uploader/utils'
 import { Markdown } from '@/app/components/base/markdown'
-import { useReverseMask } from './use-reverse-mask'
-
-const ReversedMarkdown: FC<{ content: string }> = memo(({ content }) => {
-  const reversed = useReverseMask(content)
-  return <Markdown content={reversed} />
-})
-ReversedMarkdown.displayName = 'ReversedMarkdown'
 
 type AgentContentProps = {
   item: ChatItem
@@ -35,10 +28,10 @@ const AgentContent: FC<AgentContentProps> = ({
 
   return (
     <div>
-      {content ? <ReversedMarkdown content={content} /> : agent_thoughts?.map((thought, index) => (
+      {content ? <Markdown content={content} /> : agent_thoughts?.map((thought, index) => (
         <div key={index} className="px-2 py-1">
           {thought.thought && (
-            <ReversedMarkdown content={thought.thought} />
+            <Markdown content={thought.thought} />
           )}
           {/* {item.tool} */}
           {/* perhaps not use tool */}

@@ -1,7 +1,7 @@
 """
 Comprehensive unit tests for DatasetService.
 
-This test suite provides complete coverage of dataset management operations in CheersAI,
+This test suite provides complete coverage of dataset management operations in Dify,
 following TDD principles with the Arrange-Act-Assert pattern.
 
 ## Test Coverage

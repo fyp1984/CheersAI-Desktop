@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is the workflow graph engine module of CheersAI, implementing a queue-based distributed workflow execution system. The engine handles agentic AI workflows with support for parallel execution, node iteration, conditional logic, and external command control.
+This is the workflow graph engine module of Dify, implementing a queue-based distributed workflow execution system. The engine handles agentic AI workflows with support for parallel execution, node iteration, conditional logic, and external command control.
 
 ## Architecture
 

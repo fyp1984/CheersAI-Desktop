@@ -1,7 +1,7 @@
 """
 Comprehensive unit tests for RecommendedAppService.
 
-This test suite provides complete coverage of recommended app operations in CheersAI,
+This test suite provides complete coverage of recommended app operations in Dify,
 following TDD principles with the Arrange-Act-Assert pattern.
 
 ## Test Coverage

@@ -53,37 +53,21 @@ const getStringConfig = (
   return defaultValue
 }
 
-const normalizeUrlPrefix = (value: string) => {
-  const trimmed = value.trim()
-  if (!trimmed)
-    return trimmed
-  if (/^https?:\/\//i.test(trimmed))
-    return trimmed
-  if (trimmed.startsWith('/')) {
-    if (typeof window === 'undefined')
-      return `http://127.0.0.1:3000${trimmed}`
-    const origin = globalThis.location?.origin
-    if (origin)
-      return new URL(trimmed, origin).toString()
-  }
-  return trimmed
-}
-
-export const API_PREFIX = normalizeUrlPrefix(getStringConfig(
+export const API_PREFIX = getStringConfig(
   process.env.NEXT_PUBLIC_API_PREFIX,
   DatasetAttr.DATA_API_PREFIX,
   'http://localhost:5001/console/api',
-))
-export const PUBLIC_API_PREFIX = normalizeUrlPrefix(getStringConfig(
+)
+export const PUBLIC_API_PREFIX = getStringConfig(
   process.env.NEXT_PUBLIC_PUBLIC_API_PREFIX,
   DatasetAttr.DATA_PUBLIC_API_PREFIX,
   'http://localhost:5001/api',
-))
-export const MARKETPLACE_API_PREFIX = normalizeUrlPrefix(getStringConfig(
+)
+export const MARKETPLACE_API_PREFIX = getStringConfig(
   process.env.NEXT_PUBLIC_MARKETPLACE_API_PREFIX,
   DatasetAttr.DATA_MARKETPLACE_API_PREFIX,
   'http://localhost:5002/api',
-))
+)
 export const MARKETPLACE_URL_PREFIX = getStringConfig(
   process.env.NEXT_PUBLIC_MARKETPLACE_URL_PREFIX,
   DatasetAttr.DATA_MARKETPLACE_URL_PREFIX,

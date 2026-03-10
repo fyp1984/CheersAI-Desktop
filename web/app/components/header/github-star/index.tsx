@@ -10,7 +10,7 @@ const defaultData = {
 }
 
 const getStar = async () => {
-  const res = await fetch('https://api.github.com/repos/CheersAI/CheersAI-Desktop')
+  const res = await fetch('https://api.github.com/repos/langgenius/dify')
 
   if (!res.ok)
     throw new Error('Failed to fetch github star')

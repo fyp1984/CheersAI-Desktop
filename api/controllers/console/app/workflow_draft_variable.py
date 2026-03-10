@@ -187,7 +187,7 @@ def _api_prerequisite(f: Callable[P, R]):
 
     It ensures the following conditions are satisfied:
 
-    - CheersAI has been property setup.
+    - Dify has been property setup.
     - The request user has logged in and initialized.
     - The requested app is a workflow or a chat flow.
     - The request user has the edit permission for the app.

@@ -23,7 +23,7 @@ const usePSInfo = () => {
     setTrue: setBind,
   }] = useBoolean(false)
   const { mutateAsync } = useBindPartnerStackInfo()
-  // Save to top domain. cloud.cheersai.cloud => .cheersai.cloud
+  // Save to top domain. cloud.dify.ai => .dify.ai
   const domain = globalThis.location.hostname.replace('cloud', '')
 
   const saveOrUpdate = useCallback(() => {

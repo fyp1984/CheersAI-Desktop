@@ -1,57 +1,10 @@
-import re
-from collections.abc import Callable
-
 from fastopenapi.routers import FlaskRouter
-from flask import Response, jsonify, request
 from flask_cors import CORS
 
 from configs import dify_config
 from controllers.fastopenapi import console_router
 from dify_app import DifyApp
 from extensions.ext_blueprints import AUTHENTICATED_HEADERS, EXPOSED_HEADERS
-
-
-def _patched_add_route(self: FlaskRouter, path: str, method: str, endpoint: Callable) -> None:
-    """Patch FlaskRouter.add_route to handle Flask Response objects from decorators."""
-    from fastopenapi.base_router import BaseRouter
-
-    BaseRouter.add_route(self, path, method, endpoint)
-    if self.app is not None:
-        flask_path = re.sub(r"{(\w+)}", r"<\1>", path)
-
-        def view_func(**path_params):
-            json_data = request.get_json(silent=True) or {}
-            query_params = {}
-            for key in request.args:
-                values = request.args.getlist(key)
-                query_params[key] = values[0] if len(values) == 1 else values
-            all_params = {**query_params, **path_params}
-            body = json_data
-            try:
-                kwargs = self.resolve_endpoint_params(endpoint, all_params, body)
-            except Exception as e:
-                error_response = self.handle_exception(e)
-                return jsonify(error_response), getattr(e, "status_code", 422)
-
-            try:
-                result = endpoint(**kwargs)
-            except Exception as e:
-                error_response = self.handle_exception(e)
-                return jsonify(error_response), getattr(e, "code", 500)
-
-            # If decorators returned a Response directly, pass it through
-            if isinstance(result, Response):
-                return result
-
-            meta = getattr(endpoint, "__route_meta__", {})
-            status_code = meta.get("status_code", 200)
-            result = self._serialize_response(result)
-            return jsonify(result), status_code
-
-        self.app.add_url_rule(flask_path, endpoint.__name__, view_func, methods=[method.upper()])
-
-
-FlaskRouter.add_route = _patched_add_route
 
 DOCS_PREFIX = "/fastopenapi"
 
@@ -68,9 +21,9 @@ def init_app(app: DifyApp) -> None:
         redoc_url=redoc_url,
         openapi_url=openapi_url,
         openapi_version="3.0.0",
-        title="CheersAI API (FastOpenAPI PoC)",
+        title="Dify API (FastOpenAPI PoC)",
         version="1.0",
-        description="FastOpenAPI proof of concept for CheersAI API",
+        description="FastOpenAPI proof of concept for Dify API",
     )
 
     # Ensure route decorators are evaluated.

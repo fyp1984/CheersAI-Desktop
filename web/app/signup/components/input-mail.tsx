@@ -99,7 +99,7 @@ export default function Form({
               className="system-xs-medium text-text-secondary hover:underline"
               target="_blank"
               rel="noopener noreferrer"
-              href="https://cheersai.cloud/terms"
+              href="https://dify.ai/terms"
             >
               {t('tos', { ns: 'login' })}
             </Link>
@@ -108,7 +108,7 @@ export default function Form({
               className="system-xs-medium text-text-secondary hover:underline"
               target="_blank"
               rel="noopener noreferrer"
-              href="https://cheersai.cloud/privacy"
+              href="https://dify.ai/privacy"
             >
               {t('pp', { ns: 'login' })}
             </Link>

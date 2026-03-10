@@ -1,7 +1,7 @@
 {
-  "name": "cheersai-client",
+  "name": "dify-client",
   "version": "3.0.0",
-  "description": "This is the Node.js SDK for the CheersAI API, which allows you to easily integrate CheersAI into your Node.js applications.",
+  "description": "This is the Node.js SDK for the Dify.AI API, which allows you to easily integrate Dify.AI into your Node.js applications.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -20,13 +20,14 @@
     "LICENSE"
   ],
   "keywords": [
-    "CheersAI",
+    "Dify",
+    "Dify.AI",
     "LLM",
     "AI",
     "SDK",
     "API"
   ],
-  "author": "CheersAI",
+  "author": "LangGenius",
   "contributors": [
     "Joel <iamjoel007@gmail.com> (https://github.com/iamjoel)",
     "lyzno1 <yuanyouhuilyz@gmail.com> (https://github.com/lyzno1)",
@@ -34,13 +35,13 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/CheersAI/CheersAI-Desktop.git",
+    "url": "https://github.com/langgenius/dify.git",
     "directory": "sdks/nodejs-client"
   },
   "bugs": {
-    "url": "https://github.com/CheersAI/CheersAI-Desktop/issues"
+    "url": "https://github.com/langgenius/dify/issues"
   },
-  "homepage": "https://cheersai.cloud",
+  "homepage": "https://dify.ai",
   "license": "MIT",
   "scripts": {
     "build": "tsup",

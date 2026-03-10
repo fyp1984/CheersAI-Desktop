@@ -16,7 +16,7 @@ import {
 import { request } from './base'
 
 const getMarketplaceHeaders = () => new Headers({
-  'X-CheersAI-Version': !IS_MARKETPLACE ? APP_VERSION : '999.0.0',
+  'X-Dify-Version': !IS_MARKETPLACE ? APP_VERSION : '999.0.0',
 })
 
 const marketplaceLink = new OpenAPILink(marketplaceRouterContract, {

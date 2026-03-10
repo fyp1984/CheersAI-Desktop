@@ -496,8 +496,8 @@ class TestVersionCompatibility:
             assert declaration.version == version
 
     def test_minimum_dify_version_validation(self):
-        """Test minimum CheersAI version validation."""
-        # Arrange & Act: Create declaration with minimum CheersAI version
+        """Test minimum Dify version validation."""
+        # Arrange & Act: Create declaration with minimum Dify version
         declaration = PluginDeclaration(
             version="1.0.0",
             author="test-author",
@@ -516,7 +516,7 @@ class TestVersionCompatibility:
         assert declaration.meta.minimum_dify_version == "0.6.0"
 
     def test_invalid_minimum_dify_version(self):
-        """Test that invalid minimum CheersAI version format raises error."""
+        """Test that invalid minimum Dify version format raises error."""
         # Arrange & Act & Assert: Invalid minimum version should raise ValueError
         with pytest.raises(ValueError, match="Invalid version format"):
             PluginDeclaration.Meta(version="1.0.0", minimum_dify_version="invalid.version")

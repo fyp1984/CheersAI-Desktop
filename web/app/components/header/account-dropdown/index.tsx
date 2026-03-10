@@ -86,9 +86,9 @@ export default function AppSelector() {
               >
                 <MenuItems
                   className="
-                    absolute left-full bottom-0 ml-2 w-60 max-w-80
-                    origin-bottom-left divide-y divide-divider-subtle rounded-xl bg-components-panel-bg-blur shadow-lg
-                    backdrop-blur-sm focus:outline-none z-50
+                    absolute right-0 mt-1.5 w-60 max-w-80
+                    origin-top-right divide-y divide-divider-subtle rounded-xl bg-components-panel-bg-blur shadow-lg
+                    backdrop-blur-sm focus:outline-none
                   "
                 >
                   <div className="px-1 py-1">
@@ -153,7 +153,7 @@ export default function AppSelector() {
                         <MenuItem>
                           <Link
                             className={cn(itemClassName, 'group justify-between', 'data-[active]:bg-state-base-hover')}
-                            href="https://roadmap.cheersai.cloud"
+                            href="https://roadmap.dify.ai"
                             target="_blank"
                             rel="noopener noreferrer"
                           >
@@ -165,7 +165,7 @@ export default function AppSelector() {
                         <MenuItem>
                           <Link
                             className={cn(itemClassName, 'group justify-between', 'data-[active]:bg-state-base-hover')}
-                            href="https://github.com/CheersAI/CheersAI-Desktop"
+                            href="https://github.com/langgenius/dify"
                             target="_blank"
                             rel="noopener noreferrer"
                           >

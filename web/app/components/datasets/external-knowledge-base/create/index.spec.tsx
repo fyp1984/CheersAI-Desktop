@@ -18,7 +18,7 @@ vi.mock('next/navigation', () => ({
 
 // Mock useDocLink hook
 vi.mock('@/context/i18n', () => ({
-  useDocLink: () => (path?: string) => `https://docs.cheersai.cloud/en${path || ''}`,
+  useDocLink: () => (path?: string) => `https://docs.dify.ai/en${path || ''}`,
 }))
 
 // Mock external context providers (these are external dependencies)
@@ -146,7 +146,7 @@ describe('ExternalKnowledgeBaseCreate', () => {
       renderComponent()
 
       const docLink = screen.getByText('dataset.connectHelper.helper4')
-      expect(docLink).toHaveAttribute('href', 'https://docs.cheersai.cloud/en/use-dify/knowledge/connect-external-knowledge-base')
+      expect(docLink).toHaveAttribute('href', 'https://docs.dify.ai/en/use-dify/knowledge/connect-external-knowledge-base')
       expect(docLink).toHaveAttribute('target', '_blank')
       expect(docLink).toHaveAttribute('rel', 'noopener noreferrer')
     })

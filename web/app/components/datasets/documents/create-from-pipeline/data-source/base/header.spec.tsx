@@ -233,7 +233,7 @@ describe('Header', () => {
       })
 
       it.each([
-        'https://docs.cheersai.cloud',
+        'https://docs.dify.ai',
         'https://example.com/api',
         '/local/docs',
       ])('should accept "%s" as docLink', (link) => {

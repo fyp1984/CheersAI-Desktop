@@ -7,7 +7,6 @@ export const ACCOUNT_SETTING_TAB = {
   DATA_SOURCE: 'data-source',
   API_BASED_EXTENSION: 'api-based-extension',
   CUSTOM: 'custom',
-  DATA_SECURITY: 'data-security',
   LANGUAGE: 'language',
 } as const
 

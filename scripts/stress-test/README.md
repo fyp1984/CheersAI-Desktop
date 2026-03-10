@@ -1,6 +1,6 @@
-# CheersAI Stress Test Suite
+# Dify Stress Test Suite
 
-A high-performance stress test suite for CheersAI workflow execution using **Locust** - optimized for measuring Server-Sent Events (SSE) streaming performance.
+A high-performance stress test suite for Dify workflow execution using **Locust** - optimized for measuring Server-Sent Events (SSE) streaming performance.
 
 ## Key Metrics Tracked
 
@@ -89,7 +89,7 @@ The stress test tests a single endpoint with comprehensive SSE metrics tracking:
    - Locust (load testing framework)
    - sseclient-py (SSE client library)
 
-1. **Complete CheersAI setup**:
+1. **Complete Dify setup**:
 
    ```bash
    # Run the complete setup
@@ -413,7 +413,7 @@ docker compose -f docker/docker-compose.middleware.yaml up -d db
 1. **Services not running**:
 
    ```bash
-   # Start CheersAI API with Gunicorn (production mode)
+   # Start Dify API with Gunicorn (production mode)
    cd api
    uv run gunicorn --bind 0.0.0.0:5001 --workers 4 --worker-class gevent app:app
 

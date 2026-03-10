@@ -79,7 +79,7 @@ class SchemaRegistry:
             self.versions[version][schema_name] = schema
 
             # Extract and store metadata
-            uri = f"https://cheersai.cloud/schemas/{version}/{schema_name}.json"
+            uri = f"https://dify.ai/schemas/{version}/{schema_name}.json"
             metadata = {
                 "version": version,
                 "title": schema.get("title", ""),

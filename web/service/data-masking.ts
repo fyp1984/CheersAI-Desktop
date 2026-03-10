@@ -1,9 +1,8 @@
+import type { Fetcher } from 'swr'
 import { del, get, patch, post } from './base'
 
-export type Fetcher<Data = unknown, Key = string> = (arg: Key) => Promise<Data>
-
 // 数据脱敏规则类型定义
-export type MaskingRule = {
+export interface MaskingRule {
   id: string
   name: string
   type: string
@@ -14,7 +13,7 @@ export type MaskingRule = {
   updatedAt: string
 }
 
-export type CreateMaskingRuleRequest = {
+export interface CreateMaskingRuleRequest {
   name: string
   type: string
   pattern: string
@@ -22,7 +21,7 @@ export type CreateMaskingRuleRequest = {
   enabled: boolean
 }
 
-export type UpdateMaskingRuleRequest = {
+export interface UpdateMaskingRuleRequest {
   name?: string
   type?: string
   pattern?: string
@@ -30,7 +29,7 @@ export type UpdateMaskingRuleRequest = {
   enabled?: boolean
 }
 
-export type MaskingRulesResponse = {
+export interface MaskingRulesResponse {
   data: MaskingRule[]
   total: number
 }

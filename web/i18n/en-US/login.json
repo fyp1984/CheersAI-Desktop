@@ -18,7 +18,7 @@
   "checkCode.resend": "Resend",
   "checkCode.tipsPrefix": "We send a verification code to ",
   "checkCode.useAnotherMethod": "Use another method",
-  "checkCode.validTime": "Bear in mind that the code is valid for 1 minute",
+  "checkCode.validTime": "Bear in mind that the code is valid for 5 minutes",
   "checkCode.verificationCode": "Verification code",
   "checkCode.verificationCodePlaceholder": "Enter 6-digit code",
   "checkCode.verify": "Verify",

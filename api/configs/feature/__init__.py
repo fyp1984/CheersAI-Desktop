@@ -95,7 +95,7 @@ class CodeExecutionSandboxConfig(BaseSettings):
 
     CODE_EXECUTION_API_KEY: str = Field(
         description="API key for accessing the code execution service",
-        default="cheersai-sandbox",
+        default="dify-sandbox",
     )
 
     CODE_EXECUTION_CONNECT_TIMEOUT: float | None = Field(
@@ -261,7 +261,7 @@ class MarketplaceConfig(BaseSettings):
 
     MARKETPLACE_API_URL: HttpUrl = Field(
         description="Marketplace API URL",
-        default=HttpUrl("https://marketplace.cheersai.cloud"),
+        default=HttpUrl("https://marketplace.dify.ai"),
     )
 
 
@@ -665,7 +665,7 @@ class UpdateConfig(BaseSettings):
 
     CHECK_UPDATE_URL: str = Field(
         description="URL to check for application updates",
-        default="https://updates.cheersai.cloud",
+        default="https://updates.dify.ai",
     )
 
 

@@ -1,1 +1,0 @@
-(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,503388,e=>{e.v({"sidebar.collapseSidebar":"साइडबार को बंद करें","sidebar.expandSidebar":"साइडबार विस्तार करें"})}]);

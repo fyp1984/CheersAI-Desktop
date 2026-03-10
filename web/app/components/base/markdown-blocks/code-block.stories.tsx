@@ -5,7 +5,7 @@ const SAMPLE_CODE = `const greet = (name: string) => {
   return \`Hello, \${name}\`
 }
 
-console.log(greet('CheersAI'))`
+console.log(greet('Dify'))`
 
 const CodeBlockDemo = ({
   language = 'typescript',

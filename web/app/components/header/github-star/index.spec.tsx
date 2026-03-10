@@ -5,7 +5,7 @@ import * as React from 'react'
 import GithubStar from './index'
 
 const GITHUB_HOST = 'https://api.github.com'
-const GITHUB_PATH = '/repos/CheersAI/CheersAI-Desktop'
+const GITHUB_PATH = '/repos/langgenius/dify'
 
 const renderWithQueryClient = () => {
   const queryClient = new QueryClient({

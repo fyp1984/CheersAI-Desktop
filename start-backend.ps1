@@ -1,58 +1,24 @@
-# CheersAI 一键启动后端服务
-# 包含: Docker 服务 (PostgreSQL, Redis, Weaviate, Plugin Daemon) + Flask API
+# CheersAI 后端启动脚本
 # 使用方法: .\start-backend.ps1
 
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  CheersAI 后端一键启动" -ForegroundColor Cyan
-Write-Host "========================================`n" -ForegroundColor Cyan
+Write-Host "正在启动 CheersAI 后端服务..." -ForegroundColor Green
 
-# ---- 第一步: 启动 Docker 服务 ----
-Write-Host "[1/3] 启动 Docker 服务..." -ForegroundColor Green
-
-docker-compose -f "$PSScriptRoot\docker-compose.dev.yaml" up -d
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Docker 服务启动失败，请检查 Docker 是否运行" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "  PostgreSQL : localhost:5432" -ForegroundColor Gray
-Write-Host "  Redis      : localhost:6700" -ForegroundColor Gray
-Write-Host "  Weaviate   : localhost:8080" -ForegroundColor Gray
-Write-Host "  Plugin     : localhost:5002`n" -ForegroundColor Gray
-
-# ---- 第二步: 等待数据库就绪 ----
-Write-Host "[2/3] 等待数据库就绪..." -ForegroundColor Green
-$maxRetries = 15
-$retry = 0
-while ($retry -lt $maxRetries) {
-    $pgReady = docker exec dify-postgres pg_isready -U postgres 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "  数据库已就绪`n" -ForegroundColor Green
-        break
-    }
-    $retry++
-    Write-Host "  等待中... ($retry/$maxRetries)" -ForegroundColor Yellow
-    Start-Sleep -Seconds 2
-}
-if ($retry -eq $maxRetries) {
-    Write-Host "  数据库启动超时，继续尝试启动 API...`n" -ForegroundColor Yellow
-}
-
-# ---- 第三步: 启动 Flask API ----
-Write-Host "[3/3] 启动 Flask API (端口 5001)..." -ForegroundColor Green
-Write-Host "  按 Ctrl+C 停止服务`n" -ForegroundColor Yellow
-
+# 切换到 API 目录
 Set-Location -Path "$PSScriptRoot\api"
 
+# 检查 .env 文件
+if (-not (Test-Path ".env")) {
+    Write-Host "警告: .env 文件不存在，请先配置环境变量" -ForegroundColor Yellow
+    Write-Host "你可以复制 .env.example 并重命名为 .env" -ForegroundColor Yellow
+}
+
 # 运行数据库迁移
-Write-Host "  运行数据库迁移..." -ForegroundColor Gray
-uv run flask db upgrade 2>$null
+Write-Host "`n正在运行数据库迁移..." -ForegroundColor Cyan
+python -m uv run flask db upgrade
 
-Write-Host ""
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  后端 API: http://localhost:5001" -ForegroundColor Cyan
-Write-Host "  登录账号: 1@qq.com / password123" -ForegroundColor Cyan
-Write-Host "========================================`n" -ForegroundColor Cyan
+# 启动 Flask 开发服务器
+Write-Host "`n正在启动 Flask 开发服务器..." -ForegroundColor Cyan
+Write-Host "后端 API 地址: http://localhost:5001" -ForegroundColor Green
+Write-Host "按 Ctrl+C 停止服务器`n" -ForegroundColor Yellow
 
-# 启动 Flask
-uv run flask run --host 0.0.0.0 --port=5001 --debug
+python -m uv run flask run --host 0.0.0.0 --port=5001 --debug

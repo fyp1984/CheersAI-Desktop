@@ -524,7 +524,7 @@ workflow:
     label: URL
     max_length: 256
     options: []
-    placeholder: https://docs.cheersai.cloud/en/
+    placeholder: https://docs.dify.ai/en/
     required: true
     tooltips: null
     type: text-input
@@ -581,7 +581,7 @@ workflow:
     label: URL
     max_length: 256
     options: []
-    placeholder: https://docs.cheersai.cloud/en/
+    placeholder: https://docs.dify.ai/en/
     required: true
     tooltips: null
     type: text-input

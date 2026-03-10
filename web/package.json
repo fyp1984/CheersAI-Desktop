@@ -1,5 +1,5 @@
 {
-  "name": "cheersai-web",
+  "name": "dify-web",
   "type": "module",
   "version": "1.12.0",
   "private": true,
@@ -28,14 +28,18 @@
   "scripts": {
     "dev": "next dev",
     "dev:inspect": "next dev --inspect",
+    "dev:electron": "cross-env NODE_ENV=development electron electron/main.js",
     "dev:tauri": "tauri dev",
     "build": "next build",
-    "build:tauri": "node scripts/build-tauri.cjs",
-    "build:tauri:debug": "node scripts/build-tauri.cjs debug",
-    "build:tauri:full": "node scripts/build-tauri-with-server.cjs",
-    "build:tauri:full:debug": "node scripts/build-tauri-with-server.cjs --debug",
+    "build:electron": "node scripts/build-electron.cjs",
+    "build:electron:win": "node scripts/build-electron.cjs win",
+    "build:electron:mac": "node scripts/build-electron.cjs mac",
+    "build:electron:linux": "node scripts/build-electron.cjs linux",
+    "build:tauri": "tauri build",
+    "build:tauri:debug": "tauri build --debug",
     "build:docker": "next build && node scripts/optimize-standalone.js",
     "start": "node ./scripts/copy-and-start.mjs",
+    "start:electron": "electron electron/main.js",
     "lint": "eslint --cache --concurrency=\"auto\"",
     "lint:ci": "eslint --cache --concurrency 3",
     "lint:fix": "pnpm lint --fix",
@@ -217,6 +221,8 @@
     "autoprefixer": "10.4.21",
     "code-inspector-plugin": "1.3.6",
     "cross-env": "10.1.0",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
     "esbuild-wasm": "0.27.2",
     "eslint": "9.39.2",
     "eslint-plugin-react-hooks": "7.0.1",
@@ -224,8 +230,6 @@
     "eslint-plugin-sonarjs": "3.0.6",
     "eslint-plugin-storybook": "10.2.1",
     "eslint-plugin-tailwindcss": "3.18.2",
-    "fake-indexeddb": "6.2.5",
-    "fast-check": "4.5.3",
     "husky": "9.1.7",
     "jsdom": "27.3.0",
     "jsdom-testing-mocks": "1.16.0",
@@ -293,8 +297,7 @@
     "onlyBuiltDependencies": [
       "@parcel/watcher",
       "esbuild",
-      "sharp",
-      "@swc/core"
+      "sharp"
     ]
   },
   "resolutions": {
@@ -305,6 +308,6 @@
     "string-width": "~4.2.3"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,mjs,cjs,json}": "eslint --fix"
+    "*": "eslint --fix"
   }
 }

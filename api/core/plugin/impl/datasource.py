@@ -353,7 +353,7 @@ class PluginDatasourceManager(BasePluginClient):
                     "author": "langgenius",
                     "name": "file",
                     "label": {"zh_Hans": "File", "en_US": "File", "pt_BR": "File", "ja_JP": "File"},
-                    "icon": "https://assets.cheersai.cloud/images/File%20Upload.svg",
+                    "icon": "https://assets.dify.ai/images/File%20Upload.svg",
                     "description": {"zh_Hans": "File", "en_US": "File", "pt_BR": "File", "ja_JP": "File"},
                 },
                 "credentials_schema": [],

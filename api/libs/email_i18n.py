@@ -2,7 +2,7 @@
 Email Internationalization Module
 
 This module provides a centralized, elegant way to handle email internationalization
-in CheersAI. It follows Domain-Driven Design principles with proper type hints and
+in Dify. It follows Domain-Driven Design principles with proper type hints and
 eliminates the need for repetitive language switching logic.
 """
 
@@ -272,7 +272,7 @@ class EmailI18nService:
         full_context = {
             **template_context,
             "branding_enabled": branding.enabled,
-            "application_title": branding.application_title if branding.enabled else "CheersAI",
+            "application_title": branding.application_title if branding.enabled else "Dify",
         }
 
         # Render template
@@ -407,24 +407,24 @@ def create_default_email_config() -> EmailI18nConfig:
         },
         EmailType.ACCOUNT_DELETION_SUCCESS: {
             EmailLanguage.EN_US: EmailTemplate(
-                subject="Your CheersAI.AI Account Has Been Successfully Deleted",
+                subject="Your Dify.AI Account Has Been Successfully Deleted",
                 template_path="delete_account_success_template_en-US.html",
                 branded_template_path="delete_account_success_template_en-US.html",
             ),
             EmailLanguage.ZH_HANS: EmailTemplate(
-                subject="您的 CheersAI.AI 账户已成功删除",
+                subject="您的 Dify.AI 账户已成功删除",
                 template_path="delete_account_success_template_zh-CN.html",
                 branded_template_path="delete_account_success_template_zh-CN.html",
             ),
         },
         EmailType.ACCOUNT_DELETION_VERIFICATION: {
             EmailLanguage.EN_US: EmailTemplate(
-                subject="CheersAI.AI Account Deletion and Verification",
+                subject="Dify.AI Account Deletion and Verification",
                 template_path="delete_account_code_email_template_en-US.html",
                 branded_template_path="delete_account_code_email_template_en-US.html",
             ),
             EmailLanguage.ZH_HANS: EmailTemplate(
-                subject="CheersAI.AI 账户删除和验证",
+                subject="Dify.AI 账户删除和验证",
                 template_path="delete_account_code_email_template_zh-CN.html",
                 branded_template_path="delete_account_code_email_template_zh-CN.html",
             ),
@@ -443,12 +443,12 @@ def create_default_email_config() -> EmailI18nConfig:
         },
         EmailType.DOCUMENT_CLEAN_NOTIFY: {
             EmailLanguage.EN_US: EmailTemplate(
-                subject="CheersAI Knowledge base auto disable notification",
+                subject="Dify Knowledge base auto disable notification",
                 template_path="clean_document_job_mail_template-US.html",
                 branded_template_path="clean_document_job_mail_template-US.html",
             ),
             EmailLanguage.ZH_HANS: EmailTemplate(
-                subject="CheersAI 知识库自动禁用通知",
+                subject="Dify 知识库自动禁用通知",
                 template_path="clean_document_job_mail_template_zh-CN.html",
                 branded_template_path="clean_document_job_mail_template_zh-CN.html",
             ),

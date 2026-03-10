@@ -88,7 +88,7 @@ describe('Pricing', () => {
 
       // Assert
       expect(screen.getByText('billing.plansCommon.title.plans')).toBeInTheDocument()
-      expect(screen.getByTestId('pricing-link')).toHaveAttribute('href', 'https://cheersai.cloud/en/pricing#plans-and-features')
+      expect(screen.getByTestId('pricing-link')).toHaveAttribute('href', 'https://dify.ai/en/pricing#plans-and-features')
     })
   })
 
@@ -116,7 +116,7 @@ describe('Pricing', () => {
       render(<Pricing onCancel={vi.fn()} />)
 
       // Assert
-      expect(screen.getByTestId('pricing-link')).toHaveAttribute('href', 'https://cheersai.cloud/pricing#plans-and-features')
+      expect(screen.getByTestId('pricing-link')).toHaveAttribute('href', 'https://dify.ai/pricing#plans-and-features')
     })
   })
 })

@@ -99,6 +99,21 @@
       "count": 1
     }
   },
+  "app/(shareLayout)/components/splash.tsx": {
+    "react-hooks-extra/no-direct-set-state-in-use-effect": {
+      "count": 1
+    }
+  },
+  "app/(shareLayout)/webapp-reset-password/layout.tsx": {
+    "ts/no-explicit-any": {
+      "count": 1
+    }
+  },
+  "app/(shareLayout)/webapp-signin/components/mail-and-password-auth.tsx": {
+    "ts/no-explicit-any": {
+      "count": 2
+    }
+  },
   "app/account/(commonLayout)/account-page/email-change-modal.tsx": {
     "ts/no-explicit-any": {
       "count": 5
@@ -193,6 +208,11 @@
   },
   "app/components/app/annotation/edit-annotation-modal/index.spec.tsx": {
     "test/prefer-hooks-in-order": {
+      "count": 1
+    }
+  },
+  "app/components/app/annotation/header-opts/index.spec.tsx": {
+    "ts/no-explicit-any": {
       "count": 1
     }
   },

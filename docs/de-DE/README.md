@@ -1,20 +1,20 @@
 ![cover-v5-optimized](../../images/GitHub_README_if.png)
 
 <p align="center">
-  📌 <a href="https://cheersai.cloud/blog/introducing-dify-workflow-file-upload-a-demo-on-ai-podcast">Einführung in CheersAI Workflow File Upload: Google NotebookLM Podcast nachbilden</a>
+  📌 <a href="https://dify.ai/blog/introducing-dify-workflow-file-upload-a-demo-on-ai-podcast">Einführung in Dify Workflow File Upload: Google NotebookLM Podcast nachbilden</a>
 </p>
 
 <p align="center">
-  <a href="https://cloud.cheersai.cloud">CheersAI Cloud</a> ·
-  <a href="https://docs.cheersai.cloud/getting-started/install-self-hosted">Selbstgehostetes</a> ·
-  <a href="https://docs.cheersai.cloud">Dokumentation</a> ·
-  <a href="https://cheersai.cloud/pricing">Überblick über die CheersAI-Produkte</a>
+  <a href="https://cloud.dify.ai">Dify Cloud</a> ·
+  <a href="https://docs.dify.ai/getting-started/install-self-hosted">Selbstgehostetes</a> ·
+  <a href="https://docs.dify.ai">Dokumentation</a> ·
+  <a href="https://dify.ai/pricing">Überblick über die Dify-Produkte</a>
 </p>
 
 <p align="center">
-    <a href="https://cheersai.cloud" target="_blank">
+    <a href="https://dify.ai" target="_blank">
         <img alt="Static Badge" src="https://img.shields.io/badge/Product-F04438"></a>
-    <a href="https://cheersai.cloud/pricing" target="_blank">
+    <a href="https://dify.ai/pricing" target="_blank">
         <img alt="Static Badge" src="https://img.shields.io/badge/free-pricing?logo=free&color=%20%23155EEF&label=pricing&labelColor=%20%23528bff"></a>
     <a href="https://discord.gg/FngNHpbcY7" target="_blank">
         <img src="https://img.shields.io/discord/1082486657678311454?logo=discord&labelColor=%20%235462eb&logoColor=%20%23f5f5f5&color=%20%235462eb"
@@ -29,13 +29,13 @@
         <img src="https://custom-icon-badges.demolab.com/badge/LinkedIn-0A66C2?logo=linkedin-white&logoColor=fff"
             alt="follow on LinkedIn"></a>
     <a href="https://hub.docker.com/u/langgenius" target="_blank">
-        <img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/cheersai/cheersai-web?labelColor=%20%23FDB062&color=%20%23f79009"></a>
-    <a href="https://github.com/CheersAI/CheersAI-Desktop/graphs/commit-activity" target="_blank">
-        <img alt="Commits last month" src="https://img.shields.io/github/commit-activity/m/CheersAI/CheersAI-Desktop?labelColor=%20%2332b583&color=%20%2312b76a"></a>
-    <a href="https://github.com/CheersAI/CheersAI-Desktop/" target="_blank">
+        <img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/langgenius/dify-web?labelColor=%20%23FDB062&color=%20%23f79009"></a>
+    <a href="https://github.com/langgenius/dify/graphs/commit-activity" target="_blank">
+        <img alt="Commits last month" src="https://img.shields.io/github/commit-activity/m/langgenius/dify?labelColor=%20%2332b583&color=%20%2312b76a"></a>
+    <a href="https://github.com/langgenius/dify/" target="_blank">
         <img alt="Issues closed" src="https://img.shields.io/github/issues-search?query=repo%3Alanggenius%2Fdify%20is%3Aclosed&label=issues%20closed&labelColor=%20%237d89b0&color=%20%235d6b98"></a>
-    <a href="https://github.com/CheersAI/CheersAI-Desktop/discussions/" target="_blank">
-        <img alt="Discussion posts" src="https://img.shields.io/github/discussions/CheersAI/CheersAI-Desktop?labelColor=%20%239b8afb&color=%20%237a5af8"></a>
+    <a href="https://github.com/langgenius/dify/discussions/" target="_blank">
+        <img alt="Discussion posts" src="https://img.shields.io/github/discussions/langgenius/dify?labelColor=%20%239b8afb&color=%20%237a5af8"></a>
     <a href="https://insights.linuxfoundation.org/project/langgenius-dify" target="_blank">
         <img alt="LFX Health Score" src="https://insights.linuxfoundation.org/api/badge/health-score?project=langgenius-dify"></a>
     <a href="https://insights.linuxfoundation.org/project/langgenius-dify" target="_blank">
@@ -60,18 +60,18 @@
   <a href="../bn-BD/README.md"><img alt="README in বাংলা" src="https://img.shields.io/badge/বাংলা-d9d9d9"></a>
 </p>
 
-CheersAI ist eine Open-Source-Plattform zur Entwicklung von LLM-Anwendungen. Ihre intuitive Benutzeroberfläche vereint agentenbasierte KI-Workflows, RAG-Pipelines, Agentenfunktionen, Modellverwaltung, Überwachungsfunktionen und mehr, sodass Sie schnell von einem Prototyp in die Produktion übergehen können.
+Dify ist eine Open-Source-Plattform zur Entwicklung von LLM-Anwendungen. Ihre intuitive Benutzeroberfläche vereint agentenbasierte KI-Workflows, RAG-Pipelines, Agentenfunktionen, Modellverwaltung, Überwachungsfunktionen und mehr, sodass Sie schnell von einem Prototyp in die Produktion übergehen können.
 
 ## Schnellstart
 
-> Bevor Sie CheersAI installieren, stellen Sie sicher, dass Ihr System die folgenden Mindestanforderungen erfüllt:
+> Bevor Sie Dify installieren, stellen Sie sicher, dass Ihr System die folgenden Mindestanforderungen erfüllt:
 >
 > - CPU >= 2 Core
 > - RAM >= 4 GiB
 
 </br>
 
-Der einfachste Weg, den CheersAI-Server zu starten, ist über [docker compose](../../docker/docker-compose.yaml). Stellen Sie vor dem Ausführen von CheersAI mit den folgenden Befehlen sicher, dass [Docker](https://docs.docker.com/get-docker/) und [Docker Compose](https://docs.docker.com/compose/install/) auf Ihrem System installiert sind:
+Der einfachste Weg, den Dify-Server zu starten, ist über [docker compose](../../docker/docker-compose.yaml). Stellen Sie vor dem Ausführen von Dify mit den folgenden Befehlen sicher, dass [Docker](https://docs.docker.com/get-docker/) und [Docker Compose](https://docs.docker.com/compose/install/) auf Ihrem System installiert sind:
 
 ```bash
 cd dify
@@ -80,13 +80,13 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Nachdem Sie den Server gestartet haben, können Sie über Ihren Browser auf das CheersAI Dashboard unter [http://localhost/install](http://localhost/install) zugreifen und den Initialisierungsprozess starten.
+Nachdem Sie den Server gestartet haben, können Sie über Ihren Browser auf das Dify Dashboard unter [http://localhost/install](http://localhost/install) zugreifen und den Initialisierungsprozess starten.
 
 #### Hilfe suchen
 
-Bitte beachten Sie unsere [FAQ](https://docs.cheersai.cloud/getting-started/install-self-hosted/faqs), wenn Sie Probleme bei der Einrichtung von CheersAI haben. Wenden Sie sich an [die Community und uns](#community--contact), falls weiterhin Schwierigkeiten auftreten.
+Bitte beachten Sie unsere [FAQ](https://docs.dify.ai/getting-started/install-self-hosted/faqs), wenn Sie Probleme bei der Einrichtung von Dify haben. Wenden Sie sich an [die Community und uns](#community--contact), falls weiterhin Schwierigkeiten auftreten.
 
-> Wenn Sie zu CheersAI beitragen oder zusätzliche Entwicklungen durchführen möchten, lesen Sie bitte unseren [Leitfaden zur Bereitstellung aus dem Quellcode](https://docs.cheersai.cloud/getting-started/install-self-hosted/local-source-code).
+> Wenn Sie zu Dify beitragen oder zusätzliche Entwicklungen durchführen möchten, lesen Sie bitte unseren [Leitfaden zur Bereitstellung aus dem Quellcode](https://docs.dify.ai/getting-started/install-self-hosted/local-source-code).
 
 ## Wesentliche Merkmale
 
@@ -94,9 +94,9 @@ Bitte beachten Sie unsere [FAQ](https://docs.cheersai.cloud/getting-started/inst
 Erstellen und testen Sie leistungsstarke KI-Workflows auf einer visuellen Oberfläche, wobei Sie alle der folgenden Funktionen und darüber hinaus nutzen können.
 
 **2. Umfassende Modellunterstützung**:
-Nahtlose Integration mit Hunderten von proprietären und Open-Source-LLMs von Dutzenden Inferenzanbietern und selbstgehosteten Lösungen, die GPT, Mistral, Llama3 und alle mit der OpenAI API kompatiblen Modelle abdecken. Eine vollständige Liste der unterstützten Modellanbieter finden Sie [hier](https://docs.cheersai.cloud/getting-started/readme/model-providers).
+Nahtlose Integration mit Hunderten von proprietären und Open-Source-LLMs von Dutzenden Inferenzanbietern und selbstgehosteten Lösungen, die GPT, Mistral, Llama3 und alle mit der OpenAI API kompatiblen Modelle abdecken. Eine vollständige Liste der unterstützten Modellanbieter finden Sie [hier](https://docs.dify.ai/getting-started/readme/model-providers).
 
-![providers-v5](https://github.com/CheersAI/CheersAI-Desktop/assets/13230914/5a17bdbe-097a-4100-8363-40255b70f6e3)
+![providers-v5](https://github.com/langgenius/dify/assets/13230914/5a17bdbe-097a-4100-8363-40255b70f6e3)
 
 **3. Prompt IDE**:
 Intuitive Benutzeroberfläche zum Erstellen von Prompts, zum Vergleichen der Modellleistung und zum Hinzufügen zusätzlicher Funktionen wie Text-to-Speech in einer chatbasierten Anwendung.
@@ -105,57 +105,57 @@ Intuitive Benutzeroberfläche zum Erstellen von Prompts, zum Vergleichen der Mod
 Umfassende RAG-Funktionalitäten, die alles von der Dokumenteneinlesung bis zur -abfrage abdecken, mit sofort einsatzbereiter Unterstützung für die Textextraktion aus PDFs, PPTs und anderen gängigen Dokumentformaten.
 
 **5. Fähigkeiten des Agenten**:
-Sie können Agenten basierend auf LLM Function Calling oder ReAct definieren und vorgefertigte oder benutzerdefinierte Tools für den Agenten hinzufügen. CheersAI stellt über 50 integrierte Tools für KI-Agenten bereit, wie zum Beispiel Google Search, DALL·E, Stable Diffusion und WolframAlpha.
+Sie können Agenten basierend auf LLM Function Calling oder ReAct definieren und vorgefertigte oder benutzerdefinierte Tools für den Agenten hinzufügen. Dify stellt über 50 integrierte Tools für KI-Agenten bereit, wie zum Beispiel Google Search, DALL·E, Stable Diffusion und WolframAlpha.
 
 **6. LLMOps**:
 Überwachen und analysieren Sie Anwendungsprotokolle und die Leistung im Laufe der Zeit. Sie können kontinuierlich Prompts, Datensätze und Modelle basierend auf Produktionsdaten und Annotationen verbessern.
 
 **7. Backend-as-a-Service**:
-Alle CheersAI-Angebote kommen mit entsprechenden APIs, sodass Sie CheersAI mühelos in Ihre eigene Geschäftslogik integrieren können.
+Alle Dify-Angebote kommen mit entsprechenden APIs, sodass Sie Dify mühelos in Ihre eigene Geschäftslogik integrieren können.
 
-## CheersAI verwenden
+## Dify verwenden
 
 - **Cloud </br>**
-  Wir hosten einen [CheersAI Cloud](https://cheersai.cloud)-Service, den jeder ohne Einrichtung ausprobieren kann. Er bietet alle Funktionen der selbstgehosteten Version und beinhaltet 200 kostenlose GPT-4-Aufrufe im Sandbox-Plan.
+  Wir hosten einen [Dify Cloud](https://dify.ai)-Service, den jeder ohne Einrichtung ausprobieren kann. Er bietet alle Funktionen der selbstgehosteten Version und beinhaltet 200 kostenlose GPT-4-Aufrufe im Sandbox-Plan.
 
-- **Selbstgehostete CheersAI Community Edition</br>**
-  Starten Sie CheersAI schnell in Ihrer Umgebung mit diesem [Schnellstart-Leitfaden](#quick-start). Nutzen Sie unsere [Dokumentation](https://docs.cheersai.cloud) für weiterführende Informationen und detaillierte Anweisungen.
+- **Selbstgehostete Dify Community Edition</br>**
+  Starten Sie Dify schnell in Ihrer Umgebung mit diesem [Schnellstart-Leitfaden](#quick-start). Nutzen Sie unsere [Dokumentation](https://docs.dify.ai) für weiterführende Informationen und detaillierte Anweisungen.
 
-- **CheersAI für Unternehmen / Organisationen</br>**
-  Wir bieten zusätzliche, unternehmensspezifische Funktionen. [Über diesen Chatbot können Sie uns Ihre Fragen mitteilen](https://udify.app/chat/22L1zSxg6yW1cWQg) oder [senden Sie uns eine E-Mail](mailto:business@cheersai.cloud?subject=%5BGitHub%5DBusiness%20License%20Inquiry), um Ihre unternehmerischen Bedürfnisse zu besprechen. </br>
+- **Dify für Unternehmen / Organisationen</br>**
+  Wir bieten zusätzliche, unternehmensspezifische Funktionen. [Über diesen Chatbot können Sie uns Ihre Fragen mitteilen](https://udify.app/chat/22L1zSxg6yW1cWQg) oder [senden Sie uns eine E-Mail](mailto:business@dify.ai?subject=%5BGitHub%5DBusiness%20License%20Inquiry), um Ihre unternehmerischen Bedürfnisse zu besprechen. </br>
 
-  > Für Startups und kleine Unternehmen, die AWS nutzen, schauen Sie sich [CheersAI Premium on AWS Marketplace](https://aws.amazon.com/marketplace/pp/prodview-t22mebxzwjhu6) an und stellen Sie es mit nur einem Klick in Ihrer eigenen AWS VPC bereit. Es handelt sich um ein erschwingliches AMI-Angebot mit der Option, Apps mit individuellem Logo und Branding zu erstellen.
+  > Für Startups und kleine Unternehmen, die AWS nutzen, schauen Sie sich [Dify Premium on AWS Marketplace](https://aws.amazon.com/marketplace/pp/prodview-t22mebxzwjhu6) an und stellen Sie es mit nur einem Klick in Ihrer eigenen AWS VPC bereit. Es handelt sich um ein erschwingliches AMI-Angebot mit der Option, Apps mit individuellem Logo und Branding zu erstellen.
 
 ## Immer einen Schritt voraus
 
-Star CheersAI auf GitHub und lassen Sie sich sofort über neue Releases benachrichtigen.
+Star Dify auf GitHub und lassen Sie sich sofort über neue Releases benachrichtigen.
 
-![star-us](https://github.com/CheersAI/CheersAI-Desktop/assets/13230914/b823edc1-6388-4e25-ad45-2f6b187adbb4)
+![star-us](https://github.com/langgenius/dify/assets/13230914/b823edc1-6388-4e25-ad45-2f6b187adbb4)
 
 ## Erweiterte Einstellungen
 
-Falls Sie die Konfiguration anpassen müssen, lesen Sie bitte die Kommentare in unserer [.env.example](../../docker/.env.example)-Datei und aktualisieren Sie die entsprechenden Werte in Ihrer `.env`-Datei. Zusätzlich müssen Sie eventuell Anpassungen an der `docker-compose.yaml`-Datei vornehmen, wie zum Beispiel das Ändern von Image-Versionen, Portzuordnungen oder Volumen-Mounts, je nach Ihrer spezifischen Einsatzumgebung und Ihren Anforderungen. Nachdem Sie Änderungen vorgenommen haben, starten Sie `docker-compose up -d` erneut. Eine vollständige Liste der verfügbaren Umgebungsvariablen finden Sie [hier](https://docs.cheersai.cloud/getting-started/install-self-hosted/environments).
+Falls Sie die Konfiguration anpassen müssen, lesen Sie bitte die Kommentare in unserer [.env.example](../../docker/.env.example)-Datei und aktualisieren Sie die entsprechenden Werte in Ihrer `.env`-Datei. Zusätzlich müssen Sie eventuell Anpassungen an der `docker-compose.yaml`-Datei vornehmen, wie zum Beispiel das Ändern von Image-Versionen, Portzuordnungen oder Volumen-Mounts, je nach Ihrer spezifischen Einsatzumgebung und Ihren Anforderungen. Nachdem Sie Änderungen vorgenommen haben, starten Sie `docker-compose up -d` erneut. Eine vollständige Liste der verfügbaren Umgebungsvariablen finden Sie [hier](https://docs.dify.ai/getting-started/install-self-hosted/environments).
 
 ### Metriküberwachung mit Grafana
 
-Importieren Sie das Dashboard in Grafana, wobei Sie die PostgreSQL-Datenbank von CheersAI als Datenquelle verwenden, um Metriken in der Granularität von Apps, Mandanten, Nachrichten und mehr zu überwachen.
+Importieren Sie das Dashboard in Grafana, wobei Sie die PostgreSQL-Datenbank von Dify als Datenquelle verwenden, um Metriken in der Granularität von Apps, Mandanten, Nachrichten und mehr zu überwachen.
 
 - [Grafana-Dashboard von @bowenliang123](https://github.com/bowenliang123/dify-grafana-dashboard)
 
 ### Bereitstellung mit Kubernetes
 
-Falls Sie eine hochverfügbare Konfiguration einrichten möchten, gibt es von der Community bereitgestellte [Helm Charts](https://helm.sh/) und YAML-Dateien, die es ermöglichen, CheersAI auf Kubernetes bereitzustellen.
+Falls Sie eine hochverfügbare Konfiguration einrichten möchten, gibt es von der Community bereitgestellte [Helm Charts](https://helm.sh/) und YAML-Dateien, die es ermöglichen, Dify auf Kubernetes bereitzustellen.
 
 - [Helm Chart by @LeoQuote](https://github.com/douban/charts/tree/master/charts/dify)
 - [Helm Chart by @BorisPolonsky](https://github.com/BorisPolonsky/dify-helm)
 - [Helm Chart by @magicsong](https://github.com/magicsong/ai-charts)
 - [YAML file by @Winson-030](https://github.com/Winson-030/dify-kubernetes)
 - [YAML file by @wyy-holding](https://github.com/wyy-holding/dify-k8s)
-- [🚀 NEW! YAML files (Supports CheersAI v1.6.0) by @Zhoneym](https://github.com/Zhoneym/DifyAI-Kubernetes)
+- [🚀 NEW! YAML files (Supports Dify v1.6.0) by @Zhoneym](https://github.com/Zhoneym/DifyAI-Kubernetes)
 
 #### Terraform für die Bereitstellung verwenden
 
-Stellen Sie CheersAI mit nur einem Klick mithilfe von [terraform](https://www.terraform.io/) auf einer Cloud-Plattform bereit.
+Stellen Sie Dify mit nur einem Klick mithilfe von [terraform](https://www.terraform.io/) auf einer Cloud-Plattform bereit.
 
 ##### Azure Global
 
@@ -167,7 +167,7 @@ Stellen Sie CheersAI mit nur einem Klick mithilfe von [terraform](https://www.te
 
 #### Verwendung von AWS CDK für die Bereitstellung
 
-Bereitstellung von CheersAI auf AWS mit [CDK](https://aws.amazon.com/cdk/)
+Bereitstellung von Dify auf AWS mit [CDK](https://aws.amazon.com/cdk/)
 
 ##### AWS
 
@@ -176,43 +176,43 @@ Bereitstellung von CheersAI auf AWS mit [CDK](https://aws.amazon.com/cdk/)
 
 #### Alibaba Cloud
 
-[Alibaba Cloud Computing Nest](https://computenest.console.aliyun.com/service/instance/create/default?type=user&ServiceName=CheersAI%E7%A4%BE%E5%8C%BA%E7%89%88)
+[Alibaba Cloud Computing Nest](https://computenest.console.aliyun.com/service/instance/create/default?type=user&ServiceName=Dify%E7%A4%BE%E5%8C%BA%E7%89%88)
 
 #### Alibaba Cloud Data Management
 
-Ein-Klick-Bereitstellung von CheersAI in der Alibaba Cloud mit [Alibaba Cloud Data Management](https://www.alibabacloud.com/help/en/dms/dify-in-invitational-preview/)
+Ein-Klick-Bereitstellung von Dify in der Alibaba Cloud mit [Alibaba Cloud Data Management](https://www.alibabacloud.com/help/en/dms/dify-in-invitational-preview/)
 
 #### Verwendung von Azure Devops Pipeline für AKS-Bereitstellung
 
-Stellen Sie CheersAI mit einem Klick in AKS bereit, indem Sie [Azure Devops Pipeline Helm Chart by @LeoZhang](https://github.com/Ruiruiz30/CheersAI-helm-chart-AKS) verwenden
+Stellen Sie Dify mit einem Klick in AKS bereit, indem Sie [Azure Devops Pipeline Helm Chart by @LeoZhang](https://github.com/Ruiruiz30/Dify-helm-chart-AKS) verwenden
 
 ## Contributing
 
-Falls Sie Code beitragen möchten, lesen Sie bitte unseren [Contribution Guide](./CONTRIBUTING.md). Gleichzeitig bitten wir Sie, CheersAI zu unterstützen, indem Sie es in den sozialen Medien teilen und auf Veranstaltungen und Konferenzen präsentieren.
+Falls Sie Code beitragen möchten, lesen Sie bitte unseren [Contribution Guide](./CONTRIBUTING.md). Gleichzeitig bitten wir Sie, Dify zu unterstützen, indem Sie es in den sozialen Medien teilen und auf Veranstaltungen und Konferenzen präsentieren.
 
-> Wir suchen Mitwirkende, die dabei helfen, CheersAI in weitere Sprachen zu übersetzen – außer Mandarin oder Englisch. Wenn Sie Interesse an einer Mitarbeit haben, lesen Sie bitte die [i18n README](https://github.com/CheersAI/CheersAI-Desktop/blob/main/web/i18n-config/README.md) für weitere Informationen und hinterlassen Sie einen Kommentar im `global-users`-Kanal unseres [Discord Community Servers](https://discord.gg/8Tpq4AcN9c).
+> Wir suchen Mitwirkende, die dabei helfen, Dify in weitere Sprachen zu übersetzen – außer Mandarin oder Englisch. Wenn Sie Interesse an einer Mitarbeit haben, lesen Sie bitte die [i18n README](https://github.com/langgenius/dify/blob/main/web/i18n-config/README.md) für weitere Informationen und hinterlassen Sie einen Kommentar im `global-users`-Kanal unseres [Discord Community Servers](https://discord.gg/8Tpq4AcN9c).
 
 ## Gemeinschaft & Kontakt
 
-- [GitHub Discussion](https://github.com/CheersAI/CheersAI-Desktop/discussions). Am besten geeignet für: den Austausch von Feedback und das Stellen von Fragen.
-- [GitHub Issues](https://github.com/CheersAI/CheersAI-Desktop/issues). Am besten für: Fehler, auf die Sie bei der Verwendung von CheersAI.AI stoßen, und Funktionsvorschläge. Siehe unseren [Contribution Guide](./CONTRIBUTING.md).
+- [GitHub Discussion](https://github.com/langgenius/dify/discussions). Am besten geeignet für: den Austausch von Feedback und das Stellen von Fragen.
+- [GitHub Issues](https://github.com/langgenius/dify/issues). Am besten für: Fehler, auf die Sie bei der Verwendung von Dify.AI stoßen, und Funktionsvorschläge. Siehe unseren [Contribution Guide](./CONTRIBUTING.md).
 - [Discord](https://discord.gg/FngNHpbcY7). Am besten geeignet für: den Austausch von Bewerbungen und den Austausch mit der Community.
 - [X(Twitter)](https://twitter.com/dify_ai). Am besten geeignet für: den Austausch von Bewerbungen und den Austausch mit der Community.
 
 **Mitwirkende**
 
-<a href="https://github.com/CheersAI/CheersAI-Desktop/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=CheersAI/CheersAI-Desktop" />
+<a href="https://github.com/langgenius/dify/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=langgenius/dify" />
 </a>
 
 ## Star-Geschichte
 
-[![Star History Chart](https://api.star-history.com/svg?repos=CheersAI/CheersAI-Desktop&type=Date)](https://star-history.com/#CheersAI/CheersAI-Desktop&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=langgenius/dify&type=Date)](https://star-history.com/#langgenius/dify&Date)
 
 ## Offenlegung der Sicherheit
 
-Um Ihre Privatsphäre zu schützen, vermeiden Sie es bitte, Sicherheitsprobleme auf GitHub zu posten. Schicken Sie Ihre Fragen stattdessen an security@cheersai.cloud und wir werden Ihnen eine ausführlichere Antwort geben.
+Um Ihre Privatsphäre zu schützen, vermeiden Sie es bitte, Sicherheitsprobleme auf GitHub zu posten. Schicken Sie Ihre Fragen stattdessen an security@dify.ai und wir werden Ihnen eine ausführlichere Antwort geben.
 
 ## Lizenz
 
-Dieses Repository steht unter der [CheersAI Open Source License](../../LICENSE), die im Wesentlichen Apache 2.0 mit einigen zusätzlichen Einschränkungen ist.
+Dieses Repository steht unter der [Dify Open Source License](../../LICENSE), die im Wesentlichen Apache 2.0 mit einigen zusätzlichen Einschränkungen ist.

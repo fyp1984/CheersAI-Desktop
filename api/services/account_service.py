@@ -1422,7 +1422,7 @@ class RegisterService:
             language=language,
             to=account.email,
             token=token,
-            inviter_name=inviter.name if inviter else "CheersAI",
+            inviter_name=inviter.name if inviter else "Dify",
             workspace_name=tenant.name,
         )
 

@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 
 class PyProjectConfig(BaseModel):
-    version: str = Field(description="CheersAI version", default="")
+    version: str = Field(description="Dify version", default="")
 
 
 class PyProjectTomlConfig(BaseSettings):

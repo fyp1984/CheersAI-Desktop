@@ -1,6 +1,6 @@
 # Frontend Testing Guide
 
-This document is the complete testing specification for the CheersAI frontend project.
+This document is the complete testing specification for the Dify frontend project.
 Goal: Readable, change-friendly, reusable, and debuggable tests.
 When I ask you to write/refactor/fix tests, follow these rules by default.
 
@@ -250,7 +250,7 @@ For complex inputs/entities, use Builders with solid defaults and chainable over
 
 Reserve snapshots for static, deterministic fragments (icons, badges, layout chrome). Keep them tight, prefer explicit assertions for behavior, and review any snapshot updates deliberately instead of accepting them wholesale.
 
-**Note**: CheersAI is a desktop application. **No need for** responsive/mobile testing.
+**Note**: Dify is a desktop application. **No need for** responsive/mobile testing.
 
 ### 12. Mock API
 
@@ -323,7 +323,7 @@ describe('ComponentName', () => {
 })
 ```
 
-## CheersAI-Specific Components
+## Dify-Specific Components
 
 ### General
 

@@ -24,7 +24,7 @@ These tests verify that:
 ARCHITECTURE OVERVIEW
 ================================================================================
 
-The controller layer in CheersAI uses Flask-RESTX to provide RESTful API endpoints.
+The controller layer in Dify uses Flask-RESTX to provide RESTful API endpoints.
 Controllers act as a thin layer between HTTP requests and service methods,
 handling:
 

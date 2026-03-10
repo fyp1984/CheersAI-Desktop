@@ -18,7 +18,7 @@
   "checkCode.resend": "重新发送",
   "checkCode.tipsPrefix": "我们发送一个验证码到",
   "checkCode.useAnotherMethod": "使用其他方式登录",
-  "checkCode.validTime": "请注意验证码 1 分钟内有效",
+  "checkCode.validTime": "请注意验证码 5 分钟内有效",
   "checkCode.verificationCode": "验证码",
   "checkCode.verificationCodePlaceholder": "输入 6 位验证码",
   "checkCode.verify": "验证",

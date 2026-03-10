@@ -1,7 +1,7 @@
 """
 Comprehensive unit tests for SavedMessageService.
 
-This test suite provides complete coverage of saved message operations in CheersAI,
+This test suite provides complete coverage of saved message operations in Dify,
 following TDD principles with the Arrange-Act-Assert pattern.
 
 ## Test Coverage

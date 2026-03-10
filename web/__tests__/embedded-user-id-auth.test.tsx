@@ -1,8 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import * as React from 'react'
 
-import CheckCode from '@/app/signin/check-code/page'
-import MailAndPasswordAuth from '@/app/signin/components/mail-and-password-auth'
+import CheckCode from '@/app/(shareLayout)/webapp-signin/check-code/page'
+import MailAndPasswordAuth from '@/app/(shareLayout)/webapp-signin/components/mail-and-password-auth'
 
 const replaceMock = vi.fn()
 const backMock = vi.fn()
@@ -75,7 +75,7 @@ describe('embedded user id propagation in authentication flows', () => {
     webAppLoginMock.mockResolvedValue({ result: 'success', data: { access_token: 'login-token' } })
     fetchAccessTokenMock.mockResolvedValue({ access_token: 'passport-token' })
 
-    render(<MailAndPasswordAuth isInvite={false} isEmailSetup allowRegistration={false} />)
+    render(<MailAndPasswordAuth isEmailSetup />)
 
     fireEvent.change(screen.getByLabelText('login.email'), { target: { value: 'user@example.com' } })
     fireEvent.change(screen.getByLabelText(/login\.password/), { target: { value: 'strong-password' } })

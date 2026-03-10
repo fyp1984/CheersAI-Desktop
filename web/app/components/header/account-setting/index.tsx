@@ -14,8 +14,6 @@ import {
   RiMoneyDollarCircleLine,
   RiPuzzle2Fill,
   RiPuzzle2Line,
-  RiShieldKeyholeFill,
-  RiShieldKeyholeLine,
   RiTranslate2,
 } from '@remixicon/react'
 import { useEffect, useRef, useState } from 'react'
@@ -38,7 +36,6 @@ import DataSourcePage from './data-source-page-new'
 import LanguagePage from './language-page'
 import MembersPage from './members-page'
 import ModelProviderPage from './model-provider-page'
-import { SandboxConfig } from '@/app/components/data-masking/sandbox-config'
 
 const iconClassName = `
   w-5 h-5 mr-2
@@ -112,12 +109,6 @@ export default function AccountSetting({
         name: t('settings.apiBasedExtension', { ns: 'common' }),
         icon: <RiPuzzle2Line className={iconClassName} />,
         activeIcon: <RiPuzzle2Fill className={iconClassName} />,
-      },
-      {
-        key: ACCOUNT_SETTING_TAB.DATA_SECURITY,
-        name: t('settings.dataSecurity', { ns: 'common' }),
-        icon: <RiShieldKeyholeLine className={iconClassName} />,
-        activeIcon: <RiShieldKeyholeFill className={iconClassName} />,
       },
     )
 
@@ -252,7 +243,6 @@ export default function AccountSetting({
               {activeMenu === 'billing' && <BillingPage />}
               {activeMenu === 'data-source' && <DataSourcePage />}
               {activeMenu === 'api-based-extension' && <ApiBasedExtensionPage />}
-              {activeMenu === 'data-security' && <SandboxConfig />}
               {activeMenu === 'custom' && <CustomPage />}
               {activeMenu === 'language' && <LanguagePage />}
             </div>

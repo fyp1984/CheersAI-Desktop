@@ -1,1 +1,0 @@
-(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,217672,a=>{a.v({"sidebar.collapseSidebar":"Contraer barra lateral","sidebar.expandSidebar":"Expandir barra lateral"})}]);

@@ -1,1 +1,1 @@
-# Clickzetta Vector Database Integration for CheersAI
+# Clickzetta Vector Database Integration for Dify

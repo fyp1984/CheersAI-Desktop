@@ -15,7 +15,7 @@ def tidb_vector():
             user="root",
             password="",
             database="test",
-            program_name="CheersAI/CheersAI-Desktop",
+            program_name="langgenius/dify",
         ),
     )
 

@@ -5,7 +5,7 @@ set $namespace="%SYS"
 Do ##class(Security.Users).UnExpireUserPasswords("*")
 
 // Change the default password　
-Do $SYSTEM.Security.ChangePassword("_SYSTEM","CheersAI@1234")
+Do $SYSTEM.Security.ChangePassword("_SYSTEM","Dify@1234")
 
 // Install the Japanese locale (default is English since the container is Ubuntu-based)
 // Do ##class(Config.NLS.Locales).Install("jpuw")

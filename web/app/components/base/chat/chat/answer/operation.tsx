@@ -5,7 +5,6 @@ import type {
 } from '../../types'
 import {
   RiClipboardLine,
-  RiDownloadLine,
   RiResetLeftLine,
   RiThumbDownLine,
   RiThumbUpLine,
@@ -319,40 +318,6 @@ const Operation: FC<OperationProps> = ({
             }}
             >
               <RiClipboardLine className="h-4 w-4" />
-            </ActionButton>
-            <ActionButton onClick={() => {
-              const downloadPath = typeof window !== 'undefined'
-                ? (localStorage.getItem('ai_reply_download_path')?.trim() || localStorage.getItem('sandbox_path')?.trim() || '')
-                : ''
-              const fileName = `reply-${id.slice(0, 8)}.md`
-              if (downloadPath) {
-                fetch('http://localhost:5001/console/api/data-masking/sandbox/files', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ sandbox_path: downloadPath, file_name: fileName, content }),
-                })
-                  .then(res => res.json())
-                  .then((data) => {
-                    if (data.result === 'success')
-                      Toast.notify({ type: 'success', message: `已保存: ${downloadPath}\\${fileName}` })
-                    else
-                      Toast.notify({ type: 'error', message: data.error || '保存失败' })
-                  })
-                  .catch(() => Toast.notify({ type: 'error', message: '保存失败，请确认路径有效' }))
-              }
-              else {
-                const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url
-                a.download = fileName
-                a.click()
-                URL.revokeObjectURL(url)
-                Toast.notify({ type: 'success', message: `已下载: ${fileName}` })
-              }
-            }}
-            >
-              <RiDownloadLine className="h-4 w-4" />
             </ActionButton>
             {!noChatInput && (
               <ActionButton onClick={() => onRegenerate?.(item)}>

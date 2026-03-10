@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Run CheersAI SSE Stress Test using Locust
+# Run Dify SSE Stress Test using Locust
 
 set -e
 
@@ -37,9 +37,9 @@ echo
 # Check if services are running
 echo -e "${YELLOW}Checking services...${NC}"
 
-# Check CheersAI API
+# Check Dify API
 if curl -s -f http://localhost:5001/health > /dev/null 2>&1; then
-    echo -e "${GREEN}✓ CheersAI API is running${NC}"
+    echo -e "${GREEN}✓ Dify API is running${NC}"
     
     # Warn if running in debug mode (check for werkzeug in process)
     if ps aux | grep -v grep | grep -q "werkzeug.*5001\|flask.*run.*5001"; then
@@ -56,7 +56,7 @@ if curl -s -f http://localhost:5001/health > /dev/null 2>&1; then
         fi
     fi
 else
-    echo -e "${RED}✗ CheersAI API is not running on port 5001${NC}"
+    echo -e "${RED}✗ Dify API is not running on port 5001${NC}"
     echo -e "${YELLOW}  Start it with Gunicorn for accurate benchmarking:${NC}"
     echo -e "${CYAN}  cd api && uv run gunicorn --bind 0.0.0.0:5001 --workers 4 --worker-class gevent app:app${NC}"
     exit 1

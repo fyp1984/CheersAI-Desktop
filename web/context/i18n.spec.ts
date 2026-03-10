@@ -56,17 +56,17 @@ describe('useDocLink', () => {
     })
 
     it('should remove trailing slash from base URL', () => {
-      const baseUrlWithSlash = 'https://docs.cheersai.cloud/'
+      const baseUrlWithSlash = 'https://docs.dify.ai/'
       const { result } = renderHook(() => useDocLink(baseUrlWithSlash))
       const url = result.current('/use-dify/getting-started/introduction')
-      expect(url).toBe('https://docs.cheersai.cloud/en/use-dify/getting-started/introduction')
+      expect(url).toBe('https://docs.dify.ai/en/use-dify/getting-started/introduction')
     })
 
     it('should handle base URL without trailing slash', () => {
-      const baseUrlWithoutSlash = 'https://docs.cheersai.cloud'
+      const baseUrlWithoutSlash = 'https://docs.dify.ai'
       const { result } = renderHook(() => useDocLink(baseUrlWithoutSlash))
       const url = result.current('/use-dify/getting-started/introduction')
-      expect(url).toBe('https://docs.cheersai.cloud/en/use-dify/getting-started/introduction')
+      expect(url).toBe('https://docs.dify.ai/en/use-dify/getting-started/introduction')
     })
   })
 

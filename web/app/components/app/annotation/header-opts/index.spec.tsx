@@ -128,8 +128,7 @@ vi.mock('@headlessui/react', () => {
 })
 
 let lastCSVDownloaderProps: Record<string, unknown> | undefined
-type CSVDownloaderProps = { children?: React.ReactNode } & Record<string, unknown>
-const mockCSVDownloader = vi.fn(({ children, ...props }: CSVDownloaderProps) => {
+const mockCSVDownloader = vi.fn(({ children, ...props }) => {
   lastCSVDownloaderProps = props
   return (
     <div data-testid="csv-downloader">
@@ -140,7 +139,7 @@ const mockCSVDownloader = vi.fn(({ children, ...props }: CSVDownloaderProps) => 
 
 vi.mock('react-papaparse', () => ({
   useCSVDownloader: () => ({
-    CSVDownloader: (props: CSVDownloaderProps) => mockCSVDownloader(props),
+    CSVDownloader: (props: any) => mockCSVDownloader(props),
     Type: { Link: 'link' },
   }),
 }))
@@ -338,13 +337,11 @@ describe('HeaderOptions', () => {
     const anchor = originalCreateElement('a') as HTMLAnchorElement
     const clickSpy = vi.spyOn(anchor, 'click').mockImplementation(vi.fn())
     const createElementSpy = vi.spyOn(document, 'createElement')
-      .mockImplementation(
-        ((tagName: string) => {
-          if (tagName === 'a')
-            return anchor
-          return originalCreateElement(tagName)
-        }) as unknown as typeof document.createElement,
-      )
+      .mockImplementation((tagName: Parameters<Document['createElement']>[0]) => {
+        if (tagName === 'a')
+          return anchor
+        return originalCreateElement(tagName)
+      })
     let capturedBlob: Blob | null = null
     const objectURLSpy = vi.spyOn(URL, 'createObjectURL')
       .mockImplementation((blob) => {

@@ -61,7 +61,7 @@ describe('APIKeyInfoPanel - Community Edition', () => {
 
     it('should render external link with correct href for self-host version', () => {
       const { container } = scenarios.withAPIKeyNotSet()
-      const link = container.querySelector('a[href="https://cloud.cheersai.cloud/apps"]')
+      const link = container.querySelector('a[href="https://cloud.dify.ai/apps"]')
 
       expect(link).toBeInTheDocument()
       expect(link).toHaveAttribute('target', '_blank')
@@ -71,7 +71,7 @@ describe('APIKeyInfoPanel - Community Edition', () => {
 
     it('should have external link with proper styling for self-host version', () => {
       const { container } = scenarios.withAPIKeyNotSet()
-      const link = container.querySelector('a[href="https://cloud.cheersai.cloud/apps"]')
+      const link = container.querySelector('a[href="https://cloud.dify.ai/apps"]')
 
       expect(link).toHaveClass(
         'mt-2',

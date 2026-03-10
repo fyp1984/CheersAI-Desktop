@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 # Constants
 UNCHANGED_SERVER_URL_PLACEHOLDER = "[__HIDDEN__]"
-CLIENT_NAME = "CheersAI"
+CLIENT_NAME = "Dify"
 EMPTY_TOOLS_JSON = "[]"
 EMPTY_CREDENTIALS_JSON = "{}"
 

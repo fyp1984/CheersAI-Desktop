@@ -1,4 +1,4 @@
-"""Structured logging components for CheersAI."""
+"""Structured logging components for Dify."""
 
 from core.logging.context import (
     clear_request_context,

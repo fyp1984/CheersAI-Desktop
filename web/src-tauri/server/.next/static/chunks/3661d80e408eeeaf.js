@@ -1,1 +1,0 @@
-(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,942317,e=>{e.v({"sidebar.collapseSidebar":"Zwiń pasek boczny","sidebar.expandSidebar":"Rozwiń pasek boczny"})}]);

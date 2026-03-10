@@ -1,7 +1,6 @@
 import { act, cleanup } from '@testing-library/react'
 import { mockAnimationsApi, mockResizeObserver } from 'jsdom-testing-mocks'
 import '@testing-library/jest-dom/vitest'
-import 'fake-indexeddb/auto'
 
 mockResizeObserver()
 
@@ -132,23 +131,16 @@ Object.defineProperty(window, 'matchMedia', {
 const createMockLocalStorage = () => {
   const storage: Record<string, string> = {}
   return {
-    getItem: (key: string) => storage[key] ?? null,
-    setItem: (key: string, value: string) => {
+    getItem: vi.fn((key: string) => storage[key] || null),
+    setItem: vi.fn((key: string, value: string) => {
       storage[key] = value
-    },
-    removeItem: (key: string) => {
+    }),
+    removeItem: vi.fn((key: string) => {
       delete storage[key]
-    },
-    clear: () => {
+    }),
+    clear: vi.fn(() => {
       Object.keys(storage).forEach(key => delete storage[key])
-    },
-    key: (index: number) => {
-      const keys = Object.keys(storage)
-      return keys[index] || null
-    },
-    get length() {
-      return Object.keys(storage).length
-    },
+    }),
     get storage() { return { ...storage } },
   }
 }
@@ -163,21 +155,4 @@ beforeEach(() => {
     writable: true,
     configurable: true,
   })
-
-  // Mock window.crypto for Web Crypto API
-  if (!globalThis.crypto || !globalThis.crypto.subtle) {
-    const nodeCrypto = require('crypto')
-    Object.defineProperty(globalThis, 'crypto', {
-      value: {
-        getRandomValues: (arr: any) => {
-          const bytes = nodeCrypto.randomBytes(arr.length)
-          arr.set(bytes)
-          return arr
-        },
-        subtle: nodeCrypto.webcrypto.subtle,
-      },
-      writable: true,
-      configurable: true,
-    })
-  }
 })

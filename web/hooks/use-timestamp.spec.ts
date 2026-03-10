@@ -8,7 +8,7 @@ vi.mock('@/context/app-context', () => ({
       name: 'test',
       avatar: null,
       avatar_url: null,
-      email: 'test@cheersai.cloud',
+      email: 'test@dify.ai',
       is_password_set: false,
       interface_language: 'zh-Hans',
       interface_theme: 'light',

@@ -477,9 +477,9 @@ describe('Install', () => {
   })
 
   // ================================
-  // CheersAI Version Compatibility Tests
+  // Dify Version Compatibility Tests
   // ================================
-  describe('CheersAI Version Compatibility', () => {
+  describe('Dify Version Compatibility', () => {
     it('should not show warning when dify version is compatible', () => {
       mockLangGeniusVersionInfo.current_version = '1.0.0'
       const payload = createMockManifest({ meta: { version: '1.0.0', minimum_dify_version: '0.8.0' } })

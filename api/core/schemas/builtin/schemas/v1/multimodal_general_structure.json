@@ -1,5 +1,5 @@
 {
-  "$id": "https://cheersai.cloud/schemas/v1/multimodal_general_structure.json",
+  "$id": "https://dify.ai/schemas/v1/multimodal_general_structure.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "version": "1.0.0",
   "type": "array",

@@ -23,7 +23,7 @@ class IrisVectorTest(AbstractVectorTest):
                 IRIS_HOST="host.docker.internal",
                 IRIS_SUPER_SERVER_PORT=1972,
                 IRIS_USER="_SYSTEM",
-                IRIS_PASSWORD="CheersAI@1234",
+                IRIS_PASSWORD="Dify@1234",
                 IRIS_DATABASE="USER",
                 IRIS_SCHEMA="dify",
                 IRIS_CONNECTION_URL=None,

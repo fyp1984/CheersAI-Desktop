@@ -1,20 +1,20 @@
 # ĐÓNG GÓP
 
-Bạn đang muốn đóng góp cho CheersAI - thật tuyệt vời, chúng tôi rất mong được thấy những gì bạn sẽ làm. Là một startup với nguồn nhân lực và tài chính hạn chế, chúng tôi có tham vọng lớn trong việc thiết kế quy trình trực quan nhất để xây dựng và quản lý các ứng dụng LLM. Mọi sự giúp đỡ từ cộng đồng đều rất có ý nghĩa.
+Bạn đang muốn đóng góp cho Dify - thật tuyệt vời, chúng tôi rất mong được thấy những gì bạn sẽ làm. Là một startup với nguồn nhân lực và tài chính hạn chế, chúng tôi có tham vọng lớn trong việc thiết kế quy trình trực quan nhất để xây dựng và quản lý các ứng dụng LLM. Mọi sự giúp đỡ từ cộng đồng đều rất có ý nghĩa.
 
 Chúng tôi cần phải nhanh nhẹn và triển khai nhanh chóng, nhưng cũng muốn đảm bảo những người đóng góp như bạn có trải nghiệm đóng góp thuận lợi nhất có thể. Chúng tôi đã tạo hướng dẫn đóng góp này nhằm giúp bạn làm quen với codebase và cách chúng tôi làm việc với người đóng góp, để bạn có thể nhanh chóng bắt đầu phần thú vị.
 
-Hướng dẫn này, giống như CheersAI, đang được phát triển liên tục. Chúng tôi rất cảm kích sự thông cảm của bạn nếu đôi khi nó chưa theo kịp dự án thực tế, và hoan nghênh mọi phản hồi để cải thiện.
+Hướng dẫn này, giống như Dify, đang được phát triển liên tục. Chúng tôi rất cảm kích sự thông cảm của bạn nếu đôi khi nó chưa theo kịp dự án thực tế, và hoan nghênh mọi phản hồi để cải thiện.
 
 Về giấy phép, vui lòng dành chút thời gian đọc [Thỏa thuận Cấp phép và Người đóng góp](../../LICENSE) ngắn gọn của chúng tôi. Cộng đồng cũng tuân theo [quy tắc ứng xử](https://github.com/langgenius/.github/blob/main/CODE_OF_CONDUCT.md).
 
 ## Trước khi bắt đầu
 
-Đang tìm việc để thực hiện? Hãy xem qua [các issue dành cho người mới](https://github.com/CheersAI/CheersAI-Desktop/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22) và chọn một để bắt đầu!
+Đang tìm việc để thực hiện? Hãy xem qua [các issue dành cho người mới](https://github.com/langgenius/dify/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22) và chọn một để bắt đầu!
 
-Bạn có một model runtime hoặc công cụ mới thú vị để thêm vào? Mở PR trong [repo plugin](https://github.com/CheersAI/CheersAI-Desktop-plugins) của chúng tôi và cho chúng tôi thấy những gì bạn đã xây dựng.
+Bạn có một model runtime hoặc công cụ mới thú vị để thêm vào? Mở PR trong [repo plugin](https://github.com/langgenius/dify-plugins) của chúng tôi và cho chúng tôi thấy những gì bạn đã xây dựng.
 
-Cần cập nhật model runtime, công cụ hiện có hoặc sửa lỗi? Ghé thăm [repo plugin chính thức](https://github.com/CheersAI/CheersAI-Desktop-official-plugins) và thực hiện phép màu của bạn!
+Cần cập nhật model runtime, công cụ hiện có hoặc sửa lỗi? Ghé thăm [repo plugin chính thức](https://github.com/langgenius/dify-official-plugins) và thực hiện phép màu của bạn!
 
 Hãy tham gia, đóng góp và cùng nhau xây dựng điều tuyệt vời! 💡✨
 
@@ -55,7 +55,7 @@ Cách chúng tôi ưu tiên:
 | Loại tính năng | Mức độ ưu tiên |
 | -------------- | -------------- |
 | Tính năng ưu tiên cao được gắn nhãn bởi thành viên nhóm | Ưu tiên cao |
-| Yêu cầu tính năng phổ biến từ [bảng phản hồi cộng đồng](https://github.com/CheersAI/CheersAI-Desktop/discussions/categories/feedbacks) | Ưu tiên trung bình |
+| Yêu cầu tính năng phổ biến từ [bảng phản hồi cộng đồng](https://github.com/langgenius/dify/discussions/categories/feedbacks) | Ưu tiên trung bình |
 | Tính năng không cốt lõi và cải tiến nhỏ | Ưu tiên thấp |
 | Có giá trị nhưng không cấp bách | Tính năng tương lai |
 
@@ -75,11 +75,11 @@ Cách chúng tôi ưu tiên:
 
 #### Frontend
 
-Để thiết lập dịch vụ frontend, vui lòng tham khảo [hướng dẫn](https://github.com/CheersAI/CheersAI-Desktop/blob/main/web/README.md) chi tiết của chúng tôi trong file `web/README.md`. Tài liệu này cung cấp hướng dẫn chi tiết để giúp bạn thiết lập môi trường frontend một cách đúng đắn.
+Để thiết lập dịch vụ frontend, vui lòng tham khảo [hướng dẫn](https://github.com/langgenius/dify/blob/main/web/README.md) chi tiết của chúng tôi trong file `web/README.md`. Tài liệu này cung cấp hướng dẫn chi tiết để giúp bạn thiết lập môi trường frontend một cách đúng đắn.
 
 #### Backend
 
-Để thiết lập dịch vụ backend, vui lòng tham khảo [hướng dẫn](https://github.com/CheersAI/CheersAI-Desktop/blob/main/api/README.md) chi tiết của chúng tôi trong file `api/README.md`. Tài liệu này chứa hướng dẫn từng bước để giúp bạn khởi chạy backend một cách suôn sẻ.
+Để thiết lập dịch vụ backend, vui lòng tham khảo [hướng dẫn](https://github.com/langgenius/dify/blob/main/api/README.md) chi tiết của chúng tôi trong file `api/README.md`. Tài liệu này chứa hướng dẫn từng bước để giúp bạn khởi chạy backend một cách suôn sẻ.
 
 #### Các điểm cần lưu ý khác
 

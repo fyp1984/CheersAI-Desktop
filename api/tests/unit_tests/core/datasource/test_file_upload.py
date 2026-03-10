@@ -1,6 +1,6 @@
 """Comprehensive unit tests for file upload functionality.
 
-This test module provides extensive coverage of the file upload system in CheersAI,
+This test module provides extensive coverage of the file upload system in Dify,
 ensuring robust validation, security, and proper handling of various file types.
 
 TEST COVERAGE OVERVIEW:

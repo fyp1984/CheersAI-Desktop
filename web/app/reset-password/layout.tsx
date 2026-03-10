@@ -29,7 +29,7 @@ export default function SignInLayout({ children }: any) {
               {' '}
               {new Date().getFullYear()}
               {' '}
-              CheersAI All rights reserved.
+              LangGenius, Inc. All rights reserved.
             </div>
           )}
         </div>

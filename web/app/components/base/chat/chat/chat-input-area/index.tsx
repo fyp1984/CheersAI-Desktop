@@ -87,8 +87,6 @@ const ChatInputArea = ({
   const historyRef = useRef([''])
   const [currentIndex, setCurrentIndex] = useState(-1)
   const isComposingRef = useRef(false)
-  const [showSensitiveConfirm, setShowSensitiveConfirm] = useState(false)
-  const pendingSendRef = useRef(false)
 
   const handleQueryChange = useCallback(
     (value: string) => {
@@ -98,7 +96,12 @@ const ChatInputArea = ({
     [handleTextareaResize],
   )
 
-  const doActualSend = useCallback(() => {
+  const handleSend = () => {
+    if (isResponding) {
+      notify({ type: 'info', message: t('errorMessage.waitForResponse', { ns: 'appDebug' }) })
+      return
+    }
+
     if (onSend) {
       const { files, setFiles } = filesStore.getState()
       if (files.find(item => item.transferMethod === TransferMethod.local_file && !item.uploadedId)) {
@@ -115,36 +118,6 @@ const ChatInputArea = ({
         setFiles([])
       }
     }
-  }, [onSend, filesStore, query, notify, t, checkInputsForm, inputs, inputsForm, handleQueryChange])
-
-  const handleSend = () => {
-    if (isResponding) {
-      notify({ type: 'info', message: t('errorMessage.waitForResponse', { ns: 'appDebug' }) })
-      return
-    }
-
-    // Check if sensitive data warning is enabled
-    const sensitiveWarningEnabled = typeof window !== 'undefined'
-      && localStorage.getItem('sensitive_send_warning') !== 'false'
-
-    if (sensitiveWarningEnabled && !pendingSendRef.current) {
-      // Validate first before showing dialog
-      if (!onSend) return
-      const { files } = filesStore.getState()
-      if (files.find(item => item.transferMethod === TransferMethod.local_file && !item.uploadedId)) {
-        notify({ type: 'info', message: t('errorMessage.waitForFileUpload', { ns: 'appDebug' }) })
-        return
-      }
-      if (!query || !query.trim()) {
-        notify({ type: 'info', message: t('errorMessage.queryRequired', { ns: 'appAnnotation' }) })
-        return
-      }
-      setShowSensitiveConfirm(true)
-      return
-    }
-
-    pendingSendRef.current = false
-    doActualSend()
   }
   const handleCompositionStart = () => {
     // e: React.CompositionEvent<HTMLTextAreaElement>
@@ -278,39 +251,6 @@ const ChatInputArea = ({
           onFeatureBarClick={readonly ? noop : onFeatureBarClick}
           hideEditEntrance={readonly}
         />
-      )}
-      {showSensitiveConfirm && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
-          <div className="w-[420px] rounded-2xl bg-white p-6 shadow-2xl">
-            <div className="mb-3 flex items-center gap-2">
-              <svg className="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h3 className="text-base font-semibold text-gray-900">敏感信息确认</h3>
-            </div>
-            <p className="mb-5 text-sm text-gray-600">
-              当前内容即将发送至互联网，请务必确认内容中无敏感信息（如个人隐私、密码、密钥等）。
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setShowSensitiveConfirm(false)}
-                className="rounded-lg px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
-              >
-                取消发送
-              </button>
-              <button
-                onClick={() => {
-                  setShowSensitiveConfirm(false)
-                  pendingSendRef.current = true
-                  handleSend()
-                }}
-                className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                确认发送
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </>
   )

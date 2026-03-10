@@ -671,21 +671,21 @@ class TestReasoningFormat:
         """Test separated mode: tags are removed and content is extracted"""
 
         text_with_think = """
-        <think>I need to explain what CheersAI is. It's an open source AI platform.
-        </think>CheersAI is an open source AI platform.
+        <think>I need to explain what Dify is. It's an open source AI platform.
+        </think>Dify is an open source AI platform.
         """
 
         clean_text, reasoning_content = LLMNode._split_reasoning(text_with_think, "separated")
 
-        assert clean_text == "CheersAI is an open source AI platform."
-        assert reasoning_content == "I need to explain what CheersAI is. It's an open source AI platform."
+        assert clean_text == "Dify is an open source AI platform."
+        assert reasoning_content == "I need to explain what Dify is. It's an open source AI platform."
 
     def test_split_reasoning_tagged_mode(self):
         """Test tagged mode: original text is preserved"""
 
         text_with_think = """
-        <think>I need to explain what CheersAI is. It's an open source AI platform.
-        </think>CheersAI is an open source AI platform.
+        <think>I need to explain what Dify is. It's an open source AI platform.
+        </think>Dify is an open source AI platform.
         """
 
         clean_text, reasoning_content = LLMNode._split_reasoning(text_with_think, "tagged")
@@ -718,8 +718,8 @@ class TestReasoningFormat:
         assert node_data.reasoning_format == "tagged"
 
         text_with_think = """
-        <think>I need to explain what CheersAI is. It's an open source AI platform.
-        </think>CheersAI is an open source AI platform.
+        <think>I need to explain what Dify is. It's an open source AI platform.
+        </think>Dify is an open source AI platform.
         """
         clean_text, reasoning_content = LLMNode._split_reasoning(text_with_think, node_data.reasoning_format)
 

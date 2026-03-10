@@ -71,7 +71,7 @@ describe('match the schema type', () => {
 
   it('file struct should match file type', () => {
     const fileSchema = {
-      $id: 'https://cheersai.cloud/schemas/v1/file.json',
+      $id: 'https://dify.ai/schemas/v1/file.json',
       $schema: 'http://json-schema.org/draft-07/schema#',
       version: '1.0.0',
       type: 'object',

@@ -1,10 +1,9 @@
 import type { Viewport } from 'next'
 import { Provider as JotaiProvider } from 'jotai'
 import { ThemeProvider } from 'next-themes'
-// // // // // // // // import { Instrument_Serif } from 'next/font/google' // Temporarily disabled for build // Temporarily disabled for build // Temporarily disabled for build // Temporarily disabled for build
+import { Instrument_Serif } from 'next/font/google'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import GlobalPublicStoreProvider from '@/context/global-public-context'
-import { SandboxSecurityProvider } from '@/context/sandbox-security-context'
 import { TanstackQueryInitializer } from '@/context/query-client'
 import { getLocaleOnServer } from '@/i18n-config/server'
 import { DatasetAttr } from '@/types/feature'
@@ -15,7 +14,6 @@ import { ReactScanLoader } from './components/devtools/react-scan/loader'
 import { I18nServerProvider } from './components/provider/i18n-server'
 import { PWAProvider } from './components/provider/serwist'
 import SentryInitializer from './components/sentry-initializer'
-import DevErrorSuppressor from './components/dev-error-suppressor'
 import RoutePrefixHandle from './routePrefixHandle'
 import './styles/globals.css'
 import './styles/markdown.scss'
@@ -28,7 +26,12 @@ export const viewport: Viewport = {
   userScalable: false,
 }
 
-// // // // // // // // const instrumentSerif = Instrument_Serif({ weight: ['400'], style: ['normal', 'italic'], subsets: ['latin'], display: 'swap', }) // Temporarily disabled for build // Temporarily disabled for build // Temporarily disabled for build // Temporarily disabled for build
+const instrumentSerif = Instrument_Serif({
+  weight: ['400'],
+  style: ['normal', 'italic'],
+  subsets: ['latin'],
+  variable: '--font-instrument-serif',
+})
 
 const LocaleLayout = async ({
   children,
@@ -72,7 +75,7 @@ const LocaleLayout = async ({
   }
 
   return (
-    <html lang={locale ?? 'en'} className="h-full" suppressHydrationWarning>
+    <html lang={locale ?? 'en'} className={cn('h-full', instrumentSerif.variable)} suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#1C64F2" />
@@ -91,7 +94,6 @@ const LocaleLayout = async ({
         {...datasetMap}
       >
         <PWAProvider>
-          <DevErrorSuppressor />
           <ReactScanLoader />
           <JotaiProvider>
             <ThemeProvider
@@ -108,9 +110,7 @@ const LocaleLayout = async ({
                       <I18nServerProvider>
                         <ToastProvider>
                           <GlobalPublicStoreProvider>
-                            <SandboxSecurityProvider>
-                              {children}
-                            </SandboxSecurityProvider>
+                            {children}
                           </GlobalPublicStoreProvider>
                         </ToastProvider>
                       </I18nServerProvider>
