@@ -243,3 +243,4 @@ scripts/stress-test/reports/
 *.eslintcache
 .eslintcache
 web/.pnpm-store/
+docker/nginx/conf.d/cheersai-writer.conf
