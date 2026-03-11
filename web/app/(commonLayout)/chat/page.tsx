@@ -5,12 +5,24 @@ import { RiSendPlaneLine, RiAttachmentLine, RiMicLine, RiAddLine, RiDeleteBinLin
 import { cn } from '@/utils/classnames'
 import { ModelTypeEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
 import { useModelList, useDefaultModel } from '@/app/components/header/account-setting/model-provider-page/hooks'
+import { SandboxFilePicker } from '@/app/components/base/sandbox-file-picker'
 
 interface Message {
   id: string
   type: 'user' | 'assistant'
   content: string
   timestamp: Date
+  files?: UploadedFile[]
+}
+
+interface UploadedFile {
+  id: string
+  name: string
+  size: number
+  type: string
+  url: string
+  isDesensitized?: boolean
+  content?: string
 }
 
 interface Conversation {
@@ -56,6 +68,44 @@ const ChatPage = () => {
 
   // 选中的模型状态 - 移到前面声明
   const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(null)
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
+  const [showSandboxPicker, setShowSandboxPicker] = useState(false)
+
+  // 本地存储的 key
+  const STORAGE_KEY = 'cheersai_conversations'
+
+  // 从本地存储加载对话
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        // 恢复 Date 对象
+        const restored = parsed.map((conv: any) => ({
+          ...conv,
+          timestamp: new Date(conv.timestamp),
+          messages: conv.messages.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+          })),
+        }))
+        setConversations(restored)
+      }
+    } catch (error) {
+      // 加载本地对话失败，忽略错误
+    }
+  }, [])
+
+  // 保存对话到本地存储
+  useEffect(() => {
+    if (conversations.length > 0) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations))
+      } catch (error) {
+        // 保存对话到本地存储失败，忽略错误
+      }
+    }
+  }, [conversations])
 
   // 获取模型列表 - 使用更简单的方法
   const { data: modelListData, isLoading: isModelListLoading } = useModelList(ModelTypeEnum.textGeneration)
@@ -63,16 +113,8 @@ const ChatPage = () => {
   
   // 调试信息
   useEffect(() => {
-    console.log('模型数据调试:', {
-      modelListData,
-      defaultModelData,
-      isModelListLoading,
-      modelListLength: modelListData?.length || 0
-    })
-    
     // 如果没有模型数据，设置Ollama模型作为默认选项
     if (!isModelListLoading && (!modelListData || modelListData.length === 0) && !selectedModel) {
-      console.log('没有检测到配置的模型，使用Ollama模型')
       setSelectedModel({
         provider: 'ollama',
         model: 'qwen2.5:1.5b',
@@ -162,126 +204,236 @@ const ChatPage = () => {
     setShowModelSelector(false)
   }
 
-  const handleSend = async () => {
-    if (!inputValue.trim() || isLoading) return
+  const handleRemoveFile = (fileId: string) => {
+    setUploadedFiles(prev => prev.filter(f => f.id !== fileId))
+  }
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      type: 'user',
-      content: inputValue.trim(),
-      timestamp: new Date(),
-    }
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
 
-    // 如果没有当前对话，创建一个新对话
-    if (!currentConversationId) {
-      const newConversation: Conversation = {
-        id: Date.now().toString(),
-        title: userMessage.content.slice(0, 20),
-        lastMessage: userMessage.content,
-        timestamp: new Date(),
-        messages: [userMessage],
-      }
-      setConversations(prev => [newConversation, ...prev])
-      setCurrentConversationId(newConversation.id)
-      setMessages([userMessage])
-    } else {
-      const updatedMessages = [...messages, userMessage]
-      setMessages(updatedMessages)
-      
-      // 更新当前对话
-      setConversations(prev => prev.map(conv => {
-        if (conv.id === currentConversationId) {
-          // 如果是第一条用户消息，更新标题
-          const title = conv.messages.length === 0 ? userMessage.content.slice(0, 20) : conv.title
-          return {
-            ...conv,
-            title,
-            lastMessage: userMessage.content,
-            timestamp: new Date(),
-            messages: updatedMessages,
-          }
-        }
-        return conv
-      }))
-    }
-
-    setInputValue('')
-    setIsLoading(true)
-
+  // 读取文件内容
+  const readFileContent = async (file: UploadedFile): Promise<string> => {
     try {
-      // 使用选中的模型或默认模型
-      const modelToUse = selectedModel?.model || 'qwen2.5:1.5b'
-      
-      // 调用Ollama API
-      const response = await fetch('http://localhost:11434/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: modelToUse,
-          prompt: userMessage.content,
-          stream: false,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`Ollama API error: ${response.status}`)
+      // 文件内容已在选择时读取
+      if (file.content) {
+        return file.content
+      } else if (file.type.startsWith('text/') || file.type === 'application/json') {
+        return `[文件: ${file.name} - 内容未加载]`
+      } else {
+        return `[文件: ${file.name}, 大小: ${formatFileSize(file.size)}, 类型: ${file.type}]`
       }
-
-      const data = await response.json()
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: data.response || '抱歉，我无法生成回复。',
-        timestamp: new Date(),
-      }
-      
-      setMessages(prev => [...prev, assistantMessage])
-      
-      // 更新对话记录
-      setConversations(prev => prev.map(conv => {
-        if (conv.id === currentConversationId) {
-          return {
-            ...conv,
-            lastMessage: assistantMessage.content,
-            timestamp: new Date(),
-            messages: [...(conv.messages || []), userMessage, assistantMessage],
-          }
-        }
-        return conv
-      }))
-      
     } catch (error) {
-      console.error('Ollama API调用失败:', error)
-      
-      // 显示错误消息
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: `连接Ollama失败: ${error instanceof Error ? error.message : '未知错误'}。请确保Ollama服务正在运行。`,
-        timestamp: new Date(),
-      }
-      
-      setMessages(prev => [...prev, errorMessage])
-      
-      // 更新对话记录
-      setConversations(prev => prev.map(conv => {
-        if (conv.id === currentConversationId) {
-          return {
-            ...conv,
-            lastMessage: errorMessage.content,
-            timestamp: new Date(),
-            messages: [...(conv.messages || []), userMessage, errorMessage],
-          }
-        }
-        return conv
-      }))
-    } finally {
-      setIsLoading(false)
+      return `[无法读取文件: ${file.name}]`
     }
   }
+
+  // 处理沙箱文件选择
+  const handleSandboxFilesSelected = async (selectedFiles: File[]) => {
+    const newFiles: UploadedFile[] = []
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i]
+      
+      // 读取文件内容
+      let content = ''
+      try {
+        // 直接读取File对象的内容，不管文件类型
+        content = await file.text()
+      } catch (error) {
+        content = `[无法读取文件内容: ${file.name}]`
+      }
+
+      newFiles.push({
+        id: Date.now().toString() + i,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: '', // 沙箱文件不需要URL
+        isDesensitized: true,
+        content: content,
+      })
+    }
+
+    setUploadedFiles(prev => [...prev, ...newFiles])
+  }
+
+  // 处理附件按钮点击
+  const handleAttachmentClick = () => {
+    setShowSandboxPicker(true)
+  }
+
+  const handleSend = async () => {
+      if (!inputValue.trim() || isLoading) return
+
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        type: 'user',
+        content: inputValue.trim(),
+        timestamp: new Date(),
+        files: uploadedFiles.length > 0 ? [...uploadedFiles] : undefined,
+      }
+
+      let conversationId = currentConversationId
+
+      // 如果没有当前对话，创建一个新对话
+      if (!conversationId) {
+        const newConversation: Conversation = {
+          id: Date.now().toString(),
+          title: userMessage.content.slice(0, 20),
+          lastMessage: userMessage.content,
+          timestamp: new Date(),
+          messages: [userMessage],
+        }
+        conversationId = newConversation.id
+        setConversations(prev => [newConversation, ...prev])
+        setCurrentConversationId(conversationId)
+        setMessages([userMessage])
+      } else {
+        // 更新现有对话
+        const updatedMessages = [...messages, userMessage]
+        setMessages(updatedMessages)
+
+        setConversations(prev => prev.map(conv => {
+          if (conv.id === conversationId) {
+            const title = conv.messages.length === 0 ? userMessage.content.slice(0, 20) : conv.title
+            return {
+              ...conv,
+              title,
+              lastMessage: userMessage.content,
+              timestamp: new Date(),
+              messages: updatedMessages,
+            }
+          }
+          return conv
+        }))
+      }
+
+      setInputValue('')
+      setUploadedFiles([]) // 清空已上传的文件
+      setIsLoading(true)
+
+      // 先添加一个空的 AI 消息占位
+      const assistantMessageId = (Date.now() + 1).toString()
+      const assistantMessage: Message = {
+        id: assistantMessageId,
+        type: 'assistant',
+        content: '',
+        timestamp: new Date(),
+      }
+      setMessages(prev => [...prev, assistantMessage])
+
+      try {
+        const modelToUse = selectedModel?.model || 'qwen2.5:1.5b'
+
+        // 构建包含文件内容的完整prompt
+        let fullPrompt = userMessage.content
+
+        if (uploadedFiles.length > 0) {
+          const fileContents = await Promise.all(
+            uploadedFiles.map(async (file) => {
+              const content = await readFileContent(file)
+              return `\n\n--- 文件: ${file.name} ---\n${content}\n--- 文件结束 ---`
+            })
+          )
+
+          fullPrompt += '\n\n以下是用户上传的文件内容：' + fileContents.join('')
+        }
+
+        const response = await fetch('http://localhost:11434/api/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: modelToUse,
+            prompt: fullPrompt,
+            stream: true,  // 启用流式输出
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error(`Ollama API error: ${response.status}`)
+        }
+
+        const reader = response.body?.getReader()
+        const decoder = new TextDecoder()
+        let fullResponse = ''
+
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            const chunk = decoder.decode(value, { stream: true })
+            const lines = chunk.split('\n').filter(line => line.trim())
+
+            for (const line of lines) {
+              try {
+                const data = JSON.parse(line)
+                if (data.response) {
+                  fullResponse += data.response
+                  
+                  // 实时更新消息内容
+                  setMessages(prev => prev.map(msg => 
+                    msg.id === assistantMessageId 
+                      ? { ...msg, content: fullResponse }
+                      : msg
+                  ))
+                }
+              } catch (e) {
+                // 解析 JSON 失败，忽略该行
+              }
+            }
+          }
+        }
+
+        // 更新对话记录 - 只添加 assistantMessage
+        setConversations(prev => prev.map(conv => {
+          if (conv.id === conversationId) {
+            return {
+              ...conv,
+              lastMessage: fullResponse.slice(0, 50),
+              timestamp: new Date(),
+              messages: [...conv.messages, { ...assistantMessage, content: fullResponse }],
+            }
+          }
+          return conv
+        }))
+
+      } catch (error) {
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: `连接Ollama失败: ${error instanceof Error ? error.message : '未知错误'}。请确保Ollama服务正在运行。`,
+          timestamp: new Date(),
+        }
+
+        // 替换占位消息为错误消息
+        setMessages(prev => prev.map(msg => 
+          msg.id === assistantMessageId ? errorMessage : msg
+        ))
+
+        // 更新对话记录 - 只添加 errorMessage
+        setConversations(prev => prev.map(conv => {
+          if (conv.id === conversationId) {
+            return {
+              ...conv,
+              lastMessage: errorMessage.content.slice(0, 50),
+              timestamp: new Date(),
+              messages: [...conv.messages, errorMessage],
+            }
+          }
+          return conv
+        }))
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -572,6 +724,47 @@ const ChatPage = () => {
                           : 'bg-gray-100 border border-gray-300 text-gray-900'
                       )}
                     >
+                      {/* 文件显示 */}
+                      {message.files && message.files.length > 0 && (
+                        <div className="mb-3 space-y-2">
+                          {message.files.map((file) => (
+                            <div key={file.id} className={cn(
+                              "flex items-center gap-2 p-2 rounded border",
+                              message.type === 'user' 
+                                ? 'bg-blue-500 border-blue-400' 
+                                : 'bg-white border-gray-200'
+                            )}>
+                              <div className={cn(
+                                "w-6 h-6 rounded flex items-center justify-center text-xs font-medium",
+                                message.type === 'user' 
+                                  ? 'bg-blue-400 text-white' 
+                                  : 'bg-blue-100 text-blue-600'
+                              )}>
+                                {file.name.split('.').pop()?.toUpperCase().slice(0, 2)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className={cn(
+                                  "text-xs font-medium truncate",
+                                  message.type === 'user' ? 'text-blue-100' : 'text-gray-900'
+                                )}>
+                                  {file.name}
+                                </div>
+                                <div className={cn(
+                                  "text-xs",
+                                  message.type === 'user' ? 'text-blue-200' : 'text-gray-500'
+                                )}>
+                                  {formatFileSize(file.size)}
+                                  {file.isDesensitized && (
+                                    <span className="ml-1">• 已脱敏</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* 消息内容 */}
                       <div className="whitespace-pre-wrap text-sm leading-relaxed">
                         {message.content}
                       </div>
@@ -620,15 +813,58 @@ const ChatPage = () => {
         {/* 输入区域 */}
         <div className="bg-white border-t border-gray-200 px-6 py-4">
           <div className="max-w-4xl mx-auto">
+            {/* 已上传文件列表 */}
+            {uploadedFiles.length > 0 && (
+              <div className="mb-3 p-3 bg-gray-50 rounded-lg">
+                <div className="text-sm text-gray-600 mb-2">已选择文件 ({uploadedFiles.length})</div>
+                <div className="space-y-2">
+                  {uploadedFiles.map((file) => (
+                    <div key={file.id} className="flex items-center justify-between bg-white p-2 rounded border">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
+                          <span className="text-xs text-blue-600 font-medium">
+                            {file.name.split('.').pop()?.toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{file.name}</div>
+                          <div className="text-xs text-gray-500">
+                            {formatFileSize(file.size)}
+                            <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs">
+                              沙箱文件
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveFile(file.id)}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        title="移除文件"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* 警告提示 */}
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-800">
-                系统将自动记录输入内容中的个人身份信息，并将自动脱敏。请避免输入个人身份信息中不应包含敏感信息，如身份证号、银行卡号、手机号等。
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <span className="font-medium">安全模式：</span>仅可选择沙箱内的脱敏文件。系统将自动记录并脱敏输入内容中的个人身份信息。
               </p>
             </div>
             
             <div className="relative flex items-end gap-3 rounded-xl border border-gray-200 bg-white p-3 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
-              <button className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+              {/* 文件选择按钮 */}
+              <button 
+                onClick={handleAttachmentClick}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                title="从沙箱选择文件"
+              >
                 <RiAttachmentLine className="h-4 w-4" />
               </button>
               <textarea
@@ -661,6 +897,15 @@ const ChatPage = () => {
             </div>
           </div>
         </div>
+
+        {/* 沙箱文件选择器 */}
+        <SandboxFilePicker
+          open={showSandboxPicker}
+          onClose={() => setShowSandboxPicker(false)}
+          onSelect={handleSandboxFilesSelected}
+          accept=".txt,.md,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.csv,.json"
+          multiple={true}
+        />
       </div>
     </div>
   )
