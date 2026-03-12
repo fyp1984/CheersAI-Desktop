@@ -85,7 +85,9 @@
       ],
       "unoptimized": false
     },
-    "devIndicators": false,
+    "devIndicators": {
+      "position": "bottom-left"
+    },
     "onDemandEntries": {
       "maxInactiveAge": 60000,
       "pagesBufferLength": 5
@@ -122,7 +124,7 @@
         "transform": "lodash/{{member}}"
       }
     },
-    "outputFileTracingRoot": "D:\\cheersAIdesktop-master\\cheersAIdesktop-master\\web",
+    "outputFileTracingRoot": "E:\\dify-main\\dify-main\\web",
     "allowedDevOrigins": [
       "http://192.168.0.3:3000",
       "http://localhost:3000",
@@ -332,7 +334,7 @@
           {
             "loaders": [
               {
-                "loader": "D:\\cheersAIdesktop-master\\cheersAIdesktop-master\\web\\node_modules\\.pnpm\\@next+mdx@16.1.5_@mdx-js+lo_e87761da5354137df5739f8bf13cb85d\\node_modules\\@next\\mdx\\mdx-js-loader.js",
+                "loader": "E:\\dify-main\\dify-main\\web\\node_modules\\.pnpm\\@next+mdx@16.1.5_@mdx-js+lo_e87761da5354137df5739f8bf13cb85d\\node_modules\\@next\\mdx\\mdx-js-loader.js",
                 "options": {
                   "providerImportSource": "next-mdx-import-source-file",
                   "remarkPlugins": [],
@@ -350,7 +352,7 @@
       "resolveAlias": {
         "next-mdx-import-source-file": "@vercel/turbopack-next/mdx-import-source"
       },
-      "root": "D:\\cheersAIdesktop-master\\cheersAIdesktop-master\\web"
+      "root": "E:\\dify-main\\dify-main\\web"
     },
     "distDirRoot": ".next",
     "_originalRedirects": [
@@ -361,7 +363,7 @@
       }
     ]
   },
-  "appDir": "D:\\cheersAIdesktop-master\\cheersAIdesktop-master\\web",
+  "appDir": "E:\\dify-main\\dify-main\\web",
   "relativeAppDir": "",
   "files": [
     ".next\\routes-manifest.json",

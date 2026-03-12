@@ -122,9 +122,6 @@ from .tag import tags
 # sandbox_knowledge and user_config use console_ns (authenticated)
 from .data_masking import sandbox_knowledge, user_config  # noqa: F401
 
-# Import audit controllers
-from .audit import operation_logs  # noqa: F401
-
 # Import workspace controllers
 from .workspace import (
     account,

@@ -304,14 +304,7 @@ class RefreshTokenApi(Resource):
         # Get refresh token from cookie instead of request body
         refresh_token = extract_refresh_token(request)
 
-        # Debug logging
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.info(f"Refresh token request - cookies: {list(request.cookies.keys())}")
-        logger.info(f"Refresh token extracted: {refresh_token is not None}")
-
         if not refresh_token:
-            logger.warning("No refresh token provided in cookies")
             return {"result": "fail", "message": "No refresh token provided"}, 401
 
         try:
@@ -326,7 +319,6 @@ class RefreshTokenApi(Resource):
             set_refresh_token_to_cookie(request, response, new_token_pair.refresh_token)
             return response
         except Exception as e:
-            logger.error(f"Refresh token failed: {str(e)}")
             return {"result": "fail", "message": str(e)}, 401
 
 

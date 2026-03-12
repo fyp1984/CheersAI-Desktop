@@ -85,6 +85,168 @@
     }
   },
   "dynamicRoutes": {
+    "/app/[appId]/annotations": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "routeRegex": "^/app/([^/]+?)/annotations(?:/)?$",
+      "dataRoute": "/app/[appId]/annotations.rsc",
+      "fallback": false,
+      "fallbackRouteParams": [],
+      "dataRouteRegex": "^/app/([^/]+?)/annotations\\.rsc$",
+      "prefetchDataRoute": null,
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/app/[appId]/configuration": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "routeRegex": "^/app/([^/]+?)/configuration(?:/)?$",
+      "dataRoute": "/app/[appId]/configuration.rsc",
+      "fallback": false,
+      "fallbackRouteParams": [],
+      "dataRouteRegex": "^/app/([^/]+?)/configuration\\.rsc$",
+      "prefetchDataRoute": null,
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/app/[appId]/develop": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "routeRegex": "^/app/([^/]+?)/develop(?:/)?$",
+      "dataRoute": "/app/[appId]/develop.rsc",
+      "fallback": false,
+      "fallbackRouteParams": [],
+      "dataRouteRegex": "^/app/([^/]+?)/develop\\.rsc$",
+      "prefetchDataRoute": null,
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/app/[appId]/logs": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "routeRegex": "^/app/([^/]+?)/logs(?:/)?$",
+      "dataRoute": "/app/[appId]/logs.rsc",
+      "fallback": false,
+      "fallbackRouteParams": [],
+      "dataRouteRegex": "^/app/([^/]+?)/logs\\.rsc$",
+      "prefetchDataRoute": null,
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/app/[appId]/overview": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "routeRegex": "^/app/([^/]+?)/overview(?:/)?$",
+      "dataRoute": "/app/[appId]/overview.rsc",
+      "fallback": false,
+      "fallbackRouteParams": [],
+      "dataRouteRegex": "^/app/([^/]+?)/overview\\.rsc$",
+      "prefetchDataRoute": null,
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/app/[appId]/workflow": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "routeRegex": "^/app/([^/]+?)/workflow(?:/)?$",
+      "dataRoute": "/app/[appId]/workflow.rsc",
+      "fallback": false,
+      "fallbackRouteParams": [],
+      "dataRouteRegex": "^/app/([^/]+?)/workflow\\.rsc$",
+      "prefetchDataRoute": null,
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
     "/datasets/[datasetId]/api": {
       "experimentalBypassFor": [
         {
@@ -301,6 +463,33 @@
         "x-next-revalidate-tag-token"
       ]
     },
+    "/explore/installed/[appId]": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "routeRegex": "^/explore/installed/([^/]+?)(?:/)?$",
+      "dataRoute": "/explore/installed/[appId].rsc",
+      "fallback": false,
+      "fallbackRouteParams": [],
+      "dataRouteRegex": "^/explore/installed/([^/]+?)\\.rsc$",
+      "prefetchDataRoute": null,
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
     "/serwist/[path]": {
       "experimentalBypassFor": [
         {
@@ -331,8 +520,8 @@
   },
   "notFoundRoutes": [],
   "preview": {
-    "previewModeId": "78819edb0cae0319d3f8bec81159f596",
-    "previewModeSigningKey": "56af2da3fff591c1ea32a0f76b3ffe29c4359ea6108eb8ee4e25fe5094e4d0ab",
-    "previewModeEncryptionKey": "1cc3fa04da6f8fa64a4962788bc15661955e43a1d47f20746c5e360701eafb82"
+    "previewModeId": "202136f9ac65f7bc50e991961b21aa39",
+    "previewModeSigningKey": "1e645c271a9691568f7c5b6c9fd8faddf84d176c91967af9b1e1293e0d9bbd21",
+    "previewModeEncryptionKey": "0b015b894b34978aa4718d80f6993744e16b5266b8c45864743881f35a48cfa0"
   }
 }

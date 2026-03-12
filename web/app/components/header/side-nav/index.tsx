@@ -101,18 +101,6 @@ const SideNav = () => {
 
   const navItems: NavItemConfig[] = []
 
-  // 对话应用
-  if (!isCurrentWorkspaceDatasetOperator) {
-    navItems.push({
-      id: 'chat',
-      href: '/chat',
-      icon: <RiMessage3Line className="h-5 w-5" />,
-      activeIcon: <RiMessage3Line className="h-5 w-5" />,
-      label: '对话应用',
-      segments: ['chat'],
-    })
-  }
-
   // 工作台 (原 apps)
   if (!isCurrentWorkspaceDatasetOperator) {
     navItems.push({
@@ -208,18 +196,6 @@ const SideNav = () => {
       activeIcon: <RiPuzzle2Fill className="h-5 w-5" />,
       label: '插件',
       segments: ['plugins'],
-    })
-  }
-
-  // 审计日志
-  if (!isCurrentWorkspaceDatasetOperator) {
-    navItems.push({
-      id: 'audit-logs',
-      href: '/audit-logs',
-      icon: <RiFileShield2Line className="h-5 w-5" />,
-      activeIcon: <RiFileShield2Line className="h-5 w-5" />,
-      label: '审计日志',
-      segments: ['audit-logs'],
     })
   }
 

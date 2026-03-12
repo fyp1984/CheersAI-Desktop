@@ -7,7 +7,6 @@
     "[project]/app/(commonLayout)/app/(appDetailLayout)/[appId]/overview/page": [],
     "[project]/app/(commonLayout)/app/(appDetailLayout)/[appId]/workflow/page": [],
     "[project]/app/(commonLayout)/apps/page": [],
-    "[project]/app/(commonLayout)/audit-logs/page": [],
     "[project]/app/(commonLayout)/data-masking/page": [],
     "[project]/app/(commonLayout)/datasets/(datasetDetailLayout)/[datasetId]/api/page": [],
     "[project]/app/(commonLayout)/datasets/(datasetDetailLayout)/[datasetId]/documents/[documentId]/page": [],

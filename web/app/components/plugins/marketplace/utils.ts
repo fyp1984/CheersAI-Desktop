@@ -18,11 +18,9 @@ type MarketplaceFetchOptions = {
 }
 
 export const getPluginIconInMarketplace = (plugin: Plugin) => {
-  // MARKETPLACE_API_PREFIX is /api/proxy-marketplace/api/v1
-  // We need to construct the full proxy path
   if (plugin.type === 'bundle')
-    return `/api/proxy-marketplace/api/v1/bundles/${plugin.org}/${plugin.name}/icon`
-  return `/api/proxy-marketplace/api/v1/plugins/${plugin.org}/${plugin.name}/icon`
+    return `${MARKETPLACE_API_PREFIX}/bundles/${plugin.org}/${plugin.name}/icon`
+  return `${MARKETPLACE_API_PREFIX}/plugins/${plugin.org}/${plugin.name}/icon`
 }
 
 export const getFormattedPlugin = (bundle: Plugin): Plugin => {

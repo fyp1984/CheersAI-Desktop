@@ -28,22 +28,6 @@
   },
   "dynamicRoutes": [
     {
-      "page": "/api/proxy/[...path]",
-      "regex": "^/api/proxy/(.+?)(?:/)?$",
-      "routeKeys": {
-        "nxtPpath": "nxtPpath"
-      },
-      "namedRegex": "^/api/proxy/(?<nxtPpath>.+?)(?:/)?$"
-    },
-    {
-      "page": "/api/proxy-marketplace/[...path]",
-      "regex": "^/api/proxy\\-marketplace/(.+?)(?:/)?$",
-      "routeKeys": {
-        "nxtPpath": "nxtPpath"
-      },
-      "namedRegex": "^/api/proxy\\-marketplace/(?<nxtPpath>.+?)(?:/)?$"
-    },
-    {
       "page": "/app/[appId]/annotations",
       "regex": "^/app/([^/]+?)/annotations(?:/)?$",
       "routeKeys": {
@@ -224,12 +208,6 @@
       "regex": "^/apps(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/apps(?:/)?$"
-    },
-    {
-      "page": "/audit-logs",
-      "regex": "^/audit\\-logs(?:/)?$",
-      "routeKeys": {},
-      "namedRegex": "^/audit\\-logs(?:/)?$"
     },
     {
       "page": "/data-masking",

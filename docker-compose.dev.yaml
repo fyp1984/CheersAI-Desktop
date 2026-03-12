@@ -86,8 +86,6 @@ services:
       - "5003:5003"
     volumes:
       - plugin_daemon_data:/app/storage
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       - redis
       - postgres

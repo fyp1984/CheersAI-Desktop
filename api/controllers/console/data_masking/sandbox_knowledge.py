@@ -20,7 +20,6 @@ from controllers.console.wraps import (
 )
 from extensions.ext_database import db
 from libs.login import current_account_with_tenant, login_required
-from services.audit_service import log_operation
 from services.dataset_service import DatasetService, DocumentService
 from services.file_service import FileService
 
@@ -135,20 +134,6 @@ class SandboxSyncToKnowledge(Resource):
             )
 
             db.session.commit()
-
-            # 记录审计日志
-            log_operation(
-                action="knowledge_sync",
-                content={
-                    "dataset_id": dataset.id,
-                    "dataset_name": dataset.name,
-                    "file_count": len(synced_names),
-                    "files": synced_names,
-                    "sandbox_path": sandbox_path,
-                },
-                resource_type="dataset",
-                resource_id=dataset.id,
-            )
 
             result = {
                 "result": "success",

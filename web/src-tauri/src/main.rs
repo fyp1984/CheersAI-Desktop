@@ -5,6 +5,7 @@ use std::os::windows::process::CommandExt;
 use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandChild;
+use std::net::TcpListener;
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -84,27 +85,7 @@ fn sandbox_ensure_dir(dir: String) -> Result<bool, String> {
 }
 
 fn is_port_in_use(port: u16) -> bool {
-    // 尝试连接而不是绑定，这样可以检测到任何监听的服务
-    use std::net::TcpStream;
-    use std::time::Duration;
-    
-    // 尝试 IPv4
-    if TcpStream::connect_timeout(
-        &std::net::SocketAddr::from(([127, 0, 0, 1], port)),
-        Duration::from_millis(100)
-    ).is_ok() {
-        return true;
-    }
-    
-    // 尝试 IPv6
-    if TcpStream::connect_timeout(
-        &std::net::SocketAddr::from(([0, 0, 0, 0, 0, 0, 0, 1], port)),
-        Duration::from_millis(100)
-    ).is_ok() {
-        return true;
-    }
-    
-    false
+    TcpListener::bind(("127.0.0.1", port)).is_err()
 }
 
 async fn wait_for_server(port: u16, max_attempts: u32) -> bool {

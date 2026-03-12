@@ -37,14 +37,6 @@ COPY . .
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN pnpm build:docker
 
-FROM base AS dev
-WORKDIR /app/web
-COPY --from=packages /app/web/ .
-COPY . .
-ENV NODE_ENV=development
-ENV PORT=3000
-CMD ["pnpm","dev","-H","0.0.0.0","-p","3000"]
-
 
 # production stage
 FROM base AS production

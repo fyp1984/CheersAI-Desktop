@@ -1,9 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { CheckCircleIcon, XCircleIcon, EyeIcon, EyeSlashIcon, ArrowPathIcon, ClipboardDocumentIcon } from "@heroicons/react/24/outline"
+import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline"
 import { useSandboxSecurity } from "@/context/sandbox-security-context"
-import { generatePassphrase } from "@/lib/data-masking/crypto-utils"
 
 interface SandboxConfigProps { onConfigured?: (path: string) => void }
 const API_PREFIX = "http://localhost:5001/console/api"
@@ -41,9 +40,6 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
   const [sensitiveWarning, setSensitiveWarning] = useState(true)
   const [encryptionEnabled, setEncryptionEnabled] = useState(true)
   const [configLoaded, setConfigLoaded] = useState(false)
-  const [globalPassphrase, setGlobalPassphrase] = useState("")
-  const [showPassphrase, setShowPassphrase] = useState(false)
-  const [passphraseSaved, setPassphraseSaved] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -64,8 +60,6 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
       const enc = remote.mapping_encryption_enabled
       if (enc !== undefined) { setEncryptionEnabled(enc !== "false"); localStorage.setItem("mapping_encryption_enabled", enc) }
       else { const l = localStorage.getItem("mapping_encryption_enabled"); if (l !== null) setEncryptionEnabled(l !== "false"); else setEncryptionEnabled(true) }
-      const pass = remote.mapping_encryption_passphrase || localStorage.getItem("mapping_encryption_passphrase") || ""
-      if (pass) { setGlobalPassphrase(pass); localStorage.setItem("mapping_encryption_passphrase", pass) }
       const sec = remote.sandbox_security_enabled
       if (sec !== undefined) { setSecurityEnabled(sec === "true"); localStorage.setItem("sandbox_security_enabled", sec) }
       if (!remote.sandbox_path && path) {
@@ -76,7 +70,6 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
         const le = localStorage.getItem("mapping_encryption_enabled"); if (le !== null) m.mapping_encryption_enabled = le
         const ls = localStorage.getItem("sandbox_security_enabled"); if (ls !== null) m.sandbox_security_enabled = ls
         const lp = localStorage.getItem("sandbox_export_pin"); if (lp) m.sandbox_export_pin = lp
-        const lpass = localStorage.getItem("mapping_encryption_passphrase"); if (lpass) m.mapping_encryption_passphrase = lpass
         if (Object.keys(m).length > 0) saveUserConfig(m)
       }
       setConfigLoaded(true)
@@ -140,7 +133,7 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
       </div>
 
       <div className="rounded-lg border border-divider-regular bg-components-panel-bg p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between">
           <div className="flex-1">
             <h3 className="text-sm font-medium text-text-primary">映射文件加密</h3>
             <p className="text-xs text-text-tertiary mt-0.5">导出映射文件时使用32位口令加密保护</p>
@@ -151,77 +144,9 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
           </button>
         </div>
         {encryptionEnabled && (
-          <>
-            <div className="rounded-md bg-state-accent-hover border border-state-accent-hover-alt px-3 py-2 mb-4">
-              <p className="text-xs text-text-accent">✓ 映射文件将使用AES-256-GCM加密，需要口令才能解密还原</p>
-            </div>
-            <div className="space-y-3 pt-3 border-t border-divider-subtle">
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">全局加密口令（32位）</label>
-                <div className="flex gap-2 mb-2">
-                  <div className="relative flex-1">
-                    <input
-                      type={showPassphrase ? "text" : "password"}
-                      value={globalPassphrase}
-                      onChange={(e) => setGlobalPassphrase(e.target.value)}
-                      placeholder="输入或生成32位加密口令"
-                      className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 pr-10 text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid font-mono"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassphrase(!showPassphrase)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary"
-                    >
-                      {showPassphrase ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setGlobalPassphrase(generatePassphrase(32))}
-                    className="inline-flex items-center gap-1 rounded-md bg-components-button-secondary-bg px-3 py-2 text-sm font-medium text-components-button-secondary-text hover:bg-components-button-secondary-bg-hover"
-                    title="生成随机口令"
-                  >
-                    <ArrowPathIcon className="h-4 w-4" />
-                    生成
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (globalPassphrase) {
-                        navigator.clipboard.writeText(globalPassphrase)
-                        alert('口令已复制到剪贴板')
-                      }
-                    }}
-                    disabled={!globalPassphrase}
-                    className="inline-flex items-center gap-1 rounded-md bg-components-button-secondary-bg px-3 py-2 text-sm font-medium text-components-button-secondary-text hover:bg-components-button-secondary-bg-hover disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="复制口令"
-                  >
-                    <ClipboardDocumentIcon className="h-4 w-4" />
-                    复制
-                  </button>
-                </div>
-                {globalPassphrase && globalPassphrase.length < 32 && (
-                  <p className="text-xs text-text-destructive mb-2">⚠️ 口令长度必须至少32位</p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (globalPassphrase.length < 32) {
-                    alert('口令长度必须至少32位')
-                    return
-                  }
-                  persistSetting("mapping_encryption_passphrase", globalPassphrase)
-                  setPassphraseSaved(true)
-                  setTimeout(() => setPassphraseSaved(false), 2000)
-                }}
-                disabled={!globalPassphrase || globalPassphrase.length < 32}
-                className="inline-flex items-center rounded-md bg-components-button-primary-bg px-4 py-2 text-sm font-medium text-components-button-primary-text hover:bg-components-button-primary-bg-hover disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {passphraseSaved ? "已保存 ✓" : "保存口令"}
-              </button>
-            </div>
-          </>
+          <div className="mt-3 rounded-md bg-state-accent-hover border border-state-accent-hover-alt px-3 py-2">
+            <p className="text-xs text-text-accent">✓ 映射文件将使用AES-256-GCM加密，需要口令才能解密还原</p>
+          </div>
         )}
       </div>
 
@@ -276,7 +201,6 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
           <li>• 配置保存到数据库，刷新或换设备不会丢失</li>
           <li>• 目录不存在时会自动创建</li>
           <li>• 映射文件加密默认开启，可在此关闭</li>
-          <li>• 全局口令用于所有映射文件的加密和解密</li>
         </ul>
       </div>
     </div>

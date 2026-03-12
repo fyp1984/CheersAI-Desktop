@@ -60,10 +60,6 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
           // If no matches, show all files (fallback)
         }
       }
-      
-      // 过滤掉映射文件，只显示脱敏后的文档
-      fileList = fileList.filter(f => !f.name.endsWith('.mapping.json'))
-      
       setFiles(fileList)
     }
     catch {
