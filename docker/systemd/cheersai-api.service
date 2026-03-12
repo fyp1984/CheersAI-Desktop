@@ -1,0 +1,19 @@
+[Unit]
+Description=CheersAI API Service
+After=network.target postgresql.service redis-server.service
+
+[Service]
+User=cheersai
+Group=cheersai
+WorkingDirectory=/home/cheersai/CheersAI-Desktop/api
+EnvironmentFile=/home/cheersai/CheersAI-Desktop/api/.env
+ExecStart=/home/cheersai/CheersAI-Desktop/api/.venv/bin/gunicorn \
+    --bind 127.0.0.1:8080 \
+    --workers 4 \
+    --worker-class gevent \
+    --timeout 200 \
+    app:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

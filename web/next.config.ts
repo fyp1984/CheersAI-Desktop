@@ -29,6 +29,8 @@ const remoteImageURLs = ([hasSetWebPrefix ? new URL(`${process.env.NEXT_PUBLIC_W
 
 const nextConfig: NextConfig = {
   basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
+  // 关键配置：强制使用末尾斜杠，避免与 Nginx 子路径部署的重定向死循环
+  trailingSlash: true,
   serverExternalPackages: ['esbuild-wasm'],
   transpilePackages: ['echarts', 'zrender'],
   turbopack: {

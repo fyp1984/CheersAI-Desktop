@@ -1,0 +1,14 @@
+[Unit]
+Description=CheersAI Celery Worker
+After=network.target redis-server.service
+
+[Service]
+User=cheersai
+Group=cheersai
+WorkingDirectory=/home/cheersai/CheersAI-Desktop/api
+EnvironmentFile=/home/cheersai/CheersAI-Desktop/api/.env
+ExecStart=/home/cheersai/CheersAI-Desktop/api/.venv/bin/celery -A app.celery worker -P gevent -c 1 --loglevel INFO -Q dataset,generation,mail
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
