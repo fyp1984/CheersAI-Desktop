@@ -4,8 +4,10 @@
 本脚本 (`scripts/git_merge_dynamic.sh`) 是一个通用的 Git 分支合并工具。它允许用户指定**源分支**和**目标分支**，自动化执行合并流程，并提供交互式的冲突解决界面。
 
 ## 特性
-- **参数化配置**：支持通过命令行参数指定任意分支。
-- **自动检查**：自动验证分支名称合法性、工作区状态和目标分支是否存在。
+- **交互式配置**：通过友好的问答方式引导用户配置分支。
+- **静默模式**：支持 CI/CD 或自动化调用的非交互模式。
+- **输入校验**：自动校验分支名称合法性，支持错误重试。
+- **自动检查**：自动验证工作区状态和目标分支是否存在。
 - **交互式冲突解决**：逐个文件展示差异，支持一键选择 `ours` 或 `theirs`，也支持暂停进行手动编辑。
 - **安全回滚**：提供退出选项，自动回滚未完成的合并。
 
@@ -16,34 +18,37 @@
 chmod +x scripts/git_merge_dynamic.sh
 ```
 
-### 2. 基本用法
-脚本接受两个可选参数：
-```bash
-./scripts/git_merge_dynamic.sh [source_branch] [target_branch]
-```
-
-- **参数 1 (`source_branch`)**: 源分支名称，代码将从这里合并出来。默认值: `master`
-- **参数 2 (`target_branch`)**: 目标分支名称，代码将合并到这里。默认值: `branch2B_v1.0`
-
-### 3. 使用示例
-
-#### 场景 A: 使用默认配置 (master -> branch2B_v1.0)
+### 2. 交互式使用 (推荐)
+直接运行脚本，无需参数：
 ```bash
 ./scripts/git_merge_dynamic.sh
 ```
-*等效于执行: `git checkout branch2B_v1.0 && git merge origin/master`*
 
-#### 场景 B: 指定自定义分支 (feature-x -> develop)
-```bash
-./scripts/git_merge_dynamic.sh feature-x develop
+**示例会话：**
+```text
+[Git-Merge] === Git 合并配置 ===
+请输入源分支名 (代码来源) [默认: master]: feature-login  <-- 用户输入
+请输入目标分支名 (合并目标) [默认: branch2B_v1.0]:      <-- 用户回车(使用默认值)
+[Git-Merge] 配置确认: 源分支=feature-login -> 目标分支=branch2B_v1.0
+...
 ```
-*将 `feature-x` 分支的代码合并到 `develop` 分支。*
 
-#### 场景 C: 仅指定源分支 (dev -> branch2B_v1.0)
+### 3. 命令行参数 (已废弃，仅向下兼容)
+为了保持兼容性，脚本仍接受旧的参数形式，但建议迁移到交互式或环境变量配置。
+*注：新版脚本实际上已移除位置参数支持，仅支持 --silent 标志。如需非交互运行，请参考静默模式。*
+
+### 4. 静默模式 (高级用法)
+适用于 CI/CD 或脚本调用。通过 `-s` 或 `--silent` 参数启用，并通过环境变量传递配置。
+
 ```bash
-./scripts/git_merge_dynamic.sh dev
+# 使用默认值 (master -> branch2B_v1.0)
+./scripts/git_merge_dynamic.sh --silent
+
+# 通过环境变量指定分支
+export SOURCE_BRANCH="dev"
+export TARGET_BRANCH="qa"
+./scripts/git_merge_dynamic.sh -s
 ```
-*将 `dev` 分支合并到默认的目标分支 `branch2B_v1.0`。*
 
 ## 冲突处理指南
 
@@ -67,8 +72,9 @@ chmod +x scripts/git_merge_dynamic.sh
 
 ## 常见错误排查
 
-- **Error: 分支名称包含非法字符**
+- **Error: 分支名称格式无效**
   - 请检查输入的参数是否包含空格、特殊符号等。仅允许字母、数字、`/`、`-`、`_`、`.`。
+  - 脚本允许重试 3 次，超过次数将退出。
 
 - **Error: 目标分支在本地不存在**
   - 请先执行 `git fetch` 和 `git checkout <target_branch>` 确保本地有该分支。
