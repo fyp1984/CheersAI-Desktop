@@ -58,7 +58,7 @@ if [[ "$UPDATE_CODE" =~ ^[Yy]$ ]]; then
     # 尝试禁用 HTTP/2 避免 GnuTLS 错误
     git config http.version HTTP/1.1
     # 禁用 SSL 验证（仅用于临时解决证书问题，生产环境慎用）
-    # git config http.sslVerify false
+    git config http.sslVerify false
 
     # 定义保留目录白名单 (排除 docker, docs, tests, scripts 等)
     # 只保留 api (后端), web (前端)
