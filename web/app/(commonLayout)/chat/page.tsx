@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { RiAttachmentLine, RiMicLine, RiAddLine, RiDeleteBinLine, RiSearchLine, RiMoreLine, RiArrowDownSLine, RiCheckLine, RiMenuLine, RiCloseLine, RiDownloadLine, RiFileCopyLine, RiRefreshLine } from '@remixicon/react'
+import { RiAttachmentLine, RiMicLine, RiAddLine, RiDeleteBinLine, RiSearchLine, RiMoreLine, RiArrowDownSLine, RiCheckLine, RiMenuLine, RiCloseLine, RiDownloadLine, RiFileCopyLine, RiRefreshLine, RiShieldCheckLine, RiUploadCloudLine } from '@remixicon/react'
 import { cn } from '@/utils/classnames'
 import { ModelTypeEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
 import { useModelList, useDefaultModel } from '@/app/components/header/account-setting/model-provider-page/hooks'
 import { SandboxFilePicker } from '@/app/components/base/sandbox-file-picker'
+import { ChatSearch } from '@/app/components/base/chat-search'
 import { Markdown } from '@/app/components/base/markdown'
 
 interface Message {
@@ -75,6 +76,11 @@ const ChatPage = () => {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [isAutoFilled, setIsAutoFilled] = useState(false)
   const [autoFilledText, setAutoFilledText] = useState('')
+  const [showSearch, setShowSearch] = useState(false)
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
+  const [showFileUploader, setShowFileUploader] = useState(false)
+  const [uploadMode, setUploadMode] = useState<'sandbox' | 'direct'>('sandbox')
 
   // 本地存储的 key
   const STORAGE_KEY = 'cheersai_conversations'
@@ -508,6 +514,153 @@ const ChatPage = () => {
     }
   }
 
+  // 搜索功能
+  const handleSearch = async (query: string, filters?: any) => {
+    try {
+      // 使用本地对话数据进行搜索
+      if (!query.trim()) {
+        return []
+      }
+
+      const results: any[] = []
+      const lowerQuery = query.toLowerCase()
+
+      // 搜索所有对话
+      conversations.forEach(conversation => {
+        conversation.messages.forEach(message => {
+          // 应用过滤器
+          if (filters?.messageType && filters.messageType !== 'all') {
+            const isUserMessage = message.type === 'user'
+            if (filters.messageType === 'user' && !isUserMessage) return
+            if (filters.messageType === 'ai' && isUserMessage) return
+          }
+
+          // 搜索匹配
+          const lowerContent = message.content.toLowerCase()
+          const matchIndex = lowerContent.indexOf(lowerQuery)
+          
+          if (matchIndex >= 0) {
+            results.push({
+              messageId: message.id,
+              conversationId: conversation.id,
+              content: message.content,
+              timestamp: message.timestamp,
+              isUser: message.type === 'user',
+              matchIndex,
+              matchLength: query.length,
+            })
+          }
+        })
+      })
+
+      // 按时间倒序排列
+      results.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      
+      return results
+    } catch (error) {
+      console.error('搜索失败:', error)
+      return []
+    }
+  }
+
+  // 处理搜索结果选择
+  const handleSearchResultSelect = (result: any) => {
+    // 跳转到对应的对话
+    setCurrentConversationId(result.conversationId)
+    
+    // 高亮对应的消息
+    setHighlightedMessageId(result.messageId)
+    
+    // 3秒后取消高亮
+    setTimeout(() => {
+      setHighlightedMessageId(null)
+    }, 3000)
+  }
+
+  // 本地搜索功能（在当前对话中搜索）
+  const handleLocalSearch = (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([])
+      return []
+    }
+
+    const results = messages.filter(message => 
+      message.content.toLowerCase().includes(query.toLowerCase())
+    ).map(message => ({
+      messageId: message.id,
+      conversationId: currentConversationId,
+      content: message.content,
+      timestamp: message.timestamp,
+      isUser: message.type === 'user',
+      matchIndex: message.content.toLowerCase().indexOf(query.toLowerCase()),
+      matchLength: query.length,
+    }))
+
+    setSearchResults(results)
+    return results
+  }
+
+  // 处理直接文件上传
+  const handleDirectFileSelect = async (selectedFiles: File[]) => {
+    const newFiles: UploadedFile[] = []
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i]
+      let content = ''
+
+      try {
+        // 读取文件内容
+        if (file.type.startsWith('text/') || file.name.endsWith('.md') || file.name.endsWith('.txt')) {
+          content = await file.text()
+        } else if (file.name.endsWith('.pdf')) {
+          content = `[PDF文件: ${file.name}]`
+        } else if (file.type.startsWith('image/')) {
+          content = `[图片文件: ${file.name}]`
+        } else {
+          content = `[文件: ${file.name}]`
+        }
+
+        const uploadedFile: UploadedFile = {
+          id: `${Date.now()}-${i}`,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: '', // 直接上传的文件不需要URL
+          content: content,
+        }
+        newFiles.push(uploadedFile)
+      } catch (error) {
+        console.error('读取文件失败:', error)
+      }
+    }
+
+    setUploadedFiles(prev => [...prev, ...newFiles])
+    setShowFileUploader(false)
+  }
+
+  // 处理文件上传到服务器
+  const handleFileUpload = async (files: File[]) => {
+    try {
+      const formData = new FormData()
+      files.forEach(file => formData.append('files', file))
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error('上传失败')
+      }
+
+      const result = await response.json()
+      console.log('文件上传成功:', result)
+      
+    } catch (error) {
+      console.error('文件上传失败:', error)
+    }
+  }
+
   const handleSend = async () => {
       if (!inputValue.trim() || isLoading) return
 
@@ -758,13 +911,22 @@ const ChatPage = () => {
             </div>
             <span className="text-gray-900 font-medium">CheersAI行业版</span>
           </div>
-          <button
-            onClick={handleNewConversation}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
-            title="新建对话"
-          >
-            <RiAddLine className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSearch(true)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+              title="搜索对话"
+            >
+              <RiSearchLine className="h-4 w-4" />
+            </button>
+            <button
+              onClick={handleNewConversation}
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+              title="新建对话"
+            >
+              <RiAddLine className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* 搜索框 */}
@@ -1038,8 +1200,9 @@ const ChatPage = () => {
                   <div
                     key={message.id}
                     className={cn(
-                      'flex gap-4 mb-6',
-                      message.type === 'user' ? 'justify-end' : 'justify-start'
+                      'flex gap-4 mb-6 transition-all duration-300',
+                      message.type === 'user' ? 'justify-end' : 'justify-start',
+                      highlightedMessageId === message.id && 'bg-yellow-100 rounded-lg p-2 -m-2'
                     )}
                   >
                     {message.type === 'assistant' && (
@@ -1301,6 +1464,69 @@ const ChatPage = () => {
           onSelect={handleSandboxFilesSelected}
           accept=".txt,.md,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.csv,.json"
           multiple={true}
+        />
+
+        {/* 直接文件上传器弹窗 */}
+        {showFileUploader && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+            <div className="w-[600px] max-h-[80vh] bg-white rounded-2xl shadow-2xl flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-900">上传文件</h3>
+                <button 
+                  onClick={() => setShowFileUploader(false)} 
+                  className="p-1 rounded-lg hover:bg-gray-100"
+                >
+                  <RiCloseLine className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 p-6 overflow-y-auto">
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
+                  <input
+                    type="file"
+                    multiple
+                    accept=".txt,.md,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.csv,.json"
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        handleDirectFileSelect(Array.from(e.target.files))
+                      }
+                    }}
+                    className="hidden"
+                    id="file-upload"
+                  />
+                  <label htmlFor="file-upload" className="cursor-pointer">
+                    <RiUploadCloudLine className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <p className="text-lg font-medium text-gray-700 mb-2">
+                      点击选择文件或拖拽到此处
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      支持 txt, md, pdf, doc, docx 等格式，最大 10MB
+                    </p>
+                  </label>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+                <button
+                  onClick={() => setShowFileUploader(false)}
+                  className="px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-200"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 搜索组件 */}
+        <ChatSearch
+          isOpen={showSearch}
+          onClose={() => setShowSearch(false)}
+          onSearch={handleSearch}
+          onResultSelect={handleSearchResultSelect}
         />
       </div>
     </div>
