@@ -615,6 +615,15 @@ export const request = async<T>(url: string, options = {}, otherOptions?: IOther
       const [refreshErr] = await asyncRunSafe(refreshAccessTokenOrRelogin(TIME_OUT))
       if (refreshErr === null)
         return baseFetch<T>(url, options, otherOptionsForBaseFetch)
+      
+      // 修复无限重定向问题：如果当前已经是登录页，不要再跳转
+      const currentPath = globalThis.location.pathname
+      const loginPath = `${basePath}/signin`
+      
+      if (currentPath === loginPath || currentPath.endsWith('/signin')) {
+        return Promise.reject(err)
+      }
+
       if (location.pathname !== `${basePath}/signin` || !IS_CE_EDITION) {
         jumpTo(loginUrl)
         return Promise.reject(err)
