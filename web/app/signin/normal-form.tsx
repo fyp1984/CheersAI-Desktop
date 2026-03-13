@@ -139,136 +139,142 @@ const NormalForm = () => {
 
   return (
     <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-      <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <div className="bg-white px-4 py-8 shadow sm:rounded-lg sm:px-10">
         <div className="w-full">
           {isInviteLink
-          ? (
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  加入 {workspaceName}
-                </h2>
-                {!systemFeatures.branding.enabled && (
-                  <p className="text-gray-600">
-                    您已被邀请加入 {workspaceName} 工作空间
-                  </p>
-                )}
-              </div>
-            )
-          : (
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  {systemFeatures.branding.enabled ? '登录' : '欢迎回来'}
-                </h2>
-                <p className="text-gray-600">请登录您的账户以继续使用</p>
-              </div>
-            )}
-        <div className="relative">
-          <div className="flex flex-col gap-4">
-            {systemFeatures.enable_social_oauth_login && <SocialAuth />}
-            {systemFeatures.sso_enforced_for_signin && (
-              <div className="w-full">
-                <SSOAuth protocol={systemFeatures.sso_enforced_for_signin_protocol} />
-              </div>
-            )}
-          </div>
-
-          {showORLine && (
-            <div className="relative my-6">
-              <div className="flex items-center">
-                <div className="h-px flex-1 bg-gray-200"></div>
-                <span className="px-4 text-sm text-gray-500 bg-white">或</span>
-                <div className="h-px flex-1 bg-gray-200"></div>
-              </div>
-            </div>
-          )}
-          {
-            (systemFeatures.enable_email_code_login || systemFeatures.enable_email_password_login) && (
-              <>
-                {systemFeatures.enable_email_code_login && authType === 'code' && (
-                  <>
-                    <MailAndCodeAuth isInvite={isInviteLink} />
-                    {systemFeatures.enable_email_password_login && (
-                      <div className="cursor-pointer py-2 text-center" onClick={() => { updateAuthType('password') }}>
-                        <span className="text-sm text-blue-600 hover:text-blue-700">使用密码登录</span>
-                      </div>
-                    )}
-                  </>
-                )}
-                {systemFeatures.enable_email_password_login && authType === 'password' && (
-                  <>
-                    <MailAndPasswordAuth isInvite={isInviteLink} isEmailSetup={systemFeatures.is_email_setup} allowRegistration={systemFeatures.is_allow_register} />
-                    {systemFeatures.enable_email_code_login && (
-                      <div className="cursor-pointer py-2 text-center" onClick={() => { updateAuthType('code') }}>
-                        <span className="text-sm text-blue-600 hover:text-blue-700">使用验证码登录</span>
-                      </div>
-                    )}
-                  </>
-                )}
-              </>
-            )
-          }
-
-          {systemFeatures.is_allow_register && authType === 'password' && (
-            <div className="mt-6 text-center text-sm text-gray-600">
-              <span>还没有账号？</span>
-              <Link
-                className="text-blue-600 hover:text-blue-700 ml-1"
-                href="/signup"
-              >
-                立即注册
-              </Link>
-            </div>
-          )}
-          {allMethodsAreDisabled && (
-            <>
-              <div className="rounded-lg bg-red-50 border border-red-200 p-4">
-                <div className="flex items-center mb-2">
-                  <RiDoorLockLine className="h-5 w-5 text-red-500 mr-2" />
-                  <p className="text-sm font-medium text-red-800">无可用登录方式</p>
+            ? (
+                <div className="mb-8 text-center">
+                  <h2 className="mb-2 text-2xl font-bold text-gray-900">
+                    加入
+                    {' '}
+                    {workspaceName}
+                  </h2>
+                  {!systemFeatures.branding.enabled && (
+                    <p className="text-gray-600">
+                      您已被邀请加入
+                      {' '}
+                      {workspaceName}
+                      {' '}
+                      工作空间
+                    </p>
+                  )}
                 </div>
-                <p className="text-sm text-red-700">请联系管理员配置登录方式</p>
-              </div>
-            </>
-          )}
-          {!systemFeatures.branding.enabled && (
-            <>
-              <div className="mt-6 text-xs text-gray-500 text-center">
-                登录即表示您同意我们的
-                <Link
-                  className="text-blue-600 hover:text-blue-700 mx-1"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  href="https://dify.ai/terms"
-                >
-                  服务条款
-                </Link>
-                和
-                <Link
-                  className="text-blue-600 hover:text-blue-700 ml-1"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  href="https://dify.ai/privacy"
-                >
-                  隐私政策
-                </Link>
-              </div>
-              {IS_CE_EDITION && (
-                <div className="mt-2 text-xs text-gray-500 text-center">
-                  需要初始化系统？
-                  <Link
-                    className="text-blue-600 hover:text-blue-700 ml-1"
-                    href="/install"
-                  >
-                    设置管理员账户
-                  </Link>
+              )
+            : (
+                <div className="mb-8 text-center">
+                  <h2 className="mb-2 text-2xl font-bold text-gray-900">
+                    {systemFeatures.branding.enabled ? '登录' : '欢迎回来'}
+                  </h2>
+                  <p className="text-gray-600">请登录您的账户以继续使用</p>
                 </div>
               )}
-            </>
-          )}
+          <div className="relative">
+            <div className="flex flex-col gap-4">
+              {systemFeatures.enable_social_oauth_login && <SocialAuth />}
+              {systemFeatures.sso_enforced_for_signin && (
+                <div className="w-full">
+                  <SSOAuth protocol={systemFeatures.sso_enforced_for_signin_protocol} />
+                </div>
+              )}
+            </div>
+
+            {showORLine && (
+              <div className="relative my-6">
+                <div className="flex items-center">
+                  <div className="h-px flex-1 bg-gray-200"></div>
+                  <span className="bg-white px-4 text-sm text-gray-500">或</span>
+                  <div className="h-px flex-1 bg-gray-200"></div>
+                </div>
+              </div>
+            )}
+            {
+              (systemFeatures.enable_email_code_login || systemFeatures.enable_email_password_login) && (
+                <>
+                  {systemFeatures.enable_email_code_login && authType === 'code' && (
+                    <>
+                      <MailAndCodeAuth isInvite={isInviteLink} />
+                      {systemFeatures.enable_email_password_login && (
+                        <div className="cursor-pointer py-2 text-center" onClick={() => { updateAuthType('password') }}>
+                          <span className="text-sm text-blue-600 hover:text-blue-700">使用密码登录</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {systemFeatures.enable_email_password_login && authType === 'password' && (
+                    <>
+                      <MailAndPasswordAuth isInvite={isInviteLink} isEmailSetup={systemFeatures.is_email_setup} allowRegistration={systemFeatures.is_allow_register} />
+                      {systemFeatures.enable_email_code_login && (
+                        <div className="cursor-pointer py-2 text-center" onClick={() => { updateAuthType('code') }}>
+                          <span className="text-sm text-blue-600 hover:text-blue-700">使用验证码登录</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )
+            }
+
+            {systemFeatures.is_allow_register && authType === 'password' && (
+              <div className="mt-6 text-center text-sm text-gray-600">
+                <span>还没有账号？</span>
+                <Link
+                  className="ml-1 text-blue-600 hover:text-blue-700"
+                  href="/signup"
+                >
+                  立即注册
+                </Link>
+              </div>
+            )}
+            {allMethodsAreDisabled && (
+              <>
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                  <div className="mb-2 flex items-center">
+                    <RiDoorLockLine className="mr-2 h-5 w-5 text-red-500" />
+                    <p className="text-sm font-medium text-red-800">无可用登录方式</p>
+                  </div>
+                  <p className="text-sm text-red-700">请联系管理员配置登录方式</p>
+                </div>
+              </>
+            )}
+            {!systemFeatures.branding.enabled && (
+              <>
+                <div className="mt-6 text-center text-xs text-gray-500">
+                  登录即表示您同意我们的
+                  <Link
+                    className="mx-1 text-blue-600 hover:text-blue-700"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href="https://dify.ai/terms"
+                  >
+                    服务条款
+                  </Link>
+                  和
+                  <Link
+                    className="ml-1 text-blue-600 hover:text-blue-700"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href="https://dify.ai/privacy"
+                  >
+                    隐私政策
+                  </Link>
+                </div>
+                {IS_CE_EDITION && (
+                  <div className="mt-2 text-center text-xs text-gray-500">
+                    需要初始化系统？
+                    <Link
+                      className="ml-1 text-blue-600 hover:text-blue-700"
+                      href="/install"
+                    >
+                      设置管理员账户
+                    </Link>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
-  </div>
   )
 }
 
