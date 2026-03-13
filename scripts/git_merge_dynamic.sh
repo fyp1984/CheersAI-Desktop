@@ -21,8 +21,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # 默认配置
-DEFAULT_SOURCE_BRANCH="branch2B_v1.0"
-DEFAULT_TARGET_BRANCH="master"
+DEFAULT_SOURCE_BRANCH="master"
+DEFAULT_TARGET_BRANCH="branch2B_v1.0"
 INTERACTIVE_MODE=true
 
 # 打印带时间戳的日志

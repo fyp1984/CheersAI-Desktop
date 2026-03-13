@@ -32,8 +32,8 @@ chmod +x scripts/git_merge_dynamic.sh
 
 ### 4.3 常用命令示例
 
-**场景一：将当前开发分支合并到 master**
-假设默认源分支配置为 `branch2B_v1.0`，目标为 `master`：
+**场景一：将 master 合并到 branch2B_v1.0**
+假设默认源分支配置为 `master`，目标为 `branch2B_v1.0`：
 ```bash
 ./scripts/git_merge_dynamic.sh
 ```
@@ -60,8 +60,8 @@ chmod +x scripts/git_merge_dynamic.sh
 
 | 参数 | 说明 | 默认值 | 备注 |
 | :--- | :--- | :--- | :--- |
-| `-b <branch>` | 源分支 (Source Branch) | `branch2B_v1.0` | 代码变更的来源 |
-| `-t <branch>` | 目标分支 (Target Branch) | `master` | 代码合并的目的地 |
+| `-b <branch>` | 源分支 (Source Branch) | `master` | 代码变更的来源 |
+| `-t <branch>` | 目标分支 (Target Branch) | `branch2B_v1.0` | 代码合并的目的地 |
 | `-m <msg>` | 提交消息 (Commit Message) | Git默认生成的消息 | 建议填写清晰的变更说明 |
 | `-s` | 静默模式 (Silent Mode) | 关闭 | 启用后禁用所有交互询问 |
 | `-h` | 帮助 (Help) | - | 显示帮助信息并退出 |
