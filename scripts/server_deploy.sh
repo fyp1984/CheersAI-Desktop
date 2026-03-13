@@ -232,19 +232,43 @@ fi
 
 if [ -n "$COMPOSE_FILE" ]; then
     if command -v docker >/dev/null 2>&1; then
+        # Try to run docker ps to check permissions
+        if ! docker ps >/dev/null 2>&1; then
+             log "⚠️ 当前用户无法直接运行 Docker，尝试使用 sudo..."
+             DOCKER_CMD="sudo docker"
+             DOCKER_COMPOSE_CMD="sudo docker compose"
+             
+             # Fallback for older docker-compose
+             if ! sudo docker compose version >/dev/null 2>&1; then
+                 if command -v docker-compose >/dev/null 2>&1; then
+                     DOCKER_COMPOSE_CMD="sudo docker-compose"
+                 fi
+             fi
+        else
+             DOCKER_CMD="docker"
+             DOCKER_COMPOSE_CMD="docker compose"
+             
+             # Fallback for older docker-compose
+             if ! $DOCKER_CMD compose version >/dev/null 2>&1; then
+                 if command -v docker-compose >/dev/null 2>&1; then
+                     DOCKER_COMPOSE_CMD="docker-compose"
+                 fi
+             fi
+        fi
+
         # Check if plugin_daemon container is running
         PLUGIN_CONTAINER_NAME="dify-plugin-daemon"
         IS_RUNNING=false
-
-        if docker ps --format '{{.Names}}' | grep -q "^${PLUGIN_CONTAINER_NAME}$"; then
+        
+        if $DOCKER_CMD ps --format '{{.Names}}' | grep -q "^${PLUGIN_CONTAINER_NAME}$"; then
              IS_RUNNING=true
         fi
-
+        
         if [ "$IS_RUNNING" = true ]; then
             log "✅ Plugin Daemon (容器: $PLUGIN_CONTAINER_NAME) 正在运行。"
             read -p "是否重新部署/重启 Plugin Daemon? (y/N) [默认: N]: " REDEPLOY_PLUGIN
             REDEPLOY_PLUGIN=${REDEPLOY_PLUGIN:-n}
-
+            
             if [[ "$REDEPLOY_PLUGIN" =~ ^[Yy]$ ]]; then
                  log "正在重新部署 Plugin Daemon..."
                  CMD="up -d --force-recreate plugin_daemon redis weaviate"
@@ -256,13 +280,9 @@ if [ -n "$COMPOSE_FILE" ]; then
             log "⚠️ Plugin Daemon 未运行，准备首次部署..."
             CMD="up -d plugin_daemon redis weaviate"
         fi
-
+        
         if [ -n "$CMD" ]; then
-             if docker compose version >/dev/null 2>&1; then
-                docker compose -f "$COMPOSE_FILE" $CMD 2>&1 | tee -a "$LOG_FILE"
-             elif command -v docker-compose >/dev/null 2>&1; then
-                docker-compose -f "$COMPOSE_FILE" $CMD 2>&1 | tee -a "$LOG_FILE"
-             fi
+             $DOCKER_COMPOSE_CMD -f "$COMPOSE_FILE" $CMD 2>&1 | tee -a "$LOG_FILE"
         fi
     else
         log "⚠️ 未找到 docker 命令，跳过插件服务启动。"
