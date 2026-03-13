@@ -62,10 +62,12 @@ if [[ "$UPDATE_CODE" =~ ^[Yy]$ ]]; then
     # 注意：scripts 目录通常包含当前脚本本身，将其排除可能会导致脚本在 pull 后被删除
     # 如果脚本位于 APP_DIR/scripts 并且您正在 APP_DIR 下执行，git reset --hard 可能会影响正在运行的脚本
     # 建议将运维脚本放在独立目录（如 ~/scripts/）运行，与代码仓库解耦
-    cat > .git/info/sparse-checkout <<EOF
+   # 更新稀疏检出配置
+cat > .git/info/sparse-checkout <<EOF
 api/
 web/
 scripts/
+docker-compose.dev.yaml
 README.md
 EOF
 
@@ -216,6 +218,34 @@ if [ -z "$DB_PASSWORD" ]; then
     log "❌ 未检测到 DB_PASSWORD 环境变量，数据库连接将失败。"
     log "请确保 /home/cheersai/CheersAI-Desktop/config/production.env 文件存在且包含 DB_PASSWORD。"
     exit 1
+fi
+
+# === 新增：确保 Plugin Daemon 运行 ===
+log "3.1 检查并启动 Plugin Daemon..."
+if [ -f "../docker-compose.dev.yaml" ]; then
+    COMPOSE_FILE="../docker-compose.dev.yaml"
+elif [ -f "docker-compose.dev.yaml" ]; then
+    COMPOSE_FILE="docker-compose.dev.yaml"
+else
+    COMPOSE_FILE=""
+fi
+
+if [ -n "$COMPOSE_FILE" ]; then
+    if command -v docker >/dev/null 2>&1; then
+        log "使用 Docker Compose 启动依赖服务 (Plugin Daemon)..."
+        # 尝试使用 docker compose (v2) 或 docker-compose (v1)
+        if docker compose version >/dev/null 2>&1; then
+            docker compose -f "$COMPOSE_FILE" up -d plugin_daemon redis weaviate 2>&1 | tee -a "$LOG_FILE"
+        elif command -v docker-compose >/dev/null 2>&1; then
+            docker-compose -f "$COMPOSE_FILE" up -d plugin_daemon redis weaviate 2>&1 | tee -a "$LOG_FILE"
+        else
+            log "⚠️ 未找到 docker compose 命令，跳过插件服务启动。"
+        fi
+    else
+        log "⚠️ 未找到 docker 命令，跳过插件服务启动。"
+    fi
+else
+    log "⚠️ 未找到 docker-compose.dev.yaml，无法自动启动插件服务。"
 fi
 
 uv run flask db upgrade 2>&1 | tee -a "$LOG_FILE"
