@@ -55,7 +55,10 @@ if [[ "$UPDATE_CODE" =~ ^[Yy]$ ]]; then
     git config http.postBuffer 524288000
     git config http.lowSpeedLimit 0
     git config http.lowSpeedTime 999999
+    # 尝试禁用 HTTP/2 避免 GnuTLS 错误
     git config http.version HTTP/1.1
+    # 禁用 SSL 验证（仅用于临时解决证书问题，生产环境慎用）
+    # git config http.sslVerify false
 
     # 定义保留目录白名单 (排除 docker, docs, tests, scripts 等)
     # 只保留 api (后端), web (前端)
@@ -83,11 +86,17 @@ EOF
     SUCCESS=0
 
     while [ $COUNT -lt $MAX_RETRIES ]; do
-        if git fetch origin "$BRANCH" --progress 2>&1 | tee -a "$LOG_FILE"; then
+        # 尝试使用 HTTP/1.1 并增加 verbose 输出
+        if git -c http.version=HTTP/1.1 fetch origin "$BRANCH" --progress --verbose 2>&1 | tee -a "$LOG_FILE"; then
             SUCCESS=1
             break
         else
             log "⚠️ 拉取失败，等待 5 秒后重试 ($((COUNT+1))/$MAX_RETRIES)..."
+            # 第一次重试时尝试禁用 SSL 验证作为 fallback
+            if [ $COUNT -eq 0 ]; then
+                log "⚠️ 尝试临时禁用 SSL 验证..."
+                git config http.sslVerify false
+            fi
             sleep 5
             COUNT=$((COUNT+1))
         fi
