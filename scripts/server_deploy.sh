@@ -250,6 +250,13 @@ fi
 
 log "编译前端代码 (显示详细进度)..."
 
+# === 前端环境变量配置 (解决子路径部署 404/重定向问题) ===
+# 必须与 Nginx 的 location /cheersai_desktop/ 对应
+export NEXT_PUBLIC_BASE_PATH="/cheersai_desktop"
+# 后端 API 地址 (通过 Nginx 反代)
+export NEXT_PUBLIC_API_PREFIX="https://7smile.dlithink.com/cheersai_desktop/console/api"
+export NEXT_PUBLIC_PUBLIC_API_PREFIX="https://7smile.dlithink.com/cheersai_desktop/api"
+
 # === 性能优化关键配置 ===
 # 1. 限制 Node.js 堆内存 (防止 OOM 崩溃，建议根据机器内存调整)
 export NODE_OPTIONS="--max-old-space-size=4096"
