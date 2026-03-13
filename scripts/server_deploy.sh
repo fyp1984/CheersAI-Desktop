@@ -46,6 +46,9 @@ if [[ "$UPDATE_CODE" =~ ^[Yy]$ ]]; then
         log "初始化 Git 仓库..."
         git init
         git remote add origin https://github.com/fyp1984/CheersAI-Desktop.git
+    else
+        # 强制重置远程 URL，防止 URL 错误
+        git remote set-url origin https://github.com/fyp1984/CheersAI-Desktop.git
     fi
 
     # 启用稀疏检出功能
