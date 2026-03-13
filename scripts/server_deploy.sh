@@ -207,10 +207,14 @@ fi
 # 3. 加载环境变量 (优先加载 production.env，其次是 api/.env)
 if [ -f "../config/production.env" ]; then
     log "加载生产环境配置..."
-    export $(grep -v '^#' ../config/production.env | xargs)
+    set -a
+    source "../config/production.env"
+    set +a
 elif [ -f "$APP_DIR/api/.env" ]; then
     log "加载 api/.env 配置..."
-    export $(grep -v '^#' "$APP_DIR/api/.env" | xargs)
+    set -a
+    source "$APP_DIR/api/.env"
+    set +a
 fi
 
 # 检查必要的数据库环境变量
@@ -237,7 +241,7 @@ if [ -n "$COMPOSE_FILE" ]; then
              log "⚠️ 当前用户无法直接运行 Docker，尝试使用 sudo..."
              DOCKER_CMD="sudo docker"
              DOCKER_COMPOSE_CMD="sudo docker compose"
-             
+
              # Fallback for older docker-compose
              if ! sudo docker compose version >/dev/null 2>&1; then
                  if command -v docker-compose >/dev/null 2>&1; then
@@ -247,7 +251,7 @@ if [ -n "$COMPOSE_FILE" ]; then
         else
              DOCKER_CMD="docker"
              DOCKER_COMPOSE_CMD="docker compose"
-             
+
              # Fallback for older docker-compose
              if ! $DOCKER_CMD compose version >/dev/null 2>&1; then
                  if command -v docker-compose >/dev/null 2>&1; then
@@ -259,16 +263,16 @@ if [ -n "$COMPOSE_FILE" ]; then
         # Check if plugin_daemon container is running
         PLUGIN_CONTAINER_NAME="dify-plugin-daemon"
         IS_RUNNING=false
-        
+
         if $DOCKER_CMD ps --format '{{.Names}}' | grep -q "^${PLUGIN_CONTAINER_NAME}$"; then
              IS_RUNNING=true
         fi
-        
+
         if [ "$IS_RUNNING" = true ]; then
             log "✅ Plugin Daemon (容器: $PLUGIN_CONTAINER_NAME) 正在运行。"
             read -p "是否重新部署/重启 Plugin Daemon? (y/N) [默认: N]: " REDEPLOY_PLUGIN
             REDEPLOY_PLUGIN=${REDEPLOY_PLUGIN:-n}
-            
+
             if [[ "$REDEPLOY_PLUGIN" =~ ^[Yy]$ ]]; then
                  log "正在重新部署 Plugin Daemon..."
                  CMD="up -d --force-recreate plugin_daemon redis weaviate"
@@ -280,7 +284,7 @@ if [ -n "$COMPOSE_FILE" ]; then
             log "⚠️ Plugin Daemon 未运行，准备首次部署..."
             CMD="up -d plugin_daemon redis weaviate"
         fi
-        
+
         if [ -n "$CMD" ]; then
              $DOCKER_COMPOSE_CMD -f "$COMPOSE_FILE" $CMD 2>&1 | tee -a "$LOG_FILE"
         fi
