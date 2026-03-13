@@ -6,7 +6,9 @@ import { IS_DEV } from '@/config'
 import { isClient } from '@/utils/client'
 
 export function PWAProvider({ children }: { children: React.ReactNode }) {
-  if (IS_DEV) {
+  // 临时强制禁用 PWA 以解决无限刷新循环问题
+  // 待 Service Worker 配置修复后再恢复
+  if (true || IS_DEV) {
     return <DisabledPWAProvider>{children}</DisabledPWAProvider>
   }
 
