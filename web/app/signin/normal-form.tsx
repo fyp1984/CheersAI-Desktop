@@ -14,10 +14,10 @@ import { cn } from '@/utils/classnames'
 import Loading from '../components/base/loading'
 import MailAndCodeAuth from './components/mail-and-code-auth'
 import MailAndPasswordAuth from './components/mail-and-password-auth'
+import PhoneAuth from './components/phone-auth'
 import SocialAuth from './components/social-auth'
 import SSOAuth from './components/sso-auth'
 import WechatAuth from './components/wechat-auth'
-import PhoneAuth from './components/phone-auth'
 import { resolvePostLoginRedirect } from './utils/post-login-redirect'
 
 const NormalForm = () => {
@@ -72,7 +72,7 @@ const NormalForm = () => {
       setAllMethodsAreDisabled(true)
     }
     finally { setInitCheckLoading(false) }
-  }, [isLoggedIn, message, router, invite_token, isInviteLink, systemFeatures])
+  }, [isLoggedIn, message, router, invite_token, isInviteLink, systemFeatures, searchParams])
   useEffect(() => {
     init()
   }, [init])
@@ -140,119 +140,126 @@ const NormalForm = () => {
   }
 
   return (
-    <>
-      <div className="w-full">
-        {isInviteLink
-          ? (
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  加入 {workspaceName}
-                </h2>
-                {!systemFeatures.branding.enabled && (
-                  <p className="text-gray-600">
-                    您已被邀请加入 {workspaceName} 工作空间
-                  </p>
-                )}
-              </div>
-            )
-          : (
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  {systemFeatures.branding.enabled ? '登录' : '欢迎回来'}
-                </h2>
-                <p className="text-gray-600">选择您喜欢的登录方式</p>
-              </div>
-            )}
-        <div className="relative">
-          {/* 登录方式选择 */}
-          <div className="mb-6">
-            <div className="flex flex-wrap gap-2 justify-center">
-              <button
-                type="button"
-                onClick={() => updateAuthType('password')}
-                className={`px-4 py-2 text-sm rounded-lg transition-colors ${
-                  authType === 'password'
-                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                邮箱密码
-              </button>
-              <button
-                type="button"
-                onClick={() => updateAuthType('code')}
-                className={`px-4 py-2 text-sm rounded-lg transition-colors ${
-                  authType === 'code'
-                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                邮箱验证码
-              </button>
-              <button
-                type="button"
-                onClick={() => updateAuthType('phone')}
-                className={`px-4 py-2 text-sm rounded-lg transition-colors ${
-                  authType === 'phone'
-                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                手机号
-              </button>
-              <button
-                type="button"
-                onClick={() => updateAuthType('wechat')}
-                className={`px-4 py-2 text-sm rounded-lg transition-colors ${
-                  authType === 'wechat'
-                    ? 'bg-green-100 text-green-700 border border-green-200'
-                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                微信登录
-              </button>
-            </div>
-          </div>
-
-          {/* 社交登录 */}
-          <div className="flex flex-col gap-3 mb-6">
-            {systemFeatures.enable_social_oauth_login && <SocialAuth />}
-            {systemFeatures.sso_enforced_for_signin && (
-              <div className="w-full">
-                <SSOAuth protocol={systemFeatures.sso_enforced_for_signin_protocol} />
-              </div>
-            )}
-          </div>
-
-          {/* 分割线 */}
-          {(systemFeatures.enable_social_oauth_login || systemFeatures.sso_enforced_for_signin) && (
-            <div className="relative my-6">
-              <div className="flex items-center">
-                <div className="h-px flex-1 bg-gray-200"></div>
-                <span className="px-4 text-sm text-gray-500 bg-white">或</span>
-                <div className="h-px flex-1 bg-gray-200"></div>
+    <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+      <div className="bg-white px-4 py-8 shadow sm:rounded-lg sm:px-10">
+        <div className="w-full">
+          {isInviteLink
+            ? (
+                <div className="mb-8 text-center">
+                  <h2 className="mb-2 text-2xl font-bold text-gray-900">
+                    加入
+                    {' '}
+                    {workspaceName}
+                  </h2>
+                  {!systemFeatures.branding.enabled && (
+                    <p className="text-gray-600">
+                      您已被邀请加入
+                      {' '}
+                      {workspaceName}
+                      {' '}
+                      工作空间
+                    </p>
+                  )}
+                </div>
+              )
+            : (
+                <div className="mb-8 text-center">
+                  <h2 className="mb-2 text-2xl font-bold text-gray-900">
+                    {systemFeatures.branding.enabled ? '登录' : '欢迎回来'}
+                  </h2>
+                  <p className="text-gray-600">选择您喜欢的登录方式</p>
+                </div>
+              )}
+          <div className="relative">
+            {/* 登录方式选择 */}
+            <div className="mb-6">
+              <div className="flex flex-wrap justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => updateAuthType('password')}
+                  className={`rounded-lg px-4 py-2 text-sm transition-colors ${
+                    authType === 'password'
+                      ? 'border border-blue-200 bg-blue-100 text-blue-700'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  邮箱密码
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateAuthType('code')}
+                  className={`rounded-lg px-4 py-2 text-sm transition-colors ${
+                    authType === 'code'
+                      ? 'border border-blue-200 bg-blue-100 text-blue-700'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  邮箱验证码
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateAuthType('phone')}
+                  className={`rounded-lg px-4 py-2 text-sm transition-colors ${
+                    authType === 'phone'
+                      ? 'border border-blue-200 bg-blue-100 text-blue-700'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  手机号
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateAuthType('wechat')}
+                  className={`rounded-lg px-4 py-2 text-sm transition-colors ${
+                    authType === 'wechat'
+                      ? 'border border-green-200 bg-green-100 text-green-700'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  微信登录
+                </button>
               </div>
             </div>
-          )}
 
-          {/* 登录表单 */}
-          <div className="space-y-4">
-            {authType === 'password' && systemFeatures.enable_email_password_login && (
-              <MailAndPasswordAuth isInvite={isInviteLink} isEmailSetup={systemFeatures.is_email_setup} allowRegistration={systemFeatures.is_allow_register} />
+            {/* 社交登录 */}
+            <div className="mb-6 flex flex-col gap-3">
+              {systemFeatures.enable_social_oauth_login && <SocialAuth />}
+              {systemFeatures.sso_enforced_for_signin && (
+                <div className="w-full">
+                  <SSOAuth protocol={systemFeatures.sso_enforced_for_signin_protocol} />
+                </div>
+              )}
+            </div>
+
+            {/* 分割线 */}
+            {showORLine && (
+              <div className="relative my-6">
+                <div className="flex items-center">
+                  <div className="h-px flex-1 bg-gray-200"></div>
+                  <span className="bg-white px-4 text-sm text-gray-500">或</span>
+                  <div className="h-px flex-1 bg-gray-200"></div>
+                </div>
+              </div>
             )}
 
-            {authType === 'code' && systemFeatures.enable_email_code_login && (
-              <MailAndCodeAuth isInvite={isInviteLink} />
-            )}
+            {/* 登录表单 */}
+            <div className="space-y-4">
+              {authType === 'password' && systemFeatures.enable_email_password_login && (
+                <MailAndPasswordAuth isInvite={isInviteLink} isEmailSetup={systemFeatures.is_email_setup} allowRegistration={systemFeatures.is_allow_register} />
+              )}
 
-            {authType === 'phone' && (
-              <PhoneAuth isInvite={isInviteLink} />
-            )}
+              {authType === 'code' && systemFeatures.enable_email_code_login && (
+                <MailAndCodeAuth isInvite={isInviteLink} />
+              )}
 
-            {authType === 'wechat' && (
-              <WechatAuth />
-            )}
-          </div>
+              {authType === 'phone' && (
+                <PhoneAuth isInvite={isInviteLink} />
+              )}
+
+              {authType === 'wechat' && (
+                <WechatAuth />
+              )}
+            </div>
 
             {systemFeatures.is_allow_register && authType === 'password' && (
               <div className="mt-6 text-center text-sm text-gray-600">
