@@ -22,8 +22,8 @@ log() {
 }
 
 # 交互式确认：Git 分支
-read -p "请输入要部署的 Git 分支 [默认: master]: " INPUT_BRANCH
-BRANCH=${INPUT_BRANCH:-master}
+read -p "请输入要部署的 Git 分支 [默认: branch2B_v1.0]: " INPUT_BRANCH
+BRANCH=${INPUT_BRANCH:-branch2B_v1.0}
 
 log "=== 开始部署流程 (分支: $BRANCH) ==="
 
