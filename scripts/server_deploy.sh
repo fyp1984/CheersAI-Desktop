@@ -157,8 +157,23 @@ if [ ! -d ".venv" ]; then
     uv venv .venv --python 3.12
 fi
 source .venv/bin/activate
-log "执行 uv sync..."
-uv sync 2>&1 | tee -a "$LOG_FILE"
+
+log "2.1 优化 Python 依赖安装配置 (国内镜像加速)..."
+# 优先使用清华源，配置阿里云作为备选
+export UV_INDEX_URL="https://pypi.tuna.tsinghua.edu.cn/simple"
+# 增加网络容错配置
+export UV_HTTP_TIMEOUT=300  # 增加超时时间到 5分钟
+export UV_CONCURRENT_DOWNLOADS=8 # 适当限制并发，防止拥塞
+
+# 智能依赖检测
+if [ -f "uv.lock" ] && [ -f ".uv.lock.deployed" ] && cmp -s "uv.lock" ".uv.lock.deployed"; then
+    log "⏩ 后端依赖文件 (uv.lock) 未变更，跳过依赖同步..."
+else
+    log "📦 检测到依赖变更或首次部署，执行 uv sync..."
+    uv sync 2>&1 | tee -a "$LOG_FILE"
+    # 备份当前 lock 文件以供下次比对
+    cp "uv.lock" ".uv.lock.deployed"
+fi
 
 log "3. 执行数据库迁移..."
 export FLASK_APP=app.py
@@ -220,9 +235,18 @@ if ! command -v pnpm &> /dev/null; then
     fi
 fi
 
-log "安装前端依赖..."
-# 使用 pnpm 安装依赖 (项目强制要求 pnpm)
-pnpm install 2>&1 | tee -a "$LOG_FILE"
+log "安装前端依赖 (pnpm 国内源加速)..."
+# 配置淘宝镜像源
+export NPM_CONFIG_REGISTRY="https://registry.npmmirror.com"
+
+if [ -f "pnpm-lock.yaml" ] && [ -f ".pnpm-lock.yaml.deployed" ] && cmp -s "pnpm-lock.yaml" ".pnpm-lock.yaml.deployed"; then
+    log "⏩ 前端依赖文件 (pnpm-lock.yaml) 未变更，跳过 pnpm install..."
+else
+    log "📦 检测到前端依赖变更，执行安装..."
+    pnpm install 2>&1 | tee -a "$LOG_FILE"
+    # 备份当前 lock 文件
+    cp "pnpm-lock.yaml" ".pnpm-lock.yaml.deployed"
+fi
 
 log "编译前端代码 (显示详细进度)..."
 
