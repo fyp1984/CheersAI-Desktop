@@ -65,6 +65,7 @@ if [[ "$UPDATE_CODE" =~ ^[Yy]$ ]]; then
     cat > .git/info/sparse-checkout <<EOF
 api/
 web/
+scripts/
 README.md
 EOF
 
