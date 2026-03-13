@@ -1,7 +1,7 @@
 import type { Viewport } from 'next'
 import { Provider as JotaiProvider } from 'jotai'
 import { ThemeProvider } from 'next-themes'
-// // // // // // // // // // // import { Instrument_Serif } from 'next/font/google' // Temporarily disabled for build // Temporarily disabled for build // Temporarily disabled for build // Temporarily disabled for build // Temporarily disabled for build
+// // // // // // // // import { Instrument_Serif } from 'next/font/google' // Temporarily disabled for build // Temporarily disabled for build // Temporarily disabled for build // Temporarily disabled for build
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import GlobalPublicStoreProvider from '@/context/global-public-context'
 import { SandboxSecurityProvider } from '@/context/sandbox-security-context'
@@ -28,7 +28,7 @@ export const viewport: Viewport = {
   userScalable: false,
 }
 
-// // // // // // // // // // // const instrumentSerif = Instrument_Serif({ weight: ['400'], style: ['normal', 'italic'], subsets: ['latin'], display: 'swap', }) // Temporarily disabled for build // Temporarily disabled for build // Temporarily disabled for build // Temporarily disabled for build // Temporarily disabled for build
+// // // // // // // // const instrumentSerif = Instrument_Serif({ weight: ['400'], style: ['normal', 'italic'], subsets: ['latin'], display: 'swap', }) // Temporarily disabled for build // Temporarily disabled for build // Temporarily disabled for build // Temporarily disabled for build
 
 const LocaleLayout = async ({
   children,
@@ -74,17 +74,18 @@ const LocaleLayout = async ({
   return (
     <html lang={locale ?? 'en'} className="h-full" suppressHydrationWarning>
       <head>
-        <link rel="manifest" href="/manifest.json" />
+        {/* Next.js 13+ app directory supports dynamic manifest generation,
+            see app/manifest.ts. Removing static manifest link to avoid conflict. */}
         <meta name="theme-color" content="#1C64F2" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="CheersAI" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/icon-192x192.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/icon-192x192.png" />
+        <link rel="apple-touch-icon" href={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/apple-touch-icon.png`} />
+        <link rel="icon" type="image/png" sizes="32x32" href={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/icon-192x192.png`} />
+        <link rel="icon" type="image/png" sizes="16x16" href={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/icon-192x192.png`} />
         <meta name="msapplication-TileColor" content="#1C64F2" />
-        <meta name="msapplication-config" content="/browserconfig.xml" />
+        <meta name="msapplication-config" content={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/browserconfig.xml`} />
       </head>
       <body
         className="color-scheme h-full select-auto"
