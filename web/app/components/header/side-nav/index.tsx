@@ -36,6 +36,7 @@ import { useSearchParams, useSelectedLayoutSegment } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAppContext } from '@/context/app-context'
 import { cn } from '@/utils/classnames'
+import { basePath } from '@/utils/var'
 import AccountDropdown from '../account-dropdown'
 import EnvNav from '../env-nav'
 import { useLogout } from '@/service/use-common'
@@ -231,7 +232,7 @@ const SideNav = () => {
             collapsed ? 'w-8 h-8' : 'w-12 h-12',
           )}>
             <img
-              src="/logo/CheersAI.png"
+              src={`${basePath}/logo/CheersAI.png`}
               alt="CheersAI"
               className="w-full h-full object-cover scale-125"
             />
