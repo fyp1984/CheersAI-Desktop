@@ -587,7 +587,10 @@ export const request = async<T>(url: string, options = {}, otherOptions?: IOther
       }
       if (code === 'unauthorized_and_force_logout') {
         // Cookies will be cleared by the backend
-        globalThis.location.reload()
+        // Fix: Prevent reload if already on signin page to avoid infinite loop
+        if (!globalThis.location.pathname.endsWith('/signin')) {
+          globalThis.location.reload()
+        }
         return Promise.reject(err)
       }
       const {
@@ -615,11 +618,11 @@ export const request = async<T>(url: string, options = {}, otherOptions?: IOther
       const [refreshErr] = await asyncRunSafe(refreshAccessTokenOrRelogin(TIME_OUT))
       if (refreshErr === null)
         return baseFetch<T>(url, options, otherOptionsForBaseFetch)
-      
+
       // 修复无限重定向问题：如果当前已经是登录页，不要再跳转
       const currentPath = globalThis.location.pathname
       const loginPath = `${basePath}/signin`
-      
+
       if (currentPath === loginPath || currentPath.endsWith('/signin')) {
         return Promise.reject(err)
       }
