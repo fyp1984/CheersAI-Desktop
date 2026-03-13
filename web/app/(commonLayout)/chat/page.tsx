@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { RiAttachmentLine, RiMicLine, RiAddLine, RiDeleteBinLine, RiSearchLine, RiMoreLine, RiArrowDownSLine, RiCheckLine, RiMenuLine, RiCloseLine } from '@remixicon/react'
+import { RiAttachmentLine, RiMicLine, RiAddLine, RiDeleteBinLine, RiSearchLine, RiMoreLine, RiArrowDownSLine, RiCheckLine, RiMenuLine, RiCloseLine, RiDownloadLine, RiFileCopyLine, RiRefreshLine } from '@remixicon/react'
 import { cn } from '@/utils/classnames'
 import { ModelTypeEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
 import { useModelList, useDefaultModel } from '@/app/components/header/account-setting/model-provider-page/hooks'
 import { SandboxFilePicker } from '@/app/components/base/sandbox-file-picker'
+import { Markdown } from '@/app/components/base/markdown'
 
 interface Message {
   id: string
@@ -71,6 +72,9 @@ const ChatPage = () => {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [showSandboxPicker, setShowSandboxPicker] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
+  const [isAutoFilled, setIsAutoFilled] = useState(false)
+  const [autoFilledText, setAutoFilledText] = useState('')
 
   // 本地存储的 key
   const STORAGE_KEY = 'cheersai_conversations'
@@ -294,6 +298,216 @@ const ChatPage = () => {
     setSidebarCollapsed(!sidebarCollapsed)
   }
 
+  // 复制AI回复内容
+  const handleCopyMessage = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content)
+      // 可以添加一个toast提示
+    } catch (error) {
+      // 降级方案
+      const textArea = document.createElement('textarea')
+      textArea.value = content
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+    }
+  }
+
+  // 下载AI回复内容
+  const handleDownloadMessage = (content: string, messageId: string) => {
+    const blob = new Blob([content], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `ai-response-${messageId}.md`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  // 重新生成AI回复
+  const handleRegenerateMessage = async (messageIndex: number) => {
+    if (isLoading) return
+
+    // 获取到指定消息为止的对话历史
+    const messagesToRegenerate = messages.slice(0, messageIndex)
+    const lastUserMessage = messagesToRegenerate.filter(m => m.type === 'user').pop()
+    
+    if (!lastUserMessage) return
+
+    // 移除从指定位置开始的所有消息
+    const newMessages = messages.slice(0, messageIndex)
+    setMessages(newMessages)
+
+    // 更新对话记录
+    if (currentConversationId) {
+      setConversations(prev => prev.map(conv => {
+        if (conv.id === currentConversationId) {
+          return {
+            ...conv,
+            messages: newMessages,
+            timestamp: new Date(),
+          }
+        }
+        return conv
+      }))
+    }
+
+    // 重新发送请求
+    setIsLoading(true)
+
+    // 添加新的AI消息占位
+    const assistantMessageId = Date.now().toString()
+    const assistantMessage: Message = {
+      id: assistantMessageId,
+      type: 'assistant',
+      content: '',
+      timestamp: new Date(),
+    }
+    setMessages(prev => [...prev, assistantMessage])
+    setStreamingMessageId(assistantMessageId)
+
+    try {
+      const modelToUse = selectedModel?.model || 'qwen2.5:1.5b'
+
+      // 构建包含对话历史的完整prompt
+      let fullPrompt = ''
+      
+      // 添加对话历史（最近的10轮对话）
+      const recentMessages = newMessages.slice(-20) // 取最近20条消息（10轮对话）
+      
+      if (recentMessages.length > 0) {
+        fullPrompt += '以下是对话历史：\n\n'
+        recentMessages.forEach((msg) => {
+          if (msg.type === 'user') {
+            fullPrompt += `用户: ${msg.content}\n\n`
+          } else if (msg.type === 'assistant' && msg.content.trim()) {
+            fullPrompt += `助手: ${msg.content}\n\n`
+          }
+        })
+        fullPrompt += '---\n\n'
+      }
+      
+      // 添加当前用户消息
+      fullPrompt += `用户: ${lastUserMessage.content}`
+
+      // 添加文件内容（如果有）
+      if (lastUserMessage.files && lastUserMessage.files.length > 0) {
+        const fileContents = await Promise.all(
+          lastUserMessage.files.map(async (file) => {
+            const content = await readFileContent(file)
+            return `\n\n--- 文件: ${file.name} ---\n${content}\n--- 文件结束 ---`
+          })
+        )
+        fullPrompt += '\n\n以下是用户上传的文件内容：' + fileContents.join('')
+      }
+      
+      fullPrompt += '\n\n助手:'
+
+      const response = await fetch('http://localhost:11434/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: modelToUse,
+          prompt: fullPrompt,
+          stream: true,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Ollama API error: ${response.status}`)
+      }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let fullResponse = ''
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          const chunk = decoder.decode(value, { stream: true })
+          const lines = chunk.split('\n').filter(line => line.trim())
+
+          for (const line of lines) {
+            try {
+              const data = JSON.parse(line)
+              if (data.response) {
+                fullResponse += data.response
+                
+                // 实时更新消息内容
+                setMessages(prev => prev.map(msg => 
+                  msg.id === assistantMessageId 
+                    ? { ...msg, content: fullResponse }
+                    : msg
+                ))
+              }
+            } catch (e) {
+              // 解析 JSON 失败，忽略该行
+            }
+          }
+        }
+      }
+
+      // 流式输出完成，清除流式状态
+      setStreamingMessageId(null)
+
+      // 更新对话记录
+      if (currentConversationId) {
+        setConversations(prev => prev.map(conv => {
+          if (conv.id === currentConversationId) {
+            return {
+              ...conv,
+              lastMessage: fullResponse.slice(0, 50),
+              timestamp: new Date(),
+              messages: [...conv.messages, { ...assistantMessage, content: fullResponse }],
+            }
+          }
+          return conv
+        }))
+      }
+
+    } catch (error) {
+      // 清除流式状态
+      setStreamingMessageId(null)
+      
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content: `连接Ollama失败: ${error instanceof Error ? error.message : '未知错误'}。请确保Ollama服务正在运行。`,
+        timestamp: new Date(),
+      }
+
+      // 替换占位消息为错误消息
+      setMessages(prev => prev.map(msg => 
+        msg.id === assistantMessageId ? errorMessage : msg
+      ))
+
+      // 更新对话记录
+      if (currentConversationId) {
+        setConversations(prev => prev.map(conv => {
+          if (conv.id === currentConversationId) {
+            return {
+              ...conv,
+              lastMessage: errorMessage.content.slice(0, 50),
+              timestamp: new Date(),
+              messages: [...conv.messages, errorMessage],
+            }
+          }
+          return conv
+        }))
+      }
+    } finally {
+      setIsLoading(false)
+      setStreamingMessageId(null)
+    }
+  }
+
   const handleSend = async () => {
       if (!inputValue.trim() || isLoading) return
 
@@ -342,6 +556,8 @@ const ChatPage = () => {
 
       setInputValue('')
       setUploadedFiles([]) // 清空已上传的文件
+      setIsAutoFilled(false) // 清除自动填充标记
+      setAutoFilledText('') // 清除自动填充文字
       setIsLoading(true)
 
       // 先添加一个空的 AI 消息占位
@@ -353,12 +569,32 @@ const ChatPage = () => {
         timestamp: new Date(),
       }
       setMessages(prev => [...prev, assistantMessage])
+      setStreamingMessageId(assistantMessageId)
 
       try {
         const modelToUse = selectedModel?.model || 'qwen2.5:1.5b'
 
-        // 构建包含文件内容的完整prompt
-        let fullPrompt = userMessage.content
+        // 构建包含对话历史的完整prompt
+        let fullPrompt = ''
+        
+        // 添加对话历史（最近的10轮对话）
+        const currentMessages = messages.length > 0 ? messages : []
+        const recentMessages = currentMessages.slice(-20) // 取最近20条消息（10轮对话）
+        
+        if (recentMessages.length > 0) {
+          fullPrompt += '以下是对话历史：\n\n'
+          recentMessages.forEach((msg) => {
+            if (msg.type === 'user') {
+              fullPrompt += `用户: ${msg.content}\n\n`
+            } else if (msg.type === 'assistant' && msg.content.trim()) {
+              fullPrompt += `助手: ${msg.content}\n\n`
+            }
+          })
+          fullPrompt += '---\n\n'
+        }
+        
+        // 添加当前用户消息
+        fullPrompt += `用户: ${userMessage.content}`
 
         if (uploadedFiles.length > 0) {
           const fileContents = await Promise.all(
@@ -370,6 +606,8 @@ const ChatPage = () => {
 
           fullPrompt += '\n\n以下是用户上传的文件内容：' + fileContents.join('')
         }
+        
+        fullPrompt += '\n\n助手:'
 
         const response = await fetch('http://localhost:11434/api/generate', {
           method: 'POST',
@@ -405,7 +643,11 @@ const ChatPage = () => {
                 if (data.response) {
                   fullResponse += data.response
                   
-                  // 实时更新消息内容
+                  // 调试信息
+                  console.log('收到流式数据:', data.response.length, '字符')
+                  console.log('当前总长度:', fullResponse.length)
+                  
+                  // 实时更新消息内容 - 使用更高效的方式
                   setMessages(prev => prev.map(msg => 
                     msg.id === assistantMessageId 
                       ? { ...msg, content: fullResponse }
@@ -418,6 +660,9 @@ const ChatPage = () => {
             }
           }
         }
+
+        // 流式输出完成，清除流式状态
+        setStreamingMessageId(null)
 
         // 更新对话记录 - 只添加 assistantMessage
         setConversations(prev => prev.map(conv => {
@@ -433,6 +678,9 @@ const ChatPage = () => {
         }))
 
       } catch (error) {
+        // 清除流式状态
+        setStreamingMessageId(null)
+        
         const errorMessage: Message = {
           id: (Date.now() + 1).toString(),
           type: 'assistant',
@@ -459,6 +707,7 @@ const ChatPage = () => {
         }))
       } finally {
         setIsLoading(false)
+        setStreamingMessageId(null)
       }
     }
 
@@ -470,7 +719,23 @@ const ChatPage = () => {
   }
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInputValue(e.target.value)
+    const newValue = e.target.value
+    
+    // 如果是自动填充状态，检查用户是否在自动填充文字后面添加内容
+    if (isAutoFilled && autoFilledText) {
+      // 如果新输入的内容以自动填充文字开头，保持自动填充状态
+      if (newValue.startsWith(autoFilledText)) {
+        setInputValue(newValue)
+      } else {
+        // 如果用户修改了自动填充的部分，清除自动填充状态
+        setIsAutoFilled(false)
+        setAutoFilledText('')
+        setInputValue(newValue)
+      }
+    } else {
+      setInputValue(newValue)
+    }
+    
     // 自动调整高度
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
@@ -731,13 +996,37 @@ const ChatPage = () => {
                     我是您的AI助手，可以帮助您进行数据分析、编程和各种问题解答
                   </p>
                   <div className="flex flex-wrap gap-2 justify-center">
-                    <button className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                    <button 
+                      onClick={() => {
+                        const text = '请帮我进行数据分析'
+                        setInputValue(text)
+                        setIsAutoFilled(true)
+                        setAutoFilledText(text)
+                      }}
+                      className="px-4 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
+                    >
                       数据分析
                     </button>
-                    <button className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                    <button 
+                      onClick={() => {
+                        const text = '请帮我编写代码'
+                        setInputValue(text)
+                        setIsAutoFilled(true)
+                        setAutoFilledText(text)
+                      }}
+                      className="px-4 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
+                    >
                       代码编写
                     </button>
-                    <button className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                    <button 
+                      onClick={() => {
+                        const text = '我有问题需要解答'
+                        setInputValue(text)
+                        setIsAutoFilled(true)
+                        setAutoFilledText(text)
+                      }}
+                      className="px-4 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
+                    >
                       问题解答
                     </button>
                   </div>
@@ -760,7 +1049,7 @@ const ChatPage = () => {
                     )}
                     <div
                       className={cn(
-                        'max-w-[70%] rounded-2xl px-4 py-3',
+                        'group max-w-[70%] rounded-2xl px-4 py-3',
                         message.type === 'user'
                           ? 'bg-blue-600 text-white'
                           : 'bg-gray-100 border border-gray-300 text-gray-900'
@@ -773,7 +1062,7 @@ const ChatPage = () => {
                             <div key={file.id} className={cn(
                               "flex items-center gap-2 p-2 rounded border",
                               message.type === 'user' 
-                                ? 'bg-blue-500 border-blue-400' 
+                                ? 'bg-blue-50 border-blue-200' 
                                 : 'bg-white border-gray-200'
                             )}>
                               <div className={cn(
@@ -787,13 +1076,13 @@ const ChatPage = () => {
                               <div className="flex-1 min-w-0">
                                 <div className={cn(
                                   "text-xs font-medium truncate",
-                                  message.type === 'user' ? 'text-blue-100' : 'text-gray-900'
+                                  message.type === 'user' ? 'text-gray-800' : 'text-gray-900'
                                 )}>
                                   {file.name}
                                 </div>
                                 <div className={cn(
                                   "text-xs",
-                                  message.type === 'user' ? 'text-blue-200' : 'text-gray-500'
+                                  message.type === 'user' ? 'text-gray-600' : 'text-gray-500'
                                 )}>
                                   {formatFileSize(file.size)}
                                   {file.isDesensitized && (
@@ -807,19 +1096,63 @@ const ChatPage = () => {
                       )}
                       
                       {/* 消息内容 */}
-                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                        {message.content}
-                      </div>
-                      <div
-                        className={cn(
-                          'mt-2 text-xs',
-                          message.type === 'user' ? 'text-blue-100' : 'text-gray-600'
+                      <div className="text-sm leading-relaxed">
+                        {message.type === 'assistant' ? (
+                          // 如果是正在流式输出的消息，使用纯文本以提高性能
+                          // 如果是完成的消息，使用Markdown渲染
+                          message.id === streamingMessageId ? (
+                            <div className="whitespace-pre-wrap">{message.content}</div>
+                          ) : (
+                            <Markdown content={message.content} />
+                          )
+                        ) : (
+                          <div className="whitespace-pre-wrap">{message.content}</div>
                         )}
-                      >
-                        {message.timestamp.toLocaleTimeString('zh-CN', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
+                      </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <div
+                          className={cn(
+                            'text-xs',
+                            message.type === 'user' ? 'text-blue-100' : 'text-gray-600'
+                          )}
+                        >
+                          {message.timestamp.toLocaleTimeString('zh-CN', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </div>
+                        
+                        {/* AI消息操作按钮 */}
+                        {message.type === 'assistant' && message.content && !isLoading && (
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => handleCopyMessage(message.content)}
+                              className="flex h-6 w-6 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                              title="复制"
+                            >
+                              <RiFileCopyLine className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDownloadMessage(message.content, message.id)}
+                              className="flex h-6 w-6 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                              title="下载"
+                            >
+                              <RiDownloadLine className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                const messageIndex = messages.findIndex(m => m.id === message.id)
+                                if (messageIndex > 0) {
+                                  handleRegenerateMessage(messageIndex)
+                                }
+                              }}
+                              className="flex h-6 w-6 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                              title="重新生成"
+                            >
+                              <RiRefreshLine className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                     {message.type === 'user' && (
@@ -900,7 +1233,7 @@ const ChatPage = () => {
               </p>
             </div>
             
-            <div className="relative flex items-end gap-3 rounded-xl border border-gray-200 bg-white p-3 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+            <div className="relative flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
               {/* 文件选择按钮 */}
               <button 
                 onClick={handleAttachmentClick}
@@ -909,16 +1242,37 @@ const ChatPage = () => {
               >
                 <RiAttachmentLine className="h-4 w-4" />
               </button>
-              <textarea
-                ref={textareaRef}
-                value={inputValue}
-                onChange={handleTextareaChange}
-                onKeyDown={handleKeyDown}
-                placeholder="输入消息，Ctrl+Enter 换行"
-                className="flex-1 resize-none border-0 bg-transparent text-sm text-gray-900 placeholder-gray-400 focus:outline-none"
-                rows={1}
-                style={{ maxHeight: '120px' }}
-              />
+              
+              {/* 输入框容器 */}
+              <div className="relative flex-1 min-h-[32px] flex items-center">
+                {/* 自动填充文字的背景层 */}
+                {isAutoFilled && autoFilledText && (
+                  <div className="absolute inset-0 pointer-events-none flex items-center z-10">
+                    <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded-md border border-blue-200 text-sm">
+                      {autoFilledText}
+                    </span>
+                    {inputValue.length > autoFilledText.length && (
+                      <span className="ml-1 text-gray-900 text-sm">
+                        {inputValue.slice(autoFilledText.length)}
+                      </span>
+                    )}
+                  </div>
+                )}
+                
+                <textarea
+                  ref={textareaRef}
+                  value={inputValue}
+                  onChange={handleTextareaChange}
+                  onKeyDown={handleKeyDown}
+                  placeholder="输入消息，Ctrl+Enter 换行"
+                  className={cn(
+                    "w-full resize-none border-0 bg-transparent text-sm placeholder-gray-400 focus:outline-none leading-6 py-1",
+                    isAutoFilled ? "text-transparent" : "text-gray-900"
+                  )}
+                  rows={1}
+                  style={{ maxHeight: '120px' }}
+                />
+              </div>
               <div className="flex shrink-0 items-center gap-2">
                 <button className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
                   <RiMicLine className="h-4 w-4" />
