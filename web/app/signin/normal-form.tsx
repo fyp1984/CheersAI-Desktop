@@ -267,7 +267,8 @@ const NormalForm = () => {
           )}
         </div>
       </div>
-    </>
+    </div>
+  </div>
   )
 }
 
