@@ -256,6 +256,9 @@ if [ -n "$COMPOSE_FILE" ]; then
              if ! $DOCKER_CMD compose version >/dev/null 2>&1; then
                  if command -v docker-compose >/dev/null 2>&1; then
                      DOCKER_COMPOSE_CMD="docker-compose"
+                     if [[ "$DOCKER_CMD" == "sudo docker" ]]; then
+                         DOCKER_COMPOSE_CMD="sudo docker-compose"
+                     fi
                  fi
              fi
         fi
