@@ -240,6 +240,11 @@ log "安装前端依赖 (pnpm 国内源加速)..."
 # 配置淘宝镜像源
 export NPM_CONFIG_REGISTRY="https://registry.npmmirror.com"
 
+# === 关键修复：确保 basePath 环境变量在 build 之前注入 ===
+export NEXT_PUBLIC_BASE_PATH="/cheersai_desktop"
+export NEXT_PUBLIC_API_PREFIX="https://7smile.dlithink.com/cheersai_desktop/console/api"
+export NEXT_PUBLIC_PUBLIC_API_PREFIX="https://7smile.dlithink.com/cheersai_desktop/api"
+
 if [ -f "pnpm-lock.yaml" ] && [ -f ".pnpm-lock.yaml.deployed" ] && cmp -s "pnpm-lock.yaml" ".pnpm-lock.yaml.deployed"; then
     log "⏩ 前端依赖文件 (pnpm-lock.yaml) 未变更，跳过 pnpm install..."
 else

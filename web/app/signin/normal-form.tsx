@@ -138,9 +138,10 @@ const NormalForm = () => {
   }
 
   return (
-    <>
-      <div className="w-full">
-        {isInviteLink
+    <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+      <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+        <div className="w-full">
+          {isInviteLink
           ? (
               <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">

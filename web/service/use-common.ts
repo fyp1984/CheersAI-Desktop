@@ -214,6 +214,7 @@ export const useIsLogin = () => {
     queryKey: commonQueryKeys.isLogin,
     staleTime: 0,
     gcTime: 0,
+    retry: false, // Don't retry on error to avoid loops
     queryFn: async (): Promise<isLogin> => {
       try {
         await get('/account/profile', {}, {

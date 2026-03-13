@@ -587,8 +587,8 @@ export const request = async<T>(url: string, options = {}, otherOptions?: IOther
       }
       if (code === 'unauthorized_and_force_logout') {
         // Cookies will be cleared by the backend
-        // Fix: Prevent reload if already on signin page to avoid infinite loop
-        if (!globalThis.location.pathname.endsWith('/signin')) {
+        // Fix: Prevent reload if already on signin page (handling trailing slash)
+        if (!globalThis.location.pathname.replace(/\/$/, '').endsWith('/signin')) {
           globalThis.location.reload()
         }
         return Promise.reject(err)
@@ -623,7 +623,8 @@ export const request = async<T>(url: string, options = {}, otherOptions?: IOther
       const currentPath = globalThis.location.pathname
       const loginPath = `${basePath}/signin`
 
-      if (currentPath === loginPath || currentPath.endsWith('/signin')) {
+      // Fix: Handle trailing slash correctly (e.g. /signin/)
+      if (currentPath === loginPath || currentPath.replace(/\/$/, '').endsWith('/signin')) {
         return Promise.reject(err)
       }
 
