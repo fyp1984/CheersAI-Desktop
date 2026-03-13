@@ -1,334 +1,270 @@
 #!/bin/bash
 
 # =========================================================================
-# CheersAI Desktop 生产环境热部署脚本 (Hot Deploy)
-# 功能：拉取最新代码(稀疏检出) -> 更新依赖 -> 数据库迁移 -> 前端构建 -> 重启服务
-# 优化：
-# 1. 使用 sparse-checkout 仅同步 api/ 和 web/ 目录，排除 docker/ 等无关文件
-# 2. 增加 git 操作的详细进度日志
-# 3. 前端构建性能优化：限制内存、禁用 SourceMap/ESLint/TypeCheck
-# 用法：./server_deploy.sh [branch_name]
+# CheersAI Desktop 自动化合并部署脚本 (Auto-Merge & Deploy)
+# 版本: v2.0 (Git Flow Enhanced)
+# 功能:
+# 1. 自动切换/锁定到 branch2B_v1.0 分支
+# 2. 强制合并远程 master 分支代码 (git merge --no-ff)
+# 3. 执行依赖更新、数据库迁移、前端构建、服务重启
+# 4. 包含完整的回滚机制和错误处理
 # =========================================================================
 
-set -e  # 遇到错误立即退出
+set -e
 
-# 配置
+# --- 1. 配置区域 (Configuration) ---
+# 仓库与分支配置
+REPO_URL="https://github.com/fyp1984/CheersAI-Desktop.git"
+TARGET_BRANCH="branch2B_v1.0"
+SOURCE_BRANCH="master"
+
+# 路径配置
 APP_DIR="/home/cheersai/CheersAI-Desktop"
-LOG_FILE="/home/cheersai/logs/deploy_$(date +%Y%m%d).log"
+LOG_DIR="/home/cheersai/logs"
+LOG_FILE="${LOG_DIR}/deploy_$(date +%Y%m%d).log"
 
-# 日志函数
+# Git 用户配置 (用于自动合并提交)
+GIT_USER_NAME="CheersAI Deploy Bot"
+GIT_USER_EMAIL="deploy@cheersai.cloud"
+
+# 确保日志目录存在
+mkdir -p "$LOG_DIR"
+
+# --- 2. 辅助函数 ---
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
-# 交互式确认：Git 分支
-read -p "请输入要部署的 Git 分支 [默认: master]: " INPUT_BRANCH
-BRANCH=${INPUT_BRANCH:-master}
-
-log "=== 开始部署流程 (分支: $BRANCH) ==="
-
-# 交互式确认：是否更新代码
-read -p "是否需要从远程更新代码? (y/n) [默认: y]: " UPDATE_CODE
-UPDATE_CODE=${UPDATE_CODE:-y}
-
-if [[ "$UPDATE_CODE" =~ ^[Yy]$ ]]; then
-    # 1. 代码更新 (使用稀疏检出优化)
-    log "1. 配置稀疏检出并拉取代码..."
-
-    # 确保目录存在
-    if [ ! -d "$APP_DIR" ]; then
-        mkdir -p "$APP_DIR"
+# 错误处理与回滚
+error_exit() {
+    log "❌ 部署失败: $1"
+    if [ -n "$2" ] && [ "$2" != "HEAD" ]; then
+        log "🔄 正在回滚 Git 状态到: $2"
+        git reset --hard "$2" 2>&1 | tee -a "$LOG_FILE" || log "⚠️ 回滚命令执行失败"
     fi
-    cd "$APP_DIR"
+    log "🚫 脚本异常退出 (Exit Code: 1)"
+    exit 1
+}
 
-    # 如果是新目录，先初始化 Git
-    if [ ! -d ".git" ]; then
-        log "初始化 Git 仓库..."
-        git init
-        git remote add origin https://github.com/fyp1984/CheersAI-Desktop.git
+# --- 3. 环境初始化 ---
+log "=== 开始部署流程 (Target: $TARGET_BRANCH) ==="
+log "仓库地址: $REPO_URL"
+log "部署目录: $APP_DIR"
+
+if [ ! -d "$APP_DIR" ]; then
+    log "创建部署目录..."
+    mkdir -p "$APP_DIR"
+fi
+
+cd "$APP_DIR"
+
+# 初始化 Git
+if [ ! -d ".git" ]; then
+    log "初始化 Git 仓库..."
+    git init
+    git remote add origin "$REPO_URL"
+else
+    # 幂等性：确保 origin 指向正确
+    if ! git remote get-url origin >/dev/null 2>&1; then
+        git remote add origin "$REPO_URL"
+    else
+        git remote set-url origin "$REPO_URL"
     fi
+fi
 
-    # 启用稀疏检出功能
-    git config core.sparseCheckout true
+# 配置 Git (本地有效)
+git config user.name "$GIT_USER_NAME"
+git config user.email "$GIT_USER_EMAIL"
+git config core.sparseCheckout true
+git config http.postBuffer 524288000
+git config http.version HTTP/1.1
 
-    # 增加 Git 网络容错配置
-    git config http.postBuffer 524288000
-    git config http.lowSpeedLimit 0
-    git config http.lowSpeedTime 999999
-    git config http.version HTTP/1.1
-
-    # 定义保留目录白名单 (排除 docker, docs, tests, scripts 等)
-    # 只保留 api (后端), web (前端)
-    # 注意：scripts 目录通常包含当前脚本本身，将其排除可能会导致脚本在 pull 后被删除
-    # 如果脚本位于 APP_DIR/scripts 并且您正在 APP_DIR 下执行，git reset --hard 可能会影响正在运行的脚本
-    # 建议将运维脚本放在独立目录（如 ~/scripts/）运行，与代码仓库解耦
-    cat > .git/info/sparse-checkout <<EOF
+# 更新稀疏检出配置
+cat > .git/info/sparse-checkout <<EOF
 api/
 web/
 scripts/
 README.md
 EOF
 
-    # 尝试使用 SSH 协议作为备选 (如果 HTTPS 失败)
-    # 需确保 ~/.ssh/id_ed25519.pub 已添加到 Github
-    # git remote set-url origin git@github.com:fyp1984/CheersAI-Desktop.git
+# --- 4. Git 同步流程 (核心逻辑) ---
+log ">>> [Phase 1] Git 代码同步与合并"
 
-    log "正在从远程拉取分支: $BRANCH (显示详细进度)..."
-    # 使用 --progress 显示进度
-    # 增加重试机制 (Retry up to 3 times)
-    MAX_RETRIES=3
-    COUNT=0
-    SUCCESS=0
-
-    while [ $COUNT -lt $MAX_RETRIES ]; do
-        if git fetch origin "$BRANCH" --progress 2>&1 | tee -a "$LOG_FILE"; then
-            SUCCESS=1
-            break
-        else
-            log "⚠️ 拉取失败，等待 5 秒后重试 ($((COUNT+1))/$MAX_RETRIES)..."
-            sleep 5
-            COUNT=$((COUNT+1))
-        fi
-    done
-
-    if [ $SUCCESS -eq 0 ]; then
-        log "❌ 多次尝试拉取代码失败，请检查网络或配置 SSH。"
-        exit 1
-    fi
-
-    log "重置本地代码至最新状态..."
-    # reset --hard 强制覆盖本地
-    git reset --hard "origin/$BRANCH" 2>&1 | tee -a "$LOG_FILE"
-
+# 记录当前状态用于回滚 (如果不是空仓库)
+if git rev-parse HEAD >/dev/null 2>&1; then
+    PREV_HEAD_SHA=$(git rev-parse HEAD)
 else
-    log "⏩ 跳过代码更新步骤，直接使用当前本地代码进行部署。"
-    cd "$APP_DIR"
+    PREV_HEAD_SHA=""
 fi
 
-# 2. 后端处理
-log "2. 更新后端依赖..."
+# 4.1 拉取远程信息
+log "Fetching origin..."
+git fetch origin --progress 2>&1 | tee -a "$LOG_FILE" || error_exit "Git fetch 失败" "$PREV_HEAD_SHA"
+
+# 4.2 切换到目标分支
+log "检查并切换到分支: $TARGET_BRANCH"
+if git show-ref --verify --quiet refs/heads/$TARGET_BRANCH; then
+    # 本地已存在，直接切换
+    git checkout $TARGET_BRANCH || error_exit "无法切换到本地分支 $TARGET_BRANCH" "$PREV_HEAD_SHA"
+else
+    # 本地不存在，尝试从远程检出
+    if git show-ref --verify --quiet refs/remotes/origin/$TARGET_BRANCH; then
+        git checkout -b $TARGET_BRANCH origin/$TARGET_BRANCH || error_exit "无法从远程检出 $TARGET_BRANCH" "$PREV_HEAD_SHA"
+    else
+        # 远程也不存在，基于 master 创建 (首次初始化场景)
+        log "⚠️ 目标分支不存在，基于 origin/$SOURCE_BRANCH 创建新分支 $TARGET_BRANCH"
+        git checkout -b $TARGET_BRANCH origin/$SOURCE_BRANCH || error_exit "无法基于源分支创建目标分支" "$PREV_HEAD_SHA"
+    fi
+fi
+
+# 4.3 合并 Master 分支
+log "正在将 origin/$SOURCE_BRANCH 合并入 $TARGET_BRANCH ..."
+BEFORE_MERGE_SHA=$(git rev-parse HEAD)
+
+# 执行合并：禁止快进，保留合并历史，遇到冲突自动停止
+if git merge --no-ff "origin/$SOURCE_BRANCH" -m "Merge branch 'origin/$SOURCE_BRANCH' into $TARGET_BRANCH (Auto Deploy)"; then
+    log "✅ Git 合并成功"
+else
+    log "❌ Git 合并冲突或失败"
+    git merge --abort || true
+    error_exit "合并操作因冲突被终止，请人工介入解决。" "$PREV_HEAD_SHA"
+fi
+
+# 4.4 变更审计
+AFTER_MERGE_SHA=$(git rev-parse HEAD)
+if [ "$BEFORE_MERGE_SHA" != "$AFTER_MERGE_SHA" ]; then
+    log "📦 代码发生变更:"
+    log "   Old SHA: $BEFORE_MERGE_SHA"
+    log "   New SHA: $AFTER_MERGE_SHA"
+    log "   变更文件统计:"
+    git diff --stat "$BEFORE_MERGE_SHA" "$AFTER_MERGE_SHA" | tee -a "$LOG_FILE"
+else
+    log "⏩ 代码已是最新，无变更。"
+fi
+
+# --- 5. 后端依赖与迁移 ---
+log ">>> [Phase 2] 后端处理 (Python/Flask)"
 cd "$APP_DIR/api"
 
-# 尝试加载 uv 环境变量 (应对非交互式 Shell 环境)
-if [ -f "$HOME/.cargo/env" ]; then
-    source "$HOME/.cargo/env"
-elif [ -d "$HOME/.local/bin" ]; then
-    export PATH="$HOME/.local/bin:$PATH"
-fi
+# 环境检查 (uv)
+if [ -f "$HOME/.cargo/env" ]; then source "$HOME/.cargo/env"; fi
+if [ -d "$HOME/.local/bin" ]; then export PATH="$HOME/.local/bin:$PATH"; fi
 
-# 检查 uv 是否可用
 if ! command -v uv &> /dev/null; then
-    log "⚠️ 未找到 uv 命令，尝试自动安装..."
-
-    # 尝试 1: 官方安装源 (GitHub/Astral)
-    log "尝试从官方源安装 uv..."
-    if curl -LsSf --connect-timeout 10 https://astral.sh/uv/install.sh | sh; then
-        log "✅ uv 安装成功 (官方源)"
-    else
-        log "⚠️ 官方源连接超时，尝试使用 pip (清华源) 安装..."
-
-        # 尝试 2: 使用 pip 安装 (指定清华镜像源)
-        if command -v pip3 &> /dev/null; then
-            pip3 install uv --user -i https://pypi.tuna.tsinghua.edu.cn/simple
-            export PATH="$HOME/.local/bin:$PATH"
-
-            if command -v uv &> /dev/null; then
-                log "✅ uv 安装成功 (pip 清华源)"
-            else
-                log "❌ pip 安装完成但未找到 uv 命令，请检查 PATH 设置。"
-                exit 1
-            fi
-        else
-            log "❌ 无法安装 uv：官方源连接失败且未找到 pip3。"
-            log "请手动安装 uv: curl -LsSf https://astral.sh/uv/install.sh | sh"
-            exit 1
-        fi
-    fi
-
-    # 加载环境
-    if [ -f "$HOME/.cargo/env" ]; then
-        source "$HOME/.cargo/env"
-    elif [ -d "$HOME/.local/bin" ]; then
-        export PATH="$HOME/.local/bin:$PATH"
-    fi
+    log "⚠️ 未检测到 uv，尝试自动安装..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh || error_exit "uv 安装失败" "$PREV_HEAD_SHA"
+    source "$HOME/.cargo/env"
 fi
 
+# 虚拟环境
 if [ ! -d ".venv" ]; then
-    log "创建虚拟环境..."
+    log "创建 Python 虚拟环境..."
     uv venv .venv --python 3.12
 fi
 source .venv/bin/activate
 
-log "2.1 优化 Python 依赖安装配置 (国内镜像加速)..."
-# 优先使用清华源，配置阿里云作为备选
+# 依赖配置优化
 export UV_INDEX_URL="https://pypi.tuna.tsinghua.edu.cn/simple"
-# 增加网络容错配置
-export UV_HTTP_TIMEOUT=300  # 增加超时时间到 5分钟
-export UV_CONCURRENT_DOWNLOADS=8 # 适当限制并发，防止拥塞
+export UV_HTTP_TIMEOUT=300
+export UV_CONCURRENT_DOWNLOADS=8
 
-# 智能依赖检测
+# 依赖同步
 if [ -f "uv.lock" ] && [ -f ".uv.lock.deployed" ] && cmp -s "uv.lock" ".uv.lock.deployed"; then
-    log "⏩ 后端依赖文件 (uv.lock) 未变更，跳过依赖同步..."
+    log "⏩ 后端依赖未变更，跳过同步"
 else
-    log "📦 检测到依赖变更或首次部署，执行 uv sync..."
-    uv sync 2>&1 | tee -a "$LOG_FILE"
-    # 备份当前 lock 文件以供下次比对
+    log "📦 同步后端依赖 (uv sync)..."
+    uv sync 2>&1 | tee -a "$LOG_FILE" || error_exit "后端依赖安装失败" "$PREV_HEAD_SHA"
     cp "uv.lock" ".uv.lock.deployed"
 fi
 
-log "3. 执行数据库迁移..."
+# 数据库迁移
+log "执行数据库迁移..."
 export FLASK_APP=app.py
-
-# 尝试加载环境变量 (兼容 .env 和 production.env)
-# 1. 检查 API 的 .env
-if [ ! -f "$APP_DIR/api/.env" ]; then
-    log "⚠️ api/.env 不存在，尝试从 .env.example 复制..."
-    if [ -f "$APP_DIR/api/.env.example" ]; then
-        cp "$APP_DIR/api/.env.example" "$APP_DIR/api/.env"
-        log "✅ 已创建 api/.env，请后续根据实际情况修改配置。"
-    else
-        log "❌ 未找到 api/.env.example，无法自动创建配置。"
-    fi
-fi
-
-# 2. 检查 Web 的 .env
-if [ ! -f "$APP_DIR/web/.env" ]; then
-    log "⚠️ web/.env 不存在，尝试从 .env.example 复制..."
-    if [ -f "$APP_DIR/web/.env.example" ]; then
-        cp "$APP_DIR/web/.env.example" "$APP_DIR/web/.env"
-        log "✅ 已创建 web/.env，请后续根据实际情况修改配置。"
-    else
-        log "❌ 未找到 web/.env.example，无法自动创建配置。"
-    fi
-fi
-
-# 3. 加载环境变量 (优先加载 production.env，其次是 api/.env)
+# 加载环境变量
 if [ -f "../config/production.env" ]; then
-    log "加载生产环境配置..."
     export $(grep -v '^#' ../config/production.env | xargs)
-elif [ -f "$APP_DIR/api/.env" ]; then
-    log "加载 api/.env 配置..."
-    export $(grep -v '^#' "$APP_DIR/api/.env" | xargs)
+elif [ -f ".env" ]; then
+    export $(grep -v '^#' .env | xargs)
 fi
 
-# 检查必要的数据库环境变量
 if [ -z "$DB_PASSWORD" ]; then
-    log "❌ 未检测到 DB_PASSWORD 环境变量，数据库连接将失败。"
-    log "请确保 /home/cheersai/CheersAI-Desktop/config/production.env 文件存在且包含 DB_PASSWORD。"
-    exit 1
+    error_exit "未找到 DB_PASSWORD 环境变量，请检查 production.env" "$PREV_HEAD_SHA"
 fi
 
-uv run flask db upgrade 2>&1 | tee -a "$LOG_FILE"
+uv run flask db upgrade 2>&1 | tee -a "$LOG_FILE" || error_exit "数据库迁移失败" "$PREV_HEAD_SHA"
 
-# 3. 前端处理
-log "4. 构建前端应用..."
+# --- 6. 前端构建 ---
+log ">>> [Phase 3] 前端构建 (Next.js)"
 cd "$APP_DIR/web"
 
-# 检查 pnpm 是否可用
+# pnpm 检查
 if ! command -v pnpm &> /dev/null; then
-    log "⚠️ 未找到 pnpm 命令，尝试全局安装..."
-    # 使用淘宝镜像加速安装 (需要 sudo 权限)
-    if sudo npm install -g pnpm --registry=https://registry.npmmirror.com; then
-        log "✅ pnpm 安装成功。"
-    else
-        log "❌ pnpm 安装失败 (EACCES)。请手动以 root 权限执行: sudo npm install -g pnpm"
-        exit 1
-    fi
+    log "安装 pnpm..."
+    sudo npm install -g pnpm --registry=https://registry.npmmirror.com || error_exit "pnpm 安装失败" "$PREV_HEAD_SHA"
 fi
 
-log "安装前端依赖 (pnpm 国内源加速)..."
-# 配置淘宝镜像源
 export NPM_CONFIG_REGISTRY="https://registry.npmmirror.com"
 
-# === 关键修复：确保 basePath 环境变量在 build 之前注入 ===
+# === 关键配置：环境变量注入 (修复 Logo/Manifest 路径) ===
 export NEXT_PUBLIC_BASE_PATH="/cheersai_desktop"
 export NEXT_PUBLIC_API_PREFIX="https://7smile.dlithink.com/cheersai_desktop/console/api"
 export NEXT_PUBLIC_PUBLIC_API_PREFIX="https://7smile.dlithink.com/cheersai_desktop/api"
 
+# 依赖安装
 if [ -f "pnpm-lock.yaml" ] && [ -f ".pnpm-lock.yaml.deployed" ] && cmp -s "pnpm-lock.yaml" ".pnpm-lock.yaml.deployed"; then
-    log "⏩ 前端依赖文件 (pnpm-lock.yaml) 未变更，跳过 pnpm install..."
+    log "⏩ 前端依赖未变更，跳过安装"
 else
-    log "📦 检测到前端依赖变更，执行安装..."
-    pnpm install 2>&1 | tee -a "$LOG_FILE"
-    # 备份当前 lock 文件
+    log "📦 安装前端依赖..."
+    pnpm install 2>&1 | tee -a "$LOG_FILE" || error_exit "前端依赖安装失败" "$PREV_HEAD_SHA"
     cp "pnpm-lock.yaml" ".pnpm-lock.yaml.deployed"
 fi
 
-log "编译前端代码 (显示详细进度)..."
-
-# === 前端环境变量配置 (解决子路径部署 404/重定向问题) ===
-# 必须与 Nginx 的 location /cheersai_desktop/ 对应
-export NEXT_PUBLIC_BASE_PATH="/cheersai_desktop"
-# 后端 API 地址 (通过 Nginx 反代)
-export NEXT_PUBLIC_API_PREFIX="https://7smile.dlithink.com/cheersai_desktop/console/api"
-export NEXT_PUBLIC_PUBLIC_API_PREFIX="https://7smile.dlithink.com/cheersai_desktop/api"
-
-# === 性能优化关键配置 ===
-# 1. 限制 Node.js 堆内存 (防止 OOM 崩溃，建议根据机器内存调整)
+# 构建配置优化
 export NODE_OPTIONS="--max-old-space-size=4096"
-
-# 2. 禁用 Source Map 生成 (节省大量内存和磁盘空间，生产环境通常不需要)
 export GENERATE_SOURCEMAP=false
-# Next.js 禁用 Source Map 的环境变量
 export NEXT_PUBLIC_DISABLE_SOURCEMAPS=true
-
-# 3. 禁用 ESLint 和 TypeScript 检查 (假设本地已通过，加快构建并省内存)
 export NEXT_IGNORE_ESLINT=1
 export NEXT_IGNORE_TYPECHECK=1
-
-# 4. Next.js 遥测禁用
 export NEXT_TELEMETRY_DISABLED=1
-
-# 5. Turbopack 内存优化 (针对 Next.js 16+)
-# 限制 Turbopack 的并发数，防止 CPU/内存爆表
 export TURBOPACK_MEMORY_LIMIT=4096
-# 如果可能，不使用 Turbopack 进行生产构建 (Next.js 默认可能使用 Webpack，但这里看到启用了 Turbopack)
-# 可以尝试强制使用 Webpack 构建 (通常更稳定但稍慢)
-# 或者通过参数限制并发
 
+log "开始编译前端代码..."
 START_TIME=$(date +%s)
-# 使用 pnpm run build
-# 增加 --no-lint --no-mangling (如果支持) 等参数进一步降低负载
-# 对于 Next.js，主要靠环境变量控制
-# 尝试使用 taskset 限制 CPU 核心数 (例如只用 2 核)
+
+# 尝试使用 taskset 限制 CPU (避免服务器卡死)
+BUILD_CMD="pnpm run build"
 if command -v taskset &> /dev/null; then
-    log "限制构建使用 2 个 CPU 核心..."
-    taskset -c 0,1 pnpm run build 2>&1 | tee -a "$LOG_FILE"
-    BUILD_STATUS=$?
+    log "使用 taskset 限制 CPU 核心..."
+    taskset -c 0,1 $BUILD_CMD 2>&1 | tee -a "$LOG_FILE"
 else
-    pnpm run build 2>&1 | tee -a "$LOG_FILE"
-    BUILD_STATUS=$?
+    $BUILD_CMD 2>&1 | tee -a "$LOG_FILE"
 fi
 
-if [ $BUILD_STATUS -eq 0 ]; then
+if [ ${PIPESTATUS[0]} -eq 0 ]; then
     END_TIME=$(date +%s)
-    DURATION=$((END_TIME - START_TIME))
-    log "✅ 前端构建完成，耗时: ${DURATION}秒"
+    log "✅ 前端构建成功 (耗时: $((END_TIME - START_TIME))s)"
 else
-    log "❌ 前端构建失败"
-    exit 1
+    error_exit "前端构建失败" "$PREV_HEAD_SHA"
 fi
 
-# 4. 重启服务
-log "5. 重启 Systemd 服务..."
-# 需确保 cheersai 用户有 sudo 权限执行 systemctl
-sudo systemctl restart cheersai-api
-sudo systemctl restart cheersai-worker
-sudo systemctl restart cheersai-web
+# --- 7. 服务重启 ---
+log ">>> [Phase 4] 重启服务"
+# 确保有权限执行
+if sudo systemctl restart cheersai-api cheersai-worker cheersai-web; then
+    log "服务重启命令已发送"
+else
+    error_exit "服务重启失败 (systemctl error)" "$PREV_HEAD_SHA"
+fi
 
-# 5. 验证
-log "6. 检查服务状态..."
+# 健康检查
+log "检查服务状态..."
 sleep 5
-if systemctl is-active --quiet cheersai-api && \
-   systemctl is-active --quiet cheersai-web; then
-    log "✅ 部署成功！所有服务运行正常。"
-
-    # 显示最后几行日志作为摘要
-    echo "--- 服务状态摘要 ---"
+if systemctl is-active --quiet cheersai-api && systemctl is-active --quiet cheersai-web; then
+    log "✅ 所有服务运行正常 (Active)"
     systemctl status cheersai-api cheersai-web --no-pager | grep "Active:"
 else
-    log "❌ 部署可能存在问题，请检查 'systemctl status' 日志。"
-    exit 1
+    error_exit "服务启动后状态检查失败" "$PREV_HEAD_SHA"
 fi
 
-log "=== 部署结束 ==="
+log "=== 部署流程成功结束 ==="
+exit 0
