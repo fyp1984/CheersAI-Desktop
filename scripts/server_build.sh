@@ -84,58 +84,44 @@ if [ -z "$DB_PASSWORD" ]; then
     exit 1
 fi
 
-# 3.1 检查并启动 Plugin Daemon
-log "3.1 检查并启动 Plugin Daemon..."
-if [ -f "../docker-compose.dev.yaml" ]; then COMPOSE_FILE="../docker-compose.dev.yaml";
-elif [ -f "docker-compose.dev.yaml" ]; then COMPOSE_FILE="docker-compose.dev.yaml"; else COMPOSE_FILE=""; fi
+# 3.1 检查 Plugin Daemon 部署
+log "3.1 检查 Plugin Daemon 部署状态..."
 
-if [ -n "$COMPOSE_FILE" ] && command -v docker >/dev/null 2>&1; then
-        if ! docker ps >/dev/null 2>&1; then
-             DOCKER_CMD="sudo docker"; DOCKER_COMPOSE_CMD="sudo docker compose"
-             if ! sudo docker compose version >/dev/null 2>&1 && command -v docker-compose >/dev/null 2>&1; then DOCKER_COMPOSE_CMD="sudo docker-compose"; fi
-        else
-             DOCKER_CMD="docker"; DOCKER_COMPOSE_CMD="docker compose"
-             if ! docker compose version >/dev/null 2>&1 && command -v docker-compose >/dev/null 2>&1; then
-                DOCKER_COMPOSE_CMD="docker-compose"
-                if [[ "$DOCKER_CMD" == "sudo docker" ]]; then DOCKER_COMPOSE_CMD="sudo docker-compose"; fi
-             fi
-        fi
+# 检查是否有新上传的二进制文件，智能提示
+if [ -f "$APP_DIR/dify-plugin-daemon" ]; then
+    log "🌟 检测到新上传的 Plugin Daemon 二进制文件！"
+    UPDATE_DEFAULT="Y"
+    PROMPT_TEXT="是否立即部署/更新 Plugin Daemon? [Y/n] "
+else
+    UPDATE_DEFAULT="N"
+    PROMPT_TEXT="是否重新配置/重启 Plugin Daemon? [y/N] "
+fi
 
-        PLUGIN_CONTAINER_NAME="dify-plugin-daemon"
-        if ! $DOCKER_CMD ps --format '{{.Names}}' | grep -q "^${PLUGIN_CONTAINER_NAME}$"; then
-            log "⚠️ Plugin Daemon 未运行。由于权限限制，请手动在服务器执行 'sudo docker compose up -d' 启动相关服务。"
-        else
-            log "✅ Plugin Daemon 正在运行。"
-        fi
-    fi
+echo ""
+log "=== Dify Plugin Daemon 管理 ==="
+read -p "$PROMPT_TEXT" -n 1 -r
+echo ""
 
-    # === 新增：Plugin Daemon 交互式更新 ===
-    echo ""
-    log "=== Dify Plugin Daemon 管理 ==="
-    read -p "是否更新/重新部署 Plugin Daemon? [y/N] " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        log "正在调用原生部署脚本..."
-        if [ -f "$APP_DIR/scripts/deploy_plugin_daemon_native.sh" ]; then
-            chmod +x "$APP_DIR/scripts/deploy_plugin_daemon_native.sh"
-            if sudo "$APP_DIR/scripts/deploy_plugin_daemon_native.sh"; then
-                log "✅ Plugin Daemon 部署/更新成功。"
-            else
-                log "❌ Plugin Daemon 部署失败。"
-            fi
+# 处理默认值
+if [[ -z $REPLY ]]; then
+    REPLY=$UPDATE_DEFAULT
+fi
+
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    log "正在调用原生部署脚本..."
+    if [ -f "$APP_DIR/scripts/deploy_plugin_daemon_native.sh" ]; then
+        chmod +x "$APP_DIR/scripts/deploy_plugin_daemon_native.sh"
+        if sudo "$APP_DIR/scripts/deploy_plugin_daemon_native.sh"; then
+            log "✅ Plugin Daemon 部署/更新成功。"
         else
-            log "❌ 未找到部署脚本: $APP_DIR/scripts/deploy_plugin_daemon_native.sh"
+            log "❌ Plugin Daemon 部署失败。"
         fi
     else
-        log "跳过 Plugin Daemon 更新。"
+        log "❌ 未找到部署脚本: $APP_DIR/scripts/deploy_plugin_daemon_native.sh"
     fi
-
-    # 检查服务状态
-    if [ -f "$APP_DIR/scripts/server_manage.sh" ]; then
-        chmod +x "$APP_DIR/scripts/server_manage.sh"
-        log "正在检查 Plugin Daemon 状态..."
-        "$APP_DIR/scripts/server_manage.sh" status | grep "dify-plugin-daemon" -A 5
-    fi
+else
+    log "跳过 Plugin Daemon 独立部署流程。"
+fi
 
     uv run flask db upgrade >> "$LOG_FILE" 2>&1
 
@@ -189,25 +175,25 @@ else
     exit 1
 fi
 
-# 4. 重启服务
-log "5. 重启 Systemd 服务..."
-sudo systemctl restart cheersai-api >> "$LOG_FILE" 2>&1
-sudo systemctl restart cheersai-worker >> "$LOG_FILE" 2>&1
-sudo systemctl restart cheersai-web >> "$LOG_FILE" 2>&1
-
-# 5. 验证
-log "6. 检查服务状态..."
-sleep 5
+# 4. 重启服务与验证
+log "5. 重启并验证所有服务..."
 if [ -f "$APP_DIR/scripts/server_manage.sh" ]; then
     chmod +x "$APP_DIR/scripts/server_manage.sh"
+    log "调用 server_manage.sh 进行统一重启..."
+    "$APP_DIR/scripts/server_manage.sh" restart
+
+    log "调用 server_manage.sh 进行统一状态检查..."
     "$APP_DIR/scripts/server_manage.sh" status
     log "✅ 部署脚本执行完毕。"
 else
     # 兼容旧逻辑
-    if systemctl is-active --quiet cheersai-api && systemctl is-active --quiet cheersai-web; then
+    log "未找到 server_manage.sh，执行基础重启..."
+    sudo systemctl restart cheersai-api cheersai-worker cheersai-web dify-plugin-daemon >> "$LOG_FILE" 2>&1 || true
+    sleep 5
+    if systemctl is-active --quiet cheersai-api && systemctl is-active --quiet cheersai-web && systemctl is-active --quiet dify-plugin-daemon; then
         log "✅ 部署成功！所有服务运行正常。"
         echo "--- 服务状态摘要 ---"
-        systemctl status cheersai-api cheersai-web --no-pager | grep "Active:"
+        systemctl status cheersai-api cheersai-web dify-plugin-daemon --no-pager | grep "Active:"
     else
         log "❌ 部署可能存在问题，请检查 'systemctl status' 日志。"
         exit 1
