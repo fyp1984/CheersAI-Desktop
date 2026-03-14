@@ -118,23 +118,23 @@ if [ "$NEED_UPDATE" = true ]; then
 fi
 
 # 3.5 修复系统级 uv 路径依赖
-log "检查系统级 uv 路径..."
-if ! command -v uv &> /dev/null; then
-    # 尝试寻找用户的 uv
-    USER_UV="/home/cheersai/.local/bin/uv"
-    if [ -f "$USER_UV" ] && [ -x "$USER_UV" ]; then
-        log "为系统创建 uv 软链接: $USER_UV -> /usr/local/bin/uv"
-        sudo ln -sf "$USER_UV" /usr/local/bin/uv
+log "修复 Dify Plugin Daemon 的 Python 依赖 (需要 python 模块形式的 uv)..."
+if command -v python3 &> /dev/null; then
+    if ! python3 -c 'from uv._find_uv import find_uv_bin' 2>/dev/null; then
+        log "正在为系统 python3 安装 uv 模块..."
+        # 考虑到 Ubuntu 22.04+ 的 PEP 668 限制，强制安装或使用 pip3
+        if command -v pip3 &> /dev/null; then
+            sudo pip3 install uv --break-system-packages || sudo pip3 install uv
+        else
+            sudo apt-get update && sudo apt-get install -y python3-pip
+            sudo pip3 install uv --break-system-packages || sudo pip3 install uv
+        fi
+        log "✅ uv 模块安装完成"
     else
-        warn "未找到 uv 命令，Plugin Daemon 的 Python 插件功能可能无法正常工作。"
+        log "✅ python3 uv 模块已就绪"
     fi
 else
-    # 确保 /usr/local/bin/uv 或 /usr/bin/uv 存在，因为 daemon 可能不认其他路径
-    if [ ! -f "/usr/local/bin/uv" ] && [ ! -f "/usr/bin/uv" ]; then
-         EXISTING_UV=$(command -v uv)
-         log "为系统创建 uv 软链接: $EXISTING_UV -> /usr/local/bin/uv"
-         sudo ln -sf "$EXISTING_UV" /usr/local/bin/uv
-    fi
+    warn "未找到 python3，Plugin Daemon 可能无法正常运行 Python 插件！"
 fi
 
 # 4. 配置 Systemd 服务
@@ -161,6 +161,8 @@ Restart=always
 RestartSec=5
 
 # 环境变量配置
+Environment="HOME=/home/cheersai"
+Environment="UV_CACHE_DIR=/home/cheersai/.cache/uv"
 Environment="PATH=/home/cheersai/.local/bin:/home/cheersai/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 Environment="DIFY_INNER_API_URL=http://127.0.0.1:5001/console/api"
 Environment="DIFY_INNER_API_KEY=${PLUGIN_KEY}"
