@@ -103,32 +103,31 @@ if [ -n "$COMPOSE_FILE" ] && command -v docker >/dev/null 2>&1; then
 
         PLUGIN_CONTAINER_NAME="dify-plugin-daemon"
         if ! $DOCKER_CMD ps --format '{{.Names}}' | grep -q "^${PLUGIN_CONTAINER_NAME}$"; then
-            log "⚠️ Plugin Daemon 未运行，准备首次部署..."
-            # 允许失败，即使失败也不退出脚本
-            if $DOCKER_COMPOSE_CMD -f "$COMPOSE_FILE" up -d plugin_daemon redis weaviate >> "$LOG_FILE" 2>&1; then
-                log "✅ Plugin Daemon 启动指令已执行。"
-            else
-                log "⚠️ Plugin Daemon 启动失败，跳过此步骤，继续后续操作 (请检查 Docker 日志)。"
-            fi
+            log "⚠️ Plugin Daemon 未运行。由于权限限制，请手动在服务器执行 'sudo docker compose up -d' 启动相关服务。"
         else
-            log "✅ Plugin Daemon 正在运行 (跳过重启)。"
+            log "✅ Plugin Daemon 正在运行。"
         fi
     fi
 
-    # === API 日志处理 ===
-    # 将 api.log 重命名为 api.{date}.log 进行归档
+    # === API 日志归档 ===
+    # 尝试归档文件日志或 Systemd 日志
     API_LOG_PATH="$APP_DIR/api/api.log"
-    
+    ARCHIVE_DIR="/home/cheersai/logs/archives"
+    mkdir -p "$ARCHIVE_DIR"
+
     if [ -f "$API_LOG_PATH" ]; then
-        API_ARCHIVE_LOG="$APP_DIR/api/api.$(date +%Y%m%d_%H%M%S).log"
-        log "正在归档旧的 API 日志: $API_LOG_PATH -> $API_ARCHIVE_LOG"
+        API_ARCHIVE_LOG="$ARCHIVE_DIR/api.$(date +%Y%m%d_%H%M%S).log"
+        log "正在归档旧的 API 文件日志: $API_LOG_PATH -> $API_ARCHIVE_LOG"
         mv "$API_LOG_PATH" "$API_ARCHIVE_LOG"
-        log "✅ API 日志归档完成。"
-        
-        # 可选：将归档日志移动到统一的 logs 目录
-        # mv "$API_ARCHIVE_LOG" "/home/cheersai/logs/"
     else
-        log "未找到 API 日志文件，跳过归档。"
+        # 如果没有文件日志，尝试归档 Systemd 日志（保存最近 2000 行）
+        log "未找到 API 日志文件，尝试归档 Systemd 日志..."
+        SYSTEMD_ARCHIVE_LOG="$ARCHIVE_DIR/api_systemd.$(date +%Y%m%d_%H%M%S).log"
+        if sudo journalctl -u cheersai-api -n 2000 --no-pager > "$SYSTEMD_ARCHIVE_LOG" 2>/dev/null; then
+             log "✅ 已将最近的 Systemd 日志归档至: $SYSTEMD_ARCHIVE_LOG"
+        else
+             log "⚠️ 无法获取 Systemd 日志 (可能无权限或服务名错误)，跳过归档。"
+        fi
     fi
 
     uv run flask db upgrade >> "$LOG_FILE" 2>&1
