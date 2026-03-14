@@ -10,7 +10,7 @@
 APP_ROOT="/home/cheersai/CheersAI-Desktop"
 API_ENV="$APP_ROOT/api/.env"
 WEB_ENV="$APP_ROOT/web/.env"
-SERVICES="cheersai-api cheersai-worker cheersai-web"
+SERVICES="cheersai-api cheersai-worker cheersai-web dify-plugin-daemon"
 
 # 颜色输出
 GREEN='\033[0;32m'
@@ -114,7 +114,7 @@ case "$ACTION" in
             echo ""
 
             # 检查状态
-            if systemctl is-active --quiet cheersai-api && systemctl is-active --quiet cheersai-web; then
+            if systemctl is-active --quiet cheersai-api && systemctl is-active --quiet cheersai-web && systemctl is-active --quiet dify-plugin-daemon; then
                 log "✅ 所有服务重启成功并运行中。"
             else
                 warn "部分服务可能未正常启动，请查看下方状态详情。"
@@ -133,8 +133,8 @@ case "$ACTION" in
 
         echo ""
         log "=== 端口监听状态 (TCP) ==="
-        # 检查 8080 (API) 和 3000 (Web)
-        sudo ss -tulpn | grep -E ':(8080|3000)' || echo "未检测到 8080 或 3000 端口监听"
+        # 检查 8080 (API), 3000 (Web), 5002 (Plugin Daemon)
+        sudo ss -tulpn | grep -E ':(8080|3000|5002)' || echo "未检测到关键服务端口监听"
 
         echo ""
         log "=== Nginx 代理状态 ==="
