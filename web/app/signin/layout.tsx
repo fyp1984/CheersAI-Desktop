@@ -1,3 +1,4 @@
+'use client'
 import Link from 'next/link'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 
