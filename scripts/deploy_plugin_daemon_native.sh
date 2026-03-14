@@ -141,6 +141,7 @@ Restart=always
 RestartSec=5
 
 # 环境变量配置
+Environment="PATH=/home/cheersai/.local/bin:/home/cheersai/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 Environment="DIFY_INNER_API_URL=http://127.0.0.1:5001/console/api"
 Environment="DIFY_INNER_API_KEY=${PLUGIN_KEY}"
 Environment="SERVER_KEY=${PLUGIN_KEY}"
