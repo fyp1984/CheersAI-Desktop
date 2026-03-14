@@ -264,7 +264,7 @@ const NormalForm = () => {
               <span>还没有账号？</span>
               <Link
                 className="text-blue-600 hover:text-blue-700 ml-1"
-                href="/signup"
+                href="/signup/"
               >
                 立即注册
               </Link>

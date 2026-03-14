@@ -255,7 +255,7 @@ const SideNav = () => {
             collapsed ? 'w-8 h-8' : 'w-12 h-12',
           )}>
             <img
-              src="/logo/CheersAI.png"
+              src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/logo/CheersAI.png`}
               alt="CheersAI"
               className="w-full h-full object-cover scale-125"
             />

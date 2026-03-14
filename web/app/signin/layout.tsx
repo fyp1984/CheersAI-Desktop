@@ -1,4 +1,4 @@
-'use client'
+import Link from 'next/link'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 
 import useDocumentTitle from '@/hooks/use-document-title'
@@ -15,7 +15,7 @@ export default function SignInLayout({ children }: any) {
           {/* Logo区域 - 左上角 */}
           <div className="absolute top-6 left-6 z-20 flex items-center gap-3">
             <img 
-              src="/logo/logo-monochrome-white.png" 
+              src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/logo/logo-monochrome-white.png`}
               alt="CheersAI Logo" 
               className="w-10 h-10 rounded-xl"
             />
@@ -79,7 +79,7 @@ export default function SignInLayout({ children }: any) {
               <div className="flex justify-end items-center p-6">
                 <div>
                   <span className="text-xs text-gray-500">还没有账号？</span>
-                  <a href="/signup" className="text-xs text-blue-600 hover:text-blue-700 ml-1">立即注册</a>
+                  <Link href="/signup/" className="text-xs text-blue-600 hover:text-blue-700 ml-1">立即注册</Link>
                 </div>
               </div>
 
