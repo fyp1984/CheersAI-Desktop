@@ -36,7 +36,6 @@ import { useSearchParams, useSelectedLayoutSegment } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAppContext } from '@/context/app-context'
 import { cn } from '@/utils/classnames'
-import { basePath } from '@/utils/var'
 import AccountDropdown from '../account-dropdown'
 import EnvNav from '../env-nav'
 import { useLogout } from '@/service/use-common'
@@ -101,6 +100,18 @@ const SideNav = () => {
   ]
 
   const navItems: NavItemConfig[] = []
+
+  // 对话应用
+  if (!isCurrentWorkspaceDatasetOperator) {
+    navItems.push({
+      id: 'chat',
+      href: '/chat',
+      icon: <RiMessage3Line className="h-5 w-5" />,
+      activeIcon: <RiMessage3Line className="h-5 w-5" />,
+      label: '对话应用',
+      segments: ['chat'],
+    })
+  }
 
   // 工作台 (原 apps)
   if (!isCurrentWorkspaceDatasetOperator) {
@@ -200,6 +211,18 @@ const SideNav = () => {
     })
   }
 
+  // 审计日志
+  if (!isCurrentWorkspaceDatasetOperator) {
+    navItems.push({
+      id: 'audit-logs',
+      href: '/audit-logs',
+      icon: <RiFileShield2Line className="h-5 w-5" />,
+      activeIcon: <RiFileShield2Line className="h-5 w-5" />,
+      label: '审计日志',
+      segments: ['audit-logs'],
+    })
+  }
+
   // Auto-expand the active nav item on mount / segment change
   useEffect(() => {
     const activeItem = navItems.find(item => item.segments.includes(segment ?? ''))
@@ -232,7 +255,7 @@ const SideNav = () => {
             collapsed ? 'w-8 h-8' : 'w-12 h-12',
           )}>
             <img
-              src={`${basePath}/logo/CheersAI.png`}
+              src="/logo/CheersAI.png"
               alt="CheersAI"
               className="w-full h-full object-cover scale-125"
             />
