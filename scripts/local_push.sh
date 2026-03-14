@@ -36,11 +36,11 @@ fi
 # === 新增：Plugin Daemon 版本检测与上传 ===
 check_and_upload_plugin_daemon() {
     log "=== 检查 Plugin Daemon 版本 (Docker Image) ==="
-    
+
     # 1. 确定镜像标签 (使用 docker-compose.dev.yaml 中的版本或默认值)
     DOCKER_IMAGE="langgenius/dify-plugin-daemon:main-local"
     # 如果能从 docker-compose.dev.yaml 读取则更好，这里简化处理
-    
+
     # 2. 检查本地 Docker 环境
     if ! command -v docker &> /dev/null; then
         log "⚠️ 本地未安装 Docker，无法提取 Plugin Daemon 二进制文件，跳过更新。"
@@ -50,7 +50,7 @@ check_and_upload_plugin_daemon() {
     LOCAL_CACHE_DIR="$SCRIPT_DIR/.cache/plugin_daemon"
     LOCAL_FILE="$LOCAL_CACHE_DIR/dify-plugin-daemon-server"
     mkdir -p "$LOCAL_CACHE_DIR"
-    
+
     NEED_EXTRACT=true
     # 简单的缓存策略：如果文件存在且大小合理(>10MB)，则询问是否重新提取
     if [ -f "$LOCAL_FILE" ] && [ $(stat -f%z "$LOCAL_FILE" 2>/dev/null || stat -c%s "$LOCAL_FILE" 2>/dev/null) -gt 10000000 ]; then
@@ -58,7 +58,7 @@ check_and_upload_plugin_daemon() {
         # 这里可以优化为检查镜像 ID，但为了简化，我们默认使用缓存，除非手动删除
         NEED_EXTRACT=false
     fi
-    
+
     # 3. 从 Docker 镜像提取
     if [ "$NEED_EXTRACT" = true ]; then
         log "正在拉取镜像并提取二进制文件: $DOCKER_IMAGE"
@@ -78,7 +78,7 @@ check_and_upload_plugin_daemon() {
             return
         fi
     fi
-    
+
     # 4. 上传到服务器
     log "正在上传 Plugin Daemon 到服务器..."
     # 上传并重命名为 dify-plugin-daemon
@@ -98,7 +98,7 @@ log "目标服务器: $SERVER_USER@$SERVER_IP:$SERVER_APP_DIR"
 
 # 1. 代码同步 (本地 -> 服务器)
 log "正在同步代码到服务器..."
-log "(仅同步 api/, web/, scripts/, docker-compose.dev.yaml, README.md)"
+log "(仅同步 api/, web/, scripts/, README.md)"
 
 # 使用 rsync 进行增量同步
 rsync -az --delete \
@@ -112,10 +112,11 @@ rsync -az --delete \
     --exclude '.env' \
     --exclude 'uv.lock' \
     --exclude 'pnpm-lock.yaml' \
+    --exclude '*.log' \
+    --exclude 'docker-compose*.yaml' \
     --include 'api/***' \
     --include 'web/***' \
     --include 'scripts/***' \
-    --include 'docker-compose.dev.yaml' \
     --include 'README.md' \
     --exclude '*' \
     "$LOCAL_PATH/" "$SERVER_USER@$SERVER_IP:$SERVER_APP_DIR/"
