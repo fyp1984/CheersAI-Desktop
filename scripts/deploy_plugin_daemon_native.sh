@@ -129,10 +129,12 @@ export UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 export UV_HTTP_TIMEOUT=300
 export UV_CONCURRENT_DOWNLOADS=4
 
-# 过滤参数，移除 --offline 和 --no-index
+# 过滤参数，移除所有包含 offline 或 no-index 的参数
 ARGS=()
 for arg in "\$@"; do
-    if [ "\$arg" != "--offline" ] && [ "\$arg" != "--no-index" ]; then
+    if [[ "\$arg" == *"--offline"* ]] || [[ "\$arg" == *"--no-index"* ]]; then
+        : # Skip
+    else
         ARGS+=("\$arg")
     fi
 done
