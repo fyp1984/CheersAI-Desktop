@@ -109,6 +109,34 @@ if [ -n "$COMPOSE_FILE" ] && command -v docker >/dev/null 2>&1; then
         fi
     fi
 
+    # === 新增：Plugin Daemon 交互式更新 ===
+    echo ""
+    log "=== Dify Plugin Daemon 管理 ==="
+    read -p "是否更新/重新部署 Plugin Daemon? [y/N] " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        log "正在调用原生部署脚本..."
+        if [ -f "$APP_DIR/scripts/deploy_plugin_daemon_native.sh" ]; then
+            chmod +x "$APP_DIR/scripts/deploy_plugin_daemon_native.sh"
+            if sudo "$APP_DIR/scripts/deploy_plugin_daemon_native.sh"; then
+                log "✅ Plugin Daemon 部署/更新成功。"
+            else
+                log "❌ Plugin Daemon 部署失败。"
+            fi
+        else
+            log "❌ 未找到部署脚本: $APP_DIR/scripts/deploy_plugin_daemon_native.sh"
+        fi
+    else
+        log "跳过 Plugin Daemon 更新。"
+    fi
+
+    # 检查服务状态
+    if [ -f "$APP_DIR/scripts/server_manage.sh" ]; then
+        chmod +x "$APP_DIR/scripts/server_manage.sh"
+        log "正在检查 Plugin Daemon 状态..."
+        "$APP_DIR/scripts/server_manage.sh" status | grep "dify-plugin-daemon" -A 5
+    fi
+
     uv run flask db upgrade >> "$LOG_FILE" 2>&1
 
 # 3. 前端处理
@@ -170,11 +198,18 @@ sudo systemctl restart cheersai-web >> "$LOG_FILE" 2>&1
 # 5. 验证
 log "6. 检查服务状态..."
 sleep 5
-if systemctl is-active --quiet cheersai-api && systemctl is-active --quiet cheersai-web; then
-    log "✅ 部署成功！所有服务运行正常。"
-    echo "--- 服务状态摘要 ---"
-    systemctl status cheersai-api cheersai-web --no-pager | grep "Active:"
+if [ -f "$APP_DIR/scripts/server_manage.sh" ]; then
+    chmod +x "$APP_DIR/scripts/server_manage.sh"
+    "$APP_DIR/scripts/server_manage.sh" status
+    log "✅ 部署脚本执行完毕。"
 else
-    log "❌ 部署可能存在问题，请检查 'systemctl status' 日志。"
-    exit 1
+    # 兼容旧逻辑
+    if systemctl is-active --quiet cheersai-api && systemctl is-active --quiet cheersai-web; then
+        log "✅ 部署成功！所有服务运行正常。"
+        echo "--- 服务状态摘要 ---"
+        systemctl status cheersai-api cheersai-web --no-pager | grep "Active:"
+    else
+        log "❌ 部署可能存在问题，请检查 'systemctl status' 日志。"
+        exit 1
+    fi
 fi
