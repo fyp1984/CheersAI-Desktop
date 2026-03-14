@@ -289,7 +289,7 @@ const NormalForm = () => {
                   className="text-blue-600 hover:text-blue-700 mx-1"
                   target="_blank"
                   rel="noopener noreferrer"
-                  href="https://dify.ai/terms"
+                  href="https://cheersai.cloud"
                 >
                   服务条款
                 </Link>
@@ -298,7 +298,7 @@ const NormalForm = () => {
                   className="text-blue-600 hover:text-blue-700 ml-1"
                   target="_blank"
                   rel="noopener noreferrer"
-                  href="https://dify.ai/privacy"
+                  href="https://cheersai.cloud"
                 >
                   隐私政策
                 </Link>

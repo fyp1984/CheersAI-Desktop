@@ -43,7 +43,7 @@ export default function AccountAbout({
                   alt="logo"
                 />
               )
-            : <DifyLogo size="large" className="mx-auto" />}
+            : <img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/logo/CheersAI.png`} alt="CheersAI Logo" className="mx-auto h-10" />}
 
           <div className="text-center text-xs font-normal text-text-tertiary">
             Version
@@ -54,17 +54,17 @@ export default function AccountAbout({
               ©
               {dayjs().year()}
               {' '}
-              LangGenius, Inc., Contributors.
+              CheersAI, Inc.
             </div>
             <div className="text-text-accent">
               {
                 IS_CE_EDITION
-                  ? <Link href="https://github.com/langgenius/dify/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Open Source License</Link>
+                  ? <Link href="https://github.com/fyp1984/CheersAI-Desktop" target="_blank" rel="noopener noreferrer">Open Source License</Link>
                   : (
                       <>
-                        <Link href="https://dify.ai/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
+                        <Link href="https://cheersai.cloud" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
                         ,&nbsp;
-                        <Link href="https://dify.ai/terms" target="_blank" rel="noopener noreferrer">Terms of Service</Link>
+                        <Link href="https://cheersai.cloud" target="_blank" rel="noopener noreferrer">Terms of Service</Link>
                       </>
                     )
               }

@@ -81,9 +81,8 @@ const LocaleLayout = async ({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="CheersAI" />
-        <link rel="apple-touch-icon" href={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/apple-touch-icon.png`} />
-        <link rel="icon" type="image/png" sizes="32x32" href={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/icon-192x192.png`} />
-        <link rel="icon" type="image/png" sizes="16x16" href={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/icon-192x192.png`} />
+        <link rel="icon" href={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/logo/logo-monochrome-white.png`} />
+        <link rel="apple-touch-icon" href={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/logo/logo-monochrome-white.png`} />
         <meta name="msapplication-TileColor" content="#1C64F2" />
         <meta name="msapplication-config" content={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/browserconfig.xml`} />
       </head>
