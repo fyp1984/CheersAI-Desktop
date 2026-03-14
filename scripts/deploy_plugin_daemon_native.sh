@@ -118,7 +118,35 @@ if [ "$NEED_UPDATE" = true ]; then
 fi
 
 # 3.5 修复系统级 uv 路径依赖
-log "修复 Dify Plugin Daemon 的 Python 依赖 (需要 python 模块形式的 uv)..."
+log "修复 Dify Plugin Daemon 的 Python 依赖..."
+
+# 创建 uv wrapper 以强制设置环境变量 (解决 Daemon 可能不透传 Env 导致 UV_VENV_CLEAR 失效的问题)
+cat <<EOF > /tmp/uv_wrapper.sh
+#!/bin/sh
+export UV_VENV_CLEAR=1
+export UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+export UV_HTTP_TIMEOUT=300
+export UV_CONCURRENT_DOWNLOADS=4
+# 尝试执行用户的 uv，如果不存在则尝试 python 模块的 uv
+if [ -x "/home/cheersai/.local/bin/uv" ]; then
+    exec /home/cheersai/.local/bin/uv "\$@"
+elif command -v python3 >/dev/null; then
+    # 尝试找到 python 模块里的 uv
+    REAL_UV=\$(python3 -c 'from uv._find_uv import find_uv_bin; print(find_uv_bin())' 2>/dev/null)
+    if [ -x "\$REAL_UV" ] && [ "\$REAL_UV" != "/usr/local/bin/uv" ]; then
+        exec "\$REAL_UV" "\$@"
+    fi
+fi
+# Fallback
+echo "Error: Could not find real uv binary" >&2
+exit 1
+EOF
+
+log "部署 uv wrapper 到 /usr/local/bin/uv..."
+sudo mv /tmp/uv_wrapper.sh /usr/local/bin/uv
+sudo chmod +x /usr/local/bin/uv
+
+# 确保 python3 uv 模块也安装 (用于 Daemon 启动时的路径发现)
 if command -v python3 &> /dev/null; then
     if ! python3 -c 'from uv._find_uv import find_uv_bin' 2>/dev/null; then
         log "正在为系统 python3 安装 uv 模块..."
