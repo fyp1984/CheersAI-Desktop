@@ -109,27 +109,6 @@ if [ -n "$COMPOSE_FILE" ] && command -v docker >/dev/null 2>&1; then
         fi
     fi
 
-    # === API 日志归档 ===
-    # 尝试归档文件日志或 Systemd 日志
-    API_LOG_PATH="$APP_DIR/api/api.log"
-    ARCHIVE_DIR="/home/cheersai/logs/archives"
-    mkdir -p "$ARCHIVE_DIR"
-
-    if [ -f "$API_LOG_PATH" ]; then
-        API_ARCHIVE_LOG="$ARCHIVE_DIR/api.$(date +%Y%m%d_%H%M%S).log"
-        log "正在归档旧的 API 文件日志: $API_LOG_PATH -> $API_ARCHIVE_LOG"
-        mv "$API_LOG_PATH" "$API_ARCHIVE_LOG"
-    else
-        # 如果没有文件日志，尝试归档 Systemd 日志（保存最近 2000 行）
-        log "未找到 API 日志文件，尝试归档 Systemd 日志..."
-        SYSTEMD_ARCHIVE_LOG="$ARCHIVE_DIR/api_systemd.$(date +%Y%m%d_%H%M%S).log"
-        if sudo journalctl -u cheersai-api -n 2000 --no-pager > "$SYSTEMD_ARCHIVE_LOG" 2>/dev/null; then
-             log "✅ 已将最近的 Systemd 日志归档至: $SYSTEMD_ARCHIVE_LOG"
-        else
-             log "⚠️ 无法获取 Systemd 日志 (可能无权限或服务名错误)，跳过归档。"
-        fi
-    fi
-
     uv run flask db upgrade >> "$LOG_FILE" 2>&1
 
 # 3. 前端处理
