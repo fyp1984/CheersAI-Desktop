@@ -18,7 +18,7 @@ const Activate = () => {
             {' '}
             {new Date().getFullYear()}
             {' '}
-            LangGenius, Inc. All rights reserved.
+            CheersAI, Inc. All rights reserved.
           </div>
         )}
       </div>
