@@ -30,17 +30,42 @@ const ModelIcon: FC<ModelIconProps> = ({
   if (provider?.provider && ['openai', 'langgenius/openai/openai'].includes(provider.provider) && modelName?.startsWith('o'))
     return <div className="flex items-center justify-center"><OpenaiYellow className={cn('h-5 w-5', className)} /></div>
 
+  const iconSrc = renderI18nObject(
+    theme === Theme.dark && provider?.icon_small_dark
+      ? provider.icon_small_dark
+      : (provider?.icon_small || { en_US: '', zh_Hans: '' }),
+    language,
+  )
+
+  const getIconUrl = (url: string) => {
+    if (!url)
+      return ''
+
+    try {
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        const urlObj = new URL(url)
+        let path = urlObj.pathname + urlObj.search
+        if (path.includes('/console/api/console/api/'))
+          path = path.replace('/console/api/console/api/', '/console/api/')
+        return path
+      }
+    }
+    catch {
+      // Ignore parsing errors
+    }
+
+    if (url.includes('/console/api/console/api/'))
+      return url.replace('/console/api/console/api/', '/console/api/')
+
+    return url
+  }
+
   if (provider?.icon_small) {
     return (
       <div className={cn('flex h-5 w-5 items-center justify-center', isDeprecated && 'opacity-50', className)}>
         <img
           alt="model-icon"
-          src={renderI18nObject(
-            theme === Theme.dark && provider.icon_small_dark
-              ? provider.icon_small_dark
-              : provider.icon_small,
-            language,
-          )}
+          src={getIconUrl(iconSrc)}
           className={iconClassName}
         />
       </div>

@@ -35,6 +35,15 @@ fi
 
 # === 新增：Plugin Daemon 版本检测与上传 ===
 check_and_upload_plugin_daemon() {
+    echo ""
+    # 交互式确认，默认为否
+    read -p "❓ 是否检查并上传 Plugin Daemon? [y/N] " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        log "⏩ 用户选择跳过 Plugin Daemon 检查与上传。"
+        return
+    fi
+
     log "=== 检查 Plugin Daemon 版本 (Docker Image) ==="
 
     # 1. 确定镜像标签 (使用 docker-compose.dev.yaml 中的版本或默认值)

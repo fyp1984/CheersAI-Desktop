@@ -406,3 +406,5 @@ export const RULE_TEMPLATES = {
     priority: 10,
   },
 }
+
+export const rulesManager = new RulesManager()
