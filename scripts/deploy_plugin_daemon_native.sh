@@ -66,94 +66,38 @@ else
     warn "未找到 psql 命令，跳过数据库检查。"
 fi
 
-# 3. 版本检测与自动更新
-log "3. 检查 Plugin Daemon 版本..."
+# 3. 版本检测与更新
+log "3. 检查 Plugin Daemon 更新..."
 
-# 获取最新版本 (优先尝试 GitHub API，超时则跳过)
-LATEST_VERSION=""
-CURRENT_VERSION=""
+# 说明：由于 Plugin Daemon 服务端二进制无法直接从 GitHub 下载（Release 中仅有 CLI 工具），
+# 因此必须通过 local_push.sh 从本地 Docker 镜像提取并上传到服务器。
 
-if [ -f "$VERSION_FILE" ]; then
-    CURRENT_VERSION=$(cat "$VERSION_FILE")
-    log "当前安装版本: $CURRENT_VERSION"
-fi
-
-log "正在检查 GitHub 最新版本..."
-# 使用 curl 获取 latest release tag，设置 5 秒超时
-LATEST_INFO=$(curl -s --max-time 10 https://api.github.com/repos/langgenius/dify-plugin-daemon/releases/latest || echo "")
-
-if [ -n "$LATEST_INFO" ]; then
-    LATEST_VERSION=$(echo "$LATEST_INFO" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-    log "GitHub 最新版本: $LATEST_VERSION"
-else
-    warn "无法连接 GitHub API，跳过版本检测。"
-fi
-
-# 3.1 更新逻辑
 NEED_UPDATE=false
-if [ -n "$LATEST_VERSION" ]; then
-    if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
-        log "发现新版本 ($CURRENT_VERSION -> $LATEST_VERSION)，准备更新..."
-        NEED_UPDATE=true
-    else
-        log "当前已是最新版本。"
-    fi
-elif [ ! -f "$BIN_PATH" ]; then
-    # 如果没有安装，即使没有获取到版本也要尝试安装（可能通过本地上传）
+
+# 检查是否有新上传的二进制文件
+if [ -f "$APP_ROOT/dify-plugin-daemon" ]; then
+    log "发现新上传的二进制文件: $APP_ROOT/dify-plugin-daemon"
     NEED_UPDATE=true
-    log "未检测到二进制文件，准备安装..."
+elif [ ! -f "$BIN_PATH" ]; then
+    error "未找到已安装的二进制文件，且未发现新上传的文件！请先通过 local_push.sh 上传。"
+    exit 1
+else
+    log "未发现新上传的文件，保持当前版本。"
 fi
 
-# 3.2 执行下载或安装
+# 执行安装
 if [ "$NEED_UPDATE" = true ]; then
-    DOWNLOAD_SUCCESS=false
+    log "安装二进制文件到 $BIN_PATH..."
 
-    # 尝试从 GitHub 下载
-    if [ -n "$LATEST_VERSION" ]; then
-        DOWNLOAD_URL="https://github.com/langgenius/dify-plugin-daemon/releases/download/${LATEST_VERSION}/dify-plugin-linux-amd64"
-        log "正在下载: $DOWNLOAD_URL"
+    # 停止服务以允许覆盖
+    sudo systemctl stop dify-plugin-daemon 2>/dev/null || true
 
-        if curl -L --max-time 300 -o "$APP_ROOT/dify-plugin-daemon.new" "$DOWNLOAD_URL"; then
-            if [ -s "$APP_ROOT/dify-plugin-daemon.new" ]; then
-                log "✅ 下载成功"
-                mv "$APP_ROOT/dify-plugin-daemon.new" "$APP_ROOT/dify-plugin-daemon"
-                echo "$LATEST_VERSION" > "$VERSION_FILE"
-                DOWNLOAD_SUCCESS=true
-            else
-                warn "下载文件为空"
-                rm -f "$APP_ROOT/dify-plugin-daemon.new"
-            fi
-        else
-            warn "下载失败 (超时或网络问题)"
-        fi
-    fi
+    sudo mv "$APP_ROOT/dify-plugin-daemon" "$BIN_PATH"
+    sudo chmod +x "$BIN_PATH"
+    log "✅ 安装完成"
 
-    # 如果下载失败或未下载，检查是否有本地上传的文件
-    if [ "$DOWNLOAD_SUCCESS" = false ]; then
-        if [ -f "$APP_ROOT/dify-plugin-daemon" ]; then
-            log "发现本地上传的二进制文件，使用该文件进行安装..."
-            DOWNLOAD_SUCCESS=true
-            # 这种情况下我们无法确定版本，暂不更新 version.txt
-        else
-            if [ ! -f "$BIN_PATH" ]; then
-                error "既无法下载更新，也未找到本地上传的文件！"
-                exit 1
-            else
-                warn "更新失败，保留使用旧版本。"
-            fi
-        fi
-    fi
-
-    # 安装文件
-    if [ "$DOWNLOAD_SUCCESS" = true ]; then
-        log "安装二进制文件到 $BIN_PATH..."
-        # 停止服务以允许覆盖
-        sudo systemctl stop dify-plugin-daemon 2>/dev/null || true
-
-        sudo mv "$APP_ROOT/dify-plugin-daemon" "$BIN_PATH"
-        sudo chmod +x "$BIN_PATH"
-        log "✅ 安装完成"
-    fi
+    # 更新版本记录 (这里简单记录日期作为版本)
+    date +%Y%m%d_%H%M%S > "$VERSION_FILE"
 fi
 
 # 4. 配置 Systemd 服务

@@ -35,51 +35,53 @@ fi
 
 # === 新增：Plugin Daemon 版本检测与上传 ===
 check_and_upload_plugin_daemon() {
-    log "=== 检查 Plugin Daemon 版本 ==="
+    log "=== 检查 Plugin Daemon 版本 (Docker Image) ==="
     
-    # 1. 获取 GitHub 最新版本
-    LATEST_INFO=$(curl -s --max-time 10 https://api.github.com/repos/langgenius/dify-plugin-daemon/releases/latest || echo "")
-    if [ -z "$LATEST_INFO" ]; then
-        log "⚠️ 无法连接 GitHub API，跳过插件更新检查。"
+    # 1. 确定镜像标签 (使用 docker-compose.dev.yaml 中的版本或默认值)
+    DOCKER_IMAGE="langgenius/dify-plugin-daemon:main-local"
+    # 如果能从 docker-compose.dev.yaml 读取则更好，这里简化处理
+    
+    # 2. 检查本地 Docker 环境
+    if ! command -v docker &> /dev/null; then
+        log "⚠️ 本地未安装 Docker，无法提取 Plugin Daemon 二进制文件，跳过更新。"
         return
     fi
-    
-    LATEST_VERSION=$(echo "$LATEST_INFO" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-    if [ -z "$LATEST_VERSION" ]; then
-        log "⚠️ 无法解析版本号，跳过。"
-        return
-    fi
-    
-    log "GitHub 最新版本: $LATEST_VERSION"
-    
-    # 2. 检查本地是否有对应版本的缓存文件
+
     LOCAL_CACHE_DIR="$SCRIPT_DIR/.cache/plugin_daemon"
-    LOCAL_FILE="$LOCAL_CACHE_DIR/dify-plugin-daemon-$LATEST_VERSION"
+    LOCAL_FILE="$LOCAL_CACHE_DIR/dify-plugin-daemon-server"
     mkdir -p "$LOCAL_CACHE_DIR"
     
-    NEED_DOWNLOAD=false
-    if [ ! -f "$LOCAL_FILE" ]; then
-        NEED_DOWNLOAD=true
-    else
-        log "✅ 本地已存在该版本缓存。"
+    NEED_EXTRACT=true
+    # 简单的缓存策略：如果文件存在且大小合理(>10MB)，则询问是否重新提取
+    if [ -f "$LOCAL_FILE" ] && [ $(stat -f%z "$LOCAL_FILE" 2>/dev/null || stat -c%s "$LOCAL_FILE" 2>/dev/null) -gt 10000000 ]; then
+        log "✅ 本地已存在 Plugin Daemon 缓存文件。"
+        # 这里可以优化为检查镜像 ID，但为了简化，我们默认使用缓存，除非手动删除
+        NEED_EXTRACT=false
     fi
     
-    # 3. 下载新版本
-    if [ "$NEED_DOWNLOAD" = true ]; then
-        DOWNLOAD_URL="https://github.com/langgenius/dify-plugin-daemon/releases/download/${LATEST_VERSION}/dify-plugin-linux-amd64"
-        log "正在下载新版本: $DOWNLOAD_URL"
-        if curl -L --max-time 300 -o "$LOCAL_FILE" "$DOWNLOAD_URL"; then
-             log "✅ 下载完成。"
+    # 3. 从 Docker 镜像提取
+    if [ "$NEED_EXTRACT" = true ]; then
+        log "正在拉取镜像并提取二进制文件: $DOCKER_IMAGE"
+        if docker pull "$DOCKER_IMAGE"; then
+            TEMP_ID=$(docker create "$DOCKER_IMAGE")
+            if docker cp "$TEMP_ID:/app/main" "$LOCAL_FILE"; then
+                log "✅ 提取成功。"
+                chmod +x "$LOCAL_FILE"
+            else
+                log "❌ 提取失败。"
+                docker rm -v "$TEMP_ID" >/dev/null
+                return
+            fi
+            docker rm -v "$TEMP_ID" >/dev/null
         else
-             log "❌ 下载失败，跳过更新。"
-             rm -f "$LOCAL_FILE"
-             return
+            log "❌ 镜像拉取失败，跳过更新。"
+            return
         fi
     fi
     
     # 4. 上传到服务器
     log "正在上传 Plugin Daemon 到服务器..."
-    # 上传并重命名为 dify-plugin-daemon (去掉版本号后缀，方便部署脚本直接使用)
+    # 上传并重命名为 dify-plugin-daemon
     if scp "$LOCAL_FILE" "$SERVER_USER@$SERVER_IP:$SERVER_APP_DIR/dify-plugin-daemon"; then
         log "✅ Plugin Daemon 上传成功。"
     else
