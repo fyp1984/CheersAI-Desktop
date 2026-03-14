@@ -115,6 +115,7 @@ rsync -az --delete \
     --exclude 'pnpm-lock.yaml' \
     --exclude '*.log' \
     --exclude 'docker-compose*.yaml' \
+    --exclude 'scripts/local_push.sh' \
     --include 'api/***' \
     --include 'web/***' \
     --include 'scripts/***' \
