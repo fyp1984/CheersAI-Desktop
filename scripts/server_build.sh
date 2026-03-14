@@ -14,6 +14,12 @@ LOG_FILE="/home/cheersai/logs/deploy_$(date +%Y%m%d).log"
 # 确保日志目录存在
 mkdir -p "$(dirname "$LOG_FILE")"
 
+# 参数处理
+FORCE_YES=false
+if [[ "$1" == "-y" ]] || [[ "$1" == "--yes" ]]; then
+    FORCE_YES=true
+fi
+
 # 日志函数
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
@@ -97,10 +103,21 @@ else
     PROMPT_TEXT="是否重新配置/重启 Plugin Daemon? [y/N] "
 fi
 
-echo ""
-log "=== Dify Plugin Daemon 管理 ==="
-read -p "$PROMPT_TEXT" -n 1 -r
-echo ""
+if [ "$FORCE_YES" = true ]; then
+    log "⏩ 非交互模式：自动选择默认值 ($UPDATE_DEFAULT)"
+    REPLY=$UPDATE_DEFAULT
+else
+    # 尝试检测是否为交互式终端，如果不是，则自动使用默认值
+    if [ ! -t 0 ]; then
+        log "⏩ 检测到非交互式环境：自动选择默认值 ($UPDATE_DEFAULT)"
+        REPLY=$UPDATE_DEFAULT
+    else
+        echo ""
+        log "=== Dify Plugin Daemon 管理 ==="
+        read -p "$PROMPT_TEXT" -n 1 -r
+        echo ""
+    fi
+fi
 
 # 处理默认值
 if [[ -z $REPLY ]]; then
@@ -180,15 +197,45 @@ log "5. 重启并验证所有服务..."
 if [ -f "$APP_DIR/scripts/server_manage.sh" ]; then
     chmod +x "$APP_DIR/scripts/server_manage.sh"
     log "调用 server_manage.sh 进行统一重启..."
-    "$APP_DIR/scripts/server_manage.sh" restart
 
-    log "调用 server_manage.sh 进行统一状态检查..."
-    "$APP_DIR/scripts/server_manage.sh" status
-    log "✅ 部署脚本执行完毕。"
+    # 尝试检查 sudo 是否可用（免密）
+    if sudo -n true 2>/dev/null; then
+        # sudo 可用，直接执行
+        sudo "$APP_DIR/scripts/server_manage.sh" restart
+        log "调用 server_manage.sh 进行统一状态检查..."
+        sudo "$APP_DIR/scripts/server_manage.sh" status
+        log "✅ 部署脚本执行完毕。"
+    else
+        # sudo 需要密码或不可用
+        if [ ! -t 0 ]; then
+            # 非交互式环境，跳过重启
+            log "⚠️  检测到非交互式环境且 sudo 需要密码。"
+            log "✅  构建已成功完成！"
+            log "👉  请登录服务器并手动执行重启命令以应用更改："
+            log "    sudo $APP_DIR/scripts/server_manage.sh restart"
+            exit 0
+        else
+            # 交互式环境，正常执行（会提示输入密码）
+            sudo "$APP_DIR/scripts/server_manage.sh" restart
+            log "调用 server_manage.sh 进行统一状态检查..."
+            sudo "$APP_DIR/scripts/server_manage.sh" status
+            log "✅ 部署脚本执行完毕。"
+        fi
+    fi
 else
     # 兼容旧逻辑
     log "未找到 server_manage.sh，执行基础重启..."
-    sudo systemctl restart cheersai-api cheersai-worker cheersai-web dify-plugin-daemon >> "$LOG_FILE" 2>&1 || true
+    # 同样检查 sudo
+    if sudo -n true 2>/dev/null; then
+        sudo systemctl restart cheersai-api cheersai-worker cheersai-web dify-plugin-daemon >> "$LOG_FILE" 2>&1 || true
+    elif [ ! -t 0 ]; then
+        log "⚠️  检测到非交互式环境且 sudo 需要密码，跳过重启。"
+        log "👉  请手动执行：sudo systemctl restart cheersai-api cheersai-worker cheersai-web dify-plugin-daemon"
+        exit 0
+    else
+        sudo systemctl restart cheersai-api cheersai-worker cheersai-web dify-plugin-daemon >> "$LOG_FILE" 2>&1 || true
+    fi
+
     sleep 5
     if systemctl is-active --quiet cheersai-api && systemctl is-active --quiet cheersai-web && systemctl is-active --quiet dify-plugin-daemon; then
         log "✅ 部署成功！所有服务运行正常。"
