@@ -45,7 +45,7 @@ const DataMaskingList: FC = () => {
 
   const handleDeleteRule = async (id: string) => {
     // eslint-disable-next-line no-alert
-    if (confirm(t('common.deleteConfirm', { ns: 'common' }))) {
+    if (confirm(t('common.deleteConfirm') || '确认删除？')) {
       await rulesManager.deleteRule(id)
       loadRules()
     }
@@ -65,7 +65,7 @@ const DataMaskingList: FC = () => {
     catch (error) {
       console.error('Failed to save rule:', error)
       // eslint-disable-next-line no-alert
-      alert(t('common.error', { ns: 'common' }))
+      alert(t('common.error') || '发生错误')
     }
   }
 
@@ -95,7 +95,7 @@ const DataMaskingList: FC = () => {
           ? (
               <div className="flex h-64 items-center justify-center">
                 <div className="text-gray-400">
-                  {t('common.loading', { ns: 'common' })}
+                  {t('common.loading') || '加载中...'}
                 </div>
               </div>
             )
@@ -152,7 +152,7 @@ const DataMaskingList: FC = () => {
                             }}
                             className="px-2 text-gray-400 hover:text-red-500"
                           >
-                            {t('common.delete', { ns: 'common' })}
+                            {t('common.delete') || '删除'}
                           </button>
                         </div>
                       </div>
