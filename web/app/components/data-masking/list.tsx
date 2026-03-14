@@ -18,7 +18,7 @@ const DataMaskingList: FC = () => {
   const loadRules = async () => {
     setIsLoading(true)
     try {
-      const allRules = await rulesManager.getRules()
+      const allRules = await rulesManager.getAllRules()
       setRules(allRules)
     }
     catch (error) {
@@ -57,7 +57,7 @@ const DataMaskingList: FC = () => {
         await rulesManager.updateRule(editingRule.id, data)
       }
       else {
-        await rulesManager.addRule(data)
+        await rulesManager.createRule(data)
       }
       setShowRuleForm(false)
       loadRules()
