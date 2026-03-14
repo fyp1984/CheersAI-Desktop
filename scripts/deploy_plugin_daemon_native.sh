@@ -36,6 +36,17 @@ PLUGIN_KEY=$(grep "^PLUGIN_DAEMON_KEY=" "$API_ENV" | cut -d= -f2)
 DB_HOST=$(grep "^DB_HOST=" "$API_ENV" | cut -d= -f2 | sed 's/localhost/127.0.0.1/') # 确保用 IP
 DB_PORT=$(grep "^DB_PORT=" "$API_ENV" | cut -d= -f2)
 
+# 读取 Redis 配置
+REDIS_HOST=$(grep "^REDIS_HOST=" "$API_ENV" | cut -d= -f2 | sed 's/localhost/127.0.0.1/')
+REDIS_PORT=$(grep "^REDIS_PORT=" "$API_ENV" | cut -d= -f2)
+REDIS_PASSWORD=$(grep "^REDIS_PASSWORD=" "$API_ENV" | cut -d= -f2)
+REDIS_DB=$(grep "^REDIS_DB=" "$API_ENV" | cut -d= -f2)
+
+# 设置默认值
+REDIS_HOST=${REDIS_HOST:-127.0.0.1}
+REDIS_PORT=${REDIS_PORT:-6379}
+REDIS_DB=${REDIS_DB:-0}
+
 if [ -z "$DB_PASSWORD" ] || [ -z "$PLUGIN_KEY" ]; then
     error "无法从 .env 获取 DB_PASSWORD 或 PLUGIN_DAEMON_KEY"
     exit 1
@@ -62,6 +73,12 @@ if command -v psql &> /dev/null; then
              fi
         fi
     fi
+
+    # 确保 dify_plugin 用户存在并有权限
+    log "配置数据库用户权限..."
+    sudo -u postgres psql -c "CREATE USER dify_plugin WITH PASSWORD 'dify_plugin_password';" 2>/dev/null || true
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE dify_plugin TO dify_plugin;" 2>/dev/null || true
+    sudo -u postgres psql -d dify_plugin -c "GRANT ALL ON SCHEMA public TO dify_plugin;" 2>/dev/null || true
 else
     warn "未找到 psql 命令，跳过数据库检查。"
 fi
@@ -124,16 +141,27 @@ Restart=always
 RestartSec=5
 
 # 环境变量配置
-Environment="DB_DSN=postgres://postgres:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/dify_plugin?sslmode=disable"
+Environment="DIFY_INNER_API_URL=http://127.0.0.1:5001/console/api"
+Environment="DIFY_INNER_API_KEY=${PLUGIN_KEY}"
 Environment="SERVER_KEY=${PLUGIN_KEY}"
+Environment="PLATFORM=local"
+Environment="DB_USERNAME=dify_plugin"
+Environment="DB_PASSWORD=dify_plugin_password"
+Environment="DB_HOST=${DB_HOST}"
+Environment="DB_PORT=${DB_PORT}"
+Environment="DB_DATABASE=dify_plugin"
+Environment="REDIS_HOST=${REDIS_HOST}"
+Environment="REDIS_PORT=${REDIS_PORT}"
+Environment="REDIS_PASSWORD=${REDIS_PASSWORD}"
+Environment="REDIS_DB=${REDIS_DB}"
 Environment="MAX_PER_IP_RPS=100"
 Environment="MAX_PER_IP_BURST=50"
 Environment="LOG_LEVEL=info"
 Environment="LISTEN_ADDRESS=0.0.0.0:5002"
 Environment="PLUGIN_WORKING_PATH=$WORK_DIR/storage"
 # 远程安装服务配置
-Environment="PLUGIN_REMOTE_INSTALL_HOST=0.0.0.0"
-Environment="PLUGIN_REMOTE_INSTALL_PORT=5003"
+Environment="PLUGIN_REMOTE_INSTALLING_HOST=0.0.0.0"
+Environment="PLUGIN_REMOTE_INSTALLING_PORT=5003"
 
 [Install]
 WantedBy=multi-user.target
