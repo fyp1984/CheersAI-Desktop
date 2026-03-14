@@ -121,20 +121,30 @@ fi
 log "修复 Dify Plugin Daemon 的 Python 依赖..."
 
 # 创建 uv wrapper 以强制设置环境变量 (解决 Daemon 可能不透传 Env 导致 UV_VENV_CLEAR 失效的问题)
+# 并且强制过滤掉 --offline 和 --no-index 参数，防止 Daemon 误判环境导致离线安装失败
 cat <<EOF > /tmp/uv_wrapper.sh
-#!/bin/sh
+#!/bin/bash
 export UV_VENV_CLEAR=1
 export UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 export UV_HTTP_TIMEOUT=300
 export UV_CONCURRENT_DOWNLOADS=4
+
+# 过滤参数，移除 --offline 和 --no-index
+ARGS=()
+for arg in "\$@"; do
+    if [ "\$arg" != "--offline" ] && [ "\$arg" != "--no-index" ]; then
+        ARGS+=("\$arg")
+    fi
+done
+
 # 尝试执行用户的 uv，如果不存在则尝试 python 模块的 uv
 if [ -x "/home/cheersai/.local/bin/uv" ]; then
-    exec /home/cheersai/.local/bin/uv "\$@"
+    exec /home/cheersai/.local/bin/uv "\${ARGS[@]}"
 elif command -v python3 >/dev/null; then
     # 尝试找到 python 模块里的 uv
     REAL_UV=\$(python3 -c 'from uv._find_uv import find_uv_bin; print(find_uv_bin())' 2>/dev/null)
     if [ -x "\$REAL_UV" ] && [ "\$REAL_UV" != "/usr/local/bin/uv" ]; then
-        exec "\$REAL_UV" "\$@"
+        exec "\$REAL_UV" "\${ARGS[@]}"
     fi
 fi
 # Fallback
