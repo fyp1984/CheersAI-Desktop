@@ -163,6 +163,12 @@ RestartSec=5
 # 环境变量配置
 Environment="HOME=/home/cheersai"
 Environment="UV_CACHE_DIR=/home/cheersai/.cache/uv"
+# 配置 uv 使用国内镜像源 (清华源) 并增加超时限制
+Environment="UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple"
+Environment="UV_HTTP_TIMEOUT=300"
+Environment="UV_CONCURRENT_DOWNLOADS=8"
+# 关键修复：允许 uv 自动清理已存在的虚拟环境，避免交互式确认导致超时
+Environment="UV_VENV_CLEAR=1"
 Environment="PATH=/home/cheersai/.local/bin:/home/cheersai/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 Environment="DIFY_INNER_API_URL=http://127.0.0.1:5001/console/api"
 Environment="DIFY_INNER_API_KEY=${PLUGIN_KEY}"
