@@ -61,9 +61,10 @@ check_and_upload_plugin_daemon() {
 
     # 3. 从 Docker 镜像提取
     if [ "$NEED_EXTRACT" = true ]; then
-        log "正在拉取镜像并提取二进制文件: $DOCKER_IMAGE"
-        if docker pull "$DOCKER_IMAGE"; then
-            TEMP_ID=$(docker create "$DOCKER_IMAGE")
+        log "正在拉取镜像并提取二进制文件: $DOCKER_IMAGE (linux/amd64)"
+        # 强制拉取 linux/amd64 架构，确保在服务器上可用
+        if docker pull --platform linux/amd64 "$DOCKER_IMAGE"; then
+            TEMP_ID=$(docker create --platform linux/amd64 "$DOCKER_IMAGE")
             if docker cp "$TEMP_ID:/app/main" "$LOCAL_FILE"; then
                 log "✅ 提取成功。"
                 chmod +x "$LOCAL_FILE"
