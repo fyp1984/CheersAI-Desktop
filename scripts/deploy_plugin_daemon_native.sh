@@ -117,6 +117,26 @@ if [ "$NEED_UPDATE" = true ]; then
     date +%Y%m%d_%H%M%S > "$VERSION_FILE"
 fi
 
+# 3.5 修复系统级 uv 路径依赖
+log "检查系统级 uv 路径..."
+if ! command -v uv &> /dev/null; then
+    # 尝试寻找用户的 uv
+    USER_UV="/home/cheersai/.local/bin/uv"
+    if [ -f "$USER_UV" ] && [ -x "$USER_UV" ]; then
+        log "为系统创建 uv 软链接: $USER_UV -> /usr/local/bin/uv"
+        sudo ln -sf "$USER_UV" /usr/local/bin/uv
+    else
+        warn "未找到 uv 命令，Plugin Daemon 的 Python 插件功能可能无法正常工作。"
+    fi
+else
+    # 确保 /usr/local/bin/uv 或 /usr/bin/uv 存在，因为 daemon 可能不认其他路径
+    if [ ! -f "/usr/local/bin/uv" ] && [ ! -f "/usr/bin/uv" ]; then
+         EXISTING_UV=$(command -v uv)
+         log "为系统创建 uv 软链接: $EXISTING_UV -> /usr/local/bin/uv"
+         sudo ln -sf "$EXISTING_UV" /usr/local/bin/uv
+    fi
+fi
+
 # 4. 配置 Systemd 服务
 log "4. 检查 Systemd 服务配置..."
 
