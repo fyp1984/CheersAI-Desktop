@@ -1,5 +1,4 @@
 // Chat API service
-import type { Fetcher } from 'swr'
 import { del, get, post } from './base'
 
 // Types
@@ -32,6 +31,8 @@ export type ChatResponse = {
   created_at: number
 }
 
+export type ChatInputValue = string | number | boolean | null | ChatInputValue[] | { [key: string]: ChatInputValue }
+
 // API endpoints
 const prefix = '/api'
 
@@ -40,7 +41,7 @@ export const sendChatMessage = (
   appId: string,
   body: {
     query: string
-    inputs: Record<string, any>
+    inputs: Record<string, ChatInputValue>
     conversation_id?: string
     response_mode: 'blocking' | 'streaming'
   },
@@ -51,8 +52,8 @@ export const sendChatMessage = (
 }
 
 // Get conversation list
-export const fetchConversations = (appId: string, params?: { limit?: number; last_id?: string }) => {
-  return get<{ data: Conversation[]; has_more: boolean; limit: number }>(
+export const fetchConversations = (appId: string, params?: { limit?: number, last_id?: string }) => {
+  return get<{ data: Conversation[], has_more: boolean, limit: number }>(
     `${prefix}/apps/${appId}/conversations`,
     params,
   )
@@ -62,9 +63,9 @@ export const fetchConversations = (appId: string, params?: { limit?: number; las
 export const fetchChatMessages = (
   appId: string,
   conversationId: string,
-  params?: { limit?: number; last_id?: string },
+  params?: { limit?: number, last_id?: string },
 ) => {
-  return get<{ data: Message[]; has_more: boolean; limit: number }>(
+  return get<{ data: Message[], has_more: boolean, limit: number }>(
     `${prefix}/apps/${appId}/conversations/${conversationId}/messages`,
     params,
   )
