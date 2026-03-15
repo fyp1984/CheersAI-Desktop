@@ -30,7 +30,13 @@ const DataMaskingList: FC = () => {
   }
 
   useEffect(() => {
-    loadRules()
+    rulesManager.initialize()
+      .then(() => {
+        loadRules()
+      })
+      .catch((err) => {
+        console.error('Failed to initialize rules manager:', err)
+      })
   }, [])
 
   const handleCreateRule = () => {
@@ -45,7 +51,7 @@ const DataMaskingList: FC = () => {
 
   const handleDeleteRule = async (id: string) => {
     // eslint-disable-next-line no-alert
-    if (confirm(t('common.deleteConfirm') || '确认删除？')) {
+    if (confirm(t('common.confirm') || '确认删除？')) {
       await rulesManager.deleteRule(id)
       loadRules()
     }
