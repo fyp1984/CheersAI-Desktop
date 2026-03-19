@@ -72,6 +72,7 @@ from .app import (
 # Import auth controllers
 from .auth import (
     activate,
+    apply_beta,
     data_source_bearer_auth,
     data_source_oauth,
     email_register,
@@ -80,6 +81,9 @@ from .auth import (
     oauth,
     oauth_server,
 )
+
+# Import chat controllers
+from .chat import simple_chat  # noqa: F401
 
 # Import billing controllers
 from .billing import billing, compliance

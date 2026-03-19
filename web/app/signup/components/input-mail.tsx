@@ -1,5 +1,4 @@
 'use client'
-import type { MailSendResponse } from '@/service/use-common'
 import Link from 'next/link'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -10,23 +9,19 @@ import Split from '@/app/signin/split'
 import { emailRegex } from '@/config'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 import { useLocale } from '@/context/i18n'
-import { useSendMail } from '@/service/use-common'
+import { applyForBeta } from '@/service/common'
 
-type Props = {
-  onSuccess: (email: string, payload: string) => void
-}
-export default function Form({
-  onSuccess,
-}: Props) {
+export default function Form() {
   const { t } = useTranslation()
   const [email, setEmail] = useState('')
+  const [name, setName] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
   const locale = useLocale()
   const { systemFeatures } = useGlobalPublicStore()
 
-  const { mutateAsync: submitMail, isPending } = useSendMail()
-
   const handleSubmit = useCallback(async () => {
-    if (isPending)
+    if (isLoading)
       return
 
     if (!email) {
@@ -40,10 +35,51 @@ export default function Form({
       })
       return
     }
-    const res = await submitMail({ email, language: locale })
-    if ((res as MailSendResponse).result === 'success')
-      onSuccess(email, (res as MailSendResponse).data)
-  }, [email, locale, submitMail, t, isPending, onSuccess])
+    if (!name?.trim()) {
+      Toast.notify({ type: 'error', message: '请输入您的姓名' })
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      const res = await applyForBeta({ email, name, language: locale })
+      if (res.result === 'success') {
+        setSubmitted(true)
+        Toast.notify({ type: 'success', message: '申请已提交，请等待管理员审核' })
+      }
+      else {
+        Toast.notify({ type: 'error', message: res.data || '申请失败，请重试' })
+      }
+    }
+    catch (error: any) {
+      Toast.notify({ type: 'error', message: error.message || '申请失败，请重试' })
+    }
+    finally {
+      setIsLoading(false)
+    }
+  }, [email, name, locale, isLoading, t])
+
+  if (submitted) {
+    return (
+      <div className="text-center">
+        <div className="mb-6 rounded-lg bg-green-50 border border-green-200 p-6">
+          <div className="mb-4 text-4xl">✓</div>
+          <h3 className="text-lg font-semibold text-green-800 mb-2">申请已提交</h3>
+          <p className="text-sm text-green-700">
+            我们已收到您的内测申请，管理员将尽快审核。
+            <br />
+            审核通过后，您将收到邮件通知。
+          </p>
+        </div>
+        <Link
+          className="text-text-accent hover:underline"
+          href="/signin"
+        >
+          返回登录页面
+        </Link>
+      </div>
+    )
+  }
 
   return (
     <form onSubmit={(e) => {
@@ -51,6 +87,22 @@ export default function Form({
       handleSubmit()
     }}
     >
+      <div className="mb-3">
+        <label htmlFor="name" className="system-md-semibold my-2 text-text-secondary">
+          姓名
+        </label>
+        <div className="mt-1">
+          <Input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            id="name"
+            type="text"
+            autoComplete="name"
+            placeholder="请输入您的姓名"
+            tabIndex={1}
+          />
+        </div>
+      </div>
       <div className="mb-3">
         <label htmlFor="email" className="system-md-semibold my-2 text-text-secondary">
           {t('email', { ns: 'login' })}
@@ -63,19 +115,19 @@ export default function Form({
             type="email"
             autoComplete="email"
             placeholder={t('emailPlaceholder', { ns: 'login' }) || ''}
-            tabIndex={1}
+            tabIndex={2}
           />
         </div>
       </div>
       <div className="mb-2">
         <Button
-          tabIndex={2}
+          tabIndex={3}
           variant="primary"
           type="submit"
-          disabled={isPending || !email}
+          disabled={isLoading || !email || !name}
           className="w-full"
         >
-          {t('signup.verifyMail', { ns: 'login' })}
+          {isLoading ? '提交中...' : '申请加入内测'}
         </Button>
       </div>
       <Split className="mb-5 mt-4" />

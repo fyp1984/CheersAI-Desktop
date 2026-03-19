@@ -100,3 +100,70 @@ export const updateFeedback = (
     body: { rating },
   })
 }
+
+// Simple chat using configured models (for standalone chat page)
+export const sendSimpleChatMessage = async (
+  query: string,
+  provider: string,
+  model: string,
+  history?: Array<{ type: 'user' | 'assistant', content: string }>,
+  onData?: (data: string) => void,
+  onError?: (error: string) => void,
+) => {
+  const response = await fetch('/console/api/simple-chat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({
+      query,
+      provider,
+      model,
+      history,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`)
+  }
+
+  const reader = response.body?.getReader()
+  const decoder = new TextDecoder()
+
+  if (!reader)
+    throw new Error('No response body')
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done)
+      break
+
+    const chunk = decoder.decode(value, { stream: true })
+    const lines = chunk.split('\n').filter(line => line.trim())
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6)
+        
+        if (data === '[DONE]') {
+          return
+        }
+
+        try {
+          const parsed = JSON.parse(data)
+          if (parsed.content) {
+            onData?.(parsed.content)
+          }
+          else if (parsed.error) {
+            onError?.(parsed.error)
+            return
+          }
+        }
+        catch (e) {
+          // Ignore parse errors
+        }
+      }
+    }
+  }
+}

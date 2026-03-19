@@ -383,3 +383,6 @@ export const resetEmail = (body: { new_email: string, token: string }): Promise<
 
 export const checkEmailExisted = (body: { email: string }): Promise<CommonResponse> =>
   post<CommonResponse>('/account/change-email/check-email-unique', { body }, { silent: true })
+
+export const applyForBeta = (body: { email: string; name: string; language?: string }): Promise<CommonResponse> =>
+  post<CommonResponse>('/apply-beta', { body })

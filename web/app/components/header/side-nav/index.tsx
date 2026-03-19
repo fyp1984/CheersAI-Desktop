@@ -128,29 +128,29 @@ const SideNav = () => {
     })
   }
 
-  // 脱敏沙箱子菜单
-  const dataMaskingChildren: SubItemConfig[] = [
-    { id: 'mask', href: '/data-masking?tab=mask', icon: <RiFileShield2Line className="h-4 w-4" />, label: '文件脱敏' },
-    { id: 'restore', href: '/data-masking?tab=restore', icon: <RiArrowGoBackLine className="h-4 w-4" />, label: '脱敏还原' },
-    { id: 'rules', href: '/data-masking?tab=rules', icon: <RiShieldCheckLine className="h-4 w-4" />, label: '脱敏规则' },
-    { id: 'files', href: '/data-masking?tab=files', icon: <RiFolderShield2Line className="h-4 w-4" />, label: '文件管理' },
-    { id: 'transfer', href: '/data-masking?tab=transfer', icon: <RiExchange2Line className="h-4 w-4" />, label: '导出导入' },
-  ]
+  // 脱敏沙箱子菜单 - 已隐藏，如需恢复请取消注释
+  // const dataMaskingChildren: SubItemConfig[] = [
+  //   { id: 'mask', href: '/data-masking?tab=mask', icon: <RiFileShield2Line className="h-4 w-4" />, label: '文件脱敏' },
+  //   { id: 'restore', href: '/data-masking?tab=restore', icon: <RiArrowGoBackLine className="h-4 w-4" />, label: '脱敏还原' },
+  //   { id: 'rules', href: '/data-masking?tab=rules', icon: <RiShieldCheckLine className="h-4 w-4" />, label: '脱敏规则' },
+  //   { id: 'files', href: '/data-masking?tab=files', icon: <RiFolderShield2Line className="h-4 w-4" />, label: '文件管理' },
+  //   { id: 'transfer', href: '/data-masking?tab=transfer', icon: <RiExchange2Line className="h-4 w-4" />, label: '导出导入' },
+  // ]
 
-  // 脱敏沙箱
-  if (!isCurrentWorkspaceDatasetOperator) {
-    navItems.push({
-      id: 'data-masking',
-      href: '/data-masking',
-      icon: <RiShieldCheckLine className="h-5 w-5" />,
-      activeIcon: <RiShieldCheckFill className="h-5 w-5" />,
-      label: '脱敏沙箱',
-      segments: ['data-masking'],
-      children: dataMaskingChildren,
-      childParam: 'tab',
-      childDefault: 'mask',
-    })
-  }
+  // 脱敏沙箱 - 已隐藏，如需恢复请取消注释
+  // if (!isCurrentWorkspaceDatasetOperator) {
+  //   navItems.push({
+  //     id: 'data-masking',
+  //     href: '/data-masking',
+  //     icon: <RiShieldCheckLine className="h-5 w-5" />,
+  //     activeIcon: <RiShieldCheckFill className="h-5 w-5" />,
+  //     label: '脱敏沙箱',
+  //     segments: ['data-masking'],
+  //     children: dataMaskingChildren,
+  //     childParam: 'tab',
+  //     childDefault: 'mask',
+  //   })
+  // }
 
   // 探索
   if (!isCurrentWorkspaceDatasetOperator) {

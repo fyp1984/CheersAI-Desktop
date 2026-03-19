@@ -40,6 +40,9 @@ class WebAppAuthService:
         if account.status == AccountStatus.BANNED:
             raise AccountLoginError("Account is banned.")
 
+        if account.status == AccountStatus.PENDING:
+            raise AccountLoginError("Account is pending approval. Please wait for administrator review.")
+
         if account.password is None or not compare_password(password, account.password, account.password_salt):
             raise AccountPasswordError("Invalid email or password.")
 

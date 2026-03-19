@@ -12,12 +12,7 @@ import { useIsLogin } from '@/service/use-common'
 import { LicenseStatus } from '@/types/feature'
 import { cn } from '@/utils/classnames'
 import Loading from '../components/base/loading'
-import MailAndCodeAuth from './components/mail-and-code-auth'
 import MailAndPasswordAuth from './components/mail-and-password-auth'
-import SocialAuth from './components/social-auth'
-import SSOAuth from './components/sso-auth'
-import WechatAuth from './components/wechat-auth'
-import PhoneAuth from './components/phone-auth'
 import { resolvePostLoginRedirect } from './utils/post-login-redirect'
 
 const NormalForm = () => {
@@ -32,8 +27,6 @@ const NormalForm = () => {
   const [isRedirecting, setIsRedirecting] = useState(false)
   const isLoading = isCheckLoading || isInitCheckLoading || isRedirecting
   const { systemFeatures } = useGlobalPublicStore()
-  const [authType, updateAuthType] = useState<'code' | 'password' | 'phone' | 'wechat'>('password')
-  const [showORLine, setShowORLine] = useState(false)
   const [allMethodsAreDisabled, setAllMethodsAreDisabled] = useState(false)
   const [workspaceName, setWorkSpaceName] = useState('')
 
@@ -59,9 +52,7 @@ const NormalForm = () => {
           message,
         })
       }
-      setAllMethodsAreDisabled(!systemFeatures.enable_social_oauth_login && !systemFeatures.enable_email_code_login && !systemFeatures.enable_email_password_login && !systemFeatures.sso_enforced_for_signin)
-      setShowORLine((systemFeatures.enable_social_oauth_login || systemFeatures.sso_enforced_for_signin) && (systemFeatures.enable_email_code_login || systemFeatures.enable_email_password_login))
-      updateAuthType(systemFeatures.enable_email_password_login ? 'password' : 'code')
+      setAllMethodsAreDisabled(!systemFeatures.enable_email_password_login)
       if (isInviteLink) {
         const checkRes = await invitationCheck({
           url: '/activate/check',
@@ -165,111 +156,22 @@ const NormalForm = () => {
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
                   {systemFeatures.branding.enabled ? '登录' : '欢迎回来'}
                 </h2>
-                <p className="text-gray-600">选择您喜欢的登录方式</p>
+                <p className="text-gray-600">请输入您的邮箱和密码</p>
               </div>
             )}
         <div className="relative">
-          {/* 登录方式选择 */}
-          <div className="mb-6">
-            <div className="flex flex-wrap gap-2 justify-center">
-              <button
-                type="button"
-                onClick={() => updateAuthType('password')}
-                className={`px-4 py-2 text-sm rounded-lg transition-colors ${
-                  authType === 'password' 
-                    ? 'bg-blue-100 text-blue-700 border border-blue-200' 
-                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                邮箱密码
-              </button>
-              <button
-                type="button"
-                onClick={() => updateAuthType('code')}
-                className={`px-4 py-2 text-sm rounded-lg transition-colors ${
-                  authType === 'code' 
-                    ? 'bg-blue-100 text-blue-700 border border-blue-200' 
-                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                邮箱验证码
-              </button>
-              <button
-                type="button"
-                onClick={() => updateAuthType('phone')}
-                className={`px-4 py-2 text-sm rounded-lg transition-colors ${
-                  authType === 'phone' 
-                    ? 'bg-blue-100 text-blue-700 border border-blue-200' 
-                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                手机号
-              </button>
-              <button
-                type="button"
-                onClick={() => updateAuthType('wechat')}
-                className={`px-4 py-2 text-sm rounded-lg transition-colors ${
-                  authType === 'wechat' 
-                    ? 'bg-green-100 text-green-700 border border-green-200' 
-                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                微信登录
-              </button>
-            </div>
-          </div>
-
-          {/* 社交登录 */}
-          <div className="flex flex-col gap-3 mb-6">
-            {systemFeatures.enable_social_oauth_login && <SocialAuth />}
-            {systemFeatures.sso_enforced_for_signin && (
-              <div className="w-full">
-                <SSOAuth protocol={systemFeatures.sso_enforced_for_signin_protocol} />
-              </div>
-            )}
-          </div>
-
-          {/* 分割线 */}
-          {(systemFeatures.enable_social_oauth_login || systemFeatures.sso_enforced_for_signin) && (
-            <div className="relative my-6">
-              <div className="flex items-center">
-                <div className="h-px flex-1 bg-gray-200"></div>
-                <span className="px-4 text-sm text-gray-500 bg-white">或</span>
-                <div className="h-px flex-1 bg-gray-200"></div>
-              </div>
-            </div>
-          )}
-
           {/* 登录表单 */}
           <div className="space-y-4">
-            {authType === 'password' && systemFeatures.enable_email_password_login && (
+            {systemFeatures.enable_email_password_login && (
               <MailAndPasswordAuth isInvite={isInviteLink} isEmailSetup={systemFeatures.is_email_setup} allowRegistration={systemFeatures.is_allow_register} />
-            )}
-            
-            {authType === 'code' && systemFeatures.enable_email_code_login && (
-              <MailAndCodeAuth isInvite={isInviteLink} />
-            )}
-            
-            {authType === 'phone' && (
-              <PhoneAuth isInvite={isInviteLink} />
-            )}
-            
-            {authType === 'wechat' && (
-              <WechatAuth />
             )}
           </div>
 
-          {systemFeatures.is_allow_register && authType === 'password' && (
-            <div className="mt-6 text-center text-sm text-gray-600">
-              <span>还没有账号？</span>
-              <Link
-                className="text-blue-600 hover:text-blue-700 ml-1"
-                href="/signup/"
-              >
-                立即注册
-              </Link>
-            </div>
-          )}
+          <div className="mt-6 text-center text-sm text-gray-600">
+            <p className="text-gray-500">
+              还没有账号？请联系管理员获取邀请链接
+            </p>
+          </div>
           {allMethodsAreDisabled && (
             <>
               <div className="rounded-lg bg-red-50 border border-red-200 p-4">

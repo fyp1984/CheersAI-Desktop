@@ -7,6 +7,7 @@ import { ModelTypeEnum } from '@/app/components/header/account-setting/model-pro
 import { useModelList, useDefaultModel } from '@/app/components/header/account-setting/model-provider-page/hooks'
 import { SandboxFilePicker } from '@/app/components/base/sandbox-file-picker'
 import { Markdown } from '@/app/components/base/markdown'
+import { sendSimpleChatMessage } from '@/service/chat'
 
 interface Message {
   id: string
@@ -330,6 +331,11 @@ const ChatPage = () => {
   // 重新生成AI回复
   const handleRegenerateMessage = async (messageIndex: number) => {
     if (isLoading) return
+    
+    if (!selectedModel?.provider || !selectedModel?.model) {
+      alert('请先在右上角选择模型')
+      return
+    }
 
     // 获取到指定消息为止的对话历史
     const messagesToRegenerate = messages.slice(0, messageIndex)
@@ -370,30 +376,15 @@ const ChatPage = () => {
     setStreamingMessageId(assistantMessageId)
 
     try {
-      const modelToUse = selectedModel?.model || 'qwen2.5:1.5b'
+      // 构建对话历史
+      const recentMessages = newMessages.slice(-20)
+      const history = recentMessages.map(msg => ({
+        type: msg.type,
+        content: msg.content,
+      }))
 
-      // 构建包含对话历史的完整prompt
-      let fullPrompt = ''
-      
-      // 添加对话历史（最近的10轮对话）
-      const recentMessages = newMessages.slice(-20) // 取最近20条消息（10轮对话）
-      
-      if (recentMessages.length > 0) {
-        fullPrompt += '以下是对话历史：\n\n'
-        recentMessages.forEach((msg) => {
-          if (msg.type === 'user') {
-            fullPrompt += `用户: ${msg.content}\n\n`
-          } else if (msg.type === 'assistant' && msg.content.trim()) {
-            fullPrompt += `助手: ${msg.content}\n\n`
-          }
-        })
-        fullPrompt += '---\n\n'
-      }
-      
-      // 添加当前用户消息
-      fullPrompt += `用户: ${lastUserMessage.content}`
-
-      // 添加文件内容（如果有）
+      // 添加文件内容到查询
+      let queryWithFiles = lastUserMessage.content
       if (lastUserMessage.files && lastUserMessage.files.length > 0) {
         const fileContents = await Promise.all(
           lastUserMessage.files.map(async (file) => {
@@ -401,58 +392,28 @@ const ChatPage = () => {
             return `\n\n--- 文件: ${file.name} ---\n${content}\n--- 文件结束 ---`
           })
         )
-        fullPrompt += '\n\n以下是用户上传的文件内容：' + fileContents.join('')
-      }
-      
-      fullPrompt += '\n\n助手:'
-
-      const response = await fetch('http://localhost:11434/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: modelToUse,
-          prompt: fullPrompt,
-          stream: true,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`Ollama API error: ${response.status}`)
+        queryWithFiles += '\n\n以下是用户上传的文件内容：' + fileContents.join('')
       }
 
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
       let fullResponse = ''
 
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-
-          const chunk = decoder.decode(value, { stream: true })
-          const lines = chunk.split('\n').filter(line => line.trim())
-
-          for (const line of lines) {
-            try {
-              const data = JSON.parse(line)
-              if (data.response) {
-                fullResponse += data.response
-                
-                // 实时更新消息内容
-                setMessages(prev => prev.map(msg => 
-                  msg.id === assistantMessageId 
-                    ? { ...msg, content: fullResponse }
-                    : msg
-                ))
-              }
-            } catch (e) {
-              // 解析 JSON 失败，忽略该行
-            }
-          }
+      await sendSimpleChatMessage(
+        queryWithFiles,
+        selectedModel.provider,
+        selectedModel.model,
+        history,
+        (content) => {
+          fullResponse += content
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId 
+              ? { ...msg, content: fullResponse }
+              : msg
+          ))
+        },
+        (error) => {
+          throw new Error(error)
         }
-      }
+      )
 
       // 流式输出完成，清除流式状态
       setStreamingMessageId(null)
@@ -473,22 +434,19 @@ const ChatPage = () => {
       }
 
     } catch (error) {
-      // 清除流式状态
       setStreamingMessageId(null)
       
       const errorMessage: Message = {
         id: Date.now().toString(),
         type: 'assistant',
-        content: `连接Ollama失败: ${error instanceof Error ? error.message : '未知错误'}。请确保Ollama服务正在运行。`,
+        content: `调用模型失败: ${error instanceof Error ? error.message : '未知错误'}。请确保已在设置中配置模型。`,
         timestamp: new Date(),
       }
 
-      // 替换占位消息为错误消息
       setMessages(prev => prev.map(msg => 
         msg.id === assistantMessageId ? errorMessage : msg
       ))
 
-      // 更新对话记录
       if (currentConversationId) {
         setConversations(prev => prev.map(conv => {
           if (conv.id === currentConversationId) {
@@ -510,6 +468,11 @@ const ChatPage = () => {
 
   const handleSend = async () => {
       if (!inputValue.trim() || isLoading) return
+      
+      if (!selectedModel?.provider || !selectedModel?.model) {
+        alert('请先在右上角选择模型')
+        return
+      }
 
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -555,9 +518,9 @@ const ChatPage = () => {
       }
 
       setInputValue('')
-      setUploadedFiles([]) // 清空已上传的文件
-      setIsAutoFilled(false) // 清除自动填充标记
-      setAutoFilledText('') // 清除自动填充文字
+      setUploadedFiles([])
+      setIsAutoFilled(false)
+      setAutoFilledText('')
       setIsLoading(true)
 
       // 先添加一个空的 AI 消息占位
@@ -572,30 +535,16 @@ const ChatPage = () => {
       setStreamingMessageId(assistantMessageId)
 
       try {
-        const modelToUse = selectedModel?.model || 'qwen2.5:1.5b'
-
-        // 构建包含对话历史的完整prompt
-        let fullPrompt = ''
-        
-        // 添加对话历史（最近的10轮对话）
+        // 构建对话历史
         const currentMessages = messages.length > 0 ? messages : []
-        const recentMessages = currentMessages.slice(-20) // 取最近20条消息（10轮对话）
-        
-        if (recentMessages.length > 0) {
-          fullPrompt += '以下是对话历史：\n\n'
-          recentMessages.forEach((msg) => {
-            if (msg.type === 'user') {
-              fullPrompt += `用户: ${msg.content}\n\n`
-            } else if (msg.type === 'assistant' && msg.content.trim()) {
-              fullPrompt += `助手: ${msg.content}\n\n`
-            }
-          })
-          fullPrompt += '---\n\n'
-        }
-        
-        // 添加当前用户消息
-        fullPrompt += `用户: ${userMessage.content}`
+        const recentMessages = currentMessages.slice(-20)
+        const history = recentMessages.map(msg => ({
+          type: msg.type,
+          content: msg.content,
+        }))
 
+        // 添加文件内容到查询
+        let queryWithFiles = userMessage.content
         if (uploadedFiles.length > 0) {
           const fileContents = await Promise.all(
             uploadedFiles.map(async (file) => {
@@ -603,68 +552,33 @@ const ChatPage = () => {
               return `\n\n--- 文件: ${file.name} ---\n${content}\n--- 文件结束 ---`
             })
           )
-
-          fullPrompt += '\n\n以下是用户上传的文件内容：' + fileContents.join('')
-        }
-        
-        fullPrompt += '\n\n助手:'
-
-        const response = await fetch('http://localhost:11434/api/generate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: modelToUse,
-            prompt: fullPrompt,
-            stream: true,  // 启用流式输出
-          }),
-        })
-
-        if (!response.ok) {
-          throw new Error(`Ollama API error: ${response.status}`)
+          queryWithFiles += '\n\n以下是用户上传的文件内容：' + fileContents.join('')
         }
 
-        const reader = response.body?.getReader()
-        const decoder = new TextDecoder()
         let fullResponse = ''
 
-        if (reader) {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-
-            const chunk = decoder.decode(value, { stream: true })
-            const lines = chunk.split('\n').filter(line => line.trim())
-
-            for (const line of lines) {
-              try {
-                const data = JSON.parse(line)
-                if (data.response) {
-                  fullResponse += data.response
-                  
-                  // 调试信息
-                  console.log('收到流式数据:', data.response.length, '字符')
-                  console.log('当前总长度:', fullResponse.length)
-                  
-                  // 实时更新消息内容 - 使用更高效的方式
-                  setMessages(prev => prev.map(msg => 
-                    msg.id === assistantMessageId 
-                      ? { ...msg, content: fullResponse }
-                      : msg
-                  ))
-                }
-              } catch (e) {
-                // 解析 JSON 失败，忽略该行
-              }
-            }
+        await sendSimpleChatMessage(
+          queryWithFiles,
+          selectedModel.provider,
+          selectedModel.model,
+          history,
+          (content) => {
+            fullResponse += content
+            setMessages(prev => prev.map(msg => 
+              msg.id === assistantMessageId 
+                ? { ...msg, content: fullResponse }
+                : msg
+            ))
+          },
+          (error) => {
+            throw new Error(error)
           }
-        }
+        )
 
         // 流式输出完成，清除流式状态
         setStreamingMessageId(null)
 
-        // 更新对话记录 - 只添加 assistantMessage
+        // 更新对话记录
         setConversations(prev => prev.map(conv => {
           if (conv.id === conversationId) {
             return {
@@ -678,22 +592,19 @@ const ChatPage = () => {
         }))
 
       } catch (error) {
-        // 清除流式状态
         setStreamingMessageId(null)
         
         const errorMessage: Message = {
           id: (Date.now() + 1).toString(),
           type: 'assistant',
-          content: `连接Ollama失败: ${error instanceof Error ? error.message : '未知错误'}。请确保Ollama服务正在运行。`,
+          content: `调用模型失败: ${error instanceof Error ? error.message : '未知错误'}。请确保已在设置中配置模型。`,
           timestamp: new Date(),
         }
 
-        // 替换占位消息为错误消息
         setMessages(prev => prev.map(msg => 
           msg.id === assistantMessageId ? errorMessage : msg
         ))
 
-        // 更新对话记录 - 只添加 errorMessage
         setConversations(prev => prev.map(conv => {
           if (conv.id === conversationId) {
             return {
