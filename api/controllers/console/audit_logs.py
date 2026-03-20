@@ -4,7 +4,6 @@ Audit Logs API - Read local log file
 """
 import json
 from pathlib import Path
-from typing import Any
 
 from flask import Blueprint, request
 
@@ -32,7 +31,7 @@ def get_audit_logs():
         
         # 读取所有日志行
         logs = []
-        with open(AUDIT_LOG_FILE, "r", encoding="utf-8") as f:
+        with open(AUDIT_LOG_FILE, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line:
@@ -86,13 +85,13 @@ def get_audit_stats():
                 "today": 0,
             }
         
-        from datetime import datetime, timedelta
+        from datetime import datetime
         
         total = 0
         today = 0
         today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         
-        with open(AUDIT_LOG_FILE, "r", encoding="utf-8") as f:
+        with open(AUDIT_LOG_FILE, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line:
@@ -127,7 +126,7 @@ def get_audit_actions():
         
         actions = set()
         
-        with open(AUDIT_LOG_FILE, "r", encoding="utf-8") as f:
+        with open(AUDIT_LOG_FILE, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line:
