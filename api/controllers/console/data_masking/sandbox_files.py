@@ -6,7 +6,7 @@ developer tool that reads/writes files on the machine running the API server.
 
 import os
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from flask import Blueprint, request
@@ -84,7 +84,7 @@ def list_files():
         for entry in dir_path.iterdir():
             if entry.is_file():
                 stat = entry.stat()
-                created = datetime.fromtimestamp(stat.st_ctime, tz=timezone.utc).isoformat()
+                created = datetime.fromtimestamp(stat.st_ctime, tz=UTC).isoformat()
                 files.append({
                     "name": entry.name,
                     "size": stat.st_size,

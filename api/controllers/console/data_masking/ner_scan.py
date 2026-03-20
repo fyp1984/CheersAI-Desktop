@@ -90,9 +90,6 @@ def _scan_with_ner(text: str) -> list[dict[str, str]]:
     return results
 
 
-
-
-
 def _ocr_image(data: bytes) -> str:
     """OCR text from an image using easyocr."""
     import easyocr
@@ -166,6 +163,7 @@ def extract_text():
 
 def _extract_docx(data: bytes) -> str:
     import io
+
     from docx import Document
 
     doc = Document(io.BytesIO(data))
