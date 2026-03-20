@@ -1,0 +1,6 @@
+{
+  "email": "newuser@example.com",
+  "name": "New Test User",
+  "company": "New Company Ltd",
+  "use_case": "Testing dual database save feature"
+}
