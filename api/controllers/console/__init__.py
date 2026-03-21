@@ -91,6 +91,9 @@ from .billing import billing, compliance
 # Import chat controllers
 from .chat import simple_chat
 
+# Import gitea API controllers
+from .gitea_api import gitea_config, gitea_files
+
 # Data masking sandbox_files uses its own Blueprint (registered in ext_blueprints)
 # sandbox_knowledge and user_config use console_ns (authenticated)
 from .data_masking import sandbox_knowledge, user_config

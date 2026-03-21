@@ -30,8 +30,10 @@ from models.enums import CreatorUserRole
 from models.model import EndUser, UploadFile
 
 from .errors.file import BlockedFileExtensionError, FileTooLargeError, UnsupportedFileTypeError
+from .gitea_storage_service import GiteaStorageService
 
 PREVIEW_WORDS_LIMIT = 3000
+USE_GITEA_STORAGE = os.getenv("USE_GITEA_STORAGE", "true").lower() == "true"
 
 
 class FileService:
