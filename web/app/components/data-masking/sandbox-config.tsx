@@ -44,6 +44,17 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
   const [globalPassphrase, setGlobalPassphrase] = useState("")
   const [showPassphrase, setShowPassphrase] = useState(false)
   const [passphraseSaved, setPassphraseSaved] = useState(false)
+  
+  // Gitea configuration states
+  const [giteaUrl, setGiteaUrl] = useState("")
+  const [giteaOwner, setGiteaOwner] = useState("")
+  const [giteaRepo, setGiteaRepo] = useState("")
+  const [giteaPath, setGiteaPath] = useState("")
+  const [giteaToken, setGiteaToken] = useState("")
+  const [showGiteaToken, setShowGiteaToken] = useState(false)
+  const [giteaTestResult, setGiteaTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [giteaTesting, setGiteaTesting] = useState(false)
+  const [giteaSaving, setGiteaSaving] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -79,6 +90,20 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
         const lpass = localStorage.getItem("mapping_encryption_passphrase"); if (lpass) m.mapping_encryption_passphrase = lpass
         if (Object.keys(m).length > 0) saveUserConfig(m)
       }
+      
+      // Load Gitea configuration
+      try {
+        const giteaRes = await fetch(`${API_PREFIX}/gitea/config`, { credentials: "include" })
+        if (giteaRes.ok) {
+          const data = await giteaRes.json()
+          setGiteaUrl(data.gitea_url || "")
+          setGiteaOwner(data.gitea_owner || "")
+          setGiteaRepo(data.gitea_repo || "")
+          setGiteaPath(data.gitea_path || "")
+          setGiteaToken(data.gitea_token || "")
+        }
+      } catch { /* ignore */ }
+      
       setConfigLoaded(true)
     })()
     return () => { cancelled = true }
@@ -102,6 +127,88 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
       else { const d = await res.json().catch(() => ({})); setIsValid(false); setError(d.error || "路径验证失败") }
     } catch { setIsValid(false); setError("无法连接后端服务") }
     finally { setIsLoading(false) }
+  }
+
+  const handleGiteaSave = async () => {
+    setGiteaSaving(true)
+    try {
+      const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1] || ""
+      const res = await fetch(`${API_PREFIX}/gitea/config`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          gitea_url: giteaUrl,
+          gitea_owner: giteaOwner,
+          gitea_repo: giteaRepo,
+          gitea_path: giteaPath,
+          gitea_token: giteaToken,
+        }),
+      })
+      if (res.ok) {
+        alert("Gitea 配置保存成功")
+        // Reload config to get masked token
+        const reloadRes = await fetch(`${API_PREFIX}/gitea/config`, { credentials: "include" })
+        if (reloadRes.ok) {
+          const data = await reloadRes.json()
+          setGiteaToken(data.gitea_token || "")
+        }
+      } else {
+        alert("保存失败")
+      }
+    } catch {
+      alert("保存失败：无法连接后端")
+    } finally {
+      setGiteaSaving(false)
+    }
+  }
+
+  const handleGiteaTest = async () => {
+    setGiteaTesting(true)
+    setGiteaTestResult(null)
+    try {
+      const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1] || ""
+      const res = await fetch(`${API_PREFIX}/gitea/config/test`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          gitea_url: giteaUrl,
+          gitea_owner: giteaOwner,
+          gitea_repo: giteaRepo,
+          gitea_path: giteaPath,
+          gitea_token: giteaToken,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setGiteaTestResult(data)
+      } else {
+        // Try to get error message from response
+        try {
+          const errorData = await res.json()
+          setGiteaTestResult({ 
+            success: false, 
+            message: errorData.message || `测试失败 (HTTP ${res.status})` 
+          })
+        } catch {
+          setGiteaTestResult({ success: false, message: `测试失败 (HTTP ${res.status})` })
+        }
+      }
+    } catch (err) {
+      setGiteaTestResult({ 
+        success: false, 
+        message: `无法连接后端: ${err instanceof Error ? err.message : '未知错误'}` 
+      })
+    } finally {
+      setGiteaTesting(false)
+    }
   }
 
   if (!configLoaded) return <div className="flex items-center justify-center py-12"><span className="text-sm text-text-tertiary">加载配置中...</span></div>
@@ -267,6 +374,76 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
           <button type="button" onClick={() => { persistSetting("ai_reply_download_path", aiReplyDownloadPath.trim()); setAiReplyDownloadPathSaved(true); setTimeout(() => setAiReplyDownloadPathSaved(false), 2000) }}
             className="inline-flex items-center rounded-md bg-components-button-primary-bg px-3 py-2 text-sm font-medium text-components-button-primary-text hover:bg-components-button-primary-bg-hover">
             {aiReplyDownloadPathSaved ? "已保存 ✓" : "保存"}</button>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-divider-regular bg-components-panel-bg p-4">
+        <h3 className="text-sm font-medium text-text-primary mb-3">Gitea 文件存储配置</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1">Gitea 服务器地址</label>
+            <input type="text" value={giteaUrl} onChange={e => setGiteaUrl(e.target.value)}
+              placeholder="http://localhost:3000"
+              className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">仓库所有者</label>
+              <input type="text" value={giteaOwner} onChange={e => setGiteaOwner(e.target.value)}
+                placeholder="cheersai"
+                className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">仓库名称</label>
+              <input type="text" value={giteaRepo} onChange={e => setGiteaRepo(e.target.value)}
+                placeholder="file-storage"
+                className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1">文件路径（可选）</label>
+            <input type="text" value={giteaPath} onChange={e => setGiteaPath(e.target.value)}
+              placeholder="留空表示根目录，例如: masked 或 documents/reports"
+              className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid" />
+            <p className="text-xs text-text-tertiary mt-1">指定从仓库的哪个子目录读取文件</p>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1">API Token</label>
+            <div className="relative">
+              <input type={showGiteaToken ? "text" : "password"} value={giteaToken} onChange={e => setGiteaToken(e.target.value)}
+                placeholder="输入新的 Token 或留空保持不变"
+                className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 pr-10 text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid font-mono" />
+              <button type="button" onClick={() => setShowGiteaToken(!showGiteaToken)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary">
+                {showGiteaToken ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+          {giteaTestResult && (
+            <div className={`rounded-md p-3 ${giteaTestResult.success ? "bg-state-success-hover border border-state-success-hover-alt" : "bg-state-destructive-hover border border-state-destructive-border"}`}>
+              <div className="flex items-start gap-2">
+                {giteaTestResult.success ? <CheckCircleIcon className="h-5 w-5 text-text-success mt-0.5" /> : <XCircleIcon className="h-5 w-5 text-text-destructive mt-0.5" />}
+                <div className="flex-1">
+                  <p className={`text-sm font-medium ${giteaTestResult.success ? "text-text-success" : "text-text-destructive"}`}>
+                    {giteaTestResult.success ? "连接成功" : "连接失败"}
+                  </p>
+                  <p className={`text-xs mt-1 ${giteaTestResult.success ? "text-text-success" : "text-text-destructive"}`}>
+                    {giteaTestResult.message}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <button type="button" onClick={handleGiteaSave} disabled={giteaSaving}
+              className="inline-flex items-center rounded-md bg-components-button-primary-bg px-4 py-2 text-sm font-medium text-components-button-primary-text hover:bg-components-button-primary-bg-hover disabled:opacity-50 disabled:cursor-not-allowed">
+              {giteaSaving ? "保存中..." : "保存配置"}
+            </button>
+            <button type="button" onClick={handleGiteaTest} disabled={giteaTesting}
+              className="inline-flex items-center rounded-md bg-components-button-secondary-bg px-4 py-2 text-sm font-medium text-components-button-secondary-text hover:bg-components-button-secondary-bg-hover disabled:opacity-50 disabled:cursor-not-allowed">
+              {giteaTesting ? "测试中..." : "测试连接"}
+            </button>
+          </div>
         </div>
       </div>
 
