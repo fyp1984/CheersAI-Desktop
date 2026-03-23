@@ -101,6 +101,18 @@ const SideNav = () => {
 
   const navItems: NavItemConfig[] = []
 
+  // 占位符按钮
+  if (!isCurrentWorkspaceDatasetOperator) {
+    navItems.push({
+      id: 'placeholder',
+      href: '#',
+      icon: <div className="h-5 w-5" />,
+      activeIcon: <div className="h-5 w-5" />,
+      label: '',
+      segments: [],
+    })
+  }
+
   // 对话应用
   if (!isCurrentWorkspaceDatasetOperator) {
     navItems.push({
