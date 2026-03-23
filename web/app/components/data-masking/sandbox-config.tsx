@@ -149,7 +149,7 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
         }),
       })
       if (res.ok) {
-        alert("Gitea 配置保存成功")
+        alert("FileBay 配置保存成功")
         // Reload config to get masked token
         const reloadRes = await fetch(`${API_PREFIX}/gitea/config`, { credentials: "include" })
         if (reloadRes.ok) {
@@ -378,10 +378,10 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
       </div>
 
       <div className="rounded-lg border border-divider-regular bg-components-panel-bg p-4">
-        <h3 className="text-sm font-medium text-text-primary mb-3">Gitea 文件存储配置</h3>
+        <h3 className="text-sm font-medium text-text-primary mb-3">FileBay 文件存储配置</h3>
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Gitea 服务器地址</label>
+            <label className="block text-xs font-medium text-text-secondary mb-1">FileBay 服务器地址</label>
             <input type="text" value={giteaUrl} onChange={e => setGiteaUrl(e.target.value)}
               placeholder="http://localhost:3000"
               className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid" />
@@ -439,7 +439,7 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
               className="inline-flex items-center rounded-md bg-components-button-primary-bg px-4 py-2 text-sm font-medium text-components-button-primary-text hover:bg-components-button-primary-bg-hover disabled:opacity-50 disabled:cursor-not-allowed">
               {giteaSaving ? "保存中..." : "保存配置"}
             </button>
-            <button type="button" onClick={handleGiteaTest} disabled={giteaTesting}
+            <button type="button" onClick={handleGiteaTest} disabled={giteaTesting || !giteaUrl || !giteaOwner || !giteaRepo || !giteaToken}
               className="inline-flex items-center rounded-md bg-components-button-secondary-bg px-4 py-2 text-sm font-medium text-components-button-secondary-text hover:bg-components-button-secondary-bg-hover disabled:opacity-50 disabled:cursor-not-allowed">
               {giteaTesting ? "测试中..." : "测试连接"}
             </button>

@@ -306,10 +306,10 @@ export default function GiteaSettingsPage() {
           📝 配置说明
         </h3>
         <ul className="text-sm text-blue-700 space-y-1">
-          <li>• 在 Gitea 中创建一个用于文件存储的仓库</li>
-          <li>• 在 Gitea 设置 → 应用 → 生成新令牌，选择 repo 权限</li>
-          <li>• 填写上述配置信息并点击"测试连接"验证</li>
-          <li>• 配置成功后，文件选择器将从 Gitea 仓库获取文件</li>
+          <li>• 在 FileBay 中创建一个用于文件存储的仓库</li>
+          <li>• 在 FileBay 设置 → 应用 → 生成新令牌，选择 repo 权限</li>
+          <li>• 填写上述配置信息并点击“测试连接”验证</li>
+          <li>• 配置成功后，文件选择器将从 FileBay 仓库获取文件</li>
           <li>• 注意：当前配置为临时配置，重启后失效。永久配置请修改 api/.env 文件</li>
         </ul>
       </div>
