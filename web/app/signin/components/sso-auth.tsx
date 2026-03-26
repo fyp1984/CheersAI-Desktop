@@ -1,13 +1,15 @@
 'use client'
 import type { FC } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Button from '@/app/components/base/button'
 import { Lock01 } from '@/app/components/base/icons/src/vender/solid/security'
 import Toast from '@/app/components/base/toast'
-import { getUserOAuth2SSOUrl, getUserOIDCSSOUrl, getUserSAMLSSOUrl } from '@/service/sso'
+import { exchangeSSOToken, getUserOAuth2SSOUrl, getUserOIDCSSOUrl, getUserSAMLSSOUrl } from '@/service/sso'
+import { getDesktopSSOCallbackParams, isDesktopRuntime, isDesktopSSOCallback, isDesktopSSOEnabled, startDesktopSSOLogin } from '@/service/sso-desktop-auth'
 import { SSOProtocol } from '@/types/feature'
+import { useIsLogin } from '@/service/use-common'
 
 type SSOAuthProps = {
   protocol: SSOProtocol | ''
@@ -20,11 +22,62 @@ const SSOAuth: FC<SSOAuthProps> = ({
   const { t } = useTranslation()
   const searchParams = useSearchParams()
   const invite_token = decodeURIComponent(searchParams.get('invite_token') || '')
+  const { refetch: refetchLoginStatus } = useIsLogin()
 
   const [isLoading, setIsLoading] = useState(false)
+  const [isProcessingCallback, setIsProcessingCallback] = useState(false)
+
+  useEffect(() => {
+    if (isDesktopSSOCallback()) {
+      setIsProcessingCallback(true)
+      const params = getDesktopSSOCallbackParams()
+      
+      if (!params) {
+        Toast.notify({
+          type: 'error',
+          message: 'SSO callback parameters invalid',
+        })
+        setIsProcessingCallback(false)
+        return
+      }
+
+      exchangeSSOToken(params)
+        .then(async () => {
+          await refetchLoginStatus()
+          
+          const checkLoginInterval = setInterval(async () => {
+            const { data } = await refetchLoginStatus()
+            if (data?.logged_in) {
+              clearInterval(checkLoginInterval)
+              sessionStorage.removeItem('desktop-sso-state')
+              router.replace('/apps')
+            }
+          }, 500)
+
+          setTimeout(() => {
+            clearInterval(checkLoginInterval)
+            setIsProcessingCallback(false)
+          }, 10000)
+        })
+        .catch((error) => {
+          console.error('SSO token exchange failed:', error)
+          Toast.notify({
+            type: 'error',
+            message: 'SSO login failed',
+          })
+          setIsProcessingCallback(false)
+        })
+    }
+  }, [searchParams, router, refetchLoginStatus])
 
   const handleSSOLogin = () => {
     setIsLoading(true)
+    
+    if (isDesktopSSOEnabled()) {
+      startDesktopSSOLogin()
+      return
+    }
+    
     if (protocol === SSOProtocol.SAML) {
       getUserSAMLSSOUrl(invite_token).then((res) => {
         router.push(res.url)
@@ -55,6 +108,15 @@ const SSOAuth: FC<SSOAuthProps> = ({
       })
       setIsLoading(false)
     }
+  }
+
+  if (isProcessingCallback) {
+    return (
+      <div className="w-full text-center py-4">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <p className="mt-2 text-sm text-gray-600">Processing SSO login...</p>
+      </div>
+    )
   }
 
   return (

@@ -9,10 +9,12 @@ import { IS_CE_EDITION } from '@/config'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 import { invitationCheck } from '@/service/common'
 import { useIsLogin } from '@/service/use-common'
+import { isDesktopRuntime, isDesktopSSOEnabled } from '@/service/sso-desktop-auth'
 import { LicenseStatus } from '@/types/feature'
 import { cn } from '@/utils/classnames'
 import Loading from '../components/base/loading'
 import MailAndPasswordAuth from './components/mail-and-password-auth'
+import SSOAuth from './components/sso-auth'
 import { resolvePostLoginRedirect } from './utils/post-login-redirect'
 
 const NormalForm = () => {
@@ -164,6 +166,22 @@ const NormalForm = () => {
           <div className="space-y-4">
             {systemFeatures.enable_email_password_login && (
               <MailAndPasswordAuth isInvite={isInviteLink} isEmailSetup={systemFeatures.is_email_setup} allowRegistration={systemFeatures.is_allow_register} />
+            )}
+            
+            {isDesktopSSOEnabled() && (
+              <>
+                {systemFeatures.enable_email_password_login && (
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">或</span>
+                    </div>
+                  </div>
+                )}
+                <SSOAuth protocol="" />
+              </>
             )}
           </div>
 
