@@ -17,10 +17,10 @@ export const generateRandomState = () => {
 
 export const getDesktopCallbackUrl = () => {
   if (typeof window === 'undefined')
-    return 'http://localhost:3000/signin?sso=desktop'
+    return 'http://localhost:3000/signin/built-in'
   
   const { protocol, host } = window.location
-  return `${protocol}//${host}/signin?sso=desktop`
+  return `${protocol}//${host}/signin/built-in`
 }
 
 export const startDesktopSSOLogin = () => {

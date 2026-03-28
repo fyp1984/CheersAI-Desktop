@@ -1,4 +1,6 @@
 from uuid import uuid4
+import os
+import requests
 
 from flask import request
 from flask_restx import Resource
@@ -14,6 +16,9 @@ from extensions.ext_database import db
 from utils.sqlite_helper import SQLiteHelper
 
 DEFAULT_REF_TEMPLATE_SWAGGER_2_0 = "#/definitions/{model}"
+
+# SSO API 配置
+SSO_API_URL = os.getenv("SSO_API_URL", "http://localhost:8000/api")
 
 
 class ApplyBetaPayload(BaseModel):
@@ -53,68 +58,84 @@ class ApplyBetaApi(Resource):
         except ValueError as e:
             return {"result": "fail", "data": str(e)}, 400
 
-        # Get client info
-        ip_address = request.remote_addr
-        user_agent = request.headers.get("User-Agent", "")
-
-        # Check if email already applied
-        existing_application = db.session.query(BetaApplication).filter_by(email=normalized_email).first()
-        if existing_application:
-            return {
-                "result": "fail",
-                "data": "This email has already submitted a beta application.",
-            }, 400
-
-        # Save beta application to PostgreSQL database
+        # 调用 SSO API 提交申请
         try:
-            beta_app = BetaApplication(
-                id=str(uuid4()),
-                email=normalized_email,
-                name=name,
-                company=company,
-                use_case=use_case,
-                status="pending",
-                ip_address=ip_address,
-                user_agent=user_agent[:500] if user_agent else None,
+            sso_response = requests.post(
+                f"{SSO_API_URL}/apply-beta",
+                data={
+                    "email": normalized_email,
+                    "name": name,
+                    "company": company or "",
+                    "useCase": use_case or "",
+                },
+                timeout=10,
             )
-            db.session.add(beta_app)
-            db.session.commit()
 
-            # Also save to SQLite database
+            if sso_response.status_code == 200:
+                # SSO API 调用成功，同时保存到本地 SQLite 作为备份
+                try:
+                    sqlite_helper = SQLiteHelper()
+                    sqlite_helper.save_beta_application(
+                        email=normalized_email,
+                        name=name,
+                        company=company,
+                        use_case=use_case,
+                        status="pending",
+                        ip_address=request.remote_addr,
+                        user_agent=request.headers.get("User-Agent", "")[:500],
+                    )
+                except Exception as sqlite_error:
+                    print(f"SQLite backup save failed: {sqlite_error}")
+
+                return {
+                    "result": "success",
+                    "data": "Application submitted successfully. Please wait for administrator review.",
+                }, 201
+            else:
+                # SSO API 返回错误
+                error_data = sso_response.json() if sso_response.headers.get("content-type") == "application/json" else {}
+                error_message = error_data.get("msg", "Failed to submit application to SSO")
+                
+                # 如果是邮箱已存在错误，返回特定消息
+                if "already" in error_message.lower():
+                    return {
+                        "result": "fail",
+                        "data": "This email has already submitted a beta application.",
+                    }, 400
+                
+                return {"result": "fail", "data": error_message}, 400
+
+        except requests.exceptions.RequestException as e:
+            # 网络错误，降级到本地数据库
+            print(f"SSO API call failed, falling back to local database: {e}")
+            
+            # 检查本地数据库是否已存在
+            existing_application = db.session.query(BetaApplication).filter_by(email=normalized_email).first()
+            if existing_application:
+                return {
+                    "result": "fail",
+                    "data": "This email has already submitted a beta application.",
+                }, 400
+
+            # 保存到本地 PostgreSQL 数据库
             try:
-                sqlite_helper = SQLiteHelper()
-                sqlite_helper.save_beta_application(
+                beta_app = BetaApplication(
+                    id=str(uuid4()),
                     email=normalized_email,
                     name=name,
                     company=company,
                     use_case=use_case,
                     status="pending",
-                    ip_address=ip_address,
-                    user_agent=user_agent[:500] if user_agent else None,
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get("User-Agent", "")[:500],
                 )
-            except Exception as sqlite_error:
-                # Log SQLite error but don't fail the request
-                print(f"SQLite save failed: {sqlite_error}")
+                db.session.add(beta_app)
+                db.session.commit()
 
-            # Also create account with PENDING status
-            try:
-                account = RegisterService.register(
-                    email=normalized_email,
-                    name=name,
-                    language=language,
-                    status=AccountStatus.PENDING,
-                    is_setup=True,
-                    create_workspace_required=False,
-                )
-            except Exception as e:
-                # If account creation fails, it's okay - we still have the beta application record
-                pass
-
-            return {
-                "result": "success",
-                "data": "Application submitted successfully. Please wait for administrator review.",
-            }, 201
-        except Exception as e:
-            db.session.rollback()
-            error_message = str(e)
-            return {"result": "fail", "data": f"Application failed: {error_message}"}, 400
+                return {
+                    "result": "success",
+                    "data": "Application submitted successfully. Please wait for administrator review.",
+                }, 201
+            except Exception as db_error:
+                db.session.rollback()
+                return {"result": "fail", "data": f"Application failed: {str(db_error)}"}, 400
