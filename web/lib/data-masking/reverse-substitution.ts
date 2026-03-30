@@ -8,8 +8,6 @@
 import type { MappingStore } from './mapping-store'
 import type { SubstitutionResult } from './types'
 
-type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue }
-
 /**
  * 反向替换器类
  */
@@ -26,7 +24,7 @@ export class ReverseSubstitution {
    * @param mappingId - 映射ID
    * @returns 恢复后的响应
    */
-  async substitute(response: JsonValue, mappingId: string): Promise<SubstitutionResult> {
+  async substitute(response: unknown, mappingId: string): Promise<SubstitutionResult> {
     // 识别响应中的脱敏值
     const maskedValues = this.identifyMaskedValues(response)
 
@@ -74,7 +72,7 @@ export class ReverseSubstitution {
    * @param response - 响应数据
    * @returns 脱敏值列表
    */
-  identifyMaskedValues(response: JsonValue): string[] {
+  identifyMaskedValues(response: unknown): string[] {
     const maskedValues = new Set<string>()
 
     // 定义脱敏值的模式（按优先级排序，更具体的模式在前）
@@ -96,7 +94,7 @@ export class ReverseSubstitution {
    * 递归提取脱敏值
    */
   private extractMaskedValues(
-    data: JsonValue,
+    data: unknown,
     patterns: RegExp[],
     maskedValues: Set<string>,
   ): void {
@@ -124,7 +122,7 @@ export class ReverseSubstitution {
   /**
    * 执行替换操作
    */
-  private performSubstitution(data: JsonValue, replacementMap: Map<string, string>): JsonValue {
+  private performSubstitution(data: unknown, replacementMap: Map<string, string>): unknown {
     if (typeof data === 'string') {
       // 替换字符串中的所有脱敏值
       let result = data
@@ -140,7 +138,7 @@ export class ReverseSubstitution {
     }
     else if (data && typeof data === 'object') {
       // 递归处理对象
-      const result: Record<string, JsonValue> = {}
+      const result: Record<string, unknown> = {}
       for (const [key, value] of Object.entries(data)) {
         result[key] = this.performSubstitution(value, replacementMap)
       }

@@ -9,9 +9,11 @@ import { SandboxError } from '../types'
 
 // 辅助函数：清理沙箱配置
 async function clearSandboxConfig(manager: SandboxManager): Promise<void> {
-  if (manager.db) {
+  const internalManager = manager as unknown as { db: IDBDatabase | null, sandboxPath: string | null }
+
+  if (internalManager.db) {
     try {
-      const transaction = manager.db.transaction(['sandbox_config'], 'readwrite')
+      const transaction = internalManager.db.transaction(['sandbox_config'], 'readwrite')
       const store = transaction.objectStore('sandbox_config')
       await new Promise<void>((resolve, reject) => {
         const request = store.clear()
@@ -19,7 +21,7 @@ async function clearSandboxConfig(manager: SandboxManager): Promise<void> {
         request.onerror = () => reject(request.error)
       })
       // 重置内部状态
-      manager.sandboxPath = null
+      internalManager.sandboxPath = null
     }
     catch {
       // 忽略清理错误
@@ -36,10 +38,12 @@ describe('SandboxManager', () => {
   })
 
   afterEach(async () => {
+    const internalManager = manager as unknown as { db: IDBDatabase | null }
+
     // 清理沙箱配置
-    if (manager.db) {
+    if (internalManager.db) {
       try {
-        const transaction = manager.db.transaction(['sandbox_config'], 'readwrite')
+        const transaction = internalManager.db.transaction(['sandbox_config'], 'readwrite')
         const store = transaction.objectStore('sandbox_config')
         await new Promise<void>((resolve, reject) => {
           const request = store.clear()

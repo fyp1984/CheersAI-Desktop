@@ -6,10 +6,10 @@ import { NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { filename: string } },
+  { params }: { params: Promise<{ filename: string }> },
 ) {
   try {
-    const filename = params.filename
+    const { filename } = await params
 
     // 安全检查：防止路径遍历攻击
     if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {

@@ -9,8 +9,6 @@ import { defaultSystemFeatures } from '@/types/feature'
 import Form from './input-mail'
 
 const mockSubmitMail = vi.fn()
-const mockOnSuccess = vi.fn()
-
 type SystemFeaturesOverrides = Partial<Omit<SystemFeatures, 'branding'>> & {
   branding?: Partial<SystemFeatures['branding']>
 }
@@ -67,7 +65,7 @@ const renderForm = ({
     mutateAsync: mockSubmitMail,
     isPending,
   } as unknown as UseSendMailResult)
-  return render(<Form onSuccess={mockOnSuccess} />)
+  return render(<Form />)
 }
 
 describe('InputMail Form', () => {
@@ -106,7 +104,7 @@ describe('InputMail Form', () => {
 
   // Submission flow and mutation integration.
   describe('User Interactions', () => {
-    it('should submit email and call onSuccess when mutation succeeds', async () => {
+    it('should submit email when mutation succeeds', async () => {
       renderForm()
       const input = screen.getByLabelText('login.email')
       const button = screen.getByRole('button', { name: 'login.signup.verifyMail' })
@@ -120,7 +118,6 @@ describe('InputMail Form', () => {
       })
 
       await waitFor(() => {
-        expect(mockOnSuccess).toHaveBeenCalledWith('test@example.com', 'token')
       })
     })
   })
@@ -137,10 +134,9 @@ describe('InputMail Form', () => {
       fireEvent.submit(form as HTMLFormElement)
 
       expect(mockSubmitMail).not.toHaveBeenCalled()
-      expect(mockOnSuccess).not.toHaveBeenCalled()
     })
 
-    it('should not call onSuccess when mutation does not succeed', async () => {
+    it('should keep form visible when mutation does not succeed', async () => {
       mockSubmitMail.mockResolvedValue({ result: 'failed', data: 'token' })
       renderForm()
       const input = screen.getByLabelText('login.email')
@@ -152,7 +148,6 @@ describe('InputMail Form', () => {
       await waitFor(() => {
         expect(mockSubmitMail).toHaveBeenCalled()
       })
-      expect(mockOnSuccess).not.toHaveBeenCalled()
     })
   })
 })

@@ -87,8 +87,8 @@ export class RulesManager {
     }
 
     try {
-      const records = await getAllRecords(this.db, STORES.MASKING_RULES)
-      return records.map(this.dbRecordToRule)
+      const records = await getAllRecords<DBMaskingRule>(this.db, STORES.MASKING_RULES)
+      return records.map(record => this.dbRecordToRule(record))
     }
     catch (error) {
       throw new MaskingError(
@@ -110,7 +110,7 @@ export class RulesManager {
     }
 
     try {
-      const record = await getRecord(this.db, STORES.MASKING_RULES, ruleId)
+      const record = await getRecord<DBMaskingRule>(this.db, STORES.MASKING_RULES, ruleId)
       if (!record) {
         return null
       }

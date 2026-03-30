@@ -46,7 +46,8 @@ if (typeof globalThis.crypto === 'undefined') {
         arr.set(bytes)
         return arr
       },
-      subtle: webcrypto.subtle,
+      randomUUID: () => webcrypto.randomUUID() as `${string}-${string}-${string}-${string}-${string}`,
+      subtle: webcrypto.subtle as unknown as SubtleCrypto,
     } satisfies Crypto,
     writable: true,
   })

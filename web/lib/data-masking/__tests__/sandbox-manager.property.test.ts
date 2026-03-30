@@ -89,7 +89,9 @@ describe('SandboxManager Property Tests', () => {
         arbitraryValidSandboxPath(),
         async (path) => {
           // 确保 manager 已初始化
-          if (!manager.db) {
+          const internalManager = manager as unknown as { db: IDBDatabase | null }
+
+          if (!internalManager.db) {
             await manager.initialize()
           }
 

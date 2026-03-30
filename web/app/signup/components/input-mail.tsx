@@ -48,7 +48,7 @@ export default function Form() {
         Toast.notify({ type: 'success', message: '申请已提交，请等待管理员审核' })
       }
       else {
-        Toast.notify({ type: 'error', message: res.data || '申请失败，请重试' })
+        Toast.notify({ type: 'error', message: '申请失败，请重试' })
       }
     }
     catch (error: unknown) {

@@ -127,7 +127,7 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
       setConfigLoaded(true)
     })()
     return () => { cancelled = true }
-  }, [])
+  }, [onConfigured, setContextSandboxPath, setSecurityEnabled])
 
   const persistSetting = useCallback((key: string, value: string) => {
     localStorage.setItem(key, value); saveUserConfig({ [key]: value })

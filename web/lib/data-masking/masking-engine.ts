@@ -19,7 +19,7 @@ import { MaskingError } from './types'
 export class MaskingEngine {
   private tokenCounter = 0
 
-  private static getStrategyType(strategy: never): string {
+  private static getStrategyType(strategy: MaskingStrategy): string {
     return JSON.stringify(strategy)
   }
 
