@@ -57,7 +57,7 @@ const VersionHistoryItem: React.FC<VersionHistoryItemProps> = ({
   useEffect(() => {
     if (isDraft)
       onClick(item)
-  }, [])
+  }, [isDraft, item, onClick])
 
   const handleClickItem = () => {
     if (isSelected)

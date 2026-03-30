@@ -51,8 +51,8 @@ export default function Form() {
         Toast.notify({ type: 'error', message: res.data || '申请失败，请重试' })
       }
     }
-    catch (error: any) {
-      Toast.notify({ type: 'error', message: error.message || '申请失败，请重试' })
+    catch (error: unknown) {
+      Toast.notify({ type: 'error', message: error instanceof Error ? error.message : '申请失败，请重试' })
     }
     finally {
       setIsLoading(false)
@@ -62,9 +62,9 @@ export default function Form() {
   if (submitted) {
     return (
       <div className="text-center">
-        <div className="mb-6 rounded-lg bg-green-50 border border-green-200 p-6">
+        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-6">
           <div className="mb-4 text-4xl">✓</div>
-          <h3 className="text-lg font-semibold text-green-800 mb-2">申请已提交</h3>
+          <h3 className="mb-2 text-lg font-semibold text-green-800">申请已提交</h3>
           <p className="text-sm text-green-700">
             我们已收到您的内测申请，管理员将尽快审核。
             <br />

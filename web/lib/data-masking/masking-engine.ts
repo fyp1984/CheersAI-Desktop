@@ -3,14 +3,14 @@
  * 负责识别和替换敏感数据
  */
 
-import { v4 as uuidv4 } from 'uuid'
 import type {
-  MaskingRule,
+  MappingEntry,
   MaskingResult,
+  MaskingRule,
   MaskingStrategy,
   ValidationResult,
-  MappingEntry,
 } from './types'
+import { v4 as uuidv4 } from 'uuid'
 import { MaskingError } from './types'
 
 /**
@@ -18,6 +18,10 @@ import { MaskingError } from './types'
  */
 export class MaskingEngine {
   private tokenCounter = 0
+
+  private static getStrategyType(strategy: never): string {
+    return JSON.stringify(strategy)
+  }
 
   /**
    * 对文件内容应用脱敏规则
@@ -91,7 +95,7 @@ export class MaskingEngine {
     content: string,
     rule: MaskingRule,
     entries: MappingEntry[],
-  ): { content: string; matchCount: number } {
+  ): { content: string, matchCount: number } {
     let matchCount = 0
     let result = content
 
@@ -153,28 +157,30 @@ export class MaskingEngine {
         // 格式保留策略：保持原始格式
         return this.preserveFormat(originalValue, strategy.format)
 
-      default:
+      default: {
+        const strategyType = MaskingEngine.getStrategyType(strategy)
         throw new MaskingError(
-          `Unknown masking strategy: ${(strategy as any).type}`,
+          `Unknown masking strategy: ${strategyType}`,
           'INVALID_STRATEGY',
         )
+      }
     }
   }
 
   /**
    * 格式保留脱敏
    * @param value - 原始值
-   * @param format - 格式模板
+   * @param _format - 格式模板
    * @returns 格式保留的脱敏值
    */
-  private preserveFormat(value: string, format: string): string {
+  private preserveFormat(value: string, _format: string): string {
     // 简单实现：保持字符类型（字母/数字/符号）
     return value
       .split('')
       .map((char) => {
-        if (/[a-zA-Z]/.test(char))
+        if (/[a-z]/i.test(char))
           return 'X'
-        if (/[0-9]/.test(char))
+        if (/\d/.test(char))
           return '0'
         return char
       })
@@ -230,9 +236,9 @@ export class MaskingEngine {
       try {
         // 尝试创建 RegExp
         if (typeof rule.pattern === 'string')
-          new RegExp(rule.pattern)
+          void new RegExp(rule.pattern)
         else
-          new RegExp(rule.pattern.source)
+          void new RegExp(rule.pattern.source)
       }
       catch (error) {
         errors.push(`Invalid pattern: ${(error as Error).message}`)
@@ -258,7 +264,7 @@ export class MaskingEngine {
           break
 
         default:
-          errors.push(`Unknown strategy type: ${(rule.strategy as any).type}`)
+          errors.push(`Unknown strategy type: ${MaskingEngine.getStrategyType(rule.strategy)}`)
       }
     }
 

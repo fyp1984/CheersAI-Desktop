@@ -13,6 +13,10 @@ coverage
 .husky
 .next
 .pnpm-store
+src-tauri/server/.next
+src-tauri/server/node_modules
+src-tauri/target
+src-tauri/gen
 
 # vscode
 .vscode

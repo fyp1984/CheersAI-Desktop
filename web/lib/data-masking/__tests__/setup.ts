@@ -3,11 +3,19 @@
  * Test Setup File
  */
 
-import { beforeAll, afterAll, afterEach } from 'vitest'
+import { webcrypto } from 'node:crypto'
+import { afterAll, afterEach, beforeAll } from 'vitest'
 import 'fake-indexeddb/auto'
 
+type LocalStorageMock = {
+  getItem: (key: string) => string | null
+  setItem: (key: string, value: string) => void
+  removeItem: (key: string) => void
+  clear: () => void
+}
+
 // Mock localStorage
-const localStorageMock = (() => {
+const localStorageMock: LocalStorageMock = (() => {
   let store: Record<string, string> = {}
 
   return {
@@ -24,19 +32,24 @@ const localStorageMock = (() => {
   }
 })()
 
-global.localStorage = localStorageMock as any
+Object.defineProperty(globalThis, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+})
 
 // Mock window.crypto for Web Crypto API
-if (typeof global.crypto === 'undefined') {
-  const nodeCrypto = require('crypto')
-  global.crypto = {
-    getRandomValues: (arr: any) => {
-      const bytes = nodeCrypto.randomBytes(arr.length)
-      arr.set(bytes)
-      return arr
-    },
-    subtle: nodeCrypto.webcrypto.subtle,
-  } as any
+if (typeof globalThis.crypto === 'undefined') {
+  Object.defineProperty(globalThis, 'crypto', {
+    value: {
+      getRandomValues: (arr: Uint8Array) => {
+        const bytes = webcrypto.getRandomValues(new Uint8Array(arr.length))
+        arr.set(bytes)
+        return arr
+      },
+      subtle: webcrypto.subtle,
+    } satisfies Crypto,
+    writable: true,
+  })
 }
 
 // 全局测试设置
@@ -44,11 +57,11 @@ beforeAll(() => {
   // 初始化测试环境
 })
 
-afterAll(() => {
-  // 清理测试环境
-})
-
 afterEach(() => {
   // 每个测试后清理
   localStorageMock.clear()
+})
+
+afterAll(() => {
+  // 清理测试环境
 })

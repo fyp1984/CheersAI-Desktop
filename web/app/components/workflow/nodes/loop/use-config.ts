@@ -78,7 +78,7 @@ const useConfig = (id: string, payload: LoopNodeType) => {
       draft.error_handle_mode = item.value as ErrorHandleMode
     })
     handleInputsChange(newInputs)
-  }, [inputs, handleInputsChange])
+  }, [handleInputsChange])
 
   const handleAddCondition = useCallback<HandleAddCondition>((valueSelector, varItem) => {
     const newInputs = produce(inputsRef.current, (draft) => {

@@ -10,7 +10,7 @@ export PYTHONIOENCODING=${PYTHONIOENCODING:-utf-8}
 
 if [[ "${MIGRATION_ENABLED}" == "true" ]]; then
   echo "Running migrations"
-  flask upgrade-db
+  flask db upgrade
   # Pure migration mode
   if [[ "${MODE}" == "migration" ]]; then
   echo "Migration completed, exiting normally"

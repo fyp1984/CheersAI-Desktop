@@ -97,7 +97,6 @@ const useConfig = (id: string, payload: ToolNodeType) => {
       hideSetAuthModal,
       t,
       invalidToolsByType,
-      provider_type,
     ],
   )
 
@@ -165,7 +164,7 @@ const useConfig = (id: string, payload: ToolNodeType) => {
     [inputs, setInputs],
   )
 
-  const formattingParameters = () => {
+  const formattingParameters = useCallback(() => {
     const inputsWithDefaultValue = produce(inputs, (draft) => {
       if (
         !draft.tool_configurations
@@ -187,16 +186,21 @@ const useConfig = (id: string, payload: ToolNodeType) => {
       }
     })
     return inputsWithDefaultValue
-  }
+  }, [inputs, toolInputVarSchema, toolSettingSchema, tool_configurations, tool_parameters])
 
   useEffect(() => {
     if (!currTool)
       return
+
     const inputsWithDefaultValue = formattingParameters()
     const { setControlPromptEditorRerenderKey } = workflowStore.getState()
     setInputs(inputsWithDefaultValue)
-    setTimeout(() => setControlPromptEditorRerenderKey(Date.now()))
-  }, [currTool])
+    const timer = window.setTimeout(() => {
+      setControlPromptEditorRerenderKey(Date.now())
+    })
+
+    return () => window.clearTimeout(timer)
+  }, [currTool, formattingParameters, setInputs, workflowStore])
 
   // setting when call
   const setInputVar = useCallback(

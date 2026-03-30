@@ -9,7 +9,7 @@ import {
   RiRefreshLine,
   RiShieldCheckLine,
 } from '@remixicon/react'
-import { useSandboxSecurity } from '@/context/sandbox-security-context'
+import { useSandboxSecurity } from '@/context/use-sandbox-security'
 import { get } from '@/service/base'
 
 interface SandboxFile {

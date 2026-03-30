@@ -156,7 +156,7 @@ const useConfig = (id: string, payload: ParameterExtractorNodeType) => {
       return
     setModelChanged(false)
     handleVisionConfigAfterModelChanged()
-  }, [isVisionModel, modelChanged])
+  }, [handleVisionConfigAfterModelChanged, modelChanged])
 
   const {
     currentModel: currModel,

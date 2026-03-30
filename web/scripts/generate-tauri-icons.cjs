@@ -1,11 +1,11 @@
+const fs = require('node:fs')
+const path = require('node:path')
 const sharp = require('sharp')
-const fs = require('fs')
-const path = require('path')
 
 async function generateIcons() {
   const inputFile = path.join(__dirname, '../public/logo/CheersAI.png')
   const outputDir = path.join(__dirname, '../src-tauri/icons')
-  
+
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true })
   }
@@ -34,7 +34,7 @@ async function generateIcons() {
       await sharp(inputFile)
         .resize(size, size, {
           fit: 'contain',
-          background: { r: 0, g: 0, b: 0, alpha: 0 }
+          background: { r: 0, g: 0, b: 0, alpha: 0 },
         })
         .png()
         .toFile(path.join(outputDir, name))
@@ -45,7 +45,8 @@ async function generateIcons() {
     console.log('⚠️  注意: icon.ico 和 icon.icns 需要专门工具生成')
     console.log('   Windows: 使用在线工具或 ImageMagick')
     console.log('   macOS: 使用 iconutil 或在线工具')
-  } catch (error) {
+  }
+  catch (error) {
     console.error('❌ 生成图标失败:', error.message)
     process.exit(1)
   }

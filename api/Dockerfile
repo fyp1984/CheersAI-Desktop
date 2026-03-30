@@ -11,9 +11,6 @@ RUN pip install --no-cache-dir uv==${UV_VERSION}
 
 FROM base AS packages
 
-# if you located in China, you can use aliyun mirror to speed up
-RUN sed -i 's@deb.debian.org@mirrors.aliyun.com@g' /etc/apt/sources.list.d/debian.sources
-
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
           # basic environment
@@ -23,7 +20,8 @@ RUN apt-get update \
 
 # Install Python dependencies
 COPY pyproject.toml uv.lock ./
-RUN uv sync --no-dev
+ENV UV_HTTP_TIMEOUT=300
+RUN uv sync --no-dev --no-group vdb
 
 # production stage
 FROM base AS production
@@ -57,8 +55,6 @@ RUN groupadd -r -g ${dify_uid} dify && \
     useradd -r -u ${dify_uid} -g ${dify_uid} -s /bin/bash dify && \
     chown -R dify:dify /app
 
-RUN sed -i 's@deb.debian.org@mirrors.aliyun.com@g' /etc/apt/sources.list.d/debian.sources
-
 RUN \
     apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -83,8 +79,6 @@ RUN \
         libgmp-dev libmpfr-dev libmpc-dev \
         # For Security
         expat libldap-2.5-0=2.5.13+dfsg-5 perl libsqlite3-0=3.40.1-2+deb12u2 zlib1g=1:1.2.13.dfsg-1 \
-        # install fonts to support the use of tools like pypdfium2
-        fonts-noto-cjk \
         # install a package to improve the accuracy of guessing mime type and file extension
         media-types \
         # install libmagic to support the use of python-magic guess MIMETYPE

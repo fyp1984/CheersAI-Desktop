@@ -3,8 +3,8 @@
  * Sandbox Manager Property-Based Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as fc from 'fast-check'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { SandboxManager } from '../sandbox-manager'
 
 describe('SandboxManager Property Tests', () => {
@@ -17,7 +17,7 @@ describe('SandboxManager Property Tests', () => {
 
   afterEach(() => {
     manager.close()
-    
+
     // 清理 localStorage 中的测试文件
     if (typeof localStorage !== 'undefined') {
       const keysToRemove: string[] = []
@@ -89,10 +89,10 @@ describe('SandboxManager Property Tests', () => {
         arbitraryValidSandboxPath(),
         async (path) => {
           // 确保 manager 已初始化
-          if (!manager['db']) {
+          if (!manager.db) {
             await manager.initialize()
           }
-          
+
           // 配置沙箱
           await manager.configureSandbox(path)
 
@@ -177,11 +177,11 @@ describe('SandboxManager Property Tests', () => {
       fc.asyncProperty(
         arbitraryValidSandboxPath(),
         fc.string({ minLength: 1, maxLength: 20 })
-          .filter(s => {
+          .filter((s) => {
             const trimmed = s.trim()
-            return trimmed.length > 0 
-              && !trimmed.startsWith('.') 
-              && /^[a-zA-Z0-9_-]+$/.test(trimmed)
+            return trimmed.length > 0
+              && !trimmed.startsWith('.')
+              && /^[\w-]+$/.test(trimmed)
           })
           .map(s => `${s.trim()}.txt`),
         fc.string({ minLength: 0, maxLength: 1000 }),
@@ -208,12 +208,12 @@ describe('SandboxManager Property Tests', () => {
       fc.asyncProperty(
         arbitraryValidSandboxPath(),
         fc.string({ minLength: 1, maxLength: 20 })
-          .filter(s => {
+          .filter((s) => {
             const trimmed = s.trim()
             // 只允许字母、数字、连字符和下划线
-            return trimmed.length > 0 
-              && !trimmed.startsWith('.') 
-              && /^[a-zA-Z0-9_-]+$/.test(trimmed)
+            return trimmed.length > 0
+              && !trimmed.startsWith('.')
+              && /^[\w-]+$/.test(trimmed)
           })
           .map(s => `${s.trim()}.txt`),
         fc.string({ minLength: 0, maxLength: 100 }),
@@ -248,12 +248,12 @@ describe('SandboxManager Property Tests', () => {
         fc.array(
           fc.record({
             name: fc.string({ minLength: 1, maxLength: 20 })
-              .filter(s => {
+              .filter((s) => {
                 const trimmed = s.trim()
                 // 只允许字母、数字、连字符和下划线
-                return trimmed.length > 0 
-                  && !trimmed.startsWith('.') 
-                  && /^[a-zA-Z0-9_-]+$/.test(trimmed)
+                return trimmed.length > 0
+                  && !trimmed.startsWith('.')
+                  && /^[\w-]+$/.test(trimmed)
               })
               .map(s => `${s.trim()}.txt`),
             content: fc.string({ minLength: 0, maxLength: 100 }),
@@ -350,7 +350,7 @@ function arbitraryValidSandboxPath(): fc.Arbitrary<string> {
     fc.string({ minLength: 1, maxLength: 20 }).map(s => `/home/user/${s.trim().replace(/[~\s.]/g, 'x') || 'sandbox'}`),
     fc.string({ minLength: 1, maxLength: 20 }).map(s => `/tmp/${s.trim().replace(/[~\s.]/g, 'x') || 'sandbox'}`),
     fc.string({ minLength: 1, maxLength: 20 }).map(s => `/var/data/${s.trim().replace(/[~\s.]/g, 'x') || 'sandbox'}`),
-    
+
     // Windows-style paths
     fc.string({ minLength: 1, maxLength: 20 }).map(s => `D:\\Users\\user\\${s.trim().replace(/[~\s.]/g, 'x') || 'sandbox'}`),
     fc.string({ minLength: 1, maxLength: 20 }).map(s => `E:\\Data\\${s.trim().replace(/[~\s.]/g, 'x') || 'sandbox'}`),
@@ -365,15 +365,15 @@ function arbitraryInvalidSandboxPath(): fc.Arbitrary<string> {
     // 空路径
     fc.constant(''),
     fc.constant('   '),
-    
+
     // 包含 .. 的路径
     fc.constant('/home/user/../admin'),
     fc.constant('/tmp/../etc'),
-    
+
     // 包含 ~ 的路径
     fc.constant('~/sandbox'),
     fc.constant('~user/data'),
-    
+
     // 系统保护目录
     fc.constant('/System/test'),
     fc.constant('C:\\Windows\\test'),

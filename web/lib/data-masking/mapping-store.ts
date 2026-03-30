@@ -3,25 +3,20 @@
  * 负责存储和检索原始值与脱敏值的映射
  */
 
+import type { DBMapping, DBMappingEntry, MappingData, MappingEntry, MappingInfo } from './types'
 import { v4 as uuidv4 } from 'uuid'
-import type {
-  MappingData,
-  MappingEntry,
-  MappingInfo,
-} from './types'
-import { MaskingError } from './types'
-import { encrypt, decrypt } from './crypto-utils'
 import { getCredentialManager } from './credential-manager'
+import { decrypt, encrypt } from './crypto-utils'
 import {
-  getIndexedDB,
   addRecord,
-  updateRecord,
-  getRecord,
-  getAllRecords,
   deleteRecord,
+  getAllRecords,
   getByIndex,
+  getIndexedDB,
+  getRecord,
   STORES,
 } from './indexeddb'
+import { MaskingError } from './types'
 
 /**
  * 映射存储类
@@ -99,11 +94,11 @@ export class MappingStore {
         file_name: mapping.fileName,
         file_path: mapping.filePath,
         file_hash: mapping.fileHash,
-        created_at: !isNaN(mapping.createdAt.getTime()) 
-          ? mapping.createdAt.toISOString() 
+        created_at: !Number.isNaN(mapping.createdAt.getTime())
+          ? mapping.createdAt.toISOString()
           : new Date().toISOString(),
-        expires_at: mapping.expiresAt && !isNaN(mapping.expiresAt.getTime()) 
-          ? mapping.expiresAt.toISOString() 
+        expires_at: mapping.expiresAt && !Number.isNaN(mapping.expiresAt.getTime())
+          ? mapping.expiresAt.toISOString()
           : null,
       }
 
@@ -144,7 +139,7 @@ export class MappingStore {
 
     try {
       // 获取映射记录
-      const mappingRecord = await getRecord<any>(
+      const mappingRecord = await getRecord<DBMapping>(
         this.db!,
         STORES.MAPPINGS,
         mappingId,
@@ -154,7 +149,7 @@ export class MappingStore {
         return null
 
       // 获取映射条目
-      const entryRecords = await getByIndex<any>(
+      const entryRecords = await getByIndex<DBMappingEntry>(
         this.db!,
         STORES.MAPPING_ENTRIES,
         'mapping_id',
@@ -213,7 +208,7 @@ export class MappingStore {
 
     try {
       // 获取映射条目
-      const entryRecords = await getByIndex<any>(
+      const entryRecords = await getByIndex<DBMappingEntry>(
         this.db!,
         STORES.MAPPING_ENTRIES,
         'mapping_id',
@@ -253,7 +248,7 @@ export class MappingStore {
     try {
       // 删除映射条目（由于外键约束，会自动删除）
       // 但在 IndexedDB 中需要手动删除
-      const entryRecords = await getByIndex<any>(
+      const entryRecords = await getByIndex<DBMappingEntry>(
         this.db!,
         STORES.MAPPING_ENTRIES,
         'mapping_id',
@@ -285,7 +280,7 @@ export class MappingStore {
 
     try {
       // 获取所有映射记录
-      const mappingRecords = await getAllRecords<any>(
+      const mappingRecords = await getAllRecords<DBMapping>(
         this.db!,
         STORES.MAPPINGS,
       )
@@ -294,7 +289,7 @@ export class MappingStore {
       const mappings: MappingInfo[] = await Promise.all(
         mappingRecords.map(async (record) => {
           // 获取条目数量
-          const entryRecords = await getByIndex<any>(
+          const entryRecords = await getByIndex<DBMappingEntry>(
             this.db!,
             STORES.MAPPING_ENTRIES,
             'mapping_id',

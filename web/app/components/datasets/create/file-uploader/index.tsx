@@ -12,7 +12,7 @@ import { ToastContext } from '@/app/components/base/toast'
 import { IS_CE_EDITION } from '@/config'
 
 import { useLocale } from '@/context/i18n'
-import { useSandboxSecurity } from '@/context/sandbox-security-context'
+import { useSandboxSecurity } from '@/context/use-sandbox-security'
 import useTheme from '@/hooks/use-theme'
 import { LanguagesSupported } from '@/i18n-config/language'
 import { upload } from '@/service/base'

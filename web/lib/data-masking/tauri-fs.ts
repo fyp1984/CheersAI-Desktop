@@ -4,7 +4,7 @@
  * 在浏览器环境下回退到 IndexedDB
  */
 
-export interface LocalFileInfo {
+export type LocalFileInfo = {
   name: string
   size: number
   created_at: string
@@ -13,7 +13,8 @@ export interface LocalFileInfo {
 let _invoke: ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null = null
 
 async function getInvoke() {
-  if (_invoke) return _invoke
+  if (_invoke)
+    return _invoke
   try {
     const mod = await import('@tauri-apps/api/core')
     _invoke = mod.invoke
@@ -30,30 +31,35 @@ export function isTauri(): boolean {
 
 export async function writeFileToSandbox(dir: string, fileName: string, content: string): Promise<string> {
   const invoke = await getInvoke()
-  if (!invoke) throw new Error('Tauri 环境不可用')
+  if (!invoke)
+    throw new Error('Tauri 环境不可用')
   return invoke('sandbox_write_file', { dir, fileName, content }) as Promise<string>
 }
 
 export async function readFileFromSandbox(path: string): Promise<string> {
   const invoke = await getInvoke()
-  if (!invoke) throw new Error('Tauri 环境不可用')
+  if (!invoke)
+    throw new Error('Tauri 环境不可用')
   return invoke('sandbox_read_file', { path }) as Promise<string>
 }
 
 export async function listSandboxFiles(dir: string): Promise<LocalFileInfo[]> {
   const invoke = await getInvoke()
-  if (!invoke) throw new Error('Tauri 环境不可用')
+  if (!invoke)
+    throw new Error('Tauri 环境不可用')
   return invoke('sandbox_list_files', { dir }) as Promise<LocalFileInfo[]>
 }
 
 export async function deleteSandboxFile(path: string): Promise<void> {
   const invoke = await getInvoke()
-  if (!invoke) throw new Error('Tauri 环境不可用')
+  if (!invoke)
+    throw new Error('Tauri 环境不可用')
   await invoke('sandbox_delete_file', { path })
 }
 
 export async function ensureSandboxDir(dir: string): Promise<boolean> {
   const invoke = await getInvoke()
-  if (!invoke) throw new Error('Tauri 环境不可用')
+  if (!invoke)
+    throw new Error('Tauri 环境不可用')
   return invoke('sandbox_ensure_dir', { dir }) as Promise<boolean>
 }

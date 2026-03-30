@@ -1,11 +1,11 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
 
 const STORAGE_KEY = 'sandbox_security_enabled'
 const SANDBOX_PATH_KEY = 'sandbox_path'
 
-interface SandboxSecurityContextValue {
+type SandboxSecurityContextValue = {
   /** Whether sandbox-only mode is enabled (default: true) */
   enabled: boolean
   /** Toggle sandbox security on/off */
@@ -18,7 +18,7 @@ interface SandboxSecurityContextValue {
   isConfigured: boolean
 }
 
-const SandboxSecurityContext = createContext<SandboxSecurityContextValue>({
+export const SandboxSecurityContext = createContext<SandboxSecurityContextValue>({
   enabled: true,
   setEnabled: () => {},
   sandboxPath: '',
@@ -27,28 +27,20 @@ const SandboxSecurityContext = createContext<SandboxSecurityContextValue>({
 })
 
 export function SandboxSecurityProvider({ children }: { children: React.ReactNode }) {
-  const [enabled, setEnabledState] = useState(true)
-  const [sandboxPath, setSandboxPath] = useState('')
+  const [enabled, setEnabledState] = useState(() => {
+    if (typeof window === 'undefined')
+      return true
 
-  useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
-    // Default to true if not set
-    setEnabledState(saved === null ? true : saved === 'true')
+    return saved === null ? true : saved === 'true'
+  })
+  const [sandboxPath, setSandboxPathState] = useState(() => {
+    if (typeof window === 'undefined')
+      return ''
 
     const path = localStorage.getItem(SANDBOX_PATH_KEY)
-    if (path && !path.startsWith('['))
-      setSandboxPath(path)
-
-    // Listen for sandbox path changes from other components
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === SANDBOX_PATH_KEY && e.newValue && !e.newValue.startsWith('['))
-        setSandboxPath(e.newValue)
-      if (e.key === STORAGE_KEY)
-        setEnabledState(e.newValue === null ? true : e.newValue === 'true')
-    }
-    window.addEventListener('storage', handleStorage)
-    return () => window.removeEventListener('storage', handleStorage)
-  }, [])
+    return path && !path.startsWith('[') ? path : ''
+  })
 
   const setEnabled = useCallback((v: boolean) => {
     setEnabledState(v)
@@ -56,8 +48,21 @@ export function SandboxSecurityProvider({ children }: { children: React.ReactNod
   }, [])
 
   const updateSandboxPath = useCallback((path: string) => {
-    setSandboxPath(path)
+    setSandboxPathState(path)
     localStorage.setItem(SANDBOX_PATH_KEY, path)
+  }, [])
+
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === SANDBOX_PATH_KEY && e.newValue && !e.newValue.startsWith('['))
+        setSandboxPathState(e.newValue)
+
+      if (e.key === STORAGE_KEY)
+        setEnabledState(e.newValue === null ? true : e.newValue === 'true')
+    }
+
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
   }, [])
 
   const value = useMemo<SandboxSecurityContextValue>(() => ({
@@ -74,5 +79,3 @@ export function SandboxSecurityProvider({ children }: { children: React.ReactNod
     </SandboxSecurityContext.Provider>
   )
 }
-
-export const useSandboxSecurity = () => useContext(SandboxSecurityContext)

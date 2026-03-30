@@ -23,7 +23,6 @@ import type {
 } from '@/models/common'
 import type { RETRIEVE_METHOD } from '@/types/app'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { IS_DEV } from '@/config'
 import { get, post } from './base'
 import { useInvalid } from './use-base'
 

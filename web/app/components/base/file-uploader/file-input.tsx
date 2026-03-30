@@ -3,7 +3,7 @@ import type { FileUpload } from '@/app/components/base/features/types'
 import { FILE_EXTS } from '@/app/components/base/prompt-editor/constants'
 import { SupportUploadFileTypes } from '@/app/components/workflow/types'
 import { SandboxFilePicker } from '@/app/components/base/sandbox-file-picker'
-import { useSandboxSecurity } from '@/context/sandbox-security-context'
+import { useSandboxSecurity } from '@/context/use-sandbox-security'
 import { useFile } from './hooks'
 import { useStore } from './store'
 

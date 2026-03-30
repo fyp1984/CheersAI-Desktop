@@ -25,7 +25,7 @@ const Item = ({
 }: ItemProps) => {
   const { t } = useTranslation()
 
-  const checkVariableName = (value: string) => {
+  const checkVariableName = useCallback((value: string) => {
     const { isValid, errorMessageKey } = checkKeys([value], false)
     if (!isValid) {
       Toast.notify({
@@ -35,13 +35,13 @@ const Item = ({
       return false
     }
     return true
-  }
+  }, [t])
   const handleUpdateItemLabel = useCallback((e: any) => {
     replaceSpaceWithUnderscoreInVarNameInput(e.target)
     if (!!e.target.value && !checkVariableName(e.target.value))
       return
     handleUpdateLoopVariable(item.id, { label: e.target.value })
-  }, [item.id, handleUpdateLoopVariable])
+  }, [checkVariableName, handleUpdateLoopVariable, item.id])
 
   const getDefaultValue = useCallback((varType: VarType, valueType: ValueType) => {
     if (valueType === ValueType.variable)
@@ -58,11 +58,11 @@ const Item = ({
 
   const handleUpdateItemVarType = useCallback((value: any) => {
     handleUpdateLoopVariable(item.id, { var_type: value, value: getDefaultValue(value, item.value_type) })
-  }, [item.id, handleUpdateLoopVariable])
+  }, [getDefaultValue, handleUpdateLoopVariable, item.id, item.value_type])
 
   const handleUpdateItemValueType = useCallback((value: any) => {
     handleUpdateLoopVariable(item.id, { value_type: value, value: getDefaultValue(item.var_type, value) })
-  }, [item.id, handleUpdateLoopVariable])
+  }, [getDefaultValue, handleUpdateLoopVariable, item.id, item.var_type])
 
   const handleUpdateItemValue = useCallback((value: any) => {
     handleUpdateLoopVariable(item.id, { value })

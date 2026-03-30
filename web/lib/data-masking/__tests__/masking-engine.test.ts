@@ -3,9 +3,9 @@
  * Masking Engine Unit Tests
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { MaskingEngine } from '../masking-engine'
 import type { MaskingRule } from '../types'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { MaskingEngine } from '../masking-engine'
 import { MaskingError } from '../types'
 
 describe('MaskingEngine', () => {
@@ -200,13 +200,13 @@ describe('MaskingEngine', () => {
 
     it('should throw error for invalid content type', async () => {
       await expect(
-        engine.maskContent(null as any, []),
+        engine.maskContent(null as unknown as string, []),
       ).rejects.toThrow(MaskingError)
     })
 
     it('should throw error for invalid rules type', async () => {
       await expect(
-        engine.maskContent('content', null as any),
+        engine.maskContent('content', null as unknown as MaskingRule[]),
       ).rejects.toThrow(MaskingError)
     })
   })
@@ -274,7 +274,7 @@ describe('MaskingEngine', () => {
         id: '1',
         name: 'Test',
         description: 'Test rule',
-        pattern: '[invalid(' as any,
+        pattern: '[invalid(',
         strategy: { type: 'replacement', value: '***' },
         enabled: true,
         priority: 0,
@@ -294,7 +294,7 @@ describe('MaskingEngine', () => {
         name: 'Test',
         description: 'Test rule',
         pattern: /test/g,
-        strategy: { type: 'replacement', value: undefined as any },
+        strategy: { type: 'replacement', value: undefined as unknown as string },
         enabled: true,
         priority: 0,
         createdAt: new Date(),
