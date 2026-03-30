@@ -3,11 +3,11 @@
  * Mapping Store Property-Based Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import * as fc from 'fast-check'
-import { MappingStore } from '../mapping-store'
 import type { MappingData, MappingEntry } from '../types'
+import * as fc from 'fast-check'
 import { v4 as uuidv4 } from 'uuid'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { MappingStore } from '../mapping-store'
 
 describe('MappingStore Property Tests', () => {
   let store: MappingStore
@@ -25,7 +25,7 @@ describe('MappingStore Property Tests', () => {
         await store.deleteMapping(mapping.id)
       }
     }
-    catch (error) {
+    catch {
       // Ignore errors during cleanup
     }
     store.close()

@@ -66,7 +66,7 @@ const List: FC<Props> = ({
     <div className="space-y-1">
       {list.map((item, index) => (
         <Item
-          key={index}
+          key={`${item.name}-${item.type}-${item.required ? 'required' : 'optional'}`}
           payload={item}
           onDelete={handleItemDelete(index)}
           onEdit={handleItemEdit(index)}

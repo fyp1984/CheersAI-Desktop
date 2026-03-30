@@ -2,7 +2,7 @@
  * 加密工具测试
  */
 
-import { encrypt, decrypt, generateKey, hash } from '../crypto-utils'
+import { decrypt, encrypt, generateKey, hash } from '../crypto-utils'
 
 describe('crypto-utils', () => {
   describe('generateKey', () => {
@@ -43,7 +43,7 @@ describe('crypto-utils', () => {
 
       const encrypted = await encrypt(data, key)
       const decrypted = await decrypt(encrypted, key)
-      
+
       expect(decrypted).toBe(data)
       expect(JSON.parse(decrypted)).toEqual(JSON.parse(data))
     })
@@ -54,7 +54,7 @@ describe('crypto-utils', () => {
       const key2 = generateKey(16)
 
       const encrypted = await encrypt(data, key1)
-      
+
       await expect(decrypt(encrypted, key2)).rejects.toThrow()
     })
 
@@ -64,7 +64,7 @@ describe('crypto-utils', () => {
 
       const encrypted = await encrypt(data, key)
       const decrypted = await decrypt(encrypted, key)
-      
+
       expect(decrypted).toBe(data)
     })
 
@@ -74,7 +74,7 @@ describe('crypto-utils', () => {
 
       const encrypted = await encrypt(data, key)
       const decrypted = await decrypt(encrypted, key)
-      
+
       expect(decrypted).toBe(data)
     })
   })
@@ -84,7 +84,7 @@ describe('crypto-utils', () => {
       const data = 'test data'
       const hash1 = await hash(data)
       const hash2 = await hash(data)
-      
+
       expect(hash1).toBe(hash2)
       expect(hash1).toHaveLength(64) // SHA-256 = 64 hex characters
     })
@@ -92,7 +92,7 @@ describe('crypto-utils', () => {
     it('should generate different hashes for different inputs', async () => {
       const hash1 = await hash('data1')
       const hash2 = await hash('data2')
-      
+
       expect(hash1).not.toBe(hash2)
     })
   })

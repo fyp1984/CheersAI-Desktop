@@ -3,11 +3,11 @@
  * Reverse Substitution Unit Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { ReverseSubstitution } from '../reverse-substitution'
-import { MappingStore } from '../mapping-store'
 import type { MappingData } from '../types'
 import { v4 as uuidv4 } from 'uuid'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { MappingStore } from '../mapping-store'
+import { ReverseSubstitution } from '../reverse-substitution'
 
 describe('ReverseSubstitution', () => {
   let store: MappingStore

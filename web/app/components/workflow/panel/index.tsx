@@ -1,7 +1,7 @@
 import type { FC } from 'react'
 import type { VersionHistoryPanelProps } from '@/app/components/workflow/panel/version-history-panel'
 import dynamic from 'next/dynamic'
-import { memo, useCallback, useEffect, useRef } from 'react'
+import { memo, useEffect, useRef } from 'react'
 import { useStore as useReactflow } from 'reactflow'
 import { useShallow } from 'zustand/react/shallow'
 import { cn } from '@/utils/classnames'
@@ -34,13 +34,8 @@ const getEntryWidth = (entry: ResizeObserverEntry, element: HTMLElement): number
   return element.getBoundingClientRect().width
 }
 
-const useResizeObserver = (
-  callback: (width: number) => void,
-  dependencies: React.DependencyList = [],
-) => {
+const useResizeObserver = (callback: (width: number) => void) => {
   const elementRef = useRef<HTMLDivElement>(null)
-
-  const stableCallback = useCallback(callback, [callback])
 
   useEffect(() => {
     const element = elementRef.current
@@ -50,19 +45,19 @@ const useResizeObserver = (
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const width = getEntryWidth(entry, element)
-        stableCallback(width)
+        callback(width)
       }
     })
 
     resizeObserver.observe(element)
 
     const initialWidth = element.getBoundingClientRect().width
-    stableCallback(initialWidth)
+    callback(initialWidth)
 
     return () => {
       resizeObserver.disconnect()
     }
-  }, [stableCallback, ...dependencies])
+  }, [callback])
   return elementRef
 }
 
@@ -113,15 +108,9 @@ const Panel: FC<PanelProps> = ({
   const setRightPanelWidth = useStore(s => s.setRightPanelWidth)
   const setOtherPanelWidth = useStore(s => s.setOtherPanelWidth)
 
-  const rightPanelRef = useResizeObserver(
-    setRightPanelWidth,
-    [setRightPanelWidth, selectedNode, showEnvPanel, showWorkflowVersionHistoryPanel],
-  )
+  const rightPanelRef = useResizeObserver(setRightPanelWidth)
 
-  const otherPanelRef = useResizeObserver(
-    setOtherPanelWidth,
-    [setOtherPanelWidth, showEnvPanel, showWorkflowVersionHistoryPanel],
-  )
+  const otherPanelRef = useResizeObserver(setOtherPanelWidth)
 
   return (
     <div

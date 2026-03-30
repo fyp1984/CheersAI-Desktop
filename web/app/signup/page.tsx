@@ -1,14 +1,7 @@
 'use client'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
 import MailForm from './components/input-mail'
 
 const Signup = () => {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const { t } = useTranslation()
-
   return (
     <div className="mx-auto mt-8 w-full">
       <div className="mx-auto mb-10 w-full">

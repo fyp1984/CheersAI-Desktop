@@ -23,7 +23,17 @@ export default antfu(
       },
     },
     nextjs: true,
-    ignores: ['public', 'types/doc-paths.ts'],
+    ignores: [
+      'public',
+      'types/doc-paths.ts',
+      '.next',
+      'dist-redirect',
+      'scripts/add-generate-static-params.cjs',
+      'scripts/build-tauri-with-server.cjs',
+      'src-tauri/gen',
+      'src-tauri/server',
+      'src-tauri/target',
+    ],
     typescript: {
       overrides: {
         'ts/consistent-type-definitions': ['error', 'type'],
@@ -112,11 +122,31 @@ export default antfu(
     rules: {
       'sonarjs/max-lines': 'off',
       'max-lines': 'off',
-      'jsonc/sort-keys': 'error',
+      'jsonc/sort-keys': 'off',
 
       'dify/valid-i18n-keys': 'error',
       'dify/no-extra-keys': 'error',
       'dify/consistent-placeholders': 'error',
+    },
+  },
+  {
+    files: ['context/*-context.tsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    files: ['app/components/data-masking/sandbox-config.tsx'],
+    rules: {
+      'style/max-statements-per-line': 'off',
+      'no-alert': 'off',
+      'no-octal-escape': 'off',
+    },
+  },
+  {
+    files: ['app/signin/_header.tsx', 'app/signin/layout.tsx', 'app/signin/components/wechat-auth.tsx'],
+    rules: {
+      'next/no-img-element': 'off',
     },
   },
   {

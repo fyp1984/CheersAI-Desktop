@@ -3,11 +3,11 @@
  * Mapping Store Unit Tests
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { MappingStore } from '../mapping-store'
 import type { MappingData } from '../types'
-import { MaskingError } from '../types'
 import { v4 as uuidv4 } from 'uuid'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { MappingStore } from '../mapping-store'
+import { MaskingError } from '../types'
 
 describe('MappingStore', () => {
   let store: MappingStore

@@ -18,7 +18,7 @@ const config = {
         'cheers-warning': '#f59e0b',
         'cheers-error': '#ef4444',
         'cheers-info': '#8b5cf6',
-        gray: {
+        'gray': {
           25: '#fcfcfd',
           50: '#f9fafb',
           100: '#f2f4f7',
@@ -31,37 +31,37 @@ const config = {
           800: '#1d2939',
           900: '#101828',
         },
-        primary: {
+        'primary': {
           25: '#f5f8ff',
           50: '#eff4ff',
           100: '#d1e0ff',
           200: '#b2ccff',
           300: '#84adff',
-          400: '#60a5fa',  // CheersAI light blue
-          500: '#3b82f6',  // CheersAI primary blue
-          600: '#2563eb',  // CheersAI dark blue
+          400: '#60a5fa', // CheersAI light blue
+          500: '#3b82f6', // CheersAI primary blue
+          600: '#2563eb', // CheersAI dark blue
           700: '#1d4ed8',
           800: '#1e40af',
           900: '#1e3a8a',
         },
-        blue: {
+        'blue': {
           500: '#E1EFFE',
         },
-        green: {
+        'green': {
           50: '#F3FAF7',
           100: '#DEF7EC',
           800: '#03543F',
 
         },
-        yellow: {
+        'yellow': {
           100: '#FDF6B2',
           800: '#723B13',
         },
-        purple: {
+        'purple': {
           50: '#F6F5FF',
           200: '#DCD7FE',
         },
-        indigo: {
+        'indigo': {
           25: '#F5F8FF',
           50: '#EEF4FF',
           100: '#E0EAFF',

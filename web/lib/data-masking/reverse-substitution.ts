@@ -1,13 +1,12 @@
 /**
  * 反向替换器
  * Reverse Substitution
- * 
+ *
  * 在 Dify 后端响应中识别脱敏值并恢复原始值
  */
 
-import type { SubstitutionResult } from './types'
-import { MaskingError } from './types'
 import type { MappingStore } from './mapping-store'
+import type { SubstitutionResult } from './types'
 
 /**
  * 反向替换器类
@@ -25,16 +24,16 @@ export class ReverseSubstitution {
    * @param mappingId - 映射ID
    * @returns 恢复后的响应
    */
-  async substitute(response: any, mappingId: string): Promise<SubstitutionResult> {
+  async substitute(response: unknown, mappingId: string): Promise<SubstitutionResult> {
     // 识别响应中的脱敏值
     const maskedValues = this.identifyMaskedValues(response)
-    
+
     const substituted: string[] = []
     const failed: string[] = []
-    
+
     // 创建替换映射表
     const replacementMap = new Map<string, string>()
-    
+
     // 批量查询所有脱敏值的原始值
     for (const maskedValue of maskedValues) {
       try {
@@ -42,7 +41,7 @@ export class ReverseSubstitution {
           maskedValue,
           mappingId,
         )
-        
+
         if (originalValue) {
           replacementMap.set(maskedValue, originalValue)
           substituted.push(maskedValue)
@@ -56,10 +55,10 @@ export class ReverseSubstitution {
         console.warn(`Failed to find original value for masked value: ${maskedValue}`, error)
       }
     }
-    
+
     // 执行替换
     const substitutedResponse = this.performSubstitution(response, replacementMap)
-    
+
     return {
       response: substitutedResponse,
       substituted,
@@ -73,19 +72,19 @@ export class ReverseSubstitution {
    * @param response - 响应数据
    * @returns 脱敏值列表
    */
-  identifyMaskedValues(response: any): string[] {
+  identifyMaskedValues(response: unknown): string[] {
     const maskedValues = new Set<string>()
-    
+
     // 定义脱敏值的模式（按优先级排序，更具体的模式在前）
     const patterns = [
-      /\*\*\*@\*\*\*\.\*\*\*/g,           // Email replacement: ***@***.***
-      /XXX-XXX-XXXX/g,                     // Phone replacement: XXX-XXX-XXXX
-      /TOKEN_[A-Za-z0-9]+/g,               // Tokenization: TOKEN_xxx
-      /MASKED_\d+/g,                       // Format-preserving: MASKED_123
+      /\*\*\*@\*\*\*\.\*\*\*/g, // Email replacement: ***@***.***
+      /XXX-XXX-XXXX/g, // Phone replacement: XXX-XXX-XXXX
+      /TOKEN_[A-Za-z0-9]+/g, // Tokenization: TOKEN_xxx
+      /MASKED_\d+/g, // Format-preserving: MASKED_123
     ]
-    
+
     this.extractMaskedValues(response, patterns, maskedValues)
-    
+
     return Array.from(maskedValues)
   }
 
@@ -95,7 +94,7 @@ export class ReverseSubstitution {
    * 递归提取脱敏值
    */
   private extractMaskedValues(
-    data: any,
+    data: unknown,
     patterns: RegExp[],
     maskedValues: Set<string>,
   ): void {
@@ -123,7 +122,7 @@ export class ReverseSubstitution {
   /**
    * 执行替换操作
    */
-  private performSubstitution(data: any, replacementMap: Map<string, string>): any {
+  private performSubstitution(data: unknown, replacementMap: Map<string, string>): unknown {
     if (typeof data === 'string') {
       // 替换字符串中的所有脱敏值
       let result = data
@@ -139,13 +138,13 @@ export class ReverseSubstitution {
     }
     else if (data && typeof data === 'object') {
       // 递归处理对象
-      const result: any = {}
+      const result: Record<string, unknown> = {}
       for (const [key, value] of Object.entries(data)) {
         result[key] = this.performSubstitution(value, replacementMap)
       }
       return result
     }
-    
+
     // 其他类型直接返回
     return data
   }

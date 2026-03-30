@@ -83,7 +83,7 @@ const CodeEditor: FC<CodeEditorProps> = ({
     })
     monaco.editor.setTheme('light-theme')
     setIsMounted(true)
-  }, [])
+  }, [onBlur, onFocus])
 
   const formatJsonContent = useCallback(() => {
     if (editorRef.current)

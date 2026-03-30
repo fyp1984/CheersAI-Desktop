@@ -8,8 +8,8 @@ import Toast from '@/app/components/base/toast'
 import { IS_CE_EDITION } from '@/config'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 import { invitationCheck } from '@/service/common'
+import { isDesktopSSOEnabled } from '@/service/sso-desktop-auth'
 import { useIsLogin } from '@/service/use-common'
-import { isDesktopRuntime, isDesktopSSOEnabled } from '@/service/sso-desktop-auth'
 import { LicenseStatus } from '@/types/feature'
 import { cn } from '@/utils/classnames'
 import Loading from '../components/base/loading'
@@ -41,9 +41,10 @@ const NormalForm = () => {
         const redirectUrl = resolvePostLoginRedirect(searchParams)
         // Prevent redirect loop if the target is also signin page
         if (redirectUrl && (redirectUrl.includes('/signin') || redirectUrl.includes('/login'))) {
-           router.replace('/apps')
-        } else {
-           router.replace(redirectUrl || '/apps')
+          router.replace('/apps')
+        }
+        else {
+          router.replace(redirectUrl || '/apps')
         }
         return
       }
@@ -70,7 +71,7 @@ const NormalForm = () => {
       setAllMethodsAreDisabled(true)
     }
     finally { setInitCheckLoading(false) }
-  }, [isLoggedIn, message, router, invite_token, isInviteLink, systemFeatures])
+  }, [invite_token, isInviteLink, isLoggedIn, message, router, searchParams, systemFeatures])
   useEffect(() => {
     init()
   }, [init])
@@ -142,20 +143,26 @@ const NormalForm = () => {
       <div className="w-full">
         {isInviteLink
           ? (
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  加入 {workspaceName}
+              <div className="mb-8 text-center">
+                <h2 className="mb-2 text-2xl font-bold text-gray-900">
+                  加入
+                  {' '}
+                  {workspaceName}
                 </h2>
                 {!systemFeatures.branding.enabled && (
                   <p className="text-gray-600">
-                    您已被邀请加入 {workspaceName} 工作空间
+                    您已被邀请加入
+                    {' '}
+                    {workspaceName}
+                    {' '}
+                    工作空间
                   </p>
                 )}
               </div>
             )
           : (
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <div className="mb-8 text-center">
+                <h2 className="mb-2 text-2xl font-bold text-gray-900">
                   {systemFeatures.branding.enabled ? '登录' : '欢迎回来'}
                 </h2>
                 <p className="text-gray-600">请输入您的邮箱和密码</p>
@@ -167,7 +174,7 @@ const NormalForm = () => {
             {systemFeatures.enable_email_password_login && (
               <MailAndPasswordAuth isInvite={isInviteLink} isEmailSetup={systemFeatures.is_email_setup} allowRegistration={systemFeatures.is_allow_register} />
             )}
-            
+
             {isDesktopSSOEnabled() && (
               <>
                 {systemFeatures.enable_email_password_login && (
@@ -176,7 +183,7 @@ const NormalForm = () => {
                       <div className="w-full border-t border-gray-300"></div>
                     </div>
                     <div className="relative flex justify-center text-sm">
-                      <span className="px-2 bg-white text-gray-500">或</span>
+                      <span className="bg-white px-2 text-gray-500">或</span>
                     </div>
                   </div>
                 )}
@@ -192,9 +199,9 @@ const NormalForm = () => {
           </div>
           {allMethodsAreDisabled && (
             <>
-              <div className="rounded-lg bg-red-50 border border-red-200 p-4">
-                <div className="flex items-center mb-2">
-                  <RiDoorLockLine className="h-5 w-5 text-red-500 mr-2" />
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                <div className="mb-2 flex items-center">
+                  <RiDoorLockLine className="mr-2 h-5 w-5 text-red-500" />
                   <p className="text-sm font-medium text-red-800">无可用登录方式</p>
                 </div>
                 <p className="text-sm text-red-700">请联系管理员配置登录方式</p>
@@ -203,10 +210,10 @@ const NormalForm = () => {
           )}
           {!systemFeatures.branding.enabled && (
             <>
-              <div className="mt-6 text-xs text-gray-500 text-center">
+              <div className="mt-6 text-center text-xs text-gray-500">
                 登录即表示您同意我们的
                 <Link
-                  className="text-blue-600 hover:text-blue-700 mx-1"
+                  className="mx-1 text-blue-600 hover:text-blue-700"
                   target="_blank"
                   rel="noopener noreferrer"
                   href="https://cheersai.cloud"
@@ -215,7 +222,7 @@ const NormalForm = () => {
                 </Link>
                 和
                 <Link
-                  className="text-blue-600 hover:text-blue-700 ml-1"
+                  className="ml-1 text-blue-600 hover:text-blue-700"
                   target="_blank"
                   rel="noopener noreferrer"
                   href="https://cheersai.cloud"
@@ -224,10 +231,10 @@ const NormalForm = () => {
                 </Link>
               </div>
               {IS_CE_EDITION && (
-                <div className="mt-2 text-xs text-gray-500 text-center">
+                <div className="mt-2 text-center text-xs text-gray-500">
                   需要初始化系统？
                   <Link
-                    className="text-blue-600 hover:text-blue-700 ml-1"
+                    className="ml-1 text-blue-600 hover:text-blue-700"
                     href="/install"
                   >
                     设置管理员账户

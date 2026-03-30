@@ -1,0 +1,10 @@
+FROM langgenius/dify-api:1.12.0
+
+USER root
+
+WORKDIR /app/api
+
+COPY --chown=dify:dify . /app/api/
+COPY --chown=dify:dify --chmod=755 docker/entrypoint.sh /entrypoint.sh
+
+USER dify

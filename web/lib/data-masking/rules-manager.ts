@@ -1,14 +1,14 @@
 /**
  * 规则管理器
  * Rules Manager
- * 
+ *
  * 管理脱敏规则的CRUD操作
  */
 
-import type { MaskingRule, ValidationResult } from './types'
-import { MaskingError } from './types'
-import { getIndexedDB, STORES, getAllRecords, getRecord, addRecord, updateRecord, deleteRecord } from './indexeddb'
+import type { DBMaskingRule, MaskingRule, ValidationResult } from './types'
 import { v4 as uuidv4 } from 'uuid'
+import { addRecord, deleteRecord, getAllRecords, getIndexedDB, getRecord, STORES, updateRecord } from './indexeddb'
+import { MaskingError } from './types'
 
 /**
  * 规则管理器类
@@ -87,8 +87,8 @@ export class RulesManager {
     }
 
     try {
-      const records = await getAllRecords(this.db, STORES.MASKING_RULES)
-      return records.map(this.dbRecordToRule)
+      const records = await getAllRecords<DBMaskingRule>(this.db, STORES.MASKING_RULES)
+      return records.map(record => this.dbRecordToRule(record))
     }
     catch (error) {
       throw new MaskingError(
@@ -110,7 +110,7 @@ export class RulesManager {
     }
 
     try {
-      const record = await getRecord(this.db, STORES.MASKING_RULES, ruleId)
+      const record = await getRecord<DBMaskingRule>(this.db, STORES.MASKING_RULES, ruleId)
       if (!record) {
         return null
       }
@@ -273,10 +273,10 @@ export class RulesManager {
       // 验证正则表达式
       try {
         if (typeof rule.pattern === 'string') {
-          new RegExp(rule.pattern)
+          void new RegExp(rule.pattern)
         }
       }
-      catch (error) {
+      catch {
         errors.push('Invalid regular expression pattern')
       }
     }
@@ -304,9 +304,9 @@ export class RulesManager {
   /**
    * 将数据库记录转换为规则对象
    */
-  private dbRecordToRule(record: any): MaskingRule {
-    const strategy = JSON.parse(record.strategy_config)
-    
+  private dbRecordToRule(record: DBMaskingRule): MaskingRule {
+    const strategy = JSON.parse(record.strategy_config) as MaskingRule['strategy']
+
     return {
       id: record.id,
       name: record.name,

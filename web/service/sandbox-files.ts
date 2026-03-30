@@ -5,7 +5,7 @@ function apiUrl(path: string): string {
   return `http://localhost:5001${path}`
 }
 
-export interface SandboxFileInfo {
+export type SandboxFileInfo = {
   name: string
   size: number
   created_at: string
@@ -15,7 +15,7 @@ export async function saveSandboxFile(
   sandboxPath: string,
   fileName: string,
   content: string,
-): Promise<{ result: string; file_path: string; file_name: string; size: number }> {
+): Promise<{ result: string, file_path: string, file_name: string, size: number }> {
   const res = await fetch(apiUrl(API_BASE), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -67,13 +67,11 @@ export async function deleteSandboxFile(
     throw new Error(err.error || `Delete failed: ${res.status}`)
   }
 }
-
-
 // --- NER Scan API ---
 
 const NER_API_BASE = '/console/api/data-masking/ner'
 
-export interface NerEntity {
+export type NerEntity = {
   text: string
   label: string
   type: string
@@ -96,7 +94,7 @@ export async function scanEntities(content: string): Promise<NerEntity[]> {
 }
 
 /** Extract text from binary files (docx, pdf, images) via backend */
-export async function extractTextFromFile(file: File, ocr?: 'auto' | 'force'): Promise<{ content: string; file_name: string; file_type: string; needs_ocr?: boolean; message?: string }> {
+export async function extractTextFromFile(file: File, ocr?: 'auto' | 'force'): Promise<{ content: string, file_name: string, file_type: string, needs_ocr?: boolean, message?: string }> {
   const formData = new FormData()
   formData.append('file', file)
   const ocrParam = ocr === 'force' ? '?ocr=force' : ''

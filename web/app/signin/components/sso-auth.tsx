@@ -1,15 +1,15 @@
 'use client'
 import type { FC } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useReducer, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Button from '@/app/components/base/button'
 import { Lock01 } from '@/app/components/base/icons/src/vender/solid/security'
 import Toast from '@/app/components/base/toast'
 import { exchangeSSOToken, getUserOAuth2SSOUrl, getUserOIDCSSOUrl, getUserSAMLSSOUrl } from '@/service/sso'
-import { getDesktopSSOCallbackParams, isDesktopRuntime, isDesktopSSOCallback, isDesktopSSOEnabled, startDesktopSSOLogin } from '@/service/sso-desktop-auth'
-import { SSOProtocol } from '@/types/feature'
+import { getDesktopSSOCallbackParams, isDesktopSSOCallback, isDesktopSSOEnabled, startDesktopSSOLogin } from '@/service/sso-desktop-auth'
 import { useIsLogin } from '@/service/use-common'
+import { SSOProtocol } from '@/types/feature'
 
 type SSOAuthProps = {
   protocol: SSOProtocol | ''
@@ -25,13 +25,13 @@ const SSOAuth: FC<SSOAuthProps> = ({
   const { refetch: refetchLoginStatus } = useIsLogin()
 
   const [isLoading, setIsLoading] = useState(false)
-  const [isProcessingCallback, setIsProcessingCallback] = useState(false)
+  const [isProcessingCallback, setIsProcessingCallback] = useReducer((_: boolean, value: boolean) => value, false)
 
   useEffect(() => {
     if (isDesktopSSOCallback()) {
       setIsProcessingCallback(true)
       const params = getDesktopSSOCallbackParams()
-      
+
       if (!params) {
         Toast.notify({
           type: 'error',
@@ -44,20 +44,26 @@ const SSOAuth: FC<SSOAuthProps> = ({
       exchangeSSOToken(params)
         .then(async () => {
           await refetchLoginStatus()
-          
-          const checkLoginInterval = setInterval(async () => {
+
+          let checkLoginInterval: ReturnType<typeof setInterval> | null = null
+          const processingTimeout = window.setTimeout(() => {
+            if (checkLoginInterval)
+              clearInterval(checkLoginInterval)
+
+            setIsProcessingCallback(false)
+          }, 10000)
+
+          checkLoginInterval = setInterval(async () => {
             const { data } = await refetchLoginStatus()
             if (data?.logged_in) {
-              clearInterval(checkLoginInterval)
+              if (checkLoginInterval)
+                clearInterval(checkLoginInterval)
+
+              clearTimeout(processingTimeout)
               sessionStorage.removeItem('desktop-sso-state')
               router.replace('/apps')
             }
           }, 500)
-
-          setTimeout(() => {
-            clearInterval(checkLoginInterval)
-            setIsProcessingCallback(false)
-          }, 10000)
         })
         .catch((error) => {
           console.error('SSO token exchange failed:', error)
@@ -68,16 +74,16 @@ const SSOAuth: FC<SSOAuthProps> = ({
           setIsProcessingCallback(false)
         })
     }
-  }, [searchParams, router, refetchLoginStatus])
+  }, [router, searchParams, refetchLoginStatus])
 
   const handleSSOLogin = () => {
     setIsLoading(true)
-    
+
     if (isDesktopSSOEnabled()) {
       startDesktopSSOLogin()
       return
     }
-    
+
     if (protocol === SSOProtocol.SAML) {
       getUserSAMLSSOUrl(invite_token).then((res) => {
         router.push(res.url)
@@ -112,8 +118,8 @@ const SSOAuth: FC<SSOAuthProps> = ({
 
   if (isProcessingCallback) {
     return (
-      <div className="w-full text-center py-4">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="w-full py-4 text-center">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
         <p className="mt-2 text-sm text-gray-600">Processing SSO login...</p>
       </div>
     )

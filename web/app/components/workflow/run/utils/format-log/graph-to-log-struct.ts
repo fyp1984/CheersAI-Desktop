@@ -115,7 +115,7 @@ function parseNode(nodeStr: string, parentIterationId?: string, parentLoopId?: s
  * Supports nested flows and complex sub-nodes.
  * Adds iteration-specific metadata recursively.
  * @param paramParts - The parameters string split by commas.
- * @param parentIterationId - The ID of the parent iteration node (if applicable).
+ * @param parentIteration - The ID of the parent iteration node (if applicable).
  * @param parentLoopId - The ID of the parent loop node (if applicable).
  * @returns An array of parsed parameters (plain nodes, nested nodes, or flows).
  */
