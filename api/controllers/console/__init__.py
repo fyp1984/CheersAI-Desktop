@@ -78,11 +78,13 @@ from .auth import (
     apply_beta,
     data_source_bearer_auth,
     data_source_oauth,
+    desktop_sso,
     email_register,
     forgot_password,
     login,
     oauth,
     oauth_server,
+    sso_token,
 )
 
 # Import billing controllers
