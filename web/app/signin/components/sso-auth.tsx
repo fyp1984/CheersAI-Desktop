@@ -29,10 +29,12 @@ const SSOAuth: FC<SSOAuthProps> = ({
 
   useEffect(() => {
     if (isDesktopSSOCallback()) {
+      console.log('[SSO] Detected SSO callback')
       setIsProcessingCallback(true)
       const params = getDesktopSSOCallbackParams()
       
       if (!params) {
+        console.error('[SSO] Invalid callback parameters')
         Toast.notify({
           type: 'error',
           message: 'SSO callback parameters invalid',
@@ -41,26 +43,21 @@ const SSOAuth: FC<SSOAuthProps> = ({
         return
       }
 
+      console.log('[SSO] Starting token exchange with params:', params)
       exchangeSSOToken(params)
         .then(async () => {
-          await refetchLoginStatus()
+          console.log('[SSO] Token exchange successful, waiting 1000ms before redirect')
+          // Wait longer for cookies to be set by the browser
+          await new Promise(resolve => setTimeout(resolve, 1000))
           
-          const checkLoginInterval = setInterval(async () => {
-            const { data } = await refetchLoginStatus()
-            if (data?.logged_in) {
-              clearInterval(checkLoginInterval)
-              sessionStorage.removeItem('desktop-sso-state')
-              router.replace('/apps')
-            }
-          }, 500)
-
-          setTimeout(() => {
-            clearInterval(checkLoginInterval)
-            setIsProcessingCallback(false)
-          }, 10000)
+          console.log('[SSO] Redirecting to /apps')
+          // Force reload to ensure fresh cookies are used
+          sessionStorage.removeItem('desktop-sso-state')
+          sessionStorage.setItem('sso-just-logged-in', 'true')
+          window.location.href = '/apps'
         })
         .catch((error) => {
-          console.error('SSO token exchange failed:', error)
+          console.error('[SSO] Token exchange failed:', error)
           Toast.notify({
             type: 'error',
             message: 'SSO login failed',

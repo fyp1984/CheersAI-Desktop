@@ -1,0 +1,120 @@
+Traceback 
+(most recent call last)
+File 
+"E:\CheersAI-Desktop\api\.venv\Lib\site-packages\sqlalchemy\engine\base.py"
+,
+      line 
+1967
+,
+      in 
+_exec_single_context
+context,
+):
+evt_handled = True
+break
+if not evt_handled:
+self.dialect.do_execute(
+^
+cursor, str_statement, effective_parameters, context
+)
+if self._has_events or self.engine._has_events:
+self.dispatch.after_cursor_execute(
+File 
+"E:\CheersAI-Desktop\api\.venv\Lib\site-packages\sqlalchemy\engine\default.py"
+,
+      line 
+951
+,
+      in 
+do_execute
+def do_executemany(self, cursor, statement, parameters, context=None):
+cursor.executemany(statement, parameters)
+def do_execute(self, cursor, statement, parameters, context=None):
+cursor.execute(statement, parameters)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+def do_execute_no_params(self, cursor, statement, context=None):
+cursor.execute(statement)
+def is_disconnect(
+The above exception was the direct cause of the following exception:
+File 
+"E:\CheersAI-Desktop\api\extensions\ext_fastopenapi.py"
+,
+      line 
+37
+,
+      in 
+view_func
+except Exception as e:
+error_response = self.handle_exception(e)
+return jsonify(error_response), getattr(e, "status_code", 422)
+try:
+result = endpoint(**kwargs)
+         ^^^^^^^^^^^^^^^^^^
+except Exception as e:
+error_response = self.handle_exception(e)
+return jsonify(error_response), getattr(e, "code", 500)
+# If decorators returned a Response directly, pass it through
+File 
+"E:\CheersAI-Desktop\api\controllers\console\setup.py"
+,
+      line 
+47
+,
+      in 
+get_setup_status_api
+tags=["console"],
+)
+def get_setup_status_api() -> SetupStatusResponse:
+"""Get system setup status."""
+if dify_config.EDITION == "SELF_HOSTED":
+setup_status = get_setup_status()
+               ^^^^^^^^^^^^^^^^^^
+if setup_status and not isinstance(setup_status, bool):
+return SetupStatusResponse(step="finished", setup_at=setup_status.setup_at.isoformat())
+if setup_status:
+return SetupStatusResponse(step="finished")
+return SetupStatusResponse(step="not_started")
+File 
+"E:\CheersAI-Desktop\api\controllers\console\setup.py"
+,
+      line 
+90
+,
+      in 
+get_setup_status
+return SetupResponse(result="success")
+def get_setup_status() -> DifySetup | bool | None:
+if dify_config.EDITION == "SELF_HOSTED":
+return db.session.query(DifySetup).first()
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+return True
+File 
+"E:\CheersAI-Desktop\api\.venv\Lib\site-packages\sqlalchemy\orm\query.py"
+,
+      line 
+2759
+,
+      in 
+first
+"""
+# replicates limit(1) behavior
+if self._statement is not None:
+return self._iter().first()  # type: ignore
+else:
+return self.limit(1)._iter().first()  # type: ignore
+       ^^^^^^^^^^^^^^^^^^^^^
+def one_or_none(self) -> Optional[_T]:
+"""Return at most one result or raise an exception.
+Returns ``None`` if the query selects
+File 
+"E:\CheersAI-Desktop\api\.venv\Lib\site-packages\sqlalchemy\orm\query.py"
+,
+      line 
+2857
+,
+      in 
+_iter
+def _iter(self) -> Union[ScalarResult[_T], Result[_T]]:
+# new style execution.
+params = self._params
+s

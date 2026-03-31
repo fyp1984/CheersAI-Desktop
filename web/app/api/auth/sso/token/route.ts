@@ -18,24 +18,32 @@ export async function POST(request: NextRequest) {
     const clientSecret = process.env.DESKTOP_SSO_CLIENT_SECRET || ''
 
     const tokenUrl = new URL('/api/login/oauth/access_token', ssoBaseUrl)
+    const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
     
+    const params = new URLSearchParams()
+    params.append('grant_type', 'authorization_code')
+    params.append('code', code)
+    params.append('redirect_uri', redirectUri)
+    params.append('client_id', clientId) // send in body as fallback
+    params.append('client_secret', clientSecret) // send in body because many IDPs reject Basic Auth
+
     const tokenResponse = await fetch(tokenUrl.toString(), {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${authString}`,
+        'Accept': 'application/json'
       },
-      body: JSON.stringify({
-        client_id: clientId,
-        client_secret: clientSecret,
-        code,
-        redirect_uri: redirectUri,
-        grant_type: 'authorization_code',
-      }),
+      body: params.toString(),
     })
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text()
-      console.error('SSO token exchange failed:', errorText)
+      console.error('SSO token exchange failed:', {
+        status: tokenResponse.status,
+        tokenUrl: tokenUrl.toString(),
+        body: errorText,
+      })
       return NextResponse.json(
         { error: 'Token exchange failed' },
         { status: tokenResponse.status }
@@ -78,9 +86,16 @@ export async function POST(request: NextRequest) {
     })
   }
   catch (error) {
-    console.error('SSO token exchange error:', error)
+    console.error('SSO token exchange error:', {
+      message: (error as any)?.message,
+      cause: (error as any)?.cause,
+      error,
+    })
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        error: 'Internal server error',
+        details: process.env.NODE_ENV === 'production' ? undefined : String(error),
+      },
       { status: 500 }
     )
   }

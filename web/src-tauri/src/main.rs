@@ -74,6 +74,7 @@ fn sandbox_ensure_dir(dir: String) -> Result<bool, String> {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_http::init())
         .invoke_handler(tauri::generate_handler![
             sandbox_write_file,
             sandbox_read_file,

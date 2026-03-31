@@ -17,15 +17,15 @@ export const generateRandomState = () => {
 
 export const getDesktopCallbackUrl = () => {
   if (typeof window === 'undefined')
-    return 'http://localhost:3000/signin/built-in'
+    return 'http://localhost:3000/oauth-callback'
   
   const { protocol, host } = window.location
-  return `${protocol}//${host}/signin/built-in`
+  return `${protocol}//${host}/oauth-callback`
 }
 
 export const startDesktopSSOLogin = () => {
   const clientId = process.env.NEXT_PUBLIC_DESKTOP_SSO_CLIENT_ID || '35f82ac3f099085a6fd0'
-  const protocol = process.env.NEXT_PUBLIC_DESKTOP_SSO_PROTOCOL || 'oauth2'
+  const protocol = process.env.NEXT_PUBLIC_DESKTOP_SSO_PROTOCOL || 'oauth'
   const redirectUri = getDesktopCallbackUrl()
   const state = generateRandomState()
   
@@ -48,7 +48,7 @@ export const isDesktopSSOCallback = () => {
     return false
   
   const params = new URLSearchParams(window.location.search)
-  return params.get('sso') === 'desktop' && params.has('code')
+  return window.location.pathname === '/oauth-callback' && params.has('code')
 }
 
 export const getDesktopSSOCallbackParams = () => {

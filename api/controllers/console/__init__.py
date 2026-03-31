@@ -83,6 +83,7 @@ from .auth import (
     login,
     oauth,
     oauth_server,
+    desktop_sso,
 )
 
 # Import billing controllers
@@ -168,6 +169,7 @@ __all__ = [
     "compliance",
     "console_ns",
     "conversation",
+    "desktop_sso",
     "conversation_variables",
     "data_source",
     "data_source_bearer_auth",
