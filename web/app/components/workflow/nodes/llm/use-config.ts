@@ -105,7 +105,7 @@ const useConfig = (id: string, payload: LLMNodeType) => {
       })
       setInputs(newInputs)
     }
-  }, [defaultConfig, isChatModel])
+  }, [appendDefaultPromptConfig, defaultConfig, inputs, inputs.prompt_template, setInputs])
 
   const [modelChanged, setModelChanged] = useState(false)
   const {
@@ -164,7 +164,7 @@ const useConfig = (id: string, payload: LLMNodeType) => {
       return
     setModelChanged(false)
     handleVisionConfigAfterModelChanged()
-  }, [isVisionModel, modelChanged])
+  }, [handleVisionConfigAfterModelChanged, modelChanged])
 
   // variables
   const isShowVars = (() => {

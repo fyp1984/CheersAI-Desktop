@@ -17,6 +17,18 @@ import { cn } from '@/utils/classnames'
 
 const i18nPrefix = 'singleRun'
 
+const getIterationKey = (iteration: NodeTracing[]) => {
+  const firstItem = iteration[0]
+  const executionMetadata = firstItem?.execution_metadata
+
+  return String(
+    executionMetadata?.parallel_mode_run_id
+    || executionMetadata?.iteration_id
+    || executionMetadata?.iteration_index
+    || `${firstItem?.node_id || 'iteration'}-${iteration.length}`,
+  )
+}
+
 type Props = {
   list: NodeTracing[][]
   onBack: () => void
@@ -88,7 +100,7 @@ const IterationResultPanel: FC<Props> = ({
       {/* List */}
       <div className="bg-components-panel-bg p-2">
         {list.map((iteration, index) => (
-          <div key={index} className={cn('mb-1 overflow-hidden rounded-xl border-none bg-background-section-burn')}>
+          <div key={getIterationKey(iteration)} className={cn('mb-1 overflow-hidden rounded-xl border-none bg-background-section-burn')}>
             <div
               className={cn(
                 'flex w-full cursor-pointer items-center justify-between px-3',

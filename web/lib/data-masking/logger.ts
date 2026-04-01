@@ -5,7 +5,7 @@
  * 记录数据脱敏操作的日志，确保不包含敏感数据
  */
 
-import type { MaskingLog } from './types'
+import type { ErrorDetails, MaskingLog } from './types'
 import { v4 as uuidv4 } from 'uuid'
 import { addRecord, getAllRecords, getIndexedDB, STORES } from './indexeddb'
 
@@ -55,7 +55,7 @@ export class Logger {
       status,
       message,
       timestamp: new Date(),
-      details: sanitizedDetails,
+      details: sanitizedDetails as ErrorDetails | undefined,
     }
 
     try {

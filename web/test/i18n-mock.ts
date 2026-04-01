@@ -37,14 +37,16 @@ export function createTFunction(translations: TranslationMap, defaultNs?: string
  * }))
  */
 export function createUseTranslationMock(translations: TranslationMap = {}) {
+  const translationMockFactory = (defaultNs?: string) => ({
+    t: createTFunction(translations, defaultNs),
+    i18n: {
+      language: 'en',
+      changeLanguage: vi.fn(),
+    },
+  })
+
   return {
-    useTranslation: (defaultNs?: string) => ({
-      t: createTFunction(translations, defaultNs),
-      i18n: {
-        language: 'en',
-        changeLanguage: vi.fn(),
-      },
-    }),
+    useTranslation: translationMockFactory,
   }
 }
 

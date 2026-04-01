@@ -8,17 +8,17 @@
 /**
  * 脱敏策略类型
  */
-export type MaskingStrategy =
-  | { type: 'replacement'; value: string }
-  | { type: 'tokenization'; prefix: string }
-  | { type: 'format-preserving'; format: string }
-  | { type: 'partial-mask'; keepFirst: number; keepLast: number; maskChar: string }
-  | { type: 'context-keyword'; keywords: string[]; value: string }
+export type MaskingStrategy
+  = | { type: 'replacement', value: string }
+    | { type: 'tokenization', prefix: string }
+    | { type: 'format-preserving', format: string }
+    | { type: 'partial-mask', keepFirst: number, keepLast: number, maskChar: string }
+    | { type: 'context-keyword', keywords: string[], value: string }
 
 /**
  * 脱敏规则
  */
-export interface MaskingRule {
+export type MaskingRule = {
   id: string
   name: string
   description: string
@@ -33,7 +33,7 @@ export interface MaskingRule {
 /**
  * 规则验证结果
  */
-export interface ValidationResult {
+export type ValidationResult = {
   valid: boolean
   errors: string[]
 }
@@ -43,7 +43,7 @@ export interface ValidationResult {
 /**
  * 脱敏结果
  */
-export interface MaskingResult {
+export type MaskingResult = {
   maskedContent: string
   mappingId: string
   matchCount: number
@@ -53,7 +53,7 @@ export interface MaskingResult {
 /**
  * 映射条目
  */
-export interface MappingEntry {
+export type MappingEntry = {
   originalValue: string // 加密存储
   maskedValue: string
   position: number
@@ -64,7 +64,7 @@ export interface MappingEntry {
 /**
  * 映射数据
  */
-export interface MappingData {
+export type MappingData = {
   id: string
   fileName: string
   filePath: string
@@ -77,7 +77,7 @@ export interface MappingData {
 /**
  * 映射信息（列表显示用）
  */
-export interface MappingInfo {
+export type MappingInfo = {
   id: string
   fileName: string
   entryCount: number
@@ -89,7 +89,7 @@ export interface MappingInfo {
 /**
  * 沙箱配置
  */
-export interface SandboxConfig {
+export type SandboxConfig = {
   path: string
   createdAt: Date
   lastModified: Date
@@ -101,7 +101,7 @@ export interface SandboxConfig {
 /**
  * 配置结果
  */
-export interface ConfigResult {
+export type ConfigResult = {
   success: boolean
   sandboxPath: string
   error?: string
@@ -110,7 +110,7 @@ export interface ConfigResult {
 /**
  * 文件信息
  */
-export interface FileInfo {
+export type FileInfo = {
   name: string
   path: string
   size: number
@@ -123,7 +123,7 @@ export interface FileInfo {
 /**
  * 上传结果
  */
-export interface UploadResult {
+export type UploadResult = {
   success: boolean
   fileId: string
   error?: string
@@ -136,11 +136,13 @@ export type UploadProgressCallback = (progress: number) => void
 
 // ==================== 反向替换相关类型 ====================
 
+export type ErrorDetails = Record<string, unknown>
+
 /**
  * 替换结果
  */
-export interface SubstitutionResult {
-  response: any
+export type SubstitutionResult = {
+  response: unknown
   substituted: string[]
   failed: string[]
   partial: boolean
@@ -151,7 +153,7 @@ export interface SubstitutionResult {
 /**
  * 脱敏日志
  */
-export interface MaskingLog {
+export type MaskingLog = {
   id: string
   operation: 'mask' | 'upload' | 'substitute' | 'delete'
   fileName: string
@@ -159,7 +161,7 @@ export interface MaskingLog {
   status: 'success' | 'failure' | 'partial'
   message: string
   timestamp: Date
-  details?: any
+  details?: ErrorDetails
 }
 
 // ==================== 错误类型 ====================
@@ -171,7 +173,7 @@ export class MaskingError extends Error {
   constructor(
     message: string,
     public code: string,
-    public details?: any,
+    public details?: ErrorDetails,
   ) {
     super(message)
     this.name = 'MaskingError'
@@ -185,7 +187,7 @@ export class UploadError extends Error {
   constructor(
     message: string,
     public code: string,
-    public details?: any,
+    public details?: ErrorDetails,
   ) {
     super(message)
     this.name = 'UploadError'
@@ -199,7 +201,7 @@ export class SandboxError extends Error {
   constructor(
     message: string,
     public code: string,
-    public details?: any,
+    public details?: ErrorDetails,
   ) {
     super(message)
     this.name = 'SandboxError'
@@ -211,7 +213,7 @@ export class SandboxError extends Error {
 /**
  * 数据库脱敏规则记录
  */
-export interface DBMaskingRule {
+export type DBMaskingRule = {
   id: string
   name: string
   description: string | null
@@ -227,7 +229,7 @@ export interface DBMaskingRule {
 /**
  * 数据库映射记录
  */
-export interface DBMapping {
+export type DBMapping = {
   id: string
   file_name: string
   file_path: string
@@ -239,7 +241,7 @@ export interface DBMapping {
 /**
  * 数据库映射条目记录
  */
-export interface DBMappingEntry {
+export type DBMappingEntry = {
   id: number
   mapping_id: string
   original_value_encrypted: string
@@ -252,7 +254,7 @@ export interface DBMappingEntry {
 /**
  * 数据库沙箱配置记录
  */
-export interface DBSandboxConfig {
+export type DBSandboxConfig = {
   id: number
   path: string
   created_at: string
@@ -265,7 +267,7 @@ export interface DBSandboxConfig {
 /**
  * 数据库日志记录
  */
-export interface DBMaskingLog {
+export type DBMaskingLog = {
   id: string
   operation: string
   file_name: string

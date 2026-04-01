@@ -145,7 +145,7 @@ export const sendSimpleChatMessage = async (
     for (const line of lines) {
       if (line.startsWith('data: ')) {
         const data = line.slice(6)
-        
+
         if (data === '[DONE]') {
           return
         }
@@ -160,7 +160,7 @@ export const sendSimpleChatMessage = async (
             return
           }
         }
-        catch (e) {
+        catch {
           // Ignore parse errors
         }
       }

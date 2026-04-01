@@ -15,7 +15,7 @@ export const getUserOAuth2SSOUrl = (invite_token?: string) => {
   return get<{ url: string, state: string }>(url)
 }
 
-export interface DesktopSSOLoginUrlParams {
+export type DesktopSSOLoginUrlParams = {
   clientId: string
   redirectUri: string
   state: string
@@ -27,16 +27,19 @@ export const getDesktopSSOLoginUrl = (params: DesktopSSOLoginUrlParams) => {
   const ssoBaseUrl = process.env.NEXT_PUBLIC_DESKTOP_SSO_LOGIN_URL || 'http://localhost:8000'
   
   const authUrl = new URL(`/login/oauth/authorize`, ssoBaseUrl)
+
+  const authUrl = new URL(`/login/${protocol}/authorize`, ssoBaseUrl)
   authUrl.searchParams.set('client_id', clientId)
   authUrl.searchParams.set('redirect_uri', redirectUri)
   authUrl.searchParams.set('state', state)
   authUrl.searchParams.set('response_type', 'code')
   authUrl.searchParams.set('scope', 'openid profile email')
   
+
   return authUrl.toString()
 }
 
-export interface ExchangeTokenParams {
+export type ExchangeTokenParams = {
   code: string
   state: string
   redirectUri: string

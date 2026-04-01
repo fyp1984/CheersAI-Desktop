@@ -43,6 +43,7 @@ export function createNavigationPath(basePath: string, preserveParams: boolean =
  * Creates a back navigation function that preserves query parameters
  *
  * @param router - Next.js router instance
+ * @param router.push - Router push method
  * @param basePath - The base path to navigate back to
  * @param preserveParams - Whether to preserve current query parameters (default: true)
  * @returns A function that navigates back with preserved parameters

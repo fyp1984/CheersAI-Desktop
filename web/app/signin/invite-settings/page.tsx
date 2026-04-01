@@ -63,7 +63,7 @@ export default function InviteSettingsPage() {
     catch {
       recheck()
     }
-  }, [language, name, recheck, timezone, token, router, t])
+  }, [language, name, recheck, router, searchParams, t, timezone, token])
 
   if (!checkRes)
     return <Loading />

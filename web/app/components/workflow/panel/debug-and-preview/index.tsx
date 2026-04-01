@@ -51,7 +51,6 @@ const DebugAndPreview = () => {
   }
 
   const workflowCanvasWidth = useStore(s => s.workflowCanvasWidth)
-  const nodePanelWidth = useStore(s => s.nodePanelWidth)
   const panelWidth = useStore(s => s.previewPanelWidth)
   const setPanelWidth = useStore(s => s.setPreviewPanelWidth)
   const handleResize = useCallback((width: number, source: 'user' | 'system' = 'user') => {
@@ -67,7 +66,7 @@ const DebugAndPreview = () => {
       return workflowCanvasWidth - 400
 
     return workflowCanvasWidth - 400 - 400
-  }, [workflowCanvasWidth, selectedNode, nodePanelWidth])
+  }, [workflowCanvasWidth, selectedNode])
   const {
     triggerRef,
     containerRef,

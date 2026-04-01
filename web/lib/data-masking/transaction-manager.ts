@@ -1,21 +1,22 @@
 /**
  * 事务管理器
  * Transaction Manager
- * 
+ *
  * 管理数据脱敏操作的事务，支持回滚
  */
 
-import type { SandboxManager } from './sandbox-manager'
+import type { Logger } from './logger'
 import type { MappingStore } from './mapping-store'
-import { Logger } from './logger'
+import type { SandboxManager } from './sandbox-manager'
+import type { MappingData } from './types'
 import { MaskingError } from './types'
 
 /**
  * 操作记录接口
  */
-interface Operation {
+type Operation = {
   type: 'file_save' | 'mapping_store' | 'file_delete' | 'mapping_delete'
-  data: any
+  data: Record<string, string | null>
   rollback: () => Promise<void>
 }
 
@@ -79,7 +80,7 @@ export class TransactionManager {
    * @param mappingData - 映射数据
    * @returns 映射ID
    */
-  async storeMapping(mappingData: any): Promise<string> {
+  async storeMapping(mappingData: MappingData): Promise<string> {
     this.ensureNotFinalized()
 
     const mappingId = await this.mappingStore.storeMapping(mappingData)

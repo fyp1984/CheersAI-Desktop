@@ -1,13 +1,21 @@
 /**
  * 沙箱管理器
  * Sandbox Manager
- * 
+ *
  * 管理本地隔离目录，存储脱敏文件和元数据
  */
 
-import type { ConfigResult, FileInfo, SandboxConfig } from './types'
+import type { ConfigResult, DBSandboxConfig, FileInfo, SandboxConfig } from './types'
+import { getIndexedDB, getRecord, STORES, updateRecord } from './indexeddb'
 import { SandboxError } from './types'
-import { getIndexedDB, STORES, getRecord, updateRecord } from './indexeddb'
+
+type SandboxFileMetadata = {
+  name: string
+  path: string
+  size: number
+  createdAt: string
+  isMasked: boolean
+}
 
 /**
  * 沙箱管理器类
@@ -21,7 +29,7 @@ export class SandboxManager {
    */
   async initialize(): Promise<void> {
     this.db = await getIndexedDB()
-    
+
     // 加载沙箱配置
     const config = await this.loadConfig()
     if (config) {
@@ -128,12 +136,12 @@ export class SandboxManager {
 
     // 规范化文件名（移除首尾空格）
     const normalizedFileName = fileName.trim()
-    
+
     // 检查空文件名或只有扩展名的文件名
     if (!normalizedFileName || normalizedFileName === '.txt' || normalizedFileName === '.') {
       throw new SandboxError('Invalid file name', 'INVALID_FILE_NAME')
     }
-    
+
     // 检查隐藏文件（以单个点开头，但不是 .. 路径遍历）
     // 注意：trim() 后以点开头意味着原始文件名可能是 " .txt" 这样的无效名称
     if (normalizedFileName.startsWith('.') && !normalizedFileName.startsWith('..')) {
@@ -157,7 +165,7 @@ export class SandboxManager {
     if (typeof localStorage !== 'undefined') {
       const fileKey = `sandbox_file:${filePath}`
       localStorage.setItem(fileKey, content)
-      
+
       // 保存文件元数据
       const metaKey = `sandbox_meta:${filePath}`
       const metadata = {
@@ -196,7 +204,7 @@ export class SandboxManager {
     if (typeof localStorage !== 'undefined') {
       const fileKey = `sandbox_file:${filePath}`
       const content = localStorage.getItem(fileKey)
-      
+
       if (content === null) {
         throw new SandboxError(
           'File not found',
@@ -204,7 +212,7 @@ export class SandboxManager {
           { filePath },
         )
       }
-      
+
       return content
     }
 
@@ -225,14 +233,14 @@ export class SandboxManager {
     // 在浏览器环境中，从 localStorage 读取
     if (typeof localStorage !== 'undefined') {
       const normalizedSandbox = this.normalizePath(this.sandboxPath)
-      
+
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
         if (key && key.startsWith('sandbox_meta:')) {
           const metaStr = localStorage.getItem(key)
           if (metaStr) {
             try {
-              const meta = JSON.parse(metaStr)
+              const meta = JSON.parse(metaStr) as SandboxFileMetadata
               // Check if file belongs to current sandbox
               const normalizedMetaPath = this.normalizePath(meta.path || '')
               if (normalizedMetaPath && normalizedMetaPath.startsWith(normalizedSandbox)) {
@@ -245,7 +253,7 @@ export class SandboxManager {
                 })
               }
             }
-            catch (error) {
+            catch {
               // 忽略解析错误
             }
           }
@@ -278,7 +286,7 @@ export class SandboxManager {
     if (typeof localStorage !== 'undefined') {
       const fileKey = `sandbox_file:${filePath}`
       const metaKey = `sandbox_meta:${filePath}`
-      
+
       localStorage.removeItem(fileKey)
       localStorage.removeItem(metaKey)
     }
@@ -305,8 +313,8 @@ export class SandboxManager {
     }
 
     try {
-      const record = await getRecord<any>(this.db, STORES.SANDBOX_CONFIG, 1)
-      
+      const record = await getRecord<DBSandboxConfig>(this.db, STORES.SANDBOX_CONFIG, 1)
+
       if (!record) {
         return null
       }
@@ -320,7 +328,7 @@ export class SandboxManager {
         cleanupDays: record.cleanup_days ?? undefined,
       }
     }
-    catch (error) {
+    catch {
       return null
     }
   }
@@ -328,14 +336,14 @@ export class SandboxManager {
   /**
    * 验证路径用于配置（更严格的验证）
    */
-  private async validatePathForConfig(path: string): Promise<{ valid: boolean; error?: string }> {
+  private async validatePathForConfig(path: string): Promise<{ valid: boolean, error?: string }> {
     if (!path || path.trim() === '') {
       return { valid: false, error: '路径不能为空' }
     }
 
     // Must be absolute path
     const trimmed = path.trim()
-    const isAbsolute = /^[A-Za-z]:[\\/]/.test(trimmed) || trimmed.startsWith('/') || trimmed.startsWith('\\\\')
+    const isAbsolute = /^[A-Z]:[\\/]/i.test(trimmed) || trimmed.startsWith('/') || trimmed.startsWith('\\\\')
     if (!isAbsolute) {
       return { valid: false, error: '请输入完整的绝对路径，例如 C:\\Users\\用户名\\Documents\\masked-files' }
     }
@@ -371,16 +379,16 @@ export class SandboxManager {
   private normalizePath(path: string): string {
     // 去除首尾空格
     let normalized = path.trim()
-    
+
     // 移除末尾的斜杠
-    normalized = normalized.replace(/[\/\\]+$/, '')
-    
+    normalized = normalized.replace(/[/\\]+$/, '')
+
     // 统一使用正斜杠
     normalized = normalized.replace(/\\/g, '/')
-    
+
     // 移除重复的斜杠
     normalized = normalized.replace(/\/+/g, '/')
-    
+
     return normalized
   }
 
@@ -389,20 +397,20 @@ export class SandboxManager {
    */
   private joinPath(...parts: string[]): string {
     // 如果第一个部分是绝对路径，保留它
-    const isAbsolute = parts[0] && (parts[0].startsWith('/') || /^[A-Za-z]:/.test(parts[0]))
-    
+    const isAbsolute = parts[0] && (parts[0].startsWith('/') || /^[A-Z]:/i.test(parts[0]))
+
     const joined = parts
       .map((part, index) => {
         // 对于第一个绝对路径，只移除末尾的斜杠
         if (index === 0 && isAbsolute) {
-          return part.replace(/[\/\\]+$/g, '')
+          return part.replace(/[/\\]+$/g, '')
         }
         // 对于其他部分，移除首尾的斜杠
-        return part.replace(/^[\/\\]+|[\/\\]+$/g, '')
+        return part.replace(/^[/\\]+|[/\\]+$/g, '')
       })
       .filter(part => part.length > 0)
       .join('/')
-    
+
     return joined
   }
 }

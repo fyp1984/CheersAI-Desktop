@@ -15,6 +15,18 @@ import TracingPanel from './tracing-panel'
 
 const i18nPrefix = 'singleRun'
 
+const getLoopKey = (loop: NodeTracing[]) => {
+  const firstItem = loop[0]
+  const executionMetadata = firstItem?.execution_metadata
+
+  return String(
+    executionMetadata?.parallel_mode_run_id
+    || executionMetadata?.loop_id
+    || executionMetadata?.loop_index
+    || `${firstItem?.node_id || 'loop'}-${loop.length}`,
+  )
+}
+
 type Props = {
   list: NodeTracing[][]
   onHide: () => void
@@ -57,7 +69,7 @@ const LoopResultPanel: FC<Props> = ({
       {/* List */}
       <div className={cn(!noWrap ? 'grow overflow-auto' : 'max-h-full', 'bg-components-panel-bg p-2')}>
         {list.map((loop, index) => (
-          <div key={index} className={cn('mb-1 overflow-hidden rounded-xl border-none bg-background-section-burn')}>
+          <div key={getLoopKey(loop)} className={cn('mb-1 overflow-hidden rounded-xl border-none bg-background-section-burn')}>
             <div
               className={cn(
                 'flex w-full cursor-pointer items-center justify-between px-3',

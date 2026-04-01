@@ -3,10 +3,10 @@
  * Masking Engine Property-Based Tests
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import * as fc from 'fast-check'
-import { MaskingEngine } from '../masking-engine'
 import type { MaskingRule, MaskingStrategy } from '../types'
+import * as fc from 'fast-check'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { MaskingEngine } from '../masking-engine'
 
 describe('MaskingEngine Property Tests', () => {
   let engine: MaskingEngine

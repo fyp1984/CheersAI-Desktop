@@ -3,7 +3,7 @@ import { getDesktopSSOLoginUrl } from './sso'
 export const isTauriRuntime = () => {
   if (typeof window === 'undefined')
     return false
-  
+
   return '__TAURI__' in window
 }
 
@@ -19,6 +19,8 @@ export const getDesktopCallbackUrl = () => {
   if (typeof window === 'undefined')
     return 'http://localhost:3000/oauth-callback'
   
+    return 'http://localhost:3000/signin/built-in'
+
   const { protocol, host } = window.location
   return `${protocol}//${host}/oauth-callback`
 }
@@ -28,17 +30,17 @@ export const startDesktopSSOLogin = () => {
   const protocol = process.env.NEXT_PUBLIC_DESKTOP_SSO_PROTOCOL || 'oauth'
   const redirectUri = getDesktopCallbackUrl()
   const state = generateRandomState()
-  
+
   if (typeof window !== 'undefined') {
     sessionStorage.setItem('desktop-sso-state', state)
-    
+
     const loginUrl = getDesktopSSOLoginUrl({
       clientId,
       redirectUri,
       state,
       protocol,
     })
-    
+
     window.location.href = loginUrl
   }
 }
@@ -46,7 +48,7 @@ export const startDesktopSSOLogin = () => {
 export const isDesktopSSOCallback = () => {
   if (typeof window === 'undefined')
     return false
-  
+
   const params = new URLSearchParams(window.location.search)
   return window.location.pathname === '/oauth-callback' && params.has('code')
 }
@@ -54,20 +56,20 @@ export const isDesktopSSOCallback = () => {
 export const getDesktopSSOCallbackParams = () => {
   if (typeof window === 'undefined')
     return null
-  
+
   const params = new URLSearchParams(window.location.search)
   const code = params.get('code')
   const state = params.get('state')
   const storedState = sessionStorage.getItem('desktop-sso-state')
-  
+
   if (!code || !state)
     return null
-  
+
   if (state !== storedState) {
     console.error('SSO state mismatch')
     return null
   }
-  
+
   return {
     code,
     state,

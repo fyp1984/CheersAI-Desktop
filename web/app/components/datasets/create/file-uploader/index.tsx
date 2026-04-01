@@ -12,7 +12,7 @@ import { ToastContext } from '@/app/components/base/toast'
 import { IS_CE_EDITION } from '@/config'
 
 import { useLocale } from '@/context/i18n'
-import { useSandboxSecurity } from '@/context/sandbox-security-context'
+import { useSandboxSecurity } from '@/context/use-sandbox-security'
 import useTheme from '@/hooks/use-theme'
 import { LanguagesSupported } from '@/i18n-config/language'
 import { upload } from '@/service/base'
@@ -300,15 +300,17 @@ const FileUploader = ({
   const chartColor = useMemo(() => theme === Theme.dark ? '#5289ff' : '#296dff', [theme])
 
   useEffect(() => {
-    dropRef.current?.addEventListener('dragenter', handleDragEnter)
-    dropRef.current?.addEventListener('dragover', handleDragOver)
-    dropRef.current?.addEventListener('dragleave', handleDragLeave)
-    dropRef.current?.addEventListener('drop', handleDrop)
+    const dropElement = dropRef.current
+
+    dropElement?.addEventListener('dragenter', handleDragEnter)
+    dropElement?.addEventListener('dragover', handleDragOver)
+    dropElement?.addEventListener('dragleave', handleDragLeave)
+    dropElement?.addEventListener('drop', handleDrop)
     return () => {
-      dropRef.current?.removeEventListener('dragenter', handleDragEnter)
-      dropRef.current?.removeEventListener('dragover', handleDragOver)
-      dropRef.current?.removeEventListener('dragleave', handleDragLeave)
-      dropRef.current?.removeEventListener('drop', handleDrop)
+      dropElement?.removeEventListener('dragenter', handleDragEnter)
+      dropElement?.removeEventListener('dragover', handleDragOver)
+      dropElement?.removeEventListener('dragleave', handleDragLeave)
+      dropElement?.removeEventListener('drop', handleDrop)
     }
   }, [handleDrop])
 
@@ -354,9 +356,9 @@ const FileUploader = ({
       )}
       <div className="max-w-[640px] cursor-default space-y-1">
 
-        {fileList.map((fileItem, index) => (
+        {fileList.map(fileItem => (
           <div
-            key={`${fileItem.fileID}-${index}`}
+            key={fileItem.fileID}
             onClick={() => fileItem.file?.id && onPreview(fileItem.file)}
             className={cn(
               'flex h-12 max-w-[640px] items-center rounded-lg border border-components-panel-border bg-components-panel-on-panel-item-bg text-xs leading-3 text-text-tertiary shadow-xs',

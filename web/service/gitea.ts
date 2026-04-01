@@ -1,7 +1,7 @@
 /**
  * Gitea file service for retrieving files from Gitea repository
  */
-import { del, get, post } from './base'
+import { get } from './base'
 
 export type GiteaFileMetadata = {
   name: string
@@ -27,7 +27,7 @@ export const getGiteaFileMetadata = (filePath: string) => {
  * Get file download URL from Gitea
  */
 export const getGiteaFileUrl = (filePath: string) => {
-  return get<{ url: string; path: string }>(`/gitea/files/${filePath}/url`)
+  return get<{ url: string, path: string }>(`/gitea/files/${filePath}/url`)
 }
 
 /**

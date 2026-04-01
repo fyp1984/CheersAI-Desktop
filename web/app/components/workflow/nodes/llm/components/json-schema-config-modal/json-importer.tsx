@@ -36,7 +36,7 @@ const JsonImporter: FC<JsonImporterProps> = ({
       const rect = importBtnRef.current.getBoundingClientRect()
       updateBtnWidth(rect.width)
     }
-  }, [])
+  }, [updateBtnWidth])
 
   const handleTrigger = useCallback((e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     e.stopPropagation()

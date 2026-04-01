@@ -179,9 +179,9 @@ const Panel: FC<NodePanelProps<ParameterExtractorNodeType>> = ({
           <div>
             <OutputVars>
               <>
-                {inputs.parameters.map((param, index) => (
+                {inputs.parameters.map(param => (
                   <VarItem
-                    key={index}
+                    key={`${param.name}-${param.type}`}
                     name={param.name}
                     type={param.type}
                     description={param.description}

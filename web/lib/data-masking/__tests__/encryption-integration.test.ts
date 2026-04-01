@@ -3,7 +3,7 @@
  * 测试完整的加密导出和解密还原流程
  */
 
-import { encrypt, decrypt, generateKey } from '../crypto-utils'
+import { decrypt, encrypt, generateKey } from '../crypto-utils'
 
 describe('Encryption Integration', () => {
   it('should complete full encryption and decryption workflow', async () => {
@@ -39,7 +39,7 @@ describe('Encryption Integration', () => {
     // 2. 加密映射数据
     const mappingJson = JSON.stringify(mappingData, null, 2)
     const encryptedData = await encrypt(mappingJson, encryptionKey)
-    
+
     // 3. 创建加密的映射文件结构
     const encryptedMappingFile = {
       version: '1.0',
@@ -106,7 +106,7 @@ describe('Encryption Integration', () => {
 
     const encryptionKey = generateKey(16)
     const mappingJson = JSON.stringify(largeMappingData)
-    
+
     // 加密
     const encryptedData = await encrypt(mappingJson, encryptionKey)
     expect(encryptedData.length).toBeGreaterThan(0)
@@ -169,7 +169,7 @@ describe('Encryption Integration', () => {
 
     const encryptionKey = generateKey(16)
     const mappingJson = JSON.stringify(mappingData, null, 2)
-    
+
     const encryptedData = await encrypt(mappingJson, encryptionKey)
     const decryptedJson = await decrypt(encryptedData, encryptionKey)
     const decryptedData = JSON.parse(decryptedJson)

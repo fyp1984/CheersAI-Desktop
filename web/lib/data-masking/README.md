@@ -86,7 +86,7 @@ web/lib/data-masking/
 
 1. **加密存储**: 原始敏感值使用 AES-256-GCM 加密
 2. **映射文件加密**: 导出的映射文件使用32位加密口令保护
-3. **密钥管理**: 
+3. **密钥管理**:
    - 系统自动生成32位随机口令（推荐）
    - 支持用户自定义口令（最少32位）
    - 口令默认隐藏，需要时可显示
@@ -145,10 +145,10 @@ pnpm test:coverage
 ### 脱敏文件（带加密导出）
 
 ```typescript
-import { MaskingEngine } from '@/lib/data-masking/masking-engine'
-import { MappingStore } from '@/lib/data-masking/mapping-store'
-import { SandboxManager } from '@/lib/data-masking/sandbox-manager'
 import { encrypt, generateKey } from '@/lib/data-masking/crypto-utils'
+import { MappingStore } from '@/lib/data-masking/mapping-store'
+import { MaskingEngine } from '@/lib/data-masking/masking-engine'
+import { SandboxManager } from '@/lib/data-masking/sandbox-manager'
 
 // 1. 配置沙箱
 const sandbox = new SandboxManager()
@@ -211,8 +211,8 @@ console.log('加密口令（请妥善保管）:', encryptionKey)
 ### 反向替换（带解密）
 
 ```typescript
-import { ReverseSubstitution } from '@/lib/data-masking/reverse-substitution'
 import { decrypt } from '@/lib/data-masking/crypto-utils'
+import { ReverseSubstitution } from '@/lib/data-masking/reverse-substitution'
 
 // 1. 读取加密的映射文件
 const encryptedMappingFile = JSON.parse(
@@ -223,7 +223,7 @@ const encryptedMappingFile = JSON.parse(
 if (encryptedMappingFile.encrypted) {
   // 3. 提示用户输入口令
   const userPassphrase = await promptForPassphrase()
-  
+
   // 4. 解密映射数据
   try {
     const decryptedJson = await decrypt(
@@ -231,19 +231,21 @@ if (encryptedMappingFile.encrypted) {
       userPassphrase
     )
     const mappingData = JSON.parse(decryptedJson)
-    
+
     // 5. 使用解密后的映射数据进行反向替换
     const reverseSubstitution = new ReverseSubstitution()
     const result = await reverseSubstitution.substituteWithRules(
       response,
       mappingData.rules
     )
-    
+
     console.log(result.response) // 原始敏感数据已恢复
-  } catch (error) {
+  }
+  catch (error) {
     console.error('解密失败：口令错误或数据损坏')
   }
-} else {
+}
+else {
   // 未加密的映射文件（向后兼容）
   const mappingData = encryptedMappingFile
   // ... 继续正常流程

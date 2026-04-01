@@ -39,7 +39,7 @@ const ToolForm: FC<Props> = ({
       {
         schema.map((schema, index) => (
           <ToolFormItem
-            key={index}
+            key={schema.variable || `${schema.type}-${index + 1}`}
             readOnly={readOnly}
             nodeId={nodeId}
             schema={schema}
