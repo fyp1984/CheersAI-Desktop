@@ -51,10 +51,7 @@ export const isDesktopSSOCallback = () => {
   const hasCode = params.has('code')
   const hasState = params.has('state')
   const storedState = sessionStorage.getItem('desktop-sso-state')
-  
-  // Check if this is a Desktop SSO callback by verifying:
-  // 1. Has code and state parameters
-  // 2. Has stored state in sessionStorage
+
   return hasCode && hasState && !!storedState
 }
 

@@ -12,6 +12,10 @@ build
 coverage
 .husky
 .next
+!.next/standalone
+!.next/standalone/**
+!.next/static
+!.next/static/**
 .pnpm-store
 src-tauri/server/.next
 src-tauri/server/node_modules

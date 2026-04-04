@@ -22,13 +22,13 @@ const NormalForm = () => {
   const searchParams = useSearchParams()
   const { isLoading: isCheckLoading, data: loginData } = useIsLogin()
   const isLoggedIn = loginData?.logged_in
-  const message = decodeURIComponent(searchParams.get('message') || '')
-  const invite_token = decodeURIComponent(searchParams.get('invite_token') || '')
+  const message = searchParams.get('message') || ''
+  const invite_token = searchParams.get('invite_token') || ''
   const [isInitCheckLoading, setInitCheckLoading] = useState(true)
   const [isRedirecting, setIsRedirecting] = useState(false)
   const isLoading = isCheckLoading || isInitCheckLoading || isRedirecting
   const { systemFeatures } = useGlobalPublicStore()
-  const [workspaceName, setWorkSpaceName] = useState('')
+  const [, setWorkSpaceName] = useState('')
 
   const isInviteLink = Boolean(invite_token && invite_token !== 'null')
 
@@ -149,7 +149,7 @@ const NormalForm = () => {
           {isDesktopSSOEnabled() && (
             <SSOAuth protocol="" />
           )}
-          
+
           {!isDesktopSSOEnabled() && (
             <div className="rounded-lg border border-red-200 bg-red-50 p-4">
               <div className="mb-2 flex items-center">
@@ -172,7 +172,7 @@ const NormalForm = () => {
               申请试用
             </Link>
           </p>
-          
+
           {!systemFeatures.branding.enabled && (
             <>
               <p>
