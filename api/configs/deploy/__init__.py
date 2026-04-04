@@ -32,3 +32,19 @@ class DeploymentConfig(BaseSettings):
         description="Deployment environment (e.g., 'PRODUCTION', 'DEVELOPMENT'), default to PRODUCTION",
         default="PRODUCTION",
     )
+
+    # SSO Configuration
+    SSO_API_URL: str = Field(
+        description="SSO API base URL for authentication",
+        default="",
+    )
+
+    DESKTOP_SSO_CLIENT_ID: str = Field(
+        description="OAuth2 client ID for Desktop SSO",
+        default="",
+    )
+
+    DESKTOP_SSO_CLIENT_SECRET: str = Field(
+        description="OAuth2 client secret for Desktop SSO",
+        default="",
+    )

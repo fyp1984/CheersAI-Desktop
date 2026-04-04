@@ -15,7 +15,7 @@ export const getUserOAuth2SSOUrl = (invite_token?: string) => {
   return get<{ url: string, state: string }>(url)
 }
 
-export type DesktopSSOLoginUrlParams = {
+export interface DesktopSSOLoginUrlParams {
   clientId: string
   redirectUri: string
   state: string
@@ -39,7 +39,7 @@ export const getDesktopSSOLoginUrl = (params: DesktopSSOLoginUrlParams) => {
   return authUrl.toString()
 }
 
-export type ExchangeTokenParams = {
+export interface ExchangeTokenParams {
   code: string
   state: string
   redirectUri: string
