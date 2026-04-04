@@ -59,7 +59,7 @@ const AuditLogsPage = () => {
     <div className="relative flex h-0 shrink-0 grow flex-col overflow-y-auto bg-background-body">
       {/* Top header bar */}
       <div className="sticky top-0 z-10 flex items-center justify-between bg-background-body px-12 pb-4 pt-7">
-        <h2 className="text-lg font-semibold text-text-primary">审计日志</h2>
+        <h2 className="text-lg font-semibold text-text-primary">仪表盘</h2>
       </div>
 
       {/* Content area */}

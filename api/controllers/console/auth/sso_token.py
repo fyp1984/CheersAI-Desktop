@@ -6,6 +6,7 @@ from controllers.console import console_ns
 from libs.helper import extract_remote_ip
 from services.account_service import AccountService, TenantService
 from models import Account, AccountStatus
+from models.account import TenantAccountJoin
 from extensions.ext_database import db
 from libs.datetime_utils import naive_utc_now
 from configs import dify_config
@@ -85,6 +86,20 @@ class SSOTokenExchangeApi(Resource):
             email = user_info.get('email')
             name = user_info.get('name', 'Dify User')
             
+            # 提取角色信息
+            sso_role_raw = user_info.get('type') or user_info.get('role') or 'user'
+            sso_role = sso_role_raw.lower().strip() if sso_role_raw else 'user'
+            
+            # 映射 Casdoor 角色到系统角色
+            if sso_role in ['admin', 'owner']:
+                system_role = 'owner'
+            elif sso_role in ['technician', 'editor']:
+                system_role = 'editor'
+            else:
+                system_role = 'normal'
+            
+            logger.info(f"SSO role mapping: {sso_role_raw} -> {system_role}")
+            
             if not email:
                 logger.error("No email in user info")
                 return {'result': 'fail', 'message': 'Email not provided by SSO'}, 400
@@ -108,6 +123,13 @@ class SSOTokenExchangeApi(Resource):
                 account.status = AccountStatus.ACTIVE
                 account.initialized_at = naive_utc_now()
                 db.session.commit()
+                
+                # 为新用户设置工作空间角色
+                logger.info(f"Setting workspace role for new user: {system_role}")
+                tenant_join = db.session.query(TenantAccountJoin).filter_by(account_id=account.id).first()
+                if tenant_join:
+                    tenant_join.role = system_role
+                    db.session.commit()
             else:
                 logger.info(f"Found existing account: {normalized_email}")
                 if account.status == AccountStatus.BANNED:
@@ -116,7 +138,23 @@ class SSOTokenExchangeApi(Resource):
                 if account.status == AccountStatus.PENDING:
                     account.status = AccountStatus.ACTIVE
                     account.initialized_at = naive_utc_now()
-                    db.session.commit()
+                
+                # 更新现有用户的工作空间角色
+                logger.info(f"Updating workspace role for existing user: {system_role}")
+                tenant_join = db.session.query(TenantAccountJoin).filter_by(account_id=account.id).first()
+                if tenant_join:
+                    # 如果不是唯一的owner，才更新角色
+                    if tenant_join.role == 'owner':
+                        owner_count = db.session.query(TenantAccountJoin).filter_by(
+                            tenant_id=tenant_join.tenant_id, 
+                            role='owner'
+                        ).count()
+                        if owner_count > 1:
+                            tenant_join.role = system_role
+                    else:
+                        tenant_join.role = system_role
+                
+                db.session.commit()
             
             # Generate Dify tokens
             logger.info(f"Generating Dify tokens for: {normalized_email}")

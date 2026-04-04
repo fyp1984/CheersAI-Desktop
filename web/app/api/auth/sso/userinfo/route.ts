@@ -1,17 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { getSession } from '@/lib/sso-session'
 
 export async function POST(request: NextRequest) {
   try {
     const cookieStore = await cookies()
-    const accessToken = cookieStore.get('sso_access_token')?.value
+    const sessionId = cookieStore.get('sso_session_id')?.value
 
-    if (!accessToken) {
+    console.log('[SSO] UserInfo - Session ID from cookie:', sessionId ? sessionId.substring(0, 20) + '...' : 'NOT FOUND')
+
+    if (!sessionId) {
+      console.error('[SSO] UserInfo - No session ID in cookie')
       return NextResponse.json(
-        { error: 'No access token found' },
+        { error: 'No SSO session found' },
         { status: 401 }
       )
     }
+
+    const session = getSession(sessionId)
+    if (!session) {
+      console.error('[SSO] UserInfo - Session not found or expired for ID:', sessionId.substring(0, 20) + '...')
+      return NextResponse.json(
+        { error: 'SSO session expired or invalid' },
+        { status: 401 }
+      )
+    }
+
+    console.log('[SSO] UserInfo - Session found, fetching user info from Casdoor')
+    const accessToken = session.accessToken
 
     const ssoBaseUrl = process.env.NEXT_PUBLIC_DESKTOP_SSO_LOGIN_URL || 'http://localhost:8000'
     const userinfoUrl = new URL('/api/userinfo', ssoBaseUrl)
@@ -34,6 +50,9 @@ export async function POST(request: NextRequest) {
     }
 
     const userInfo = await userinfoResponse.json()
+    
+    // Debug: Log all fields from Casdoor
+    console.log('[SSO DEBUG] Full userinfo from Casdoor:', JSON.stringify(userInfo, null, 2))
 
     return NextResponse.json(userInfo)
   }

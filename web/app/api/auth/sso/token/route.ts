@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { generateSessionId, storeSession } from '@/lib/sso-session'
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,29 +61,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Store tokens server-side with session ID to avoid cookie size limits
+    const sessionId = generateSessionId()
+    storeSession(sessionId, access_token, refresh_token, 60 * 60 * 24 * 7) // 7 days
+
+    // Only store small session ID in cookie
     const cookieStore = await cookies()
-    cookieStore.set('sso_access_token', access_token, {
+    cookieStore.set('sso_session_id', sessionId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: 60 * 60 * 24 * 7, // 7 days
     })
 
-    if (refresh_token) {
-      cookieStore.set('sso_refresh_token', refresh_token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 60 * 60 * 24 * 30,
-      })
-    }
+    console.log('[SSO] Token stored in session:', sessionId.substring(0, 20) + '...')
 
     return NextResponse.json({
       success: true,
-      access_token,
-      refresh_token,
     })
   }
   catch (error) {

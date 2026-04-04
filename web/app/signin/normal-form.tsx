@@ -13,7 +13,6 @@ import { useIsLogin } from '@/service/use-common'
 import { LicenseStatus } from '@/types/feature'
 import { cn } from '@/utils/classnames'
 import Loading from '../components/base/loading'
-import MailAndPasswordAuth from './components/mail-and-password-auth'
 import SSOAuth from './components/sso-auth'
 import { resolvePostLoginRedirect } from './utils/post-login-redirect'
 
@@ -29,7 +28,6 @@ const NormalForm = () => {
   const [isRedirecting, setIsRedirecting] = useState(false)
   const isLoading = isCheckLoading || isInitCheckLoading || isRedirecting
   const { systemFeatures } = useGlobalPublicStore()
-  const [allMethodsAreDisabled, setAllMethodsAreDisabled] = useState(false)
   const [workspaceName, setWorkSpaceName] = useState('')
 
   const isInviteLink = Boolean(invite_token && invite_token !== 'null')
@@ -55,7 +53,6 @@ const NormalForm = () => {
           message,
         })
       }
-      setAllMethodsAreDisabled(!systemFeatures.enable_email_password_login)
       if (isInviteLink) {
         const checkRes = await invitationCheck({
           url: '/activate/check',
@@ -68,10 +65,9 @@ const NormalForm = () => {
     }
     catch (error) {
       console.error(error)
-      setAllMethodsAreDisabled(true)
     }
     finally { setInitCheckLoading(false) }
-  }, [invite_token, isInviteLink, isLoggedIn, message, router, searchParams, systemFeatures])
+  }, [invite_token, isInviteLink, isLoggedIn, message, router, searchParams])
   useEffect(() => {
     init()
   }, [init])
@@ -141,76 +137,45 @@ const NormalForm = () => {
   return (
     <>
       <div className="w-full">
-        {isInviteLink
-          ? (
-              <div className="mb-8 text-center">
-                <h2 className="mb-2 text-2xl font-bold text-gray-900">
-                  加入
-                  {' '}
-                  {workspaceName}
-                </h2>
-                {!systemFeatures.branding.enabled && (
-                  <p className="text-gray-600">
-                    您已被邀请加入
-                    {' '}
-                    {workspaceName}
-                    {' '}
-                    工作空间
-                  </p>
-                )}
-              </div>
-            )
-          : (
-              <div className="mb-8 text-center">
-                <h2 className="mb-2 text-2xl font-bold text-gray-900">
-                  {systemFeatures.branding.enabled ? '登录' : '欢迎回来'}
-                </h2>
-                <p className="text-gray-600">请输入您的邮箱和密码</p>
-              </div>
-            )}
-        <div className="relative">
-          {/* 登录表单 */}
-          <div className="space-y-4">
-            {systemFeatures.enable_email_password_login && (
-              <MailAndPasswordAuth isInvite={isInviteLink} isEmailSetup={systemFeatures.is_email_setup} allowRegistration={systemFeatures.is_allow_register} />
-            )}
+        {/* 标题 */}
+        <div className="mb-8 text-center">
+          <h2 className="text-2xl font-bold text-gray-900">
+            欢迎回来
+          </h2>
+        </div>
 
-            {isDesktopSSOEnabled() && (
-              <>
-                {systemFeatures.enable_email_password_login && (
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-300"></div>
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="bg-white px-2 text-gray-500">或</span>
-                    </div>
-                  </div>
-                )}
-                <SSOAuth protocol="" />
-              </>
-            )}
-          </div>
-
-          <div className="mt-6 text-center text-sm text-gray-600">
-            <p className="text-gray-500">
-              还没有账号？请联系管理员获取邀请链接
-            </p>
-          </div>
-          {allMethodsAreDisabled && (
-            <>
-              <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-                <div className="mb-2 flex items-center">
-                  <RiDoorLockLine className="mr-2 h-5 w-5 text-red-500" />
-                  <p className="text-sm font-medium text-red-800">无可用登录方式</p>
-                </div>
-                <p className="text-sm text-red-700">请联系管理员配置登录方式</p>
-              </div>
-            </>
+        {/* SSO 登录按钮 */}
+        <div className="space-y-4">
+          {isDesktopSSOEnabled() && (
+            <SSOAuth protocol="" />
           )}
+          
+          {!isDesktopSSOEnabled() && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+              <div className="mb-2 flex items-center">
+                <RiDoorLockLine className="mr-2 h-5 w-5 text-red-500" />
+                <p className="text-sm font-medium text-red-800">SSO 登录未配置</p>
+              </div>
+              <p className="text-sm text-red-700">请联系管理员配置 SSO 登录</p>
+            </div>
+          )}
+        </div>
+
+        {/* 底部提示 */}
+        <div className="mt-6 space-y-3 text-center text-xs text-gray-500">
+          <p>
+            还没有账号？
+            <Link
+              className="ml-1 text-blue-600 hover:text-blue-700"
+              href="/signup"
+            >
+              申请试用
+            </Link>
+          </p>
+          
           {!systemFeatures.branding.enabled && (
             <>
-              <div className="mt-6 text-center text-xs text-gray-500">
+              <p>
                 登录即表示您同意我们的
                 <Link
                   className="mx-1 text-blue-600 hover:text-blue-700"
@@ -229,9 +194,9 @@ const NormalForm = () => {
                 >
                   隐私政策
                 </Link>
-              </div>
+              </p>
               {IS_CE_EDITION && (
-                <div className="mt-2 text-center text-xs text-gray-500">
+                <p>
                   需要初始化系统？
                   <Link
                     className="ml-1 text-blue-600 hover:text-blue-700"
@@ -239,7 +204,7 @@ const NormalForm = () => {
                   >
                     设置管理员账户
                   </Link>
-                </div>
+                </p>
               )}
             </>
           )}

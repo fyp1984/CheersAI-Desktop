@@ -77,12 +77,17 @@ export const exchangeSSOToken = async (params: ExchangeTokenParams) => {
   console.log('[SSO] Step 3: Logging into Dify backend')
   
   // 3. Call OUR NEW Python Backend to log into Dify and get cookies
-  console.log('[SSO] Calling backend /auth/desktop-sso/login with:', { email: userInfo.email, name: userInfo.name })
+  console.log('[SSO] Calling backend /auth/desktop-sso/login with:', { 
+    email: userInfo.email, 
+    name: userInfo.name,
+    role: userInfo.role || userInfo.type || 'user'  // Get role from SSO
+  })
   
   const result = await post('/auth/desktop-sso/login', {
     body: {
       email: userInfo.email,
       name: userInfo.name,
+      role: userInfo.role || userInfo.type || 'user',  // Pass role to backend
     }
   })
   
@@ -99,5 +104,5 @@ export const getSSOUserInfo = async () => {
     const errorData = await response.json().catch(() => ({}))
     throw new Error(errorData.error || 'Failed to fetch user info')
   }
-  return response.json() as Promise<{ id: string, email: string, name: string }>
+  return response.json() as Promise<{ id: string, email: string, name: string, role?: string, type?: string }>
 }

@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  casdoor:
+    image: casbin/casdoor:latest
+    container_name: cheersai-sso-casdoor-writable
+    ports:
+      - "18000:8000"
+    environment:
+      - RUNNING_IN_DOCKER=true
+      - isDemoMode=false  # 关闭演示模式
+      - dataSourceName=root:root@tcp(mysql:3306)/
+    depends_on:
+      - mysql
+    networks:
+      - default
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    container_name: casdoor-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=casdoor
+    ports:
+      - "3307:3306"
+    volumes:
+      - casdoor-mysql-data:/var/lib/mysql
+    networks:
+      - default
+    restart: unless-stopped
+
+volumes:
+  casdoor-mysql-data:
+
+networks:
+  default:
+    name: dify-network
+    external: true

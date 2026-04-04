@@ -2,38 +2,26 @@
 
 import {
   RiApps2Line,
-  RiCodeLine,
-  RiDashboardFill,
-  RiDashboardLine,
   RiDatabase2Fill,
   RiDatabase2Line,
   RiExchange2Line,
-  RiFile4Line,
   RiFileShield2Line,
-  RiFolderShield2Line,
-  RiHammerFill,
-  RiHammerLine,
   RiArrowDownSLine,
   RiArrowRightSLine,
-  RiArrowGoBackLine,
   RiLogoutBoxRLine,
   RiMenuFoldLine,
   RiMenuUnfoldLine,
   RiMessage3Line,
   RiPlanetFill,
   RiPlanetLine,
-  RiPlugLine,
   RiPuzzle2Fill,
   RiPuzzle2Line,
   RiRobot3Line,
-  RiShieldCheckFill,
-  RiShieldCheckLine,
-  RiToolsLine,
 } from '@remixicon/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSearchParams, useSelectedLayoutSegment } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAppContext } from '@/context/app-context'
 import { cn } from '@/utils/classnames'
 import AccountDropdown from '../account-dropdown'
@@ -64,7 +52,7 @@ interface NavItemConfig {
 const SideNav = () => {
   const segment = useSelectedLayoutSegment()
   const searchParams = useSearchParams()
-  const { isCurrentWorkspaceEditor, isCurrentWorkspaceDatasetOperator, userProfile } = useAppContext()
+  const { isCurrentWorkspaceDatasetOperator, userProfile, currentWorkspace } = useAppContext()
   const router = useRouter()
   const { mutateAsync: logout } = useLogout()
 
@@ -89,82 +77,85 @@ const SideNav = () => {
 
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
 
-  // 工作台子菜单
-  const appsChildren: SubItemConfig[] = [
-    { id: 'all', href: '/apps?category=all', icon: <RiApps2Line className="h-4 w-4" />, label: '全部' },
-    { id: 'workflow', href: '/apps?category=workflow', icon: <RiExchange2Line className="h-4 w-4" />, label: '工作流' },
-    { id: 'advanced-chat', href: '/apps?category=advanced-chat', icon: <RiMessage3Line className="h-4 w-4" />, label: 'Chatflow' },
-    { id: 'chat', href: '/apps?category=chat', icon: <RiMessage3Line className="h-4 w-4" />, label: '聊天助手' },
-    { id: 'agent-chat', href: '/apps?category=agent-chat', icon: <RiRobot3Line className="h-4 w-4" />, label: 'Agent' },
-    { id: 'completion', href: '/apps?category=completion', icon: <RiFile4Line className="h-4 w-4" />, label: '文本生成' },
-  ]
+  // 角色权限判断
+  const isAdmin = useMemo(() => ['owner', 'admin'].includes(currentWorkspace.role), [currentWorkspace.role])
+  const isEditor = useMemo(() => ['owner', 'admin', 'editor'].includes(currentWorkspace.role), [currentWorkspace.role])
 
   const navItems: NavItemConfig[] = []
 
-  // 占位符按钮
+  // 1. 我的 Agent（所有角色可见）
   if (!isCurrentWorkspaceDatasetOperator) {
     navItems.push({
-      id: 'placeholder',
-      href: '#',
-      icon: <div className="h-5 w-5" />,
-      activeIcon: <div className="h-5 w-5" />,
-      label: '',
-      segments: [],
+      id: 'apps',
+      href: '/apps',
+      icon: <RiRobot3Line className="h-5 w-5" />,
+      activeIcon: <RiRobot3Line className="h-5 w-5" />,
+      label: '我的 Agent',
+      segments: ['apps', 'app'],
     })
   }
 
-  // 对话应用
+  // 2. 对话（所有角色可见）
   if (!isCurrentWorkspaceDatasetOperator) {
     navItems.push({
       id: 'chat',
       href: '/chat',
       icon: <RiMessage3Line className="h-5 w-5" />,
       activeIcon: <RiMessage3Line className="h-5 w-5" />,
-      label: '对话应用',
+      label: '对话',
       segments: ['chat'],
     })
   }
 
-  // 工作台 (原 apps)
+  // 3. 知识库（所有角色可见，但普通用户只读）
   if (!isCurrentWorkspaceDatasetOperator) {
     navItems.push({
-      id: 'apps',
-      href: '/apps',
-      icon: <RiDashboardLine className="h-5 w-5" />,
-      activeIcon: <RiDashboardFill className="h-5 w-5" />,
-      label: '工作台',
-      segments: ['apps', 'app'],
-      children: appsChildren,
-      childParam: 'category',
-      childDefault: 'all',
+      id: 'datasets',
+      href: '/datasets',
+      icon: <RiDatabase2Line className="h-5 w-5" />,
+      activeIcon: <RiDatabase2Fill className="h-5 w-5" />,
+      label: '知识库',
+      segments: ['datasets'],
     })
   }
 
-  // 脱敏沙箱子菜单 - 已隐藏，如需恢复请取消注释
-  // const dataMaskingChildren: SubItemConfig[] = [
-  //   { id: 'mask', href: '/data-masking?tab=mask', icon: <RiFileShield2Line className="h-4 w-4" />, label: '文件脱敏' },
-  //   { id: 'restore', href: '/data-masking?tab=restore', icon: <RiArrowGoBackLine className="h-4 w-4" />, label: '脱敏还原' },
-  //   { id: 'rules', href: '/data-masking?tab=rules', icon: <RiShieldCheckLine className="h-4 w-4" />, label: '脱敏规则' },
-  //   { id: 'files', href: '/data-masking?tab=files', icon: <RiFolderShield2Line className="h-4 w-4" />, label: '文件管理' },
-  //   { id: 'transfer', href: '/data-masking?tab=transfer', icon: <RiExchange2Line className="h-4 w-4" />, label: '导出导入' },
-  // ]
+  // 4. 智能体管理（技术员和管理员可见）
+  if (isEditor) {
+    navItems.push({
+      id: 'plugins',
+      href: '/plugins',
+      icon: <RiPuzzle2Line className="h-5 w-5" />,
+      activeIcon: <RiPuzzle2Fill className="h-5 w-5" />,
+      label: '智能体管理',
+      segments: ['plugins'],
+    })
+  }
 
-  // 脱敏沙箱 - 已隐藏，如需恢复请取消注释
-  // if (!isCurrentWorkspaceDatasetOperator) {
-  //   navItems.push({
-  //     id: 'data-masking',
-  //     href: '/data-masking',
-  //     icon: <RiShieldCheckLine className="h-5 w-5" />,
-  //     activeIcon: <RiShieldCheckFill className="h-5 w-5" />,
-  //     label: '脱敏沙箱',
-  //     segments: ['data-masking'],
-  //     children: dataMaskingChildren,
-  //     childParam: 'tab',
-  //     childDefault: 'mask',
-  //   })
-  // }
+  // 5. 工作流（技术员和管理员可见）
+  if (isEditor) {
+    navItems.push({
+      id: 'workflow',
+      href: '/apps?category=workflow',
+      icon: <RiExchange2Line className="h-5 w-5" />,
+      activeIcon: <RiExchange2Line className="h-5 w-5" />,
+      label: '工作流',
+      segments: [],  // 不设置 segments，避免与 apps 冲突
+    })
+  }
 
-  // 探索
+  // 6. 应用中心（所有角色可见，但普通用户只读）
+  if (!isCurrentWorkspaceDatasetOperator) {
+    navItems.push({
+      id: 'tools',
+      href: '/tools',
+      icon: <RiApps2Line className="h-5 w-5" />,
+      activeIcon: <RiApps2Line className="h-5 w-5" />,
+      label: '应用中心',
+      segments: ['tools'],
+    })
+  }
+
+  // 7. 探索（所有角色可见）
   if (!isCurrentWorkspaceDatasetOperator) {
     navItems.push({
       id: 'explore',
@@ -176,55 +167,8 @@ const SideNav = () => {
     })
   }
 
-  // 知识库
-  if (isCurrentWorkspaceEditor || isCurrentWorkspaceDatasetOperator) {
-    navItems.push({
-      id: 'datasets',
-      href: '/datasets',
-      icon: <RiDatabase2Line className="h-5 w-5" />,
-      activeIcon: <RiDatabase2Fill className="h-5 w-5" />,
-      label: '知识库',
-      segments: ['datasets'],
-    })
-  }
-
-  // 工具子菜单
-  const toolsChildren: SubItemConfig[] = [
-    { id: 'builtin', href: '/tools?category=builtin', icon: <RiToolsLine className="h-4 w-4" />, label: '工具' },
-    { id: 'api', href: '/tools?category=api', icon: <RiCodeLine className="h-4 w-4" />, label: '自定义' },
-    { id: 'workflow', href: '/tools?category=workflow', icon: <RiExchange2Line className="h-4 w-4" />, label: '工作流' },
-    { id: 'mcp', href: '/tools?category=mcp', icon: <RiPlugLine className="h-4 w-4" />, label: 'MCP' },
-  ]
-
-  // 工具
-  if (!isCurrentWorkspaceDatasetOperator) {
-    navItems.push({
-      id: 'tools',
-      href: '/tools',
-      icon: <RiHammerLine className="h-5 w-5" />,
-      activeIcon: <RiHammerFill className="h-5 w-5" />,
-      label: '工具',
-      segments: ['tools'],
-      children: toolsChildren,
-      childParam: 'category',
-      childDefault: 'builtin',
-    })
-  }
-
-  // 插件
-  if (!isCurrentWorkspaceDatasetOperator) {
-    navItems.push({
-      id: 'plugins',
-      href: '/plugins',
-      icon: <RiPuzzle2Line className="h-5 w-5" />,
-      activeIcon: <RiPuzzle2Fill className="h-5 w-5" />,
-      label: '插件',
-      segments: ['plugins'],
-    })
-  }
-
-  // 审计日志
-  if (!isCurrentWorkspaceDatasetOperator) {
+  // 8. 审计日志（仅管理员可见）
+  if (isAdmin) {
     navItems.push({
       id: 'audit-logs',
       href: '/audit-logs',
@@ -294,7 +238,12 @@ const SideNav = () => {
       {/* Nav items */}
       <nav className="flex-1 flex flex-col gap-0.5 px-3 py-2 overflow-y-auto scrollbar-hide">
         {navItems.map((item) => {
-          const isActive = item.segments.includes(segment ?? '')
+          // 特殊处理：工作流菜单在访问 /apps?category=workflow 时高亮
+          const isWorkflowActive = item.id === 'workflow' && segment === 'apps' && searchParams.get('category') === 'workflow'
+          // 如果是工作流页面，我的 Agent 不应该高亮
+          const isWorkflowPage = segment === 'apps' && searchParams.get('category') === 'workflow'
+          const isActive = item.segments.includes(segment ?? '') && !(item.id === 'apps' && isWorkflowPage)
+          const shouldHighlight = isActive || isWorkflowActive
           const hasChildren = item.children && item.children.length > 0
           const isExpanded = expandedItems.has(item.id)
           const showChildren = isExpanded && hasChildren && !collapsed
@@ -311,7 +260,7 @@ const SideNav = () => {
                 return next
               })
               // Navigate if not already on this section
-              if (!isActive)
+              if (!shouldHighlight)
                 router.push(item.href)
             }
           }
@@ -325,15 +274,15 @@ const SideNav = () => {
                 className={cn(
                   'flex items-center gap-3 rounded-xl transition-colors w-full',
                   collapsed ? 'justify-center px-0 py-3' : 'px-4 py-3',
-                  isActive && !showChildren
+                  shouldHighlight && !showChildren
                     ? 'bg-[#2563eb] text-white font-medium'
-                    : isActive
+                    : shouldHighlight
                       ? 'bg-white/10 text-white font-medium'
                       : 'text-white/70 hover:bg-white/5 hover:text-white',
                 )}
               >
                 <span className="shrink-0">
-                  {isActive ? item.activeIcon : item.icon}
+                  {shouldHighlight ? item.activeIcon : item.icon}
                 </span>
                 {!collapsed && (
                   <>
@@ -355,7 +304,7 @@ const SideNav = () => {
                 <div className="mt-0.5 ml-4 flex flex-col gap-0.5">
                   {item.children!.map((child) => {
                     const paramValue = item.childParam ? (searchParams.get(item.childParam) || item.childDefault) : ''
-                    const isChildActive = isActive && paramValue === child.id
+                    const isChildActive = shouldHighlight && paramValue === child.id
                     return (
                       <Link
                         key={child.id}
