@@ -10,6 +10,12 @@ server {
       include proxy.conf;
     }
 
+    location /api/auth/sso {
+      proxy_pass http://web:3000;
+      include proxy.conf;
+      proxy_set_header Host ${NGINX_WEB_HOST_HEADER};
+    }
+
     location /api {
       proxy_pass http://api:5001;
       include proxy.conf;
@@ -29,6 +35,25 @@ server {
       proxy_pass http://web:3000;
       include proxy.conf;
       proxy_set_header Host ${NGINX_WEB_HOST_HEADER};
+    }
+
+    location /serwist/ {
+      return 404;
+    }
+
+    location = /@vite/client {
+      default_type application/javascript;
+      return 200 "export default {};\n";
+    }
+
+    location = /@vite/client/ {
+      default_type application/javascript;
+      return 200 "export default {};\n";
+    }
+
+    location = /__clear_cache {
+      add_header Clear-Site-Data "\"cache\", \"storage\", \"cookies\"" always;
+      return 204;
     }
 
     location /e/ {

@@ -1,9 +1,9 @@
 'use client'
 import type { SuccessInvitationResult } from '.'
 import copy from 'copy-to-clipboard'
-import { t } from 'i18next'
 import * as React from 'react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Tooltip from '@/app/components/base/tooltip'
 import s from './index.module.css'
 
@@ -14,13 +14,22 @@ type IInvitationLinkProps = {
 const InvitationLink = ({
   value,
 }: IInvitationLinkProps) => {
+  const { t } = useTranslation()
   const [isCopied, setIsCopied] = useState(false)
+  const fullUrl = useMemo(() => {
+    if (value.url.startsWith('http'))
+      return value.url
+
+    if (typeof window === 'undefined')
+      return value.url
+
+    return `${window.location.origin}${value.url}`
+  }, [value.url])
 
   const copyHandle = useCallback(() => {
-    // No prefix is needed here because the backend has already processed it
-    copy(`${!value.url.startsWith('http') ? window.location.origin : ''}${value.url}`)
+    copy(fullUrl)
     setIsCopied(true)
-  }, [value])
+  }, [fullUrl])
 
   useEffect(() => {
     if (isCopied) {
@@ -35,18 +44,20 @@ const InvitationLink = ({
   }, [isCopied])
 
   return (
-    <div className="flex items-center rounded-lg border border-components-input-border-active bg-components-input-bg-normal py-2 hover:bg-state-base-hover">
-      <div className="flex h-5 grow items-center">
-        <div className="relative h-full grow text-[13px]">
+    <div className="flex items-stretch rounded-lg border border-components-input-border-active bg-components-input-bg-normal hover:bg-state-base-hover">
+      <div className="flex min-w-0 grow items-stretch">
+        <div className="min-w-0 grow text-[13px]">
           <Tooltip
-            popupContent={isCopied ? `${t('copied', { ns: 'appApi' })}` : `${t('copy', { ns: 'appApi' })}`}
+            popupContent={fullUrl}
           >
-            <div className="r-0 absolute left-0 top-0 w-full cursor-pointer truncate pl-2 pr-2 text-text-primary" onClick={copyHandle}>{value.url}</div>
+            <div className="flex h-full cursor-pointer items-center px-2 py-2 text-text-primary" onClick={copyHandle}>
+              <div className="break-all">{fullUrl}</div>
+            </div>
           </Tooltip>
         </div>
-        <div className="h-4 shrink-0 border bg-divider-regular" />
+        <div className="my-2 h-auto w-px shrink-0 bg-divider-regular" />
         <Tooltip
-          popupContent={isCopied ? `${t('copied', { ns: 'appApi' })}` : `${t('copy', { ns: 'appApi' })}`}
+          popupContent={isCopied ? t('copied', { ns: 'appApi' }) : t('copy', { ns: 'appApi' })}
         >
           <div className="shrink-0 px-0.5">
             <div className={`box-border flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-lg hover:bg-state-base-hover ${s.copyIcon} ${isCopied ? s.copied : ''}`} onClick={copyHandle}>
