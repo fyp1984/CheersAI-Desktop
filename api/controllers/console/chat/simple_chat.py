@@ -6,9 +6,10 @@ from pydantic import BaseModel, Field
 
 from controllers.console import console_ns
 from controllers.console.wraps import account_initialization_required, setup_required
+from core.model_manager import ModelManager
 from core.model_runtime.entities.message_entities import SystemPromptMessage, UserPromptMessage
+from core.model_runtime.entities.model_entities import ModelType
 from core.model_runtime.errors.invoke import InvokeError
-from core.provider_manager import ProviderManager
 from libs.login import current_account_with_tenant, login_required
 
 DEFAULT_REF_TEMPLATE_SWAGGER_2_0 = "#/definitions/{model}"
@@ -64,24 +65,14 @@ class SimpleChatApi(Resource):
 
         def generate():
             try:
-                # Get provider manager
-                provider_manager = ProviderManager()
-                
-                # Get model instance
-                model_instance = provider_manager.get_model_instance(
+                model_instance = ModelManager().get_model_instance(
                     tenant_id=tenant_id,
                     provider=provider,
-                    model_type="llm",
+                    model_type=ModelType.LLM,
                     model=model_name
                 )
 
-                # Invoke model with streaming
-                response = model_instance.invoke(
-                    model=model_name,
-                    credentials=provider_manager.get_provider_credentials(
-                        tenant_id=tenant_id,
-                        provider=provider
-                    ),
+                response = model_instance.invoke_llm(
                     prompt_messages=messages,
                     model_parameters={
                         "temperature": 0.7,
@@ -93,8 +84,10 @@ class SimpleChatApi(Resource):
 
                 # Stream response
                 for chunk in response:
-                    if chunk.delta and chunk.delta.message and chunk.delta.message.content:
-                        yield f"data: {json.dumps({'content': chunk.delta.message.content})}\n\n"
+                    if chunk.delta and chunk.delta.message:
+                        content = chunk.delta.message.get_text_content()
+                        if content:
+                            yield f"data: {json.dumps({'content': content})}\n\n"
 
                 yield "data: [DONE]\n\n"
 

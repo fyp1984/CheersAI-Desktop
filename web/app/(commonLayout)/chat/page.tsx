@@ -1,6 +1,6 @@
 'use client'
 
-import { RiAddLine, RiArrowDownSLine, RiAttachmentLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiDownloadLine, RiFileCopyLine, RiMenuLine, RiMicLine, RiMoreLine, RiRefreshLine, RiSearchLine } from '@remixicon/react'
+import { RiAddLine, RiArrowDownSLine, RiArrowLeftSLine, RiArrowRightSLine, RiAttachmentLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiDownloadLine, RiFileCopyLine, RiMicFill, RiMicLine, RiMoreLine, RiRefreshLine, RiSearchLine } from '@remixicon/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Markdown } from '@/app/components/base/markdown'
 import { SandboxFilePicker } from '@/app/components/base/sandbox-file-picker'
@@ -120,6 +120,7 @@ const ChatPage = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [showModelSelector, setShowModelSelector] = useState(false)
   const modelSelectorRef = useRef<HTMLDivElement>(null)
+  const actionsMenuRef = useRef<HTMLDivElement>(null)
 
   // 选中的模型状态 - 移到前面声明
   const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(null)
@@ -129,6 +130,12 @@ const ChatPage = () => {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [isAutoFilled, setIsAutoFilled] = useState(false)
   const [autoFilledText, setAutoFilledText] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showConversationActions, setShowConversationActions] = useState(false)
+  const [isVoiceSupported, setIsVoiceSupported] = useState(false)
+  const [isVoiceListening, setIsVoiceListening] = useState(false)
+  const recognitionRef = useRef<any>(null)
+  const inputValueRef = useRef('')
 
   // 保存侧边栏状态到本地存储
   useEffect(() => {
@@ -142,15 +149,20 @@ const ChatPage = () => {
 
   // 保存对话到本地存储
   useEffect(() => {
-    if (conversations.length > 0) {
-      try {
+    try {
+      if (conversations.length > 0)
         localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations))
-      }
-      catch {
-        // 保存对话到本地存储失败，忽略错误
-      }
+      else
+        localStorage.removeItem(STORAGE_KEY)
+    }
+    catch {
+      // 保存对话到本地存储失败，忽略错误
     }
   }, [conversations])
+
+  useEffect(() => {
+    inputValueRef.current = inputValue
+  }, [inputValue])
 
   // 获取模型列表 - 使用更简单的方法
   const { data: modelListData, isLoading: isModelListLoading } = useModelList(ModelTypeEnum.textGeneration)
@@ -190,11 +202,70 @@ const ChatPage = () => {
       if (modelSelectorRef.current && !modelSelectorRef.current.contains(event.target as Node)) {
         setShowModelSelector(false)
       }
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target as Node)) {
+        setShowConversationActions(false)
+      }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined')
+      return
+
+    const speechWindow = window as Window & {
+      SpeechRecognition?: new () => any
+      webkitSpeechRecognition?: new () => any
+    }
+    const SpeechRecognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition
+
+    if (!SpeechRecognition)
+      return
+
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'zh-CN'
+    recognition.continuous = false
+    recognition.interimResults = false
+    recognition.maxAlternatives = 1
+    recognition.onstart = () => setIsVoiceListening(true)
+    recognition.onend = () => setIsVoiceListening(false)
+    recognition.onerror = () => {
+      setIsVoiceListening(false)
+      Toast.notify({ type: 'error', message: '语音输入暂不可用，请检查麦克风权限。' })
+    }
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results || [])
+        .slice(event.resultIndex || 0)
+        .filter((result: any) => result.isFinal)
+        .map((result: any) => result[0]?.transcript || '')
+        .join('')
+        .trim()
+
+      if (!transcript)
+        return
+
+      setInputValue((prev) => {
+        const nextValue = prev.trim() ? `${prev.trimEnd()} ${transcript}` : transcript
+        requestAnimationFrame(() => {
+          if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto'
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+          }
+        })
+        return nextValue
+      })
+    }
+
+    recognitionRef.current = recognition
+    setIsVoiceSupported(true)
+
+    return () => {
+      recognition.stop()
+      recognitionRef.current = null
     }
   }, [])
 
@@ -244,6 +315,31 @@ const ChatPage = () => {
     setSelectedModel({ provider, model, label })
     setShowModelSelector(false)
   }
+
+  const currentConversation = useMemo(
+    () => conversations.find(conversation => conversation.id === currentConversationId) || null,
+    [conversations, currentConversationId],
+  )
+
+  const filteredConversations = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase()
+    const sortedConversations = [...conversations].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+
+    if (!normalizedQuery)
+      return sortedConversations
+
+    return sortedConversations.filter((conversation) => {
+      const searchableText = [
+        conversation.title,
+        conversation.lastMessage,
+        ...conversation.messages.map(message => message.content),
+      ]
+        .join('\n')
+        .toLowerCase()
+
+      return searchableText.includes(normalizedQuery)
+    })
+  }, [conversations, searchQuery])
 
   const handleRemoveFile = (fileId: string) => {
     setUploadedFiles(prev => prev.filter(f => f.id !== fileId))
@@ -315,6 +411,76 @@ const ChatPage = () => {
 
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed)
+  }
+
+  const handleVoiceInput = () => {
+    if (!isVoiceSupported || !recognitionRef.current) {
+      Toast.notify({ type: 'error', message: '当前浏览器不支持语音输入。' })
+      return
+    }
+
+    if (isVoiceListening) {
+      recognitionRef.current.stop()
+      return
+    }
+
+    try {
+      recognitionRef.current.start()
+    }
+    catch {
+      Toast.notify({ type: 'warning', message: '语音输入正在准备中，请稍后再试。' })
+    }
+  }
+
+  const handleRenameConversation = (conversationId: string) => {
+    const conversation = conversations.find(item => item.id === conversationId)
+    const nextTitle = window.prompt('请输入新的对话标题', conversation?.title || '')
+
+    if (!nextTitle?.trim())
+      return
+
+    setConversations(prev => prev.map(item =>
+      item.id === conversationId
+        ? { ...item, title: nextTitle.trim(), timestamp: new Date() }
+        : item,
+    ))
+  }
+
+  const handleExportConversation = () => {
+    if (!currentConversation)
+      return
+
+    const content = currentConversation.messages
+      .map(message => [
+        `## ${message.type === 'user' ? '用户' : 'AI'} · ${message.timestamp.toLocaleString('zh-CN')}`,
+        '',
+        message.content || '暂无消息',
+      ].join('\n'))
+      .join('\n\n')
+
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${currentConversation.title || 'conversation'}.md`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    setShowConversationActions(false)
+  }
+
+  const handleClearCurrentConversation = () => {
+    if (!currentConversationId)
+      return
+
+    setMessages([])
+    setConversations(prev => prev.map(item =>
+      item.id === currentConversationId
+        ? { ...item, lastMessage: '', messages: [], timestamp: new Date() }
+        : item,
+    ))
+    setShowConversationActions(false)
   }
 
   // 复制AI回复内容
@@ -705,7 +871,7 @@ const ChatPage = () => {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500">
               <span className="text-sm font-medium text-white">AI</span>
             </div>
-            <span className="font-medium text-gray-900">CheersAI行业版</span>
+            <span className="font-medium text-gray-900">CheersAI</span>
           </div>
           <button
             onClick={handleNewConversation}
@@ -723,21 +889,32 @@ const ChatPage = () => {
             <input
               type="text"
               placeholder="搜索对话..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
               className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-gray-600"
+                title="清空搜索"
+              >
+                <RiCloseLine className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
 
         {/* 对话列表 */}
         <div className="flex-1 overflow-y-auto">
-          {conversations.length === 0
+          {filteredConversations.length === 0
             ? (
                 <div className="p-4 text-center text-sm text-gray-500">
-                  暂无对话记录
+                  {searchQuery ? '未找到匹配的对话' : '暂无对话记录'}
                 </div>
               )
             : (
-                conversations.map(conversation => (
+                filteredConversations.map(conversation => (
                   <div
                     key={conversation.id}
                     onClick={() => handleSelectConversation(conversation.id)}
@@ -788,23 +965,15 @@ const ChatPage = () => {
             >
               {sidebarCollapsed
                 ? (
-                    <RiMenuLine className="h-4 w-4" />
+                    <RiArrowRightSLine className="h-4 w-4" />
                   )
                 : (
-                    <RiCloseLine className="h-4 w-4" />
+                    <RiArrowLeftSLine className="h-4 w-4" />
                   )}
             </button>
             <h1 className="text-lg font-medium text-gray-900">
-              {currentConversationId
-                ? conversations.find(c => c.id === currentConversationId)?.title || 'Python数据分析脚本'
-                : 'Python数据分析脚本'}
+              {currentConversation?.title || '新建对话'}
             </h1>
-            <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600">
-              草稿
-            </span>
-            <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600">
-              自动
-            </span>
           </div>
           <div className="flex items-center gap-3">
             {/* 模型选择器 */}
@@ -932,9 +1101,46 @@ const ChatPage = () => {
               )}
             </div>
 
-            <button className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-              <RiMoreLine className="h-4 w-4" />
-            </button>
+            <div className="relative" ref={actionsMenuRef}>
+              <button
+                onClick={() => setShowConversationActions(prev => !prev)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                title="更多操作"
+              >
+                <RiMoreLine className="h-4 w-4" />
+              </button>
+              {showConversationActions && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+                  <button
+                    onClick={() => {
+                      if (currentConversationId)
+                        handleRenameConversation(currentConversationId)
+                      setShowConversationActions(false)
+                    }}
+                    disabled={!currentConversationId}
+                    className="w-full px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-300"
+                  >
+                    重命名对话
+                  </button>
+                  <button
+                    onClick={handleExportConversation}
+                    disabled={!currentConversationId}
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-300"
+                  >
+                    <span>导出 Markdown</span>
+                    <RiDownloadLine className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={handleClearCurrentConversation}
+                    disabled={!currentConversationId}
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:text-gray-300"
+                  >
+                    <span>清空当前对话</span>
+                    <RiDeleteBinLine className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1235,8 +1441,19 @@ const ChatPage = () => {
                 />
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <button className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
-                  <RiMicLine className="h-4 w-4" />
+                <button
+                  onClick={handleVoiceInput}
+                  className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-lg transition-colors',
+                    isVoiceListening
+                      ? 'bg-red-50 text-red-500 hover:bg-red-100'
+                      : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600',
+                    !isVoiceSupported && 'cursor-not-allowed opacity-50',
+                  )}
+                  title={isVoiceSupported ? (isVoiceListening ? '停止语音输入' : '语音输入') : '当前浏览器不支持语音输入'}
+                  disabled={!isVoiceSupported}
+                >
+                  {isVoiceListening ? <RiMicFill className="h-4 w-4" /> : <RiMicLine className="h-4 w-4" />}
                 </button>
                 <button
                   onClick={handleSend}

@@ -1,4 +1,6 @@
 // Chat API service
+import Cookies from 'js-cookie'
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '@/config'
 import { del, get, post } from './base'
 
 // Types
@@ -114,6 +116,7 @@ export const sendSimpleChatMessage = async (
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      [CSRF_HEADER_NAME]: Cookies.get(CSRF_COOKIE_NAME()) || '',
     },
     credentials: 'include',
     body: JSON.stringify({
@@ -134,36 +137,39 @@ export const sendSimpleChatMessage = async (
   if (!reader)
     throw new Error('No response body')
 
+  let buffer = ''
+
   while (true) {
     const { done, value } = await reader.read()
-    if (done)
-      break
+    buffer += decoder.decode(value, { stream: !done })
 
-    const chunk = decoder.decode(value, { stream: true })
-    const lines = chunk.split('\n').filter(line => line.trim())
+    const events = buffer.split('\n\n')
+    buffer = events.pop() || ''
 
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = line.slice(6)
+    for (const event of events) {
+      const dataLines = event
+        .split('\n')
+        .filter(line => line.startsWith('data: '))
+        .map(line => line.slice(6))
 
-        if (data === '[DONE]') {
-          return
-        }
+      if (!dataLines.length)
+        continue
 
-        try {
-          const parsed = JSON.parse(data)
-          if (parsed.content) {
-            onData?.(parsed.content)
-          }
-          else if (parsed.error) {
-            onError?.(parsed.error)
-            return
-          }
-        }
-        catch {
-          // Ignore parse errors
-        }
+      const data = dataLines.join('\n')
+      if (data === '[DONE]')
+        return
+
+      const parsed = JSON.parse(data)
+      if (parsed.content) {
+        onData?.(parsed.content)
+      }
+      else if (parsed.error) {
+        onError?.(parsed.error)
+        throw new Error(parsed.error)
       }
     }
+
+    if (done)
+      break
   }
 }
