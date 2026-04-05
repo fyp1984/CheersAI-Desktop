@@ -1,5 +1,6 @@
 """Gitea configuration API endpoints."""
 import os
+
 from flask import request
 from flask_restx import Resource, fields
 
@@ -7,7 +8,6 @@ from controllers.console import console_ns
 from controllers.console.wraps import setup_required
 from libs.login import login_required
 from services.gitea_storage_service import GiteaStorageService
-
 
 # Define API models
 gitea_config_model = console_ns.model('GiteaConfig', {
@@ -86,7 +86,7 @@ class GiteaConfigApi(Resource):
             os.environ['GITEA_REPO'] = data['gitea_repo']
         if 'gitea_path' in data:
             os.environ['GITEA_PATH'] = data['gitea_path']
-        if 'gitea_token' in data and data['gitea_token']:
+        if data.get('gitea_token'):
             # Only update if a new token is provided (not masked)
             if not data['gitea_token'].startswith('****'):
                 os.environ['GITEA_TOKEN'] = data['gitea_token']
@@ -107,7 +107,6 @@ class GiteaConfigApi(Resource):
     
     def _update_env_file(self, data):
         """Update .env file with new Gitea configuration."""
-        import re
         from pathlib import Path
         
         # Find .env file
@@ -115,7 +114,7 @@ class GiteaConfigApi(Resource):
         
         # Read existing .env file
         if env_path.exists():
-            with open(env_path, 'r', encoding='utf-8') as f:
+            with open(env_path, encoding='utf-8') as f:
                 lines = f.readlines()
         else:
             lines = []

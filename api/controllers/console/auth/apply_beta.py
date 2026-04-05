@@ -1,18 +1,16 @@
-from uuid import uuid4
 import os
-import requests
+from uuid import uuid4
 
+import requests
 from flask import request
 from flask_restx import Resource
 from pydantic import BaseModel, Field
 
 from controllers.console import console_ns
 from controllers.console.wraps import setup_required
-from libs.helper import email as validate_email
-from models.account import AccountStatus
-from models.beta_application import BetaApplication
-from services.account_service import RegisterService
 from extensions.ext_database import db
+from libs.helper import email as validate_email
+from models.beta_application import BetaApplication
 from utils.sqlite_helper import SQLiteHelper
 
 DEFAULT_REF_TEMPLATE_SWAGGER_2_0 = "#/definitions/{model}"

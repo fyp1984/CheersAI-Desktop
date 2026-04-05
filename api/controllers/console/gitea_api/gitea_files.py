@@ -1,14 +1,13 @@
 """Gitea file retrieval API endpoints."""
+from io import BytesIO
+
 from flask import send_file
 from flask_restx import Resource, fields
-from werkzeug.exceptions import NotFound
-from io import BytesIO
 
 from controllers.console import console_ns
 from controllers.console.wraps import setup_required
 from libs.login import login_required
 from services.gitea_storage_service import GiteaStorageService
-
 
 # Define API models
 gitea_file_list_model = console_ns.model('GiteaFileList', {

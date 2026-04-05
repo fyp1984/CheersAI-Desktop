@@ -136,10 +136,13 @@ const MembersPage = () => {
                     {isCurrentWorkspaceOwner && account.role === 'owner' && !isAllowTransferWorkspace && (
                       <div className="system-sm-regular px-3 text-text-secondary">{RoleMap[account.role] || RoleMap.normal}</div>
                     )}
-                    {isCurrentWorkspaceOwner && account.role !== 'owner' && (
+                    {isCurrentWorkspaceManager && account.role !== 'owner' && (
                       <Operation member={account} operatorRole={currentWorkspace.role} onOperate={refetch} />
                     )}
-                    {!isCurrentWorkspaceOwner && (
+                    {!isCurrentWorkspaceManager && (
+                      <div className="system-sm-regular px-3 text-text-secondary">{RoleMap[account.role] || RoleMap.normal}</div>
+                    )}
+                    {isCurrentWorkspaceManager && account.role === 'owner' && !isCurrentWorkspaceOwner && (
                       <div className="system-sm-regular px-3 text-text-secondary">{RoleMap[account.role] || RoleMap.normal}</div>
                     )}
                   </div>

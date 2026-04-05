@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """Fix admin account role back to owner"""
 
+from app_factory import create_app
 from extensions.ext_database import db
 from models.account import Account, TenantAccountJoin
-from app_factory import create_app
 
 app = create_app()
 

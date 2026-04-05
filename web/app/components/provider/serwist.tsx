@@ -9,6 +9,7 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
   const isPWAEnabled = !IS_DEV && process.env.NEXT_PUBLIC_DEPLOY_ENV === 'PRODUCTION'
 
   if (!isPWAEnabled) {
+  if (IS_DEV || isLocalRuntime()) {
     return <DisabledPWAProvider>{children}</DisabledPWAProvider>
   }
 
@@ -20,6 +21,13 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
       {children}
     </SerwistProvider>
   )
+}
+
+function isLocalRuntime() {
+  if (!isClient)
+    return false
+
+  return ['localhost', '127.0.0.1'].includes(window.location.hostname)
 }
 
 function DisabledPWAProvider({ children }: { children: React.ReactNode }) {

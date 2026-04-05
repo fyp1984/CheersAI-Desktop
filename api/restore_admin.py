@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """Restore admin account to owner role"""
 
+from app_factory import create_app
 from extensions.ext_database import db
 from models.account import Account, TenantAccountJoin
-from app_factory import create_app
 
 app = create_app()
 
@@ -29,9 +29,9 @@ with app.app_context():
             
             if tj.role != 'owner':
                 tj.role = 'owner'
-                print(f"✅ Updated to owner")
+                print("✅ Updated to owner")
             else:
-                print(f"✅ Already owner")
+                print("✅ Already owner")
         
         db.session.commit()
         print("\n✅ Admin account verified/restored!")

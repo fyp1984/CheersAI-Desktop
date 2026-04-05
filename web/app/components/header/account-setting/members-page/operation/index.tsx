@@ -45,16 +45,9 @@ const Operation = ({
     dataset_operator: t('members.datasetOperator', { ns: 'common' }),
   }
   const roleList = useMemo((): OperationRoleKey[] => {
-    if (operatorRole === 'owner') {
+    if (operatorRole === 'owner' || operatorRole === 'admin') {
       return [
         'admin',
-        'editor',
-        'normal',
-        ...(datasetOperatorEnabled ? ['dataset_operator'] as const : []),
-      ]
-    }
-    if (operatorRole === 'admin') {
-      return [
         'editor',
         'normal',
         ...(datasetOperatorEnabled ? ['dataset_operator'] as const : []),

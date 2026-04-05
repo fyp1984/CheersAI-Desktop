@@ -1197,8 +1197,8 @@ class TenantService:
         """Check member permission"""
         perms = {
             "add": [TenantAccountRole.OWNER, TenantAccountRole.ADMIN],
-            "remove": [TenantAccountRole.OWNER],
-            "update": [TenantAccountRole.OWNER],
+            "remove": [TenantAccountRole.OWNER, TenantAccountRole.ADMIN],
+            "update": [TenantAccountRole.OWNER, TenantAccountRole.ADMIN],
         }
         if action not in {"add", "remove", "update"}:
             raise InvalidActionError("Invalid action.")
@@ -1211,6 +1211,11 @@ class TenantService:
 
         if not ta_operator or ta_operator.role not in perms[action]:
             raise NoPermissionError(f"No permission to {action} member.")
+
+        if member and action in {"remove", "update"}:
+            ta_member = db.session.query(TenantAccountJoin).filter_by(tenant_id=tenant.id, account_id=member.id).first()
+            if ta_member and ta_member.role == TenantAccountRole.OWNER.value and ta_operator.role != TenantAccountRole.OWNER:
+                raise NoPermissionError(f"No permission to {action} owner.")
 
     @staticmethod
     def remove_member_from_tenant(tenant: Tenant, account: Account, operator: Account):

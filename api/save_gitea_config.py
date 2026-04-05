@@ -16,7 +16,7 @@ print("=" * 50)
 
 # Read existing .env file
 if os.path.exists(env_file):
-    with open(env_file, 'r', encoding='utf-8') as f:
+    with open(env_file, encoding='utf-8') as f:
         lines = f.readlines()
 else:
     lines = []

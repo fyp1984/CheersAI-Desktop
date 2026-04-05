@@ -23,7 +23,7 @@ with app.app_context():
     
     try:
         gitea_service = GiteaStorageService()
-        print(f"✓ Gitea service initialized")
+        print("✓ Gitea service initialized")
         print(f"  URL: {os.getenv('GITEA_URL')}")
         print(f"  Owner: {os.getenv('GITEA_OWNER')}")
         print(f"  Repo: {os.getenv('GITEA_REPO')}")
