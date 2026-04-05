@@ -1,15 +1,17 @@
 import logging
+
 import requests
 from flask import request
 from flask_restx import Resource, fields
+
+from configs import dify_config
 from controllers.console import console_ns
-from libs.helper import extract_remote_ip
-from services.account_service import AccountService, TenantService
-from models import Account, AccountStatus
-from models.account import TenantAccountJoin
 from extensions.ext_database import db
 from libs.datetime_utils import naive_utc_now
-from configs import dify_config
+from libs.helper import extract_remote_ip
+from models import AccountStatus
+from models.account import TenantAccountJoin
+from services.account_service import AccountService, TenantService
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +20,7 @@ sso_token_exchange_model = console_ns.model('SSOTokenExchange', {
     'state': fields.String(required=True, description='State parameter for CSRF protection'),
     'redirectUri': fields.String(required=True, description='Redirect URI used in authorization')
 })
+
 
 @console_ns.route('/auth/sso/token')
 class SSOTokenExchangeApi(Resource):
@@ -36,7 +39,7 @@ class SSOTokenExchangeApi(Resource):
                 logger.error("Missing required parameters")
                 return {'result': 'fail', 'message': 'Missing required parameters'}, 400
             
-            logger.info(f"Exchanging code with SSO server, state: {state}")
+            logger.info("Exchanging code with SSO server, state: %s", state)
             
             # Get SSO configuration from environment
             sso_api_url = dify_config.SSO_API_URL
@@ -57,7 +60,7 @@ class SSOTokenExchangeApi(Resource):
                 'client_secret': client_secret,
             }
             
-            logger.info(f"Calling SSO token endpoint: {token_url}")
+            logger.info("Calling SSO token endpoint: %s", token_url)
             token_response = requests.post(token_url, data=token_data, timeout=10)
             
             if token_response.status_code != 200:
@@ -75,7 +78,7 @@ class SSOTokenExchangeApi(Resource):
             userinfo_url = f"{sso_api_url}/oauth2/userinfo"
             headers = {'Authorization': f'Bearer {access_token}'}
             
-            logger.info(f"Fetching user info from: {userinfo_url}")
+            logger.info("Fetching user info from: %s", userinfo_url)
             userinfo_response = requests.get(userinfo_url, headers=headers, timeout=10)
             
             if userinfo_response.status_code != 200:
@@ -98,20 +101,20 @@ class SSOTokenExchangeApi(Resource):
             else:
                 system_role = 'normal'
             
-            logger.info(f"SSO role mapping: {sso_role_raw} -> {system_role}")
+            logger.info("SSO role mapping: %s -> %s", sso_role_raw, system_role)
             
             if not email:
                 logger.error("No email in user info")
                 return {'result': 'fail', 'message': 'Email not provided by SSO'}, 400
             
             normalized_email = email.lower()
-            logger.info(f"SSO user authenticated: {normalized_email}")
+            logger.info("SSO user authenticated: %s", normalized_email)
             
             # Get or create account
             account = AccountService.get_user_through_email(normalized_email)
             
             if not account:
-                logger.info(f"Creating new account for SSO user: {normalized_email}")
+                logger.info("Creating new account for SSO user: %s", normalized_email)
                 account = AccountService.create_account(
                     email=normalized_email,
                     name=name,
@@ -125,13 +128,13 @@ class SSOTokenExchangeApi(Resource):
                 db.session.commit()
                 
                 # 为新用户设置工作空间角色
-                logger.info(f"Setting workspace role for new user: {system_role}")
+                logger.info("Setting workspace role for new user: %s", system_role)
                 tenant_join = db.session.query(TenantAccountJoin).filter_by(account_id=account.id).first()
                 if tenant_join:
                     tenant_join.role = system_role
                     db.session.commit()
             else:
-                logger.info(f"Found existing account: {normalized_email}")
+                logger.info("Found existing account: %s", normalized_email)
                 if account.status == AccountStatus.BANNED:
                     return {'result': 'fail', 'message': 'Account is banned'}, 403
                 
@@ -140,7 +143,7 @@ class SSOTokenExchangeApi(Resource):
                     account.initialized_at = naive_utc_now()
                 
                 # 更新现有用户的工作空间角色
-                logger.info(f"Updating workspace role for existing user: {system_role}")
+                logger.info("Updating workspace role for existing user: %s", system_role)
                 tenant_join = db.session.query(TenantAccountJoin).filter_by(account_id=account.id).first()
                 if tenant_join:
                     # 如果不是唯一的owner，才更新角色
@@ -157,7 +160,7 @@ class SSOTokenExchangeApi(Resource):
                 db.session.commit()
             
             # Generate Dify tokens
-            logger.info(f"Generating Dify tokens for: {normalized_email}")
+            logger.info("Generating Dify tokens for: %s", normalized_email)
             token_pair = AccountService.login(
                 account=account,
                 ip_address=extract_remote_ip(request),
@@ -171,7 +174,7 @@ class SSOTokenExchangeApi(Resource):
             })
             
             # Set cookies
-            logger.info(f"Setting authentication cookies for: {normalized_email}")
+            logger.info("Setting authentication cookies for: %s", normalized_email)
             
             response.set_cookie(
                 'access_token',
@@ -206,7 +209,7 @@ class SSOTokenExchangeApi(Resource):
                 path="/",
             )
             
-            logger.info(f"SSO login successful for: {normalized_email}")
+            logger.info("SSO login successful for: %s", normalized_email)
             return response
             
         except requests.RequestException as e:

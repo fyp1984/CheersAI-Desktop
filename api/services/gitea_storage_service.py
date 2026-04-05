@@ -1,8 +1,7 @@
 """Gitea storage service for file retrieval."""
 import os
+
 import requests
-from typing import Optional, BinaryIO
-from configs import dify_config
 
 
 class GiteaStorageService:

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Create an admin account for CheersAI."""
+
+from werkzeug.security import generate_password_hash
+
 from app import create_app
 from extensions.ext_database import db
 from models.account import Account, AccountStatus
-from werkzeug.security import generate_password_hash
-import uuid
 
 app = create_app()
 
@@ -35,6 +36,6 @@ with app.app_context():
         db.session.commit()
         
         print("✅ Admin account created successfully!")
-        print(f"Email: admin@cheersai.com")
-        print(f"Password: admin123")
+        print("Email: admin@cheersai.com")
+        print("Password: admin123")
         print(f"Status: {admin.status}")
