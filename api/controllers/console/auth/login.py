@@ -312,7 +312,11 @@ class RefreshTokenApi(Resource):
 
         if not refresh_token:
             logger.warning("No refresh token provided in cookies")
-            return {"result": "fail", "message": "No refresh token provided"}, 401
+            response = make_response({"result": "fail", "message": "No refresh token provided"}, 401)
+            clear_csrf_token_from_cookie(response)
+            clear_access_token_from_cookie(response)
+            clear_refresh_token_from_cookie(response)
+            return response
 
         try:
             new_token_pair = AccountService.refresh_token(refresh_token)
@@ -327,7 +331,11 @@ class RefreshTokenApi(Resource):
             return response
         except Exception as e:
             logger.error(f"Refresh token failed: {str(e)}")
-            return {"result": "fail", "message": str(e)}, 401
+            response = make_response({"result": "fail", "message": str(e)}, 401)
+            clear_csrf_token_from_cookie(response)
+            clear_access_token_from_cookie(response)
+            clear_refresh_token_from_cookie(response)
+            return response
 
 
 def _get_account_with_case_fallback(email: str):

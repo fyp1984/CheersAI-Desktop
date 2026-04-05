@@ -46,7 +46,7 @@ export const exchangeSSOToken = async (params: ExchangeTokenParams) => {
   console.log('[SSO] Step 1: Exchanging OAuth code for SSO access_token')
   
   // 1. Exchange OAuth code for SSO access_token
-  const response = await fetch('/api/auth/sso/token', {
+  const response = await fetch('/api/auth/sso/token/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
@@ -61,7 +61,7 @@ export const exchangeSSOToken = async (params: ExchangeTokenParams) => {
   console.log('[SSO] Step 2: Fetching user info from SSO')
   
   // 2. Fetch User Info from SSO using the token
-  const userInfoResponse = await fetch('/api/auth/sso/userinfo', {
+  const userInfoResponse = await fetch('/api/auth/sso/userinfo/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   })
@@ -96,7 +96,7 @@ export const exchangeSSOToken = async (params: ExchangeTokenParams) => {
 }
 
 export const getSSOUserInfo = async () => {
-  const response = await fetch('/api/auth/sso/userinfo', {
+  const response = await fetch('/api/auth/sso/userinfo/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   })

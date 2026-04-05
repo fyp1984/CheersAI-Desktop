@@ -82,7 +82,7 @@ WORKDIR /app/web
 
 COPY --from=builder --chown=dify:dify /app/web/public ./public
 COPY --from=builder --chown=dify:dify /app/web/.next/standalone ./
-COPY --from=builder --chown=dify:dify /app/web/.next/static ./.next/static
+COPY --from=builder --chown=dify:dify /app/web/.next/static/ ./.next/static/
 
 COPY --chown=dify:dify --chmod=755 docker/entrypoint.sh ./entrypoint.sh
 
