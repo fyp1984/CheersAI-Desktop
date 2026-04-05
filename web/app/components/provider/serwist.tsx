@@ -6,6 +6,9 @@ import { IS_DEV } from '@/config'
 import { isClient } from '@/utils/client'
 
 export function PWAProvider({ children }: { children: React.ReactNode }) {
+  const isPWAEnabled = !IS_DEV && process.env.NEXT_PUBLIC_DEPLOY_ENV === 'PRODUCTION'
+
+  if (!isPWAEnabled) {
   if (IS_DEV || isLocalRuntime()) {
     return <DisabledPWAProvider>{children}</DisabledPWAProvider>
   }

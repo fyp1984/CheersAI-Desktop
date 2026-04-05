@@ -41,21 +41,6 @@ server {
       return 404;
     }
 
-    location = /@vite/client {
-      default_type application/javascript;
-      return 200 "export default {};\n";
-    }
-
-    location = /@vite/client/ {
-      default_type application/javascript;
-      return 200 "export default {};\n";
-    }
-
-    location = /__clear_cache {
-      add_header Clear-Site-Data "\"cache\", \"storage\", \"cookies\"" always;
-      return 204;
-    }
-
     location /e/ {
       set $plugin_daemon_upstream plugin_daemon:5002;
       proxy_pass http://$plugin_daemon_upstream;

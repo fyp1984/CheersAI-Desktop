@@ -1,6 +1,5 @@
 'use client'
 import type { FC } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Button from '@/app/components/base/button'
@@ -17,10 +16,8 @@ type SSOAuthProps = {
 const SSOAuth: FC<SSOAuthProps> = ({
   protocol,
 }) => {
-  const router = useRouter()
   const { t } = useTranslation()
-  const searchParams = useSearchParams()
-  const invite_token = decodeURIComponent(searchParams.get('invite_token') || '')
+  const inviteToken = ''
 
   const [isLoading, setIsLoading] = useState(false)
 
@@ -33,24 +30,24 @@ const SSOAuth: FC<SSOAuthProps> = ({
     }
 
     if (protocol === SSOProtocol.SAML) {
-      getUserSAMLSSOUrl(invite_token).then((res) => {
-        router.push(res.url)
+      getUserSAMLSSOUrl(inviteToken).then((res) => {
+        window.location.href = res.url
       }).finally(() => {
         setIsLoading(false)
       })
     }
     else if (protocol === SSOProtocol.OIDC) {
-      getUserOIDCSSOUrl(invite_token).then((res) => {
+      getUserOIDCSSOUrl(inviteToken).then((res) => {
         document.cookie = `user-oidc-state=${res.state};Path=/`
-        router.push(res.url)
+        window.location.href = res.url
       }).finally(() => {
         setIsLoading(false)
       })
     }
     else if (protocol === SSOProtocol.OAuth2) {
-      getUserOAuth2SSOUrl(invite_token).then((res) => {
+      getUserOAuth2SSOUrl(inviteToken).then((res) => {
         document.cookie = `user-oauth2-state=${res.state};Path=/`
-        router.push(res.url)
+        window.location.href = res.url
       }).finally(() => {
         setIsLoading(false)
       })

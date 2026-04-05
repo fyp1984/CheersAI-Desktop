@@ -24,7 +24,9 @@ const usePSInfo = () => {
   }] = useBoolean(false)
   const { mutateAsync } = useBindPartnerStackInfo()
   // Save to top domain. cloud.dify.ai => .dify.ai
-  const domain = globalThis.location.hostname.replace('cloud', '')
+  const domain = typeof window !== 'undefined'
+    ? window.location.hostname.replace('cloud', '')
+    : undefined
 
   const saveOrUpdate = useCallback(() => {
     if (!psPartnerKey || !psClickId)
@@ -37,9 +39,9 @@ const usePSInfo = () => {
     }), {
       expires: PARTNER_STACK_CONFIG.saveCookieDays,
       path: '/',
-      domain,
+      ...(domain ? { domain } : {}),
     })
-  }, [psPartnerKey, psClickId, isPSChanged])
+  }, [domain, psPartnerKey, psClickId, isPSChanged])
 
   const bind = useCallback(async () => {
     if (psPartnerKey && psClickId && !hasBind) {
@@ -56,10 +58,10 @@ const usePSInfo = () => {
           shouldRemoveCookie = true
       }
       if (shouldRemoveCookie)
-        Cookies.remove(PARTNER_STACK_CONFIG.cookieName, { path: '/', domain })
+        Cookies.remove(PARTNER_STACK_CONFIG.cookieName, { path: '/', ...(domain ? { domain } : {}) })
       setBind()
     }
-  }, [psPartnerKey, psClickId, mutateAsync, hasBind, setBind])
+  }, [domain, psPartnerKey, psClickId, mutateAsync, hasBind, setBind])
   return {
     psPartnerKey,
     psClickId,
