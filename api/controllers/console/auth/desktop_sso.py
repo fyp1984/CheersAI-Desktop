@@ -1,30 +1,34 @@
 import logging
+
 from flask import request
 from flask_restx import Resource, fields
+
 from controllers.console import console_ns
+from extensions.ext_database import db
+from libs.datetime_utils import naive_utc_now
 from libs.helper import extract_remote_ip
 from libs.token import (
     set_access_token_to_cookie,
     set_csrf_token_to_cookie,
     set_refresh_token_to_cookie,
 )
-from services.account_service import AccountService, RegisterService, TenantService
-from models import Account, AccountStatus
-from extensions.ext_database import db
-from libs.datetime_utils import naive_utc_now
-from controllers.console.wraps import setup_required
+from models import AccountStatus
+from services.account_service import AccountService, TenantService
 
 logger = logging.getLogger(__name__)
+
 
 class DesktopSSOLoginPayload(fields.Raw):
     def format(self, value):
         return value
+
 
 desktop_sso_login_model = console_ns.model('DesktopSSOLoginPayload', {
     'email': fields.String(required=True, description='User email from SSO'),
     'name': fields.String(required=False, description='User name from SSO'),
     'role': fields.String(required=False, description='User role from SSO (admin/technician/user)')
 })
+
 
 @console_ns.route('/auth/desktop-sso/login')
 class DesktopSSOLoginApi(Resource):
@@ -34,7 +38,7 @@ class DesktopSSOLoginApi(Resource):
         try:
             logger.info("Desktop SSO login request received")
             data = request.get_json()
-            logger.info(f"Request data: {data}")
+            logger.info("Request data: %s", data)
             
             email = data.get('email') if data else None
             name = data.get('name') if data else 'Dify User'
@@ -45,7 +49,7 @@ class DesktopSSOLoginApi(Resource):
                 return {'result': 'fail', 'message': 'Email is required'}, 400
 
             normalized_email = email.lower()
-            logger.info(f"Processing SSO login for: {normalized_email}, role: {sso_role}")
+            logger.info("Processing SSO login for: %s, role: %s", normalized_email, sso_role)
             logger.info(f"DEBUG: Email contains 'tech': {'tech' in normalized_email}, contains 'technician': {'technician' in normalized_email}")
             
             # Map SSO role to system role
@@ -64,23 +68,23 @@ class DesktopSSOLoginApi(Resource):
                 normalized_name = name.lower() if name else ''
                 if 'admin' in normalized_email or 'admin' in normalized_name:
                     sso_role = 'admin'
-                    logger.info(f"Test mode: Auto-assigned admin role based on email/name")
+                    logger.info("Test mode: Auto-assigned admin role based on email/name")
                 elif 'tech' in normalized_email or 'tech' in normalized_name:
                     sso_role = 'technician'
-                    logger.info(f"Test mode: Auto-assigned technician role based on email/name")
+                    logger.info("Test mode: Auto-assigned technician role based on email/name")
                 else:
                     sso_role = 'user'
-                    logger.info(f"Test mode: Using default user role")
+                    logger.info("Test mode: Using default user role")
             
             system_role = SSO_ROLE_MAPPING.get(sso_role.lower() if sso_role else None, 'normal')
-            logger.info(f"Mapped SSO role '{sso_role}' to system role '{system_role}'")
+            logger.info("Mapped SSO role '%s' to system role '%s'", sso_role, system_role)
             
             # 1. Get or create account
             account = AccountService.get_user_through_email(normalized_email)
             
             if not account:
                 # Handle auto-registration - bypass normal registration checks for SSO
-                logger.info(f"Creating new account for SSO user: {normalized_email} with role: {system_role}")
+                logger.info("Creating new account for SSO user: %s with role: %s", normalized_email, system_role)
                 
                 # Create account directly using is_setup=True to bypass registration checks
                 account = AccountService.create_account(
@@ -102,7 +106,7 @@ class DesktopSSOLoginApi(Resource):
                 if tenant_join:
                     tenant_join.role = system_role
                     db.session.commit()
-                    logger.info(f"Set workspace role to '{system_role}' for new user")
+                    logger.info("Set workspace role to '%s' for new user", system_role)
                 
                 # Set to active
                 account.status = AccountStatus.ACTIVE
@@ -110,7 +114,7 @@ class DesktopSSOLoginApi(Resource):
                 db.session.commit()
                 
             else:
-                logger.info(f"Found existing account for: {normalized_email}")
+                logger.info("Found existing account for: %s", normalized_email)
                 if account.status == AccountStatus.BANNED:
                     return {'result': 'fail', 'message': 'Account is banned'}, 403
                 
@@ -132,7 +136,7 @@ class DesktopSSOLoginApi(Resource):
                 # Update role for existing user
                 if tenant_join:
                     old_role = tenant_join.role
-                    logger.info(f"DEBUG: Attempting to update role from '{old_role}' to '{system_role}'")
+                    logger.info("DEBUG: Attempting to update role from '%s' to '%s'", old_role, system_role)
                     
                     # 测试模式：允许降级唯一owner（生产环境请删除此段代码）
                     TEST_MODE_ALLOW_OWNER_DOWNGRADE = True
@@ -146,16 +150,16 @@ class DesktopSSOLoginApi(Resource):
                         if owner_count > 1:
                             tenant_join.role = system_role
                             db.session.commit()
-                            logger.info(f"Updated role from 'owner' to '{system_role}' (multiple owners exist)")
+                            logger.info("Updated role from 'owner' to '%s' (multiple owners exist)", system_role)
                         else:
-                            logger.info(f"Keeping 'owner' role (only owner in workspace)")
+                            logger.info("Keeping 'owner' role (only owner in workspace)")
                     elif old_role != system_role:
                         tenant_join.role = system_role
                         db.session.commit()
-                        logger.info(f"Updated role from '{old_role}' to '{system_role}'")
+                        logger.info("Updated role from '%s' to '%s'", old_role, system_role)
 
             # 2. Login and issue Dify tokens
-            logger.info(f"Generating tokens for: {normalized_email}")
+            logger.info("Generating tokens for: %s", normalized_email)
             token_pair = AccountService.login(
                 account=account,
                 ip_address=extract_remote_ip(request),
@@ -164,7 +168,7 @@ class DesktopSSOLoginApi(Resource):
             logger.info(f"DEBUG: Token pair generated - access_token length: {len(token_pair.access_token)}, refresh_token length: {len(token_pair.refresh_token)}, csrf_token length: {len(token_pair.csrf_token)}")
 
             # 3. Set cookies using standard Dify cookie functions
-            logger.info(f"Setting cookies for: {normalized_email}")
+            logger.info("Setting cookies for: %s", normalized_email)
             
             from flask import make_response
             response = make_response({'result': 'success'})
@@ -174,9 +178,9 @@ class DesktopSSOLoginApi(Resource):
             set_refresh_token_to_cookie(request, response, token_pair.refresh_token)
             set_csrf_token_to_cookie(request, response, token_pair.csrf_token)
             
-            logger.info(f"DEBUG: Cookies set in response headers")
+            logger.info("DEBUG: Cookies set in response headers")
 
-            logger.info(f"Desktop SSO Login success for: {normalized_email} with role: {system_role}")
+            logger.info("Desktop SSO Login success for: %s with role: %s", normalized_email, system_role)
             return response
         except Exception as e:
             logger.error(f"Desktop SSO login failed: {str(e)}", exc_info=True)
