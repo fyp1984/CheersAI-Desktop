@@ -52,6 +52,17 @@ def test_resolve_workspace_role_supports_dataset_operator_bundle():
     assert workspace_role == "dataset_operator"
 
 
+def test_resolve_workspace_role_prefers_higher_privilege_identifier():
+    resolved_identifier, workspace_role = resolve_workspace_role({
+        "role": "user",
+        "roles": ["desktop_dataset_operator", "desktop_team_admin"],
+        "permissions": ["desktop_access"],
+    })
+
+    assert resolved_identifier == "desktop_team_admin"
+    assert workspace_role == "admin"
+
+
 def test_get_role_capabilities_matches_expected_matrix():
     capabilities = get_role_capabilities("dataset_operator")
 
