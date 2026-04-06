@@ -141,6 +141,7 @@ export type IWorkspace = {
 
 export type ICurrentWorkspace = Omit<IWorkspace, 'current'> & {
   role: 'owner' | 'admin' | 'editor' | 'dataset_operator' | 'normal'
+  capabilities?: string[]
   providers: Provider[]
   trial_credits: number
   trial_credits_used: number

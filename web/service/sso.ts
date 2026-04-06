@@ -25,7 +25,8 @@ export type DesktopSSOLoginUrlParams = {
 export const getDesktopSSOLoginUrl = (params: DesktopSSOLoginUrlParams) => {
   const { clientId, redirectUri, state, protocol = 'oauth' } = params
   const ssoBaseUrl = process.env.NEXT_PUBLIC_DESKTOP_SSO_LOGIN_URL || 'http://localhost:8000'
-  const authUrl = new URL(`/login/${protocol}/authorize`, ssoBaseUrl)
+  const normalizedProtocol = protocol === 'oauth2' ? 'oauth' : protocol
+  const authUrl = new URL(`/login/${normalizedProtocol}/authorize`, ssoBaseUrl)
   authUrl.searchParams.set('client_id', clientId)
   authUrl.searchParams.set('redirect_uri', redirectUri)
   authUrl.searchParams.set('state', state)

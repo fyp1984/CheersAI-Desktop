@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next'
 import Button from '@/app/components/base/button'
 import { Lock01 } from '@/app/components/base/icons/src/vender/solid/security'
 import Toast from '@/app/components/base/toast'
-import { getUserOAuth2SSOUrl, getUserOIDCSSOUrl, getUserSAMLSSOUrl } from '@/service/sso'
-import { isDesktopSSOEnabled, startDesktopSSOLogin } from '@/service/sso-desktop-auth'
+import { getDesktopSSOLoginUrl, getUserOAuth2SSOUrl, getUserOIDCSSOUrl, getUserSAMLSSOUrl } from '@/service/sso'
+import { generateRandomState, getDesktopCallbackUrl, isDesktopSSOEnabled } from '@/service/sso-desktop-auth'
 import { SSOProtocol } from '@/types/feature'
 
 type SSOAuthProps = {
@@ -25,7 +25,17 @@ const SSOAuth: FC<SSOAuthProps> = ({
     setIsLoading(true)
 
     if (isDesktopSSOEnabled()) {
-      startDesktopSSOLogin()
+      const state = generateRandomState()
+      const protocol = (process.env.NEXT_PUBLIC_DESKTOP_SSO_PROTOCOL || 'oauth').replace('oauth2', 'oauth')
+      const loginUrl = getDesktopSSOLoginUrl({
+        clientId: process.env.NEXT_PUBLIC_DESKTOP_SSO_CLIENT_ID || '35f82ac3f099085a6fd0',
+        redirectUri: getDesktopCallbackUrl(),
+        state,
+        protocol,
+      })
+
+      sessionStorage.setItem('desktop-sso-state', state)
+      window.location.href = loginUrl
       return
     }
 
@@ -66,9 +76,9 @@ const SSOAuth: FC<SSOAuthProps> = ({
       tabIndex={0}
       onClick={() => { handleSSOLogin() }}
       disabled={isLoading}
-      className="w-full"
+      className="signin-sso-button w-full"
     >
-      <Lock01 className="mr-2 h-5 w-5 text-text-accent-light-mode-only" />
+      <Lock01 className="signin-sso-button__icon mr-2 h-5 w-5" />
       <span className="truncate">{t('withSSO', { ns: 'login' })}</span>
     </Button>
   )

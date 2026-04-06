@@ -13,6 +13,7 @@ import {
   PortalToFollowElemContent,
   PortalToFollowElemTrigger,
 } from '@/app/components/base/portal-to-follow-elem'
+import { useAppContext } from '@/context/app-context'
 import { fetchTagList } from '@/service/tag'
 import { cn } from '@/utils/classnames'
 
@@ -29,6 +30,7 @@ const TagFilter: FC<TagFilterProps> = ({
   onChange,
 }) => {
   const { t } = useTranslation()
+  const { isCurrentWorkspaceEditor } = useAppContext()
   const [open, setOpen] = useState(false)
 
   const tagList = useTagStore(s => s.tagList)
@@ -141,21 +143,25 @@ const TagFilter: FC<TagFilterProps> = ({
                 </div>
               )}
             </div>
-            <div className="border-t-[0.5px] border-divider-regular" />
-            <div className="p-1">
-              <div
-                className="flex cursor-pointer select-none items-center gap-2 rounded-lg py-[6px] pl-3 pr-2 hover:bg-state-base-hover"
-                onClick={() => {
-                  setShowTagManagementModal(true)
-                  setOpen(false)
-                }}
-              >
-                <Tag03 className="h-4 w-4 text-text-tertiary" />
-                <div className="grow truncate text-sm leading-5 text-text-secondary">
-                  {t('tag.manageTags', { ns: 'common' })}
+            {isCurrentWorkspaceEditor && (
+              <>
+                <div className="border-t-[0.5px] border-divider-regular" />
+                <div className="p-1">
+                  <div
+                    className="flex cursor-pointer select-none items-center gap-2 rounded-lg py-[6px] pl-3 pr-2 hover:bg-state-base-hover"
+                    onClick={() => {
+                      setShowTagManagementModal(true)
+                      setOpen(false)
+                    }}
+                  >
+                    <Tag03 className="h-4 w-4 text-text-tertiary" />
+                    <div className="grow truncate text-sm leading-5 text-text-secondary">
+                      {t('tag.manageTags', { ns: 'common' })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         </PortalToFollowElemContent>
       </div>

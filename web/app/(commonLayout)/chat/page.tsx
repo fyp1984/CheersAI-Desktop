@@ -154,7 +154,7 @@ const ChatPage = () => {
   const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(null)
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [showSandboxPicker, setShowSandboxPicker] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => getInitialSidebarCollapsed(SIDEBAR_STORAGE_KEY))
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => getInitialSidebarCollapsed(SIDEBAR_STORAGE_KEY))
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [isAutoFilled, setIsAutoFilled] = useState(false)
   const [autoFilledText, setAutoFilledText] = useState('')

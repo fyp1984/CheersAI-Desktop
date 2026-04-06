@@ -25,7 +25,7 @@ export const getDesktopCallbackUrl = () => {
 
 export const startDesktopSSOLogin = () => {
   const clientId = process.env.NEXT_PUBLIC_DESKTOP_SSO_CLIENT_ID || '35f82ac3f099085a6fd0'
-  const protocol = process.env.NEXT_PUBLIC_DESKTOP_SSO_PROTOCOL || 'oauth'
+  const protocol = (process.env.NEXT_PUBLIC_DESKTOP_SSO_PROTOCOL || 'oauth').replace('oauth2', 'oauth')
   const redirectUri = getDesktopCallbackUrl()
   const state = generateRandomState()
 

@@ -1,7 +1,9 @@
 type SSOSession = {
   accessToken: string
   refreshToken?: string
+  scope?: string
   createdAt: number
+  lastSyncedAt: number
   expiresAt: number
 }
 
@@ -37,12 +39,14 @@ export function generateSessionId(): string {
   return `sso_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
 }
 
-export function storeSession(sessionId: string, accessToken: string, refreshToken?: string, expiresIn: number = 7 * 24 * 60 * 60): void {
+export function storeSession(sessionId: string, accessToken: string, refreshToken?: string, expiresIn: number = 60 * 60, scope?: string): void {
   const now = Date.now()
   sessions.set(sessionId, {
     accessToken,
     refreshToken,
+    scope,
     createdAt: now,
+    lastSyncedAt: now,
     expiresAt: now + (expiresIn * 1000),
   })
   console.warn(`[SSO Session] Stored session ${sessionId.substring(0, 20)}... (total: ${sessions.size})`)
@@ -63,6 +67,23 @@ export function getSession(sessionId: string): SSOSession | null {
 
   console.warn(`[SSO Session] Session retrieved: ${sessionId.substring(0, 20)}...`)
   return session
+}
+
+export function updateSession(sessionId: string, partial: Partial<SSOSession>): SSOSession | null {
+  const session = sessions.get(sessionId)
+  if (!session)
+    return null
+
+  const nextSession = {
+    ...session,
+    ...partial,
+  }
+  sessions.set(sessionId, nextSession)
+  return nextSession
+}
+
+export function shouldRefreshSession(session: SSOSession, bufferMs: number = 5 * 60 * 1000): boolean {
+  return session.expiresAt <= Date.now() + bufferMs
 }
 
 export function deleteSession(sessionId: string): void {

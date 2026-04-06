@@ -19,6 +19,7 @@ import { useExternalApiPanel } from '@/context/external-api-panel-context'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 import useDocumentTitle from '@/hooks/use-document-title'
 import { useDatasetApiBaseUrl } from '@/service/knowledge/use-dataset'
+import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 // Components
 import ExternalAPIPanel from '../external-api/external-api-panel'
 import ServiceApi from '../extra-info/service-api'
@@ -55,7 +56,7 @@ const List = () => {
   }
 
   useEffect(() => {
-    if (currentWorkspace.role === 'normal')
+    if (!hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.knowledgeView))
       return router.replace('/apps')
   }, [currentWorkspace, router])
 

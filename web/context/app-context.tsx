@@ -15,6 +15,7 @@ import {
   useLangGeniusVersion,
   useUserProfile,
 } from '@/service/use-common'
+import { getWorkspaceCapabilities, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import { useGlobalPublicStore } from './global-public-context'
 
 export type AppContextValue = {
@@ -58,6 +59,7 @@ const initialWorkspaceInfo: ICurrentWorkspace = {
   status: '',
   created_at: 0,
   role: 'normal',
+  capabilities: [],
   providers: [],
   trial_credits: 200,
   trial_credits_used: 0,
@@ -114,9 +116,16 @@ export const AppContextProvider: FC<AppContextProviderProps> = ({ children }) =>
     }
   }, [langGeniusVersionQuery.data, userProfileResp?.meta])
 
-  const isCurrentWorkspaceManager = useMemo(() => ['owner', 'admin'].includes(currentWorkspace.role), [currentWorkspace.role])
+  const workspaceCapabilities = useMemo(() => getWorkspaceCapabilities(currentWorkspace), [currentWorkspace])
+  const isCurrentWorkspaceManager = useMemo(
+    () => workspaceCapabilities.includes(WORKSPACE_CAPABILITIES.teamManage),
+    [workspaceCapabilities],
+  )
   const isCurrentWorkspaceOwner = useMemo(() => currentWorkspace.role === 'owner', [currentWorkspace.role])
-  const isCurrentWorkspaceEditor = useMemo(() => ['owner', 'admin', 'editor'].includes(currentWorkspace.role), [currentWorkspace.role])
+  const isCurrentWorkspaceEditor = useMemo(
+    () => workspaceCapabilities.includes(WORKSPACE_CAPABILITIES.agentManage),
+    [workspaceCapabilities],
+  )
   const isCurrentWorkspaceDatasetOperator = useMemo(() => currentWorkspace.role === 'dataset_operator', [currentWorkspace.role])
 
   const mutateUserProfile = useCallback(() => {
