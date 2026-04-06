@@ -14,10 +14,11 @@ export const createTag = (name: string, type: string) => {
   })
 }
 
-export const updateTag = (tagID: string, name: string) => {
+export const updateTag = (tagID: string, name: string, type: string) => {
   return patch(`/tags/${tagID}`, {
     body: {
       name,
+      type,
     },
   })
 }

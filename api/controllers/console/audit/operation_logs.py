@@ -4,9 +4,10 @@ from sqlalchemy import desc, func, or_
 from sqlalchemy.orm import Session
 
 from controllers.console import console_ns
-from controllers.console.wraps import account_initialization_required
+from controllers.console.wraps import account_initialization_required, require_workspace_capabilities
 from extensions.ext_database import db
 from libs.helper import TimestampField
+from libs.login import login_required
 from models.account import Account
 from models.model import OperationLog
 
@@ -49,7 +50,9 @@ stats_model = console_ns.model(
 
 @console_ns.route("/operation-logs")
 class OperationLogListApi(Resource):
+    @login_required
     @account_initialization_required
+    @require_workspace_capabilities("desktop_audit_view")
     @console_ns.marshal_with(operation_log_list_model)
     def get(self):
         """Get operation logs list with pagination and filters"""
@@ -130,7 +133,9 @@ class OperationLogListApi(Resource):
 
 @console_ns.route("/operation-logs/stats")
 class OperationLogStatsApi(Resource):
+    @login_required
     @account_initialization_required
+    @require_workspace_capabilities("desktop_audit_view")
     @console_ns.marshal_with(stats_model)
     def get(self):
         """Get operation logs statistics"""
@@ -186,7 +191,9 @@ class OperationLogStatsApi(Resource):
 
 @console_ns.route("/operation-logs/actions")
 class OperationLogActionsApi(Resource):
+    @login_required
     @account_initialization_required
+    @require_workspace_capabilities("desktop_audit_view")
     def get(self):
         """Get all unique action types"""
         with Session(db.engine) as session:

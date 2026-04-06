@@ -5,12 +5,13 @@ import {
   RiEditLine,
 } from '@remixicon/react'
 import { useDebounceFn } from 'ahooks'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useContext } from 'use-context-selector'
 import Confirm from '@/app/components/base/confirm'
 import { ToastContext } from '@/app/components/base/toast'
 import Tooltip from '@/app/components/base/tooltip'
+import { useAppContext } from '@/context/app-context'
 import {
   deleteTag,
   updateTag,
@@ -26,28 +27,39 @@ const TagItemEditor: FC<TagItemEditorProps> = ({
 }) => {
   const { t } = useTranslation()
   const { notify } = useContext(ToastContext)
+  const { isCurrentWorkspaceEditor } = useAppContext()
   const tagList = useTagStore(s => s.tagList)
   const setTagList = useTagStore(s => s.setTagList)
 
   const [isEditing, setIsEditing] = useState(false)
   const [name, setName] = useState(tag.name)
+  const editingRef = useRef(false)
   const editTag = async (tagID: string, name: string) => {
-    if (name === tag.name) {
+    if (!isCurrentWorkspaceEditor) {
+      notify({ type: 'error', message: t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }) })
+      return
+    }
+    const trimmedName = name.trim()
+    if (editingRef.current)
+      return
+    if (trimmedName === tag.name) {
+      setName(tag.name)
       setIsEditing(false)
       return
     }
-    if (!name) {
+    if (!trimmedName) {
       notify({ type: 'error', message: 'tag name is empty' })
       setName(tag.name)
       setIsEditing(false)
       return
     }
+    editingRef.current = true
     try {
       const newList = tagList.map((tag) => {
         if (tag.id === tagID) {
           return {
             ...tag,
-            name,
+            name: trimmedName,
           }
         }
         return tag
@@ -56,9 +68,9 @@ const TagItemEditor: FC<TagItemEditorProps> = ({
         ...newList,
       ])
       setIsEditing(false)
-      await updateTag(tagID, name)
+      await updateTag(tagID, trimmedName, tag.type)
       notify({ type: 'success', message: t('actionMsg.modifiedSuccessfully', { ns: 'common' }) })
-      setName(name)
+      setName(trimmedName)
     }
     catch {
       notify({ type: 'error', message: t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }) })
@@ -77,10 +89,17 @@ const TagItemEditor: FC<TagItemEditorProps> = ({
       ])
       setIsEditing(false)
     }
+    finally {
+      editingRef.current = false
+    }
   }
   const [showRemoveModal, setShowRemoveModal] = useState(false)
   const [pending, setPending] = useState<boolean>(false)
   const removeTag = async (tagID: string) => {
+    if (!isCurrentWorkspaceEditor) {
+      notify({ type: 'error', message: t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }) })
+      return
+    }
     if (pending)
       return
     try {
@@ -118,20 +137,24 @@ const TagItemEditor: FC<TagItemEditorProps> = ({
             >
               <div className="leading-4.5 shrink-0 px-1 text-sm font-medium text-text-tertiary">{tag.binding_count}</div>
             </Tooltip>
-            <div className="group/edit shrink-0 cursor-pointer rounded-md p-1 hover:bg-state-base-hover" onClick={() => setIsEditing(true)}>
-              <RiEditLine className="h-3 w-3 text-text-tertiary group-hover/edit:text-text-secondary" />
-            </div>
-            <div
-              className="group/remove shrink-0 cursor-pointer rounded-md p-1 hover:bg-state-base-hover"
-              onClick={() => {
-                if (tag.binding_count)
-                  setShowRemoveModal(true)
-                else
-                  handleRemove()
-              }}
-            >
-              <RiDeleteBinLine className="h-3 w-3 text-text-tertiary group-hover/remove:text-text-secondary" />
-            </div>
+            {isCurrentWorkspaceEditor && (
+              <>
+                <div className="group/edit shrink-0 cursor-pointer rounded-md p-1 hover:bg-state-base-hover" onClick={() => setIsEditing(true)}>
+                  <RiEditLine className="h-3 w-3 text-text-tertiary group-hover/edit:text-text-secondary" />
+                </div>
+                <div
+                  className="group/remove shrink-0 cursor-pointer rounded-md p-1 hover:bg-state-base-hover"
+                  onClick={() => {
+                    if (tag.binding_count)
+                      setShowRemoveModal(true)
+                    else
+                      handleRemove()
+                  }}
+                >
+                  <RiDeleteBinLine className="h-3 w-3 text-text-tertiary group-hover/remove:text-text-secondary" />
+                </div>
+              </>
+            )}
           </>
         )}
         {isEditing && (
@@ -140,7 +163,15 @@ const TagItemEditor: FC<TagItemEditorProps> = ({
             autoFocus
             value={name}
             onChange={e => setName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && editTag(tag.id, name)}
+            onKeyDown={(e) => {
+              const isComposing = e.nativeEvent.isComposing || e.keyCode === 229
+              if (e.key !== 'Enter' || isComposing)
+                return
+              e.preventDefault()
+              e.stopPropagation()
+              if (e.key === 'Enter' && !isComposing)
+                editTag(tag.id, name)
+            }}
             onBlur={() => editTag(tag.id, name)}
           />
         )}

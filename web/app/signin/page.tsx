@@ -1,22 +1,11 @@
-'use client'
-import { useSearchParams } from 'next/navigation'
-import { useEffect } from 'react'
-import usePSInfo from '../components/billing/partner-stack/use-ps-info'
-import NormalForm from './normal-form'
-import OneMoreStep from './one-more-step'
+import type { Metadata } from 'next'
+import SignInPageClient from './page-client'
 
-const SignIn = () => {
-  const searchParams = useSearchParams()
-  const step = searchParams.get('step')
-  const { saveOrUpdate } = usePSInfo()
-
-  useEffect(() => {
-    saveOrUpdate()
-  }, [saveOrUpdate])
-
-  if (step === 'next')
-    return <OneMoreStep />
-  return <NormalForm />
+export const metadata: Metadata = {
+  title: '登录CheersAI-Desktop',
+  description: '使用企业单点登录进入 CheersAI Desktop 工作区，获得安全、可审计、可扩展的 AI 协作体验。',
 }
 
-export default SignIn
+export default function SignInPage() {
+  return <SignInPageClient />
+}

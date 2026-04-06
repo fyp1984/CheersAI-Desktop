@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { Buffer } from 'node:buffer'
 import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
 import { generateSessionId, storeSession } from '@/lib/sso-session'
 
 export async function POST(request: NextRequest) {
@@ -10,7 +12,7 @@ export async function POST(request: NextRequest) {
     if (!code || !state || !redirectUri) {
       return NextResponse.json(
         { error: 'Missing required parameters' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -20,20 +22,20 @@ export async function POST(request: NextRequest) {
 
     const tokenUrl = new URL('/api/login/oauth/access_token', ssoBaseUrl)
     const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
-    
+
     const params = new URLSearchParams()
     params.append('grant_type', 'authorization_code')
     params.append('code', code)
     params.append('redirect_uri', redirectUri)
-    params.append('client_id', clientId) // send in body as fallback
-    params.append('client_secret', clientSecret) // send in body because many IDPs reject Basic Auth
+    params.append('client_id', clientId)
+    params.append('client_secret', clientSecret)
 
     const tokenResponse = await fetch(tokenUrl.toString(), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Authorization': `Basic ${authString}`,
-        'Accept': 'application/json'
+        'Accept': 'application/json',
       },
       body: params.toString(),
     })
@@ -47,44 +49,47 @@ export async function POST(request: NextRequest) {
       })
       return NextResponse.json(
         { error: 'Token exchange failed' },
-        { status: tokenResponse.status }
+        { status: tokenResponse.status },
       )
     }
 
     const tokenData = await tokenResponse.json()
-    const { access_token, refresh_token } = tokenData
+    const { access_token, refresh_token, expires_in, scope } = tokenData
 
     if (!access_token) {
       return NextResponse.json(
         { error: 'No access token received' },
-        { status: 500 }
+        { status: 500 },
       )
     }
 
-    // Store tokens server-side with session ID to avoid cookie size limits
     const sessionId = generateSessionId()
-    storeSession(sessionId, access_token, refresh_token, 60 * 60 * 24 * 7) // 7 days
+    const sessionExpiresIn = Number.isFinite(Number(expires_in)) && Number(expires_in) > 0
+      ? Number(expires_in)
+      : 60 * 60
+    storeSession(sessionId, access_token, refresh_token, sessionExpiresIn, scope)
 
-    // Only store small session ID in cookie
     const cookieStore = await cookies()
     cookieStore.set('sso_session_id', sessionId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: sessionExpiresIn,
     })
 
-    console.log('[SSO] Token stored in session:', sessionId.substring(0, 20) + '...')
+    console.warn('[SSO] Token stored in session:', `${sessionId.substring(0, 20)}...`)
 
     return NextResponse.json({
       success: true,
+      expires_in: sessionExpiresIn,
     })
   }
   catch (error) {
+    const routeError = error as Error & { cause?: unknown }
     console.error('SSO token exchange error:', {
-      message: (error as any)?.message,
-      cause: (error as any)?.cause,
+      message: routeError.message,
+      cause: routeError.cause,
       error,
     })
     return NextResponse.json(
@@ -92,7 +97,7 @@ export async function POST(request: NextRequest) {
         error: 'Internal server error',
         details: process.env.NODE_ENV === 'production' ? undefined : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

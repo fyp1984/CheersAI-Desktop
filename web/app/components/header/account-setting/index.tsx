@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next'
 import Input from '@/app/components/base/input'
 import BillingPage from '@/app/components/billing/billing-page'
 import CustomPage from '@/app/components/custom/custom-page'
+import { SandboxConfig } from '@/app/components/data-masking/sandbox-config'
 import {
   ACCOUNT_SETTING_TAB,
 
@@ -32,13 +33,13 @@ import { useAppContext } from '@/context/app-context'
 import { useProviderContext } from '@/context/provider-context'
 import useBreakpoints, { MediaType } from '@/hooks/use-breakpoints'
 import { cn } from '@/utils/classnames'
+import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import Button from '../../base/button'
 import ApiBasedExtensionPage from './api-based-extension-page'
 import DataSourcePage from './data-source-page-new'
 import LanguagePage from './language-page'
 import MembersPage from './members-page'
 import ModelProviderPage from './model-provider-page'
-import { SandboxConfig } from '@/app/components/data-masking/sandbox-config'
 
 const iconClassName = `
   w-5 h-5 mr-2
@@ -63,34 +64,38 @@ export default function AccountSetting({
   activeTab = ACCOUNT_SETTING_TAB.MEMBERS,
   onTabChange,
 }: IAccountSettingProps) {
-  const [activeMenu, setActiveMenu] = useState<AccountSettingTab>(activeTab)
-  useEffect(() => {
-    setActiveMenu(activeTab)
-  }, [activeTab])
+  const [internalActiveMenu, setInternalActiveMenu] = useState<AccountSettingTab>(activeTab)
   const { t } = useTranslation()
   const { enableBilling, enableReplaceWebAppLogo } = useProviderContext()
-  const { isCurrentWorkspaceDatasetOperator } = useAppContext()
+  const { currentWorkspace } = useAppContext()
+  const canManageModels = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.modelManage)
+  const canManageTeam = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.teamManage)
+  const canEditKnowledge = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.knowledgeEdit)
+  const canManageAgent = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.agentManage)
+  const canManageWorkspaceSettings = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.settingsTeam)
 
   const workplaceGroupItems: GroupItem[] = (() => {
-    if (isCurrentWorkspaceDatasetOperator)
-      return []
+    const items: GroupItem[] = []
 
-    const items: GroupItem[] = [
-      {
+    if (canManageModels) {
+      items.push({
         key: ACCOUNT_SETTING_TAB.PROVIDER,
         name: t('settings.provider', { ns: 'common' }),
         icon: <RiBrain2Line className={iconClassName} />,
         activeIcon: <RiBrain2Fill className={iconClassName} />,
-      },
-      {
+      })
+    }
+
+    if (canManageTeam) {
+      items.push({
         key: ACCOUNT_SETTING_TAB.MEMBERS,
         name: t('settings.members', { ns: 'common' }),
         icon: <RiGroup2Line className={iconClassName} />,
         activeIcon: <RiGroup2Fill className={iconClassName} />,
-      },
-    ]
+      })
+    }
 
-    if (enableBilling) {
+    if (enableBilling && canManageWorkspaceSettings) {
       items.push({
         key: ACCOUNT_SETTING_TAB.BILLING,
         name: t('settings.billing', { ns: 'common' }),
@@ -100,28 +105,34 @@ export default function AccountSetting({
       })
     }
 
-    items.push(
-      {
+    if (canEditKnowledge) {
+      items.push({
         key: ACCOUNT_SETTING_TAB.DATA_SOURCE,
         name: t('settings.dataSource', { ns: 'common' }),
         icon: <RiDatabase2Line className={iconClassName} />,
         activeIcon: <RiDatabase2Fill className={iconClassName} />,
-      },
-      {
+      })
+    }
+
+    if (canManageAgent) {
+      items.push({
         key: ACCOUNT_SETTING_TAB.API_BASED_EXTENSION,
         name: t('settings.apiBasedExtension', { ns: 'common' }),
         icon: <RiPuzzle2Line className={iconClassName} />,
         activeIcon: <RiPuzzle2Fill className={iconClassName} />,
-      },
-      {
+      })
+    }
+
+    if (canManageWorkspaceSettings) {
+      items.push({
         key: ACCOUNT_SETTING_TAB.DATA_SECURITY,
         name: t('settings.dataSecurity', { ns: 'common' }),
         icon: <RiShieldKeyholeLine className={iconClassName} />,
         activeIcon: <RiShieldKeyholeFill className={iconClassName} />,
-      },
-    )
+      })
+    }
 
-    if (enableReplaceWebAppLogo || enableBilling) {
+    if ((enableReplaceWebAppLogo || enableBilling) && canManageWorkspaceSettings) {
       items.push({
         key: ACCOUNT_SETTING_TAB.CUSTOM,
         name: t('custom', { ns: 'custom' }),
@@ -155,6 +166,12 @@ export default function AccountSetting({
       ],
     },
   ]
+  const activeMenu = onTabChange ? activeTab : internalActiveMenu
+  const availableItems = menuItems.flatMap(menuItem => menuItem.items)
+  const effectiveActiveMenu = availableItems.some(item => item.key === activeMenu)
+    ? activeMenu
+    : (availableItems[0]?.key || ACCOUNT_SETTING_TAB.LANGUAGE)
+
   const scrollRef = useRef<HTMLDivElement>(null)
   const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
@@ -169,7 +186,7 @@ export default function AccountSetting({
     }
   }, [])
 
-  const activeItem = [...menuItems[0].items, ...menuItems[1].items].find(item => item.key === activeMenu)
+  const activeItem = availableItems.find(item => item.key === effectiveActiveMenu)
 
   const [searchValue, setSearchValue] = useState<string>('')
 
@@ -185,7 +202,7 @@ export default function AccountSetting({
             {
               menuItems.map(menuItem => (
                 <div key={menuItem.key} className="mb-2">
-                  {!isCurrentWorkspaceDatasetOperator && (
+                  {menuItem.items.length > 0 && (
                     <div className="system-xs-medium-uppercase mb-0.5 py-2 pb-1 pl-3 text-text-tertiary">{menuItem.name}</div>
                   )}
                   <div>
@@ -195,15 +212,16 @@ export default function AccountSetting({
                           key={item.key}
                           className={cn(
                             'mb-0.5 flex h-[37px] cursor-pointer items-center rounded-lg p-1 pl-3 text-sm',
-                            activeMenu === item.key ? 'system-sm-semibold bg-state-base-active text-components-menu-item-text-active' : 'system-sm-medium text-components-menu-item-text',
+                            effectiveActiveMenu === item.key ? 'system-sm-semibold bg-state-base-active text-components-menu-item-text-active' : 'system-sm-medium text-components-menu-item-text',
                           )}
                           title={item.name}
                           onClick={() => {
-                            setActiveMenu(item.key)
+                            if (!onTabChange)
+                              setInternalActiveMenu(item.key)
                             onTabChange?.(item.key)
                           }}
                         >
-                          {activeMenu === item.key ? item.activeIcon : item.icon}
+                          {effectiveActiveMenu === item.key ? item.activeIcon : item.icon}
                           {!isMobile && <div className="truncate">{item.name}</div>}
                         </div>
                       ))
@@ -247,14 +265,14 @@ export default function AccountSetting({
               )}
             </div>
             <div className="px-4 pt-2 sm:px-8">
-              {activeMenu === 'provider' && <ModelProviderPage searchText={searchValue} />}
-              {activeMenu === 'members' && <MembersPage />}
-              {activeMenu === 'billing' && <BillingPage />}
-              {activeMenu === 'data-source' && <DataSourcePage />}
-              {activeMenu === 'api-based-extension' && <ApiBasedExtensionPage />}
-              {activeMenu === 'data-security' && <SandboxConfig />}
-              {activeMenu === 'custom' && <CustomPage />}
-              {activeMenu === 'language' && <LanguagePage />}
+              {effectiveActiveMenu === 'provider' && <ModelProviderPage searchText={searchValue} />}
+              {effectiveActiveMenu === 'members' && <MembersPage />}
+              {effectiveActiveMenu === 'billing' && <BillingPage />}
+              {effectiveActiveMenu === 'data-source' && <DataSourcePage />}
+              {effectiveActiveMenu === 'api-based-extension' && <ApiBasedExtensionPage />}
+              {effectiveActiveMenu === 'data-security' && <SandboxConfig />}
+              {effectiveActiveMenu === 'custom' && <CustomPage />}
+              {effectiveActiveMenu === 'language' && <LanguagePage />}
             </div>
           </div>
         </div>

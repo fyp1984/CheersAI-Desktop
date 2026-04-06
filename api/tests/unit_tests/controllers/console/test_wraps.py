@@ -14,6 +14,7 @@ from controllers.console.wraps import (
     only_edition_cloud,
     only_edition_enterprise,
     only_edition_self_hosted,
+    require_workspace_capabilities,
     setup_required,
 )
 from models.account import AccountStatus
@@ -145,6 +146,47 @@ class TestEditionChecks:
 
         # Assert
         assert result == "self_hosted_success"
+
+
+class TestWorkspaceCapabilities:
+    def test_should_allow_when_user_has_required_workspace_capability(self):
+        class DummyAccount:
+            current_tenant_current_role = "admin"
+
+        mock_account = DummyAccount()
+        mock_current_user = MagicMock()
+        mock_current_user._get_current_object.return_value = mock_account
+
+        @require_workspace_capabilities("desktop_audit_view")
+        def protected_view():
+            return "success"
+
+        with patch("libs.login.current_user", mock_current_user):
+            with patch("models.Account", DummyAccount):
+                result = protected_view()
+
+        assert result == "success"
+
+    def test_should_reject_when_user_lacks_workspace_capability(self):
+        app = Flask(__name__)
+
+        class DummyAccount:
+            current_tenant_current_role = "normal"
+
+        mock_account = DummyAccount()
+        mock_current_user = MagicMock()
+        mock_current_user._get_current_object.return_value = mock_account
+
+        @require_workspace_capabilities("desktop_audit_view")
+        def protected_view():
+            return "success"
+
+        with app.test_request_context():
+            with patch("libs.login.current_user", mock_current_user):
+                with patch("models.Account", DummyAccount):
+                    with pytest.raises(Exception) as exc_info:
+                        protected_view()
+                    assert exc_info.value.code == 403
 
 
 class TestBillingResourceLimits:

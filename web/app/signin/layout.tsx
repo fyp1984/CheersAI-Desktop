@@ -1,54 +1,96 @@
 'use client'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useGlobalPublicStore } from '@/context/global-public-context'
-import useDocumentTitle from '@/hooks/use-document-title'
+import SignInSplash from './components/signin-splash'
+import SignInThemeToggle from './components/signin-theme-toggle'
+import { getEnvSignInConfig, loadSignInConfig } from './runtime-config'
+import './signin.css'
 
-export default function SignInLayout({ children }: any) {
+const initialConfig = getEnvSignInConfig()
+
+export default function SignInLayout({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation()
   const { systemFeatures } = useGlobalPublicStore()
-  useDocumentTitle('')
+  const [config, setConfig] = useState(initialConfig)
+  const [isSplashComplete, setIsSplashComplete] = useState(!initialConfig.enableSplash)
+
+  useEffect(() => {
+    document.title = t('pageTitle', { ns: 'login' })
+  }, [t])
+
+  useEffect(() => {
+    let isActive = true
+
+    loadSignInConfig().then((nextConfig) => {
+      if (!isActive)
+        return
+
+      setConfig(nextConfig)
+      if (!nextConfig.enableSplash)
+        setIsSplashComplete(true)
+    })
+
+    return () => {
+      isActive = false
+    }
+  }, [])
+
   return (
-    <>
-      <div className="flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
-        {/* 居中的登录区域 */}
-        <div className="relative w-full max-w-md">
-          {/* Logo - 顶部居中，圆角 */}
-          <div className="mb-8 flex justify-center">
-            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-blue-600 shadow-lg">
-              <img
-                src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/logo/CheersAI.png`}
-                alt="CheersAI Logo"
-                className="h-full w-full object-cover"
-              />
+    <div className="signin-page">
+      <div className="signin-page__shell">
+        <div className="signin-page__content">
+          <main className="signin-panel">
+            <div className="signin-panel__chrome">
+              <div className="signin-panel__brand">
+                <img
+                  src={config.logoUrl}
+                  alt="CheersAI Logo"
+                  className="signin-shell__logo-image"
+                />
+                <strong className="signin-shell__logo-title">CheersAI Desktop</strong>
+              </div>
+              <div className="signin-panel__toolbar">
+                <SignInThemeToggle />
+              </div>
             </div>
-          </div>
-
-          {/* 登录内容区域 - 无边框 */}
-          <div className="w-full">
-            {children}
-          </div>
-
-          {/* 底部版权 */}
-          {systemFeatures.branding.enabled === false && (
-            <div className="mt-8 text-center">
-              <p className="text-xs text-gray-400">
-                ©
-                {' '}
-                {new Date().getFullYear()}
-                {' '}
-                <Link
-                  href="https://www.cheersai.cloud"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-700"
-                >
-                  CheersAI
-                </Link>
-                . All rights reserved.
-              </p>
+            <div className="signin-shell__card">
+              {children}
             </div>
-          )}
+          </main>
         </div>
+        {config.enableSplash && !isSplashComplete && (
+          <SignInSplash
+            duration={config.animationDuration}
+            logoUrl={config.logoUrl}
+            onComplete={() => setIsSplashComplete(true)}
+          />
+        )}
+        <div className="signin-hero__footer">
+          <span className="signin-hero__dot" />
+          <span>{t('signinRefresh.heroFootnote', { ns: 'login' })}</span>
+        </div>
+        {systemFeatures.branding.enabled === false && (
+          <div className="signin-copyright">
+            <p>
+              ©
+              {' '}
+              {new Date().getFullYear()}
+              {' '}
+              <Link
+                href="https://www.cheersai.cloud"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="signin-copyright__link"
+              >
+                CheersAI
+              </Link>
+              . All rights reserved.
+            </p>
+          </div>
+        )}
       </div>
-    </>
+    </div>
   )
 }

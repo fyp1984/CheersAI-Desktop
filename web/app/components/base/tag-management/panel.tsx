@@ -5,13 +5,14 @@ import { RiAddLine, RiPriceTag3Line } from '@remixicon/react'
 import { useUnmount } from 'ahooks'
 import { noop } from 'es-toolkit/function'
 import * as React from 'react'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useContext } from 'use-context-selector'
 import Checkbox from '@/app/components/base/checkbox'
 import Divider from '@/app/components/base/divider'
 import Input from '@/app/components/base/input'
 import { ToastContext } from '@/app/components/base/toast'
+import { useAppContext } from '@/context/app-context'
 import { bindTag, createTag, unBindTag } from '@/service/tag'
 import { useStore as useTagStore } from './store'
 
@@ -22,6 +23,7 @@ type PanelProps = {
 const Panel = (props: PanelProps) => {
   const { t } = useTranslation()
   const { notify } = useContext(ToastContext)
+  const { isCurrentWorkspaceEditor } = useAppContext()
   const { targetID, type, value, selectedTags, onCacheUpdate, onChange, onCreate } = props
   const tagList = useTagStore(s => s.tagList)
   const setTagList = useTagStore(s => s.setTagList)
@@ -33,7 +35,8 @@ const Panel = (props: PanelProps) => {
   }
 
   const notExisted = useMemo(() => {
-    return tagList.every(tag => tag.type === type && tag.name !== keywords)
+    const trimmedKeywords = keywords.trim()
+    return !trimmedKeywords || !tagList.some(tag => tag.type === type && tag.name === trimmedKeywords)
   }, [type, tagList, keywords])
   const filteredSelectedTagList = useMemo(() => {
     return selectedTags.filter(tag => tag.name.includes(keywords))
@@ -42,27 +45,33 @@ const Panel = (props: PanelProps) => {
     return tagList.filter(tag => tag.type === type && !value.includes(tag.id) && tag.name.includes(keywords))
   }, [type, tagList, value, keywords])
 
-  const [creating, setCreating] = useState<boolean>(false)
+  const creatingRef = useRef(false)
   const createNewTag = async () => {
-    if (!keywords)
+    if (!isCurrentWorkspaceEditor) {
+      notify({ type: 'error', message: t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }) })
       return
-    if (creating)
+    }
+    const trimmedKeywords = keywords.trim()
+    if (!trimmedKeywords)
       return
+    if (creatingRef.current)
+      return
+    creatingRef.current = true
     try {
-      setCreating(true)
-      const newTag = await createTag(keywords, type)
+      const newTag = await createTag(trimmedKeywords, type)
       notify({ type: 'success', message: t('tag.created', { ns: 'common' }) })
       setTagList([
         ...tagList,
         newTag,
       ])
       setKeywords('')
-      setCreating(false)
       onCreate()
     }
     catch {
       notify({ type: 'error', message: t('tag.failed', { ns: 'common' }) })
-      setCreating(false)
+    }
+    finally {
+      creatingRef.current = false
     }
   }
   const bind = async (tagIDs: string[]) => {
@@ -124,10 +133,17 @@ const Panel = (props: PanelProps) => {
           value={keywords}
           placeholder={t('tag.selectorPlaceholder', { ns: 'common' }) || ''}
           onChange={e => handleKeywordsChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter' || e.nativeEvent.isComposing)
+              return
+            e.preventDefault()
+            e.stopPropagation()
+            createNewTag()
+          }}
           onClear={() => handleKeywordsChange('')}
         />
       </div>
-      {keywords && notExisted && (
+      {isCurrentWorkspaceEditor && keywords && notExisted && (
         <div className="p-1">
           <div
             className="flex cursor-pointer items-center gap-x-1 rounded-lg px-2 py-1.5 hover:bg-state-base-hover"
@@ -195,17 +211,19 @@ const Panel = (props: PanelProps) => {
         </div>
       )}
       <Divider type="horizontal" className="my-0 h-px bg-divider-subtle" />
-      <div className="p-1">
-        <div
-          className="flex cursor-pointer items-center gap-x-1 rounded-lg px-2 py-1.5 hover:bg-state-base-hover"
-          onClick={() => setShowTagManagementModal(true)}
-        >
-          <RiPriceTag3Line className="h-4 w-4 text-text-tertiary" />
-          <div className="system-md-regular grow truncate px-1 text-text-secondary">
-            {t('tag.manageTags', { ns: 'common' })}
+      {isCurrentWorkspaceEditor && (
+        <div className="p-1">
+          <div
+            className="flex cursor-pointer items-center gap-x-1 rounded-lg px-2 py-1.5 hover:bg-state-base-hover"
+            onClick={() => setShowTagManagementModal(true)}
+          >
+            <RiPriceTag3Line className="h-4 w-4 text-text-tertiary" />
+            <div className="system-md-regular grow truncate px-1 text-text-secondary">
+              {t('tag.manageTags', { ns: 'common' })}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

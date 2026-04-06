@@ -1,58 +1,181 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { Buffer } from 'node:buffer'
 import { cookies } from 'next/headers'
-import { getSession } from '@/lib/sso-session'
+import { NextResponse } from 'next/server'
+import { deleteSession, getSession, shouldRefreshSession, updateSession } from '@/lib/sso-session'
 
-export async function POST(request: NextRequest) {
+type RawSSOUserInfo = {
+  sub?: string
+  preferred_username?: string
+  preferredUsername?: string
+  name?: string
+  displayName?: string
+  email?: string
+  groups?: unknown
+  roles?: unknown
+  permissions?: unknown
+  iss?: string
+  aud?: string | string[]
+}
+
+const getSSOConfig = () => {
+  const ssoBaseUrl = process.env.NEXT_PUBLIC_DESKTOP_SSO_LOGIN_URL || 'http://localhost:8000'
+  const clientId = process.env.NEXT_PUBLIC_DESKTOP_SSO_CLIENT_ID || '35f82ac3f099085a6fd0'
+  const clientSecret = process.env.DESKTOP_SSO_CLIENT_SECRET || ''
+
+  return {
+    ssoBaseUrl,
+    clientId,
+    clientSecret,
+  }
+}
+
+const normalizeStringArray = (values: unknown) => {
+  if (!Array.isArray(values))
+    return []
+
+  return [...new Set(values.filter(value => typeof value === 'string' && value.trim()).map(value => value.trim()))]
+}
+
+const normalizeUserInfo = (rawUserInfo: RawSSOUserInfo) => {
+  const { ssoBaseUrl, clientId } = getSSOConfig()
+
+  return {
+    sub: rawUserInfo?.sub || '',
+    preferred_username: rawUserInfo?.preferred_username || rawUserInfo?.preferredUsername || '',
+    name: rawUserInfo?.name || rawUserInfo?.displayName || '',
+    email: rawUserInfo?.email || '',
+    groups: normalizeStringArray(rawUserInfo?.groups),
+    roles: normalizeStringArray(rawUserInfo?.roles),
+    permissions: normalizeStringArray(rawUserInfo?.permissions),
+    iss: rawUserInfo?.iss || ssoBaseUrl,
+    aud: Array.isArray(rawUserInfo?.aud) ? rawUserInfo.aud[0] : (rawUserInfo?.aud || clientId),
+  }
+}
+
+const validateUserInfo = (userInfo: ReturnType<typeof normalizeUserInfo>) => {
+  const { ssoBaseUrl, clientId } = getSSOConfig()
+
+  if (!userInfo.sub)
+    return 'Missing SSO subject'
+
+  if (userInfo.iss && userInfo.iss !== ssoBaseUrl)
+    return 'Invalid SSO issuer'
+
+  if (userInfo.aud && userInfo.aud !== clientId)
+    return 'Invalid SSO audience'
+
+  return null
+}
+
+const refreshAccessToken = async (sessionId: string, refreshToken: string) => {
+  const { ssoBaseUrl, clientId, clientSecret } = getSSOConfig()
+  const tokenUrl = new URL('/api/login/oauth/access_token', ssoBaseUrl)
+  const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+  const params = new URLSearchParams()
+  params.append('grant_type', 'refresh_token')
+  params.append('refresh_token', refreshToken)
+  params.append('client_id', clientId)
+  params.append('client_secret', clientSecret)
+
+  const response = await fetch(tokenUrl.toString(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': `Basic ${authString}`,
+      'Accept': 'application/json',
+    },
+    body: params.toString(),
+  })
+
+  if (!response.ok)
+    throw new Error(`SSO refresh failed: ${response.status}`)
+
+  const tokenData = await response.json()
+  const expiresIn = Number.isFinite(Number(tokenData?.expires_in)) && Number(tokenData?.expires_in) > 0
+    ? Number(tokenData.expires_in)
+    : 60 * 60
+
+  updateSession(sessionId, {
+    accessToken: tokenData.access_token,
+    refreshToken: tokenData.refresh_token || refreshToken,
+    scope: tokenData.scope,
+    expiresAt: Date.now() + expiresIn * 1000,
+    lastSyncedAt: Date.now(),
+  })
+
+  return tokenData.access_token
+}
+
+export async function POST() {
   try {
     const cookieStore = await cookies()
     const sessionId = cookieStore.get('sso_session_id')?.value
 
-    console.log('[SSO] UserInfo - Session ID from cookie:', sessionId ? sessionId.substring(0, 20) + '...' : 'NOT FOUND')
-
     if (!sessionId) {
-      console.error('[SSO] UserInfo - No session ID in cookie')
       return NextResponse.json(
         { error: 'No SSO session found' },
-        { status: 401 }
+        { status: 401 },
       )
     }
 
     const session = getSession(sessionId)
     if (!session) {
-      console.error('[SSO] UserInfo - Session not found or expired for ID:', sessionId.substring(0, 20) + '...')
       return NextResponse.json(
         { error: 'SSO session expired or invalid' },
-        { status: 401 }
+        { status: 401 },
       )
     }
 
-    console.log('[SSO] UserInfo - Session found, fetching user info from Casdoor')
-    const accessToken = session.accessToken
-
-    const ssoBaseUrl = process.env.NEXT_PUBLIC_DESKTOP_SSO_LOGIN_URL || 'http://localhost:8000'
+    const { ssoBaseUrl } = getSSOConfig()
     const userinfoUrl = new URL('/api/userinfo', ssoBaseUrl)
+    let accessToken = session.accessToken
+
+    if (shouldRefreshSession(session) && session.refreshToken) {
+      try {
+        accessToken = await refreshAccessToken(sessionId, session.refreshToken)
+      }
+      catch {
+        deleteSession(sessionId)
+        cookieStore.delete('sso_session_id')
+        return NextResponse.json(
+          { error: 'SSO session refresh failed' },
+          { status: 401 },
+        )
+      }
+    }
+
+    userinfoUrl.searchParams.set('access_token', accessToken)
 
     const userinfoResponse = await fetch(userinfoUrl.toString(), {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
     })
 
     if (!userinfoResponse.ok) {
-      const errorText = await userinfoResponse.text()
-      console.error('SSO userinfo request failed:', errorText)
       return NextResponse.json(
         { error: 'Failed to fetch user info' },
-        { status: userinfoResponse.status }
+        { status: userinfoResponse.status },
       )
     }
 
-    const userInfo = await userinfoResponse.json()
-    
-    // Debug: Log all fields from Casdoor
-    console.log('[SSO DEBUG] Full userinfo from Casdoor:', JSON.stringify(userInfo, null, 2))
+    const rawUserInfo = await userinfoResponse.json()
+    const userInfo = normalizeUserInfo(rawUserInfo)
+    const validationError = validateUserInfo(userInfo)
+
+    if (validationError) {
+      deleteSession(sessionId)
+      cookieStore.delete('sso_session_id')
+      return NextResponse.json(
+        { error: validationError },
+        { status: 401 },
+      )
+    }
+
+    updateSession(sessionId, {
+      lastSyncedAt: Date.now(),
+    })
 
     return NextResponse.json(userInfo)
   }
@@ -60,7 +183,7 @@ export async function POST(request: NextRequest) {
     console.error('SSO userinfo error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

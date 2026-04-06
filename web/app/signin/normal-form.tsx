@@ -1,17 +1,13 @@
 import { RiContractLine, RiDoorLockLine, RiErrorWarningFill } from '@remixicon/react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import * as React from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Toast from '@/app/components/base/toast'
-import { IS_CE_EDITION } from '@/config'
 import { useGlobalPublicStore } from '@/context/global-public-context'
-import { invitationCheck } from '@/service/common'
 import { isDesktopSSOEnabled } from '@/service/sso-desktop-auth'
 import { useIsLogin } from '@/service/use-common'
 import { LicenseStatus } from '@/types/feature'
-import { cn } from '@/utils/classnames'
 import Loading from '../components/base/loading'
 import SSOAuth from './components/sso-auth'
 import { resolvePostLoginRedirect } from './utils/post-login-redirect'
@@ -23,14 +19,11 @@ const NormalForm = () => {
   const { isLoading: isCheckLoading, data: loginData } = useIsLogin()
   const isLoggedIn = loginData?.logged_in
   const message = searchParams.get('message') || ''
-  const invite_token = searchParams.get('invite_token') || ''
   const [isInitCheckLoading, setInitCheckLoading] = useState(true)
   const [isRedirecting, setIsRedirecting] = useState(false)
   const isLoading = isCheckLoading || isInitCheckLoading || isRedirecting
   const { systemFeatures } = useGlobalPublicStore()
-  const [, setWorkSpaceName] = useState('')
-
-  const isInviteLink = Boolean(invite_token && invite_token !== 'null')
+  const legalUrl = 'https://cheersai.cloud'
 
   const init = useCallback(async () => {
     try {
@@ -53,34 +46,18 @@ const NormalForm = () => {
           message,
         })
       }
-      if (isInviteLink) {
-        const checkRes = await invitationCheck({
-          url: '/activate/check',
-          params: {
-            token: invite_token,
-          },
-        })
-        setWorkSpaceName(checkRes?.data?.workspace_name || '')
-      }
     }
     catch (error) {
       console.error(error)
     }
     finally { setInitCheckLoading(false) }
-  }, [invite_token, isInviteLink, isLoggedIn, message, router, searchParams])
+  }, [isLoggedIn, message, router, searchParams])
   useEffect(() => {
     init()
   }, [init])
   if (isLoading) {
     return (
-      <div className={
-        cn(
-          'flex w-full grow flex-col items-center justify-center',
-          'px-6',
-          'md:px-[108px]',
-        )
-      }
-      >
+      <div className="signin-loading">
         <Loading type="area" />
       </div>
     )
@@ -135,82 +112,58 @@ const NormalForm = () => {
   }
 
   return (
-    <>
-      <div className="w-full">
-        {/* 标题 */}
-        <div className="mb-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-900">
-            欢迎回来
-          </h2>
-        </div>
+    <div className="signin-main">
+      <h2 className="signin-main__title">{t('signinRefresh.formTitle', { ns: 'login' })}</h2>
+      <div className="signin-main__form">
+        {isDesktopSSOEnabled() && (
+          <SSOAuth protocol="" />
+        )}
 
-        {/* SSO 登录按钮 */}
-        <div className="space-y-4">
-          {isDesktopSSOEnabled() && (
-            <SSOAuth protocol="" />
-          )}
-
-          {!isDesktopSSOEnabled() && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-              <div className="mb-2 flex items-center">
-                <RiDoorLockLine className="mr-2 h-5 w-5 text-red-500" />
-                <p className="text-sm font-medium text-red-800">SSO 登录未配置</p>
-              </div>
-              <p className="text-sm text-red-700">请联系管理员配置 SSO 登录</p>
+        {!isDesktopSSOEnabled() && (
+          <div className="signin-main__status" role="alert">
+            <div className="signin-main__status-title">
+              <RiDoorLockLine className="mr-2 h-5 w-5 text-red-500" />
+              <p>{t('signinRefresh.ssoUnavailableTitle', { ns: 'login' })}</p>
             </div>
-          )}
-        </div>
-
-        {/* 底部提示 */}
-        <div className="mt-6 space-y-3 text-center text-xs text-gray-500">
-          <p>
-            还没有账号？
+            <p className="signin-main__status-copy">{t('signinRefresh.ssoUnavailableDescription', { ns: 'login' })}</p>
+          </div>
+        )}
+      </div>
+      <div className="signin-main__footer">
+        <p>
+          {t('signup.noAccount', { ns: 'login' })}
+          <Link
+            className="signin-main__link"
+            href="/signup"
+            prefetch={false}
+          >
+            {t('signinRefresh.applyTrial', { ns: 'login' })}
+          </Link>
+        </p>
+        {!systemFeatures.branding.enabled && (
+          <p className="signin-main__legal-copy">
+            <span>{t('signinRefresh.termsPrefix', { ns: 'login' })}</span>
             <Link
-              className="ml-1 text-blue-600 hover:text-blue-700"
-              href="/signup"
+              className="signin-main__link signin-main__legal-link"
+              target="_blank"
+              rel="noopener noreferrer"
+              href={legalUrl}
             >
-              申请试用
+              {t('signinRefresh.termsServiceLabel', { ns: 'login' })}
+            </Link>
+            <span>{t('signinRefresh.termsJoiner', { ns: 'login' })}</span>
+            <Link
+              className="signin-main__link signin-main__legal-link"
+              target="_blank"
+              rel="noopener noreferrer"
+              href={legalUrl}
+            >
+              {t('signinRefresh.privacyPolicyLabel', { ns: 'login' })}
             </Link>
           </p>
-
-          {!systemFeatures.branding.enabled && (
-            <>
-              <p>
-                登录即表示您同意我们的
-                <Link
-                  className="mx-1 text-blue-600 hover:text-blue-700"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  href="https://cheersai.cloud"
-                >
-                  服务条款
-                </Link>
-                和
-                <Link
-                  className="ml-1 text-blue-600 hover:text-blue-700"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  href="https://cheersai.cloud"
-                >
-                  隐私政策
-                </Link>
-              </p>
-              {IS_CE_EDITION && (
-                <p>
-                  需要初始化系统？
-                  <Link
-                    className="ml-1 text-blue-600 hover:text-blue-700"
-                    href="/install"
-                  >
-                    设置管理员账户
-                  </Link>
-                </p>
-              )}
-            </>
-          )}
-        </div>
+        )}
       </div>
-    </>
+    </div>
   )
 }
 

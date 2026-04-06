@@ -14,6 +14,7 @@ from controllers.console.workspace.error import AccountNotInitializedError
 from enums.cloud_plan import CloudPlan
 from extensions.ext_database import db
 from extensions.ext_redis import redis_client
+from libs.desktop_auth import has_role_capability
 from libs.encryption import FieldEncryption
 from libs.login import current_account_with_tenant
 from models.account import AccountStatus
@@ -340,6 +341,32 @@ def is_admin_or_owner_required(f: Callable[P, R]):
         return f(*args, **kwargs)
 
     return decorated_function
+
+
+def require_workspace_capabilities(*capabilities: str):
+    def decorator(f: Callable[P, R]):
+        @wraps(f)
+        def decorated_function(*args: P.args, **kwargs: P.kwargs):
+            from werkzeug.exceptions import Forbidden
+
+            from libs.login import current_user
+            from models import Account
+
+            user = current_user._get_current_object()
+            if not isinstance(user, Account):
+                raise Forbidden()
+
+            if not any(
+                has_role_capability(user.current_tenant_current_role, capability)
+                for capability in capabilities
+            ):
+                raise Forbidden()
+
+            return f(*args, **kwargs)
+
+        return decorated_function
+
+    return decorator
 
 
 def annotation_import_rate_limit(view: Callable[P, R]):
