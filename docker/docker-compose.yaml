@@ -98,6 +98,12 @@ x-shared-env: &shared-api-worker-env
   REDIS_USE_CLUSTERS: ${REDIS_USE_CLUSTERS:-false}
   REDIS_CLUSTERS: ${REDIS_CLUSTERS:-}
   REDIS_CLUSTERS_PASSWORD: ${REDIS_CLUSTERS_PASSWORD:-}
+  GITEA_URL: ${GITEA_URL:-}
+  GITEA_PROXY_URL: ${GITEA_PROXY_URL:-}
+  GITEA_TOKEN: ${GITEA_TOKEN:-}
+  GITEA_OWNER: ${GITEA_OWNER:-}
+  GITEA_REPO: ${GITEA_REPO:-}
+  GITEA_PATH: ${GITEA_PATH:-}
   CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://:difyai123456@redis:6379/1}
   CELERY_BACKEND: ${CELERY_BACKEND:-redis}
   BROKER_USE_SSL: ${BROKER_USE_SSL:-false}
@@ -824,6 +830,20 @@ services:
       - ssrf_proxy_network
       - default
 
+  filebay_proxy:
+    image: python:3.11-slim
+    restart: always
+    environment:
+      FILEBAY_UPSTREAM: ${GITEA_URL:-https://uat-filebay.cheersai.cloud}
+      FILEBAY_PROXY_HOST: 0.0.0.0
+      FILEBAY_PROXY_PORT: 39091
+      PYTHONUNBUFFERED: "1"
+    command: ["python", "/app/filebay_proxy.py"]
+    volumes:
+      - ./filebay_proxy.py:/app/filebay_proxy.py:ro
+    networks:
+      - default
+
   # Frontend web application.
   web:
     image: cheersai-desktop-web:local
@@ -861,7 +881,7 @@ services:
       ENABLE_WEBSITE_WATERCRAWL: ${ENABLE_WEBSITE_WATERCRAWL:-true}
       NEXT_PUBLIC_DESKTOP_SSO_LOGIN_URL: ${NEXT_PUBLIC_DESKTOP_SSO_LOGIN_URL:-}
       NEXT_PUBLIC_DESKTOP_SSO_CLIENT_ID: ${NEXT_PUBLIC_DESKTOP_SSO_CLIENT_ID:-}
-      NEXT_PUBLIC_DESKTOP_SSO_PROTOCOL: ${NEXT_PUBLIC_DESKTOP_SSO_PROTOCOL:-oauth2}
+      NEXT_PUBLIC_DESKTOP_SSO_PROTOCOL: ${NEXT_PUBLIC_DESKTOP_SSO_PROTOCOL:-oauth}
       NEXT_PUBLIC_DESKTOP_SSO_ENABLED: ${NEXT_PUBLIC_DESKTOP_SSO_ENABLED:-false}
       DESKTOP_SSO_CLIENT_SECRET: ${DESKTOP_SSO_CLIENT_SECRET:-}
 

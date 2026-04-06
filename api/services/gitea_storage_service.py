@@ -9,11 +9,13 @@ class GiteaStorageService:
 
     def __init__(self):
         """Initialize Gitea storage service."""
-        self.gitea_url = os.getenv("GITEA_URL", "http://localhost:3000")
+        self.gitea_url = os.getenv("GITEA_URL", "http://localhost:3000").rstrip("/")
+        self.gitea_proxy_url = os.getenv("GITEA_PROXY_URL", "").rstrip("/")
         self.gitea_token = os.getenv("GITEA_TOKEN", "")
         self.gitea_owner = os.getenv("GITEA_OWNER", "cheersai")
         self.gitea_repo = os.getenv("GITEA_REPO", "file-storage")
-        
+        self.request_base_url = self.gitea_proxy_url or self.gitea_url
+
         # Token is optional for public repositories
         self.use_auth = bool(self.gitea_token)
 
@@ -28,7 +30,7 @@ class GiteaStorageService:
             bytes: File content
         """
         # Use raw file URL for direct download
-        raw_url = f"{self.gitea_url}/{self.gitea_owner}/{self.gitea_repo}/raw/branch/main/{file_path}"
+        raw_url = f"{self.request_base_url}/{self.gitea_owner}/{self.gitea_repo}/raw/branch/main/{file_path}"
         
         headers = {}
         if self.use_auth:
@@ -53,7 +55,7 @@ class GiteaStorageService:
         Returns:
             dict: File metadata including name, size, sha, etc.
         """
-        api_url = f"{self.gitea_url}/api/v1/repos/{self.gitea_owner}/{self.gitea_repo}/contents/{file_path}"
+        api_url = f"{self.request_base_url}/api/v1/repos/{self.gitea_owner}/{self.gitea_repo}/contents/{file_path}"
         
         headers = {}
         if self.use_auth:
@@ -86,7 +88,7 @@ class GiteaStorageService:
         Returns:
             list: List of file metadata dictionaries
         """
-        api_url = f"{self.gitea_url}/api/v1/repos/{self.gitea_owner}/{self.gitea_repo}/contents/{directory_path}"
+        api_url = f"{self.request_base_url}/api/v1/repos/{self.gitea_owner}/{self.gitea_repo}/contents/{directory_path}"
         
         headers = {}
         if self.use_auth:
