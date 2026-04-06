@@ -106,6 +106,14 @@ SSO_IDENTIFIER_TO_WORKSPACE_ROLE: dict[str, str] = {
     "permission_cheersal_member": TenantAccountRole.NORMAL,
 }
 
+WORKSPACE_ROLE_PRIORITY: dict[str, int] = {
+    TenantAccountRole.NORMAL: 1,
+    TenantAccountRole.DATASET_OPERATOR: 2,
+    TenantAccountRole.EDITOR: 3,
+    TenantAccountRole.ADMIN: 4,
+    TenantAccountRole.OWNER: 5,
+}
+
 
 def normalize_sso_identifier(value: Any) -> str | None:
     if not isinstance(value, str):
@@ -125,11 +133,6 @@ def collect_sso_identifiers(payload: Mapping[str, Any] | None) -> list[str]:
 
     identifiers: list[str] = []
 
-    for key in ("role", "type"):
-        normalized = normalize_sso_identifier(payload.get(key))
-        if normalized:
-            identifiers.append(normalized)
-
     for key in ("roles", "permissions"):
         values = payload.get(key)
         if isinstance(values, Iterable) and not isinstance(values, (str, bytes)):
@@ -137,6 +140,11 @@ def collect_sso_identifiers(payload: Mapping[str, Any] | None) -> list[str]:
                 normalized = normalize_sso_identifier(value)
                 if normalized:
                     identifiers.append(normalized)
+
+    for key in ("role", "type"):
+        normalized = normalize_sso_identifier(payload.get(key))
+        if normalized:
+            identifiers.append(normalized)
 
     return list(dict.fromkeys(identifiers))
 
@@ -147,13 +155,22 @@ def has_desktop_access(payload: Mapping[str, Any] | None) -> bool:
 
 def resolve_workspace_role(payload: Mapping[str, Any] | None) -> tuple[str | None, str]:
     identifiers = collect_sso_identifiers(payload)
+    resolved_identifier: str | None = None
+    resolved_workspace_role = TenantAccountRole.NORMAL
+    resolved_priority = WORKSPACE_ROLE_PRIORITY[resolved_workspace_role]
 
     for identifier in identifiers:
         workspace_role = SSO_IDENTIFIER_TO_WORKSPACE_ROLE.get(identifier)
-        if workspace_role:
-            return identifier, workspace_role
+        if not workspace_role:
+            continue
 
-    return None, TenantAccountRole.NORMAL
+        workspace_priority = WORKSPACE_ROLE_PRIORITY.get(workspace_role, 0)
+        if workspace_priority > resolved_priority:
+            resolved_identifier = identifier
+            resolved_workspace_role = workspace_role
+            resolved_priority = workspace_priority
+
+    return resolved_identifier, resolved_workspace_role
 
 
 def get_role_capabilities(role: str | None) -> list[str]:

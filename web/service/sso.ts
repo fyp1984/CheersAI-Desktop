@@ -41,6 +41,20 @@ export type ExchangeTokenParams = {
   redirectUri: string
 }
 
+export type SSOUserInfo = {
+  sub: string
+  email: string
+  name: string
+  preferred_username?: string
+  role?: string
+  type?: string
+  groups?: string[]
+  roles?: string[]
+  permissions?: string[]
+  iss?: string
+  aud?: string
+}
+
 export const exchangeSSOToken = async (params: ExchangeTokenParams) => {
   // 1. Exchange OAuth code for SSO access_token
   const response = await fetch('/api/auth/sso/token/', {
@@ -66,12 +80,20 @@ export const exchangeSSOToken = async (params: ExchangeTokenParams) => {
     throw new Error('Failed to fetch user info from SSO')
   }
 
-  const userInfo = await userInfoResponse.json()
+  const userInfo = await userInfoResponse.json() as SSOUserInfo
   const result = await post('/auth/desktop-sso/login', {
     body: {
+      sub: userInfo.sub,
       email: userInfo.email,
       name: userInfo.name,
-      role: userInfo.role || userInfo.type || 'user',
+      preferred_username: userInfo.preferred_username,
+      role: userInfo.role || userInfo.type,
+      type: userInfo.type,
+      groups: userInfo.groups || [],
+      roles: userInfo.roles || [],
+      permissions: userInfo.permissions || [],
+      iss: userInfo.iss,
+      aud: userInfo.aud,
     },
   })
 
@@ -87,5 +109,5 @@ export const getSSOUserInfo = async () => {
     const errorData = await response.json().catch(() => ({}))
     throw new Error(errorData.error || 'Failed to fetch user info')
   }
-  return response.json() as Promise<{ id: string, email: string, name: string, role?: string, type?: string }>
+  return response.json() as Promise<SSOUserInfo>
 }

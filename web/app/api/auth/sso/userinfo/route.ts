@@ -29,11 +29,40 @@ const getSSOConfig = () => {
   }
 }
 
+const decodeJwtPayload = (token: string) => {
+  const [, payload] = token.split('.')
+  if (!payload)
+    return null
+
+  try {
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const paddedPayload = normalizedPayload.padEnd(Math.ceil(normalizedPayload.length / 4) * 4, '=')
+    return JSON.parse(Buffer.from(paddedPayload, 'base64').toString('utf-8')) as RawSSOUserInfo
+  }
+  catch {
+    return null
+  }
+}
+
 const normalizeStringArray = (values: unknown) => {
   if (!Array.isArray(values))
     return []
 
-  return [...new Set(values.filter(value => typeof value === 'string' && value.trim()).map(value => value.trim()))]
+  return [...new Set(values.flatMap((value) => {
+    if (typeof value === 'string' && value.trim())
+      return [value.trim()]
+
+    if (value && typeof value === 'object') {
+      const record = value as Record<string, unknown>
+      const normalizedValue = [record.name, record.displayName, record.id]
+        .find(item => typeof item === 'string' && item.trim())
+
+      if (typeof normalizedValue === 'string' && normalizedValue.trim())
+        return [normalizedValue.trim()]
+    }
+
+    return []
+  }))]
 }
 
 const normalizeUserInfo = (rawUserInfo: RawSSOUserInfo) => {
@@ -66,6 +95,8 @@ const validateUserInfo = (userInfo: ReturnType<typeof normalizeUserInfo>) => {
 
   return null
 }
+
+const canFallbackToTokenClaims = (status: number) => [400, 414, 431].includes(status)
 
 const refreshAccessToken = async (sessionId: string, refreshToken: string) => {
   const { ssoBaseUrl, clientId, clientSecret } = getSSOConfig()
@@ -154,6 +185,22 @@ export async function POST() {
     })
 
     if (!userinfoResponse.ok) {
+      if (canFallbackToTokenClaims(userinfoResponse.status)) {
+        const fallbackUserInfo = decodeJwtPayload(accessToken)
+        if (fallbackUserInfo) {
+          const normalizedFallbackUserInfo = normalizeUserInfo(fallbackUserInfo)
+          const validationError = validateUserInfo(normalizedFallbackUserInfo)
+
+          if (!validationError) {
+            updateSession(sessionId, {
+              lastSyncedAt: Date.now(),
+            })
+
+            return NextResponse.json(normalizedFallbackUserInfo)
+          }
+        }
+      }
+
       return NextResponse.json(
         { error: 'Failed to fetch user info' },
         { status: userinfoResponse.status },
