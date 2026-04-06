@@ -42,6 +42,34 @@ type SelectedModel = {
   label: string
 }
 
+type SpeechRecognitionAlternativeLike = {
+  transcript?: string
+}
+
+type SpeechRecognitionResultLike = {
+  isFinal?: boolean
+  0?: SpeechRecognitionAlternativeLike
+}
+
+type SpeechRecognitionEventLike = {
+  error?: string
+  resultIndex?: number
+  results?: ArrayLike<SpeechRecognitionResultLike>
+}
+
+type SpeechRecognitionLike = {
+  lang: string
+  continuous: boolean
+  interimResults: boolean
+  maxAlternatives: number
+  onstart: (() => void) | null
+  onend: (() => void) | null
+  onerror: ((event: SpeechRecognitionEventLike) => void) | null
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null
+  start: () => void
+  stop: () => void
+}
+
 type StoredMessage = Omit<Message, 'timestamp'> & {
   timestamp: string
 }
@@ -132,9 +160,22 @@ const ChatPage = () => {
   const [autoFilledText, setAutoFilledText] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [showConversationActions, setShowConversationActions] = useState(false)
-  const [isVoiceSupported, setIsVoiceSupported] = useState(false)
+  const [isVoiceSupported] = useState(() => {
+    if (typeof window === 'undefined')
+      return false
+
+    const speechWindow = window as Window & {
+      SpeechRecognition?: new () => SpeechRecognitionLike
+      webkitSpeechRecognition?: new () => SpeechRecognitionLike
+    }
+
+    return Boolean(speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition)
+  })
   const [isVoiceListening, setIsVoiceListening] = useState(false)
-  const recognitionRef = useRef<any>(null)
+  const [voiceDraft, setVoiceDraft] = useState('')
+  const [renameConversationId, setRenameConversationId] = useState<string | null>(null)
+  const [renameDraft, setRenameDraft] = useState('')
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const inputValueRef = useRef('')
 
   // 保存侧边栏状态到本地存储
@@ -218,8 +259,8 @@ const ChatPage = () => {
       return
 
     const speechWindow = window as Window & {
-      SpeechRecognition?: new () => any
-      webkitSpeechRecognition?: new () => any
+      SpeechRecognition?: new () => SpeechRecognitionLike
+      webkitSpeechRecognition?: new () => SpeechRecognitionLike
     }
     const SpeechRecognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition
 
@@ -229,21 +270,35 @@ const ChatPage = () => {
     const recognition = new SpeechRecognition()
     recognition.lang = 'zh-CN'
     recognition.continuous = false
-    recognition.interimResults = false
+    recognition.interimResults = true
     recognition.maxAlternatives = 1
     recognition.onstart = () => setIsVoiceListening(true)
-    recognition.onend = () => setIsVoiceListening(false)
-    recognition.onerror = () => {
+    recognition.onend = () => {
       setIsVoiceListening(false)
+      setVoiceDraft('')
+    }
+    recognition.onerror = (event: SpeechRecognitionEventLike) => {
+      setIsVoiceListening(false)
+      setVoiceDraft('')
+      if (event?.error === 'aborted')
+        return
       Toast.notify({ type: 'error', message: '语音输入暂不可用，请检查麦克风权限。' })
     }
-    recognition.onresult = (event: any) => {
-      const transcript = Array.from(event.results || [])
+    recognition.onresult = (event: SpeechRecognitionEventLike) => {
+      const results = Array.from(event.results || [])
         .slice(event.resultIndex || 0)
-        .filter((result: any) => result.isFinal)
-        .map((result: any) => result[0]?.transcript || '')
+      const transcript = results
+        .filter(result => result.isFinal)
+        .map(result => result[0]?.transcript || '')
         .join('')
         .trim()
+      const interimTranscript = results
+        .filter(result => !result.isFinal)
+        .map(result => result[0]?.transcript || '')
+        .join('')
+        .trim()
+
+      setVoiceDraft(interimTranscript)
 
       if (!transcript)
         return
@@ -261,7 +316,6 @@ const ChatPage = () => {
     }
 
     recognitionRef.current = recognition
-    setIsVoiceSupported(true)
 
     return () => {
       recognition.stop()
@@ -288,6 +342,7 @@ const ChatPage = () => {
     setConversations(prev => [newConversation, ...prev])
     setCurrentConversationId(newConversation.id)
     setMessages([])
+    setShowConversationActions(false)
   }
 
   const handleDeleteConversation = (id: string) => {
@@ -410,7 +465,7 @@ const ChatPage = () => {
   }
 
   const toggleSidebar = () => {
-    setSidebarCollapsed(!sidebarCollapsed)
+    setSidebarCollapsed(prev => !prev)
   }
 
   const handleVoiceInput = () => {
@@ -434,16 +489,22 @@ const ChatPage = () => {
 
   const handleRenameConversation = (conversationId: string) => {
     const conversation = conversations.find(item => item.id === conversationId)
-    const nextTitle = window.prompt('请输入新的对话标题', conversation?.title || '')
+    setRenameConversationId(conversationId)
+    setRenameDraft(conversation?.title || '')
+    setShowConversationActions(false)
+  }
 
-    if (!nextTitle?.trim())
+  const handleConfirmRenameConversation = () => {
+    if (!renameConversationId || !renameDraft.trim())
       return
 
     setConversations(prev => prev.map(item =>
-      item.id === conversationId
-        ? { ...item, title: nextTitle.trim(), timestamp: new Date() }
+      item.id === renameConversationId
+        ? { ...item, title: renameDraft.trim(), timestamp: new Date() }
         : item,
     ))
+    setRenameConversationId(null)
+    setRenameDraft('')
   }
 
   const handleExportConversation = () => {
@@ -857,41 +918,51 @@ const ChatPage = () => {
     return <Markdown content={message.content} />
   }
 
+  const promptSuggestions = [
+    '请帮我进行数据分析',
+    '请帮我编写代码',
+    '我有问题需要解答',
+  ]
+
+  const searchResultText = searchQuery.trim()
+    ? `找到 ${filteredConversations.length} 条相关对话`
+    : `共 ${conversations.length} 条对话`
+
   return (
-    <div className="flex h-full bg-white">
-      {/* 侧边栏 - 历史对话 */}
+    <div className="flex h-full bg-[#f9fafb] font-sans text-[#111827]">
       <div className={cn(
-        'flex flex-col border-r border-gray-200 bg-gray-50 transition-all duration-300 ease-in-out',
-        sidebarCollapsed ? 'w-0 overflow-hidden' : 'w-80',
+        'flex flex-col border-r border-white/10 bg-[linear-gradient(180deg,#111827_0%,#1f2937_100%)] text-white transition-all duration-300 ease-in-out',
+        sidebarCollapsed ? 'w-0 overflow-hidden border-r-0' : 'w-64',
       )}
       >
-        {/* 侧边栏头部 */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4">
+        <div className="flex min-h-16 items-center justify-between border-b border-white/10 px-4 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500">
-              <span className="text-sm font-medium text-white">AI</span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#3b82f6_0%,#2563eb_100%)] shadow-md">
+              <span className="text-sm font-semibold text-white">AI</span>
             </div>
-            <span className="font-medium text-gray-900">CheersAI</span>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold text-white">CheersAI</div>
+              <div className="truncate text-xs text-gray-400">安全对话</div>
+            </div>
           </div>
           <button
             onClick={handleNewConversation}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500 text-white transition-colors hover:bg-blue-600"
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#3b82f6] text-white transition-colors hover:bg-[#2563eb]"
             title="新建对话"
           >
             <RiAddLine className="h-4 w-4" />
           </button>
         </div>
 
-        {/* 搜索框 */}
-        <div className="border-b border-gray-200 px-4 py-3">
+        <div className="border-b border-white/10 px-4 py-3">
           <div className="relative">
-            <RiSearchLine className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <RiSearchLine className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
             <input
               type="text"
               placeholder="搜索对话..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-white/10 bg-white/95 py-2 pl-10 pr-10 text-sm text-[#111827] placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#3b82f6]"
             />
             {searchQuery && (
               <button
@@ -903,13 +974,13 @@ const ChatPage = () => {
               </button>
             )}
           </div>
+          <p className="mt-2 text-xs text-gray-400">{searchResultText}</p>
         </div>
 
-        {/* 对话列表 */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto py-2">
           {filteredConversations.length === 0
             ? (
-                <div className="p-4 text-center text-sm text-gray-500">
+                <div className="px-4 py-10 text-center text-sm text-gray-400">
                   {searchQuery ? '未找到匹配的对话' : '暂无对话记录'}
                 </div>
               )
@@ -919,19 +990,21 @@ const ChatPage = () => {
                     key={conversation.id}
                     onClick={() => handleSelectConversation(conversation.id)}
                     className={cn(
-                      'group relative cursor-pointer px-4 py-3 transition-colors hover:bg-white',
-                      currentConversationId === conversation.id && 'border-r-2 border-blue-500 bg-white',
+                      'group relative mx-2 my-1 cursor-pointer rounded-lg border border-transparent px-3 py-3 transition-all',
+                      currentConversationId === conversation.id
+                        ? 'border-[#3b82f6] bg-white/10 shadow-sm'
+                        : 'hover:bg-white/5',
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 overflow-hidden">
-                        <h3 className="mb-1 truncate text-sm font-medium text-gray-900">
+                        <h3 className="mb-1 truncate text-sm font-medium text-white">
                           {conversation.title}
                         </h3>
-                        <p className="mb-1 truncate text-xs text-gray-500">
+                        <p className="mb-1 truncate text-xs text-gray-400">
                           {conversation.lastMessage || '暂无消息'}
                         </p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-gray-500">
                           {formatTimestamp(conversation.timestamp)}
                         </p>
                       </div>
@@ -940,7 +1013,7 @@ const ChatPage = () => {
                           e.stopPropagation()
                           handleDeleteConversation(conversation.id)
                         }}
-                        className="flex h-6 w-6 items-center justify-center rounded text-gray-400 opacity-0 transition-all hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100"
+                        className="flex h-6 w-6 items-center justify-center rounded text-gray-500 opacity-0 transition-all hover:bg-white/10 hover:text-white group-hover:opacity-100"
                         title="删除对话"
                       >
                         <RiDeleteBinLine className="h-3.5 w-3.5" />
@@ -952,35 +1025,31 @@ const ChatPage = () => {
         </div>
       </div>
 
-      {/* 主聊天区域 */}
-      <div className="flex flex-1 flex-col">
-        {/* 头部 */}
-        <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-16 items-center justify-between border-b border-[#e5e7eb] bg-white px-8 py-4">
           <div className="flex items-center gap-3">
-            {/* 折叠按钮 */}
             <button
               onClick={toggleSidebar}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-[#f3f4f6] hover:text-gray-700"
               title={sidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'}
             >
-              {sidebarCollapsed
-                ? (
-                    <RiArrowRightSLine className="h-4 w-4" />
-                  )
-                : (
-                    <RiArrowLeftSLine className="h-4 w-4" />
-                  )}
+              {sidebarCollapsed ? <RiArrowRightSLine className="h-4 w-4" /> : <RiArrowLeftSLine className="h-4 w-4" />}
             </button>
-            <h1 className="text-lg font-medium text-gray-900">
-              {currentConversation?.title || '新建对话'}
-            </h1>
+            <div>
+              <h1 className="text-lg font-semibold text-[#111827]">
+                {currentConversation?.title || '新建对话'}
+              </h1>
+              <p className="mt-1 text-xs text-[#4b5563]">已启用安全对话与 FileBay 文件接入</p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
-            {/* 模型选择器 */}
+            <div className="hidden rounded-full bg-[#d1fae5] px-3 py-1 text-xs font-medium text-[#065f46] md:block">
+              隐私保护已开启
+            </div>
             <div className="relative" ref={modelSelectorRef}>
               <button
                 onClick={() => setShowModelSelector(!showModelSelector)}
-                className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm transition-colors hover:bg-gray-100"
+                className="flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-3 py-2 text-sm transition-colors hover:bg-[#f3f4f6]"
               >
                 <span className="text-gray-700">
                   {resolvedSelectedModel?.label || '选择模型'}
@@ -1104,8 +1173,8 @@ const ChatPage = () => {
             <div className="relative" ref={actionsMenuRef}>
               <button
                 onClick={() => setShowConversationActions(prev => !prev)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-                title="更多操作"
+                className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e5e7eb] text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600"
+                title="会话工具"
               >
                 <RiMoreLine className="h-4 w-4" />
               </button>
@@ -1144,56 +1213,50 @@ const ChatPage = () => {
           </div>
         </div>
 
-        {/* 消息区域 */}
-        <div className="flex-1 overflow-y-auto bg-white">
-          <div className="mx-auto max-w-4xl px-6 py-6">
+        <div className="flex-1 overflow-y-auto bg-[#f9fafb]">
+          <div className="mx-auto max-w-5xl px-8 py-8">
             {messages.length === 0 && !currentConversationId
               ? (
                   <div className="flex h-full items-center justify-center">
-                    <div className="text-center">
-                      <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-blue-500">
+                    <div className="w-full max-w-3xl rounded-2xl border border-[#e5e7eb] bg-white p-10 text-center shadow-sm">
+                      <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#3b82f6_0%,#2563eb_100%)] shadow-md">
                         <span className="text-xl font-bold text-white">AI</span>
                       </div>
-                      <h3 className="mb-3 text-xl font-medium text-gray-900">
-                        欢迎使用 CheersAI Desktop
+                      <h3 className="mb-3 text-2xl font-bold text-[#111827]">
+                        欢迎使用 CheersAI
                       </h3>
-                      <p className="mb-6 text-gray-500">
-                        我是您的AI助手，可以帮助您进行数据分析、编程和各种问题解答
+                      <p className="mx-auto mb-6 max-w-2xl text-sm leading-6 text-[#4b5563]">
+                        我是您的 AI 助手，可协助完成数据分析、代码编写、问题解答与文件协同。
+                        当前页面支持安全输入、语音录入与 FileBay 沙箱文件选择。
                       </p>
-                      <div className="flex flex-wrap justify-center gap-2">
-                        <button
-                          onClick={() => {
-                            const text = '请帮我进行数据分析'
-                            setInputValue(text)
-                            setIsAutoFilled(true)
-                            setAutoFilledText(text)
-                          }}
-                          className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-600 transition-colors hover:bg-blue-100"
-                        >
-                          数据分析
-                        </button>
-                        <button
-                          onClick={() => {
-                            const text = '请帮我编写代码'
-                            setInputValue(text)
-                            setIsAutoFilled(true)
-                            setAutoFilledText(text)
-                          }}
-                          className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-600 transition-colors hover:bg-blue-100"
-                        >
-                          代码编写
-                        </button>
-                        <button
-                          onClick={() => {
-                            const text = '我有问题需要解答'
-                            setInputValue(text)
-                            setIsAutoFilled(true)
-                            setAutoFilledText(text)
-                          }}
-                          className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-600 transition-colors hover:bg-blue-100"
-                        >
-                          问题解答
-                        </button>
+                      <div className="mb-6 flex flex-wrap justify-center gap-2">
+                        {promptSuggestions.map(text => (
+                          <button
+                            key={text}
+                            onClick={() => {
+                              setInputValue(text)
+                              setIsAutoFilled(true)
+                              setAutoFilledText(text)
+                            }}
+                            className="rounded-full bg-[#f3f4f6] px-4 py-2 text-xs font-medium text-[#4b5563] transition-colors hover:bg-[#e5e7eb]"
+                          >
+                            {text.replace('请帮我', '').replace('我有', '').replace('需要', '')}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="grid gap-3 text-left md:grid-cols-3">
+                        <div className="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
+                          <div className="mb-1 text-sm font-semibold text-[#111827]">对话更聚焦</div>
+                          <div className="text-xs leading-5 text-[#4b5563]">搜索历史会话、重命名、导出 Markdown，并支持重新生成回复。</div>
+                        </div>
+                        <div className="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
+                          <div className="mb-1 text-sm font-semibold text-[#111827]">输入更自然</div>
+                          <div className="text-xs leading-5 text-[#4b5563]">支持语音输入、附件上传与多行编辑，适合持续协作场景。</div>
+                        </div>
+                        <div className="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
+                          <div className="mb-1 text-sm font-semibold text-[#111827]">安全更清晰</div>
+                          <div className="text-xs leading-5 text-[#4b5563]">仅允许选择沙箱脱敏文件，并在当前页持续展示安全状态提示。</div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1209,19 +1272,18 @@ const ChatPage = () => {
                         )}
                       >
                         {message.type === 'assistant' && (
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-500">
-                            <span className="text-sm font-medium text-white">AI</span>
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#3b82f6_0%,#2563eb_100%)] shadow-sm">
+                            <span className="text-sm font-semibold text-white">AI</span>
                           </div>
                         )}
                         <div
                           className={cn(
-                            'group max-w-[70%] rounded-2xl px-4 py-3',
+                            'group max-w-[768px] rounded-2xl px-4 py-3 shadow-sm',
                             message.type === 'user'
-                              ? 'bg-blue-600 text-white'
-                              : 'border border-gray-300 bg-gray-100 text-gray-900',
+                              ? 'bg-[#3b82f6] text-white'
+                              : 'border border-[#e5e7eb] bg-white text-[#111827]',
                           )}
                         >
-                          {/* 文件显示 */}
                           {message.files && message.files.length > 0 && (
                             <div className="mb-3 space-y-2">
                               {message.files.map(file => (
@@ -1246,14 +1308,14 @@ const ChatPage = () => {
                                   <div className="min-w-0 flex-1">
                                     <div className={cn(
                                       'truncate text-xs font-medium',
-                                      message.type === 'user' ? 'text-gray-800' : 'text-gray-900',
+                                      message.type === 'user' ? 'text-gray-800' : 'text-[#111827]',
                                     )}
                                     >
                                       {file.name}
                                     </div>
                                     <div className={cn(
                                       'text-xs',
-                                      message.type === 'user' ? 'text-gray-600' : 'text-gray-500',
+                                      message.type === 'user' ? 'text-gray-600' : 'text-[#4b5563]',
                                     )}
                                     >
                                       {formatFileSize(file.size)}
@@ -1267,7 +1329,6 @@ const ChatPage = () => {
                             </div>
                           )}
 
-                          {/* 消息内容 */}
                           <div className="text-sm leading-relaxed">
                             {renderMessageContent(message)}
                           </div>
@@ -1284,19 +1345,18 @@ const ChatPage = () => {
                               })}
                             </div>
 
-                            {/* AI消息操作按钮 */}
                             {message.type === 'assistant' && message.content && !isLoading && (
                               <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                                 <button
                                   onClick={() => handleCopyMessage(message.content)}
-                                  className="flex h-6 w-6 items-center justify-center rounded text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600"
                                   title="复制"
                                 >
                                   <RiFileCopyLine className="h-3.5 w-3.5" />
                                 </button>
                                 <button
                                   onClick={() => handleDownloadMessage(message.content, message.id)}
-                                  className="flex h-6 w-6 items-center justify-center rounded text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600"
                                   title="下载"
                                 >
                                   <RiDownloadLine className="h-3.5 w-3.5" />
@@ -1304,11 +1364,10 @@ const ChatPage = () => {
                                 <button
                                   onClick={() => {
                                     const messageIndex = messages.findIndex(m => m.id === message.id)
-                                    if (messageIndex > 0) {
+                                    if (messageIndex > 0)
                                       handleRegenerateMessage(messageIndex)
-                                    }
                                   }}
-                                  className="flex h-6 w-6 items-center justify-center rounded text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600"
                                   title="重新生成"
                                 >
                                   <RiRefreshLine className="h-3.5 w-3.5" />
@@ -1318,25 +1377,25 @@ const ChatPage = () => {
                           </div>
                         </div>
                         {message.type === 'user' && (
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600">
-                            <span className="text-sm font-medium text-white">我</span>
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#1f2937] shadow-sm">
+                            <span className="text-sm font-semibold text-white">我</span>
                           </div>
                         )}
                       </div>
                     ))}
                     {isLoading && (
                       <div className="mb-6 flex justify-start gap-4">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-500">
-                          <span className="text-sm font-medium text-white">AI</span>
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#3b82f6_0%,#2563eb_100%)] shadow-sm">
+                          <span className="text-sm font-semibold text-white">AI</span>
                         </div>
-                        <div className="max-w-[70%] rounded-2xl border border-gray-300 bg-gray-100 px-4 py-3">
+                        <div className="max-w-[768px] rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 shadow-sm">
                           <div className="flex items-center gap-2">
                             <div className="flex space-x-1">
-                              <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.3s]"></div>
-                              <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.15s]"></div>
-                              <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400"></div>
+                              <div className="h-2 w-2 animate-bounce rounded-full bg-[#3b82f6] [animation-delay:-0.3s]"></div>
+                              <div className="h-2 w-2 animate-bounce rounded-full bg-[#3b82f6] [animation-delay:-0.15s]"></div>
+                              <div className="h-2 w-2 animate-bounce rounded-full bg-[#3b82f6]"></div>
                             </div>
-                            <span className="text-sm text-gray-700">正在思考...</span>
+                            <span className="text-sm text-[#4b5563]">正在思考...</span>
                           </div>
                         </div>
                       </div>
@@ -1347,22 +1406,16 @@ const ChatPage = () => {
           </div>
         </div>
 
-        {/* 输入区域 */}
-        <div className="border-t border-gray-200 bg-white px-6 py-4">
-          <div className="mx-auto max-w-4xl">
-            {/* 已上传文件列表 */}
+        <div className="border-t border-[#e5e7eb] bg-white px-8 py-5">
+          <div className="mx-auto max-w-5xl">
             {uploadedFiles.length > 0 && (
-              <div className="mb-3 rounded-lg bg-gray-50 p-3">
-                <div className="mb-2 text-sm text-gray-600">
-                  已选择文件 (
-                  {uploadedFiles.length}
-                  )
-                </div>
+              <div className="mb-3 rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-3">
+                <div className="mb-2 text-sm font-medium text-[#4b5563]">{`已选择文件（${uploadedFiles.length}）`}</div>
                 <div className="space-y-2">
                   {uploadedFiles.map(file => (
-                    <div key={file.id} className="flex items-center justify-between rounded border bg-white p-2">
+                    <div key={file.id} className="flex items-center justify-between rounded-lg border border-[#e5e7eb] bg-white p-2">
                       <div className="flex items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded bg-blue-100">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#dbeafe]">
                           <span className="text-xs font-medium text-blue-600">
                             {file.name.split('.').pop()?.toUpperCase()}
                           </span>
@@ -1371,7 +1424,7 @@ const ChatPage = () => {
                           <div className="text-sm font-medium text-gray-900">{file.name}</div>
                           <div className="text-xs text-gray-500">
                             {formatFileSize(file.size)}
-                            <span className="ml-2 rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-700">
+                            <span className="ml-2 rounded-full bg-[#d1fae5] px-2 py-0.5 text-xs text-[#065f46]">
                               沙箱文件
                             </span>
                           </div>
@@ -1379,12 +1432,10 @@ const ChatPage = () => {
                       </div>
                       <button
                         onClick={() => handleRemoveFile(file.id)}
-                        className="text-gray-400 transition-colors hover:text-red-500"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#fee2e2] hover:text-[#ef4444]"
                         title="移除文件"
                       >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <RiCloseLine className="h-4 w-4" />
                       </button>
                     </div>
                   ))}
@@ -1392,87 +1443,143 @@ const ChatPage = () => {
               </div>
             )}
 
-            {/* 警告提示 */}
-            <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
-              <p className="text-sm text-blue-800">
+            <div className="mb-4 rounded-xl border border-[#bfdbfe] bg-[#eff6ff] p-4">
+              <p className="text-sm leading-6 text-[#1e40af]">
                 <span className="font-medium">安全模式：</span>
                 仅可选择沙箱内的脱敏文件。系统将自动记录并脱敏输入内容中的个人身份信息。
               </p>
             </div>
 
-            <div className="relative flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
-              {/* 文件选择按钮 */}
-              <button
-                onClick={handleAttachmentClick}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-                title="从沙箱选择文件"
-              >
-                <RiAttachmentLine className="h-4 w-4" />
-              </button>
-
-              {/* 输入框容器 */}
-              <div className="relative flex min-h-[32px] flex-1 items-center">
-                {/* 自动填充文字的背景层 */}
-                {isAutoFilled && autoFilledText && (
-                  <div className="pointer-events-none absolute inset-0 z-10 flex items-center">
-                    <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-sm text-blue-600">
-                      {autoFilledText}
-                    </span>
-                    {inputValue.length > autoFilledText.length && (
-                      <span className="ml-1 text-sm text-gray-900">
-                        {inputValue.slice(autoFilledText.length)}
-                      </span>
-                    )}
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm transition-all duration-200 focus-within:border-[#3b82f6] focus-within:ring-2 focus-within:ring-[rgba(59,130,246,0.12)]">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-xs text-[#4b5563]">
+                  <span className="rounded-full bg-[#d1fae5] px-2 py-1 font-medium text-[#065f46]">已脱敏保护</span>
+                  <span>支持语音输入、搜索历史和 Markdown 导出</span>
+                </div>
+                {voiceDraft && (
+                  <div className="max-w-[280px] truncate rounded-full bg-[#fff3cc] px-3 py-1 text-xs text-[#92400e]">
+                    正在识别：
+                    {voiceDraft}
                   </div>
                 )}
-
-                <textarea
-                  ref={textareaRef}
-                  value={inputValue}
-                  onChange={handleTextareaChange}
-                  onKeyDown={handleKeyDown}
-                  placeholder="输入消息，Ctrl+Enter 换行"
-                  className={cn(
-                    'w-full resize-none border-0 bg-transparent py-1 text-sm leading-6 placeholder:text-gray-400 focus:outline-none',
-                    isAutoFilled ? 'text-transparent' : 'text-gray-900',
-                  )}
-                  rows={1}
-                  style={{ maxHeight: '120px' }}
-                />
               </div>
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="relative flex items-end gap-3">
                 <button
-                  onClick={handleVoiceInput}
-                  className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-lg transition-colors',
-                    isVoiceListening
-                      ? 'bg-red-50 text-red-500 hover:bg-red-100'
-                      : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600',
-                    !isVoiceSupported && 'cursor-not-allowed opacity-50',
-                  )}
-                  title={isVoiceSupported ? (isVoiceListening ? '停止语音输入' : '语音输入') : '当前浏览器不支持语音输入'}
-                  disabled={!isVoiceSupported}
+                  onClick={handleAttachmentClick}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600"
+                  title="从沙箱选择文件"
                 >
-                  {isVoiceListening ? <RiMicFill className="h-4 w-4" /> : <RiMicLine className="h-4 w-4" />}
+                  <RiAttachmentLine className="h-4 w-4" />
                 </button>
-                <button
-                  onClick={handleSend}
-                  disabled={!inputValue.trim() || isLoading}
-                  className={cn(
-                    'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-                    inputValue.trim() && !isLoading
-                      ? 'bg-green-500 text-white hover:bg-green-600'
-                      : 'cursor-not-allowed bg-gray-100 text-gray-400',
+
+                <div className="relative flex min-h-[96px] flex-1 items-start">
+                  {isAutoFilled && autoFilledText && (
+                    <div className="pointer-events-none absolute inset-0 z-10 flex items-start pt-3">
+                      <span className="rounded-md border border-[#bfdbfe] bg-[#eff6ff] px-2 py-1 text-sm text-[#2563eb]">
+                        {autoFilledText}
+                      </span>
+                      {inputValue.length > autoFilledText.length && (
+                        <span className="ml-1 pt-1 text-sm text-[#111827]">
+                          {inputValue.slice(autoFilledText.length)}
+                        </span>
+                      )}
+                    </div>
                   )}
-                >
-                  发送回复
-                </button>
+
+                  <textarea
+                    ref={textareaRef}
+                    value={inputValue}
+                    onChange={handleTextareaChange}
+                    onKeyDown={handleKeyDown}
+                    placeholder="输入消息，Ctrl+Enter 换行"
+                    className={cn(
+                      'min-h-[96px] w-full resize-none border-0 bg-transparent py-3 text-sm leading-6 placeholder:text-gray-400 focus:outline-none',
+                      isAutoFilled ? 'text-transparent' : 'text-gray-900',
+                    )}
+                    rows={4}
+                    style={{ maxHeight: '160px' }}
+                  />
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    onClick={handleVoiceInput}
+                    className={cn(
+                      'flex h-10 w-10 items-center justify-center rounded-lg border transition-colors',
+                      isVoiceListening
+                        ? 'border-red-100 bg-red-50 text-red-500 hover:bg-red-100'
+                        : 'border-[#e5e7eb] text-gray-400 hover:bg-[#f3f4f6] hover:text-gray-600',
+                      !isVoiceSupported && 'cursor-not-allowed opacity-50',
+                    )}
+                    title={isVoiceSupported ? (isVoiceListening ? '停止语音输入' : '语音输入') : '当前浏览器不支持语音输入'}
+                    disabled={!isVoiceSupported}
+                  >
+                    {isVoiceListening ? <RiMicFill className="h-4 w-4" /> : <RiMicLine className="h-4 w-4" />}
+                  </button>
+                  <button
+                    onClick={handleSend}
+                    disabled={!inputValue.trim() || isLoading}
+                    className={cn(
+                      'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                      inputValue.trim() && !isLoading
+                        ? 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'
+                        : 'cursor-not-allowed bg-gray-100 text-gray-400',
+                    )}
+                  >
+                    发送回复
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* 沙箱文件选择器 */}
+        {renameConversationId && (
+          <div className="absolute inset-0 z-[60] flex items-center justify-center bg-[rgba(17,24,39,0.35)] px-4">
+            <div className="w-full max-w-md rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-xl">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-[#111827]">重命名对话</h3>
+                <p className="mt-1 text-sm text-[#4b5563]">使用更清晰的标题，方便后续搜索与归档。</p>
+              </div>
+              <input
+                value={renameDraft}
+                onChange={e => setRenameDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter')
+                    handleConfirmRenameConversation()
+                  if (e.key === 'Escape') {
+                    setRenameConversationId(null)
+                    setRenameDraft('')
+                  }
+                }}
+                placeholder="请输入新的对话标题"
+                className="w-full rounded-lg border border-[#d1d5db] px-4 py-3 text-sm text-[#111827] focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#3b82f6]"
+                autoFocus
+              />
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setRenameConversationId(null)
+                    setRenameDraft('')
+                  }}
+                  className="rounded-lg border border-[#d1d5db] px-4 py-2 text-sm text-[#4b5563] transition-colors hover:bg-[#f3f4f6]"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleConfirmRenameConversation}
+                  disabled={!renameDraft.trim()}
+                  className={cn(
+                    'rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors',
+                    renameDraft.trim() ? 'bg-[#3b82f6] hover:bg-[#2563eb]' : 'cursor-not-allowed bg-gray-300',
+                  )}
+                >
+                  保存
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <SandboxFilePicker
           open={showSandboxPicker}
           onClose={() => setShowSandboxPicker(false)}
