@@ -94,6 +94,8 @@ const buildAppContext = (overrides: Partial<AppContextValue> = {}): AppContextVa
     isCurrentWorkspaceManager: false,
     isCurrentWorkspaceOwner: false,
     isCurrentWorkspaceEditor: false,
+    canViewWorkflow: false,
+    canEditWorkflow: false,
     isCurrentWorkspaceDatasetOperator: false,
     mutateUserProfile: vi.fn(),
     mutateCurrentWorkspace: vi.fn(),

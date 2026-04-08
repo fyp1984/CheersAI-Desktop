@@ -65,7 +65,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
   const { t } = useTranslation()
   const { notify } = useContext(ToastContext)
   const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
-  const { isCurrentWorkspaceEditor } = useAppContext()
+  const { isCurrentWorkspaceEditor, canViewWorkflow, canEditWorkflow } = useAppContext()
   const { onPlanInfoChanged } = useProviderContext()
   const { push } = useRouter()
   const openAsyncWindow = useAsyncWindowOpen()
@@ -149,7 +149,11 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
       if (onRefresh)
         onRefresh()
       onPlanInfoChanged()
-      getRedirection(isCurrentWorkspaceEditor, newApp, push)
+      getRedirection({
+        canEditApp: isCurrentWorkspaceEditor,
+        canViewWorkflow,
+        canEditWorkflow,
+      }, newApp, push)
     }
     catch {
       notify({ type: 'error', message: t('newApp.appCreateFailed', { ns: 'app' }) })
@@ -349,7 +353,11 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
       <div
         onClick={(e) => {
           e.preventDefault()
-          getRedirection(isCurrentWorkspaceEditor, app, push)
+          getRedirection({
+            canEditApp: isCurrentWorkspaceEditor,
+            canViewWorkflow,
+            canEditWorkflow,
+          }, app, push)
         }}
         className="group relative col-span-1 inline-flex h-[160px] cursor-pointer flex-col rounded-xl border-[1px] border-solid border-components-card-border bg-components-card-bg shadow-sm transition-all duration-200 ease-in-out hover:shadow-lg"
       >

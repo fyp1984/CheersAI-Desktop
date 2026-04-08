@@ -37,6 +37,8 @@ vi.mock('use-context-selector', () => ({
 vi.mock('@/context/app-context', () => ({
   useAppContext: () => ({
     isCurrentWorkspaceEditor: true,
+    canViewWorkflow: true,
+    canEditWorkflow: true,
   }),
 }))
 
@@ -355,7 +357,11 @@ describe('AppCard', () => {
       render(<AppCard app={mockApp} />)
       const card = screen.getByTitle('Test App').closest('[class*="cursor-pointer"]')!
       fireEvent.click(card)
-      expect(mockGetRedirection).toHaveBeenCalledWith(true, mockApp, mockPush)
+      expect(mockGetRedirection).toHaveBeenCalledWith({
+        canEditApp: true,
+        canViewWorkflow: true,
+        canEditWorkflow: true,
+      }, mockApp, mockPush)
     })
   })
 

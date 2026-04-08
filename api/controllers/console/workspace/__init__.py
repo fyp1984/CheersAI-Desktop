@@ -43,6 +43,14 @@ def require_knowledge_edit_capability(view: Callable[P, R]):
     return _require_workspace_capabilities("desktop_knowledge_edit")(view)
 
 
+def require_workflow_view_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_workflow_view")(view)
+
+
+def require_workflow_edit_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_workflow_edit")(view)
+
+
 def plugin_permission_required(
     install_required: bool = False,
     debug_required: bool = False,

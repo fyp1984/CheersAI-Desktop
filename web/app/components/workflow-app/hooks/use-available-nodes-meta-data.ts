@@ -14,7 +14,8 @@ import { useDocLink } from '@/context/i18n'
 import { useIsChatMode } from './use-is-chat-mode'
 
 export const useAvailableNodesMetaData = () => {
-  const { t } = useTranslation()
+  const translation = useTranslation()
+  const t = translation?.t ?? ((key: string) => key)
   const isChatMode = useIsChatMode()
   const docLink = useDocLink()
 

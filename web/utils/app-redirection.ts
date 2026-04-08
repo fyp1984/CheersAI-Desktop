@@ -1,25 +1,50 @@
 import { AppModeEnum } from '@/types/app'
 
+type WorkspaceAppCapabilities = {
+  canEditApp: boolean
+  canViewWorkflow: boolean
+  canEditWorkflow: boolean
+}
+
+const normalizeWorkspaceCapabilities = (
+  workspaceCapabilities: WorkspaceAppCapabilities | boolean,
+): WorkspaceAppCapabilities => {
+  if (typeof workspaceCapabilities === 'boolean') {
+    return {
+      canEditApp: workspaceCapabilities,
+      canViewWorkflow: workspaceCapabilities,
+      canEditWorkflow: workspaceCapabilities,
+    }
+  }
+
+  return workspaceCapabilities
+}
+
 export const getRedirectionPath = (
-  isCurrentWorkspaceEditor: boolean,
+  workspaceCapabilities: WorkspaceAppCapabilities | boolean,
   app: { id: string, mode: AppModeEnum },
 ) => {
-  if (!isCurrentWorkspaceEditor) {
+  const normalizedCapabilities = normalizeWorkspaceCapabilities(workspaceCapabilities)
+  const isWorkflowApp = app.mode === AppModeEnum.WORKFLOW || app.mode === AppModeEnum.ADVANCED_CHAT
+
+  if (isWorkflowApp) {
+    if (normalizedCapabilities.canEditWorkflow)
+      return `/app/${app.id}/workflow`
+
     return `/app/${app.id}/overview`
   }
-  else {
-    if (app.mode === AppModeEnum.WORKFLOW || app.mode === AppModeEnum.ADVANCED_CHAT)
-      return `/app/${app.id}/workflow`
-    else
-      return `/app/${app.id}/configuration`
-  }
+
+  if (!normalizedCapabilities.canEditApp)
+    return `/app/${app.id}/overview`
+
+  return `/app/${app.id}/configuration`
 }
 
 export const getRedirection = (
-  isCurrentWorkspaceEditor: boolean,
+  workspaceCapabilities: WorkspaceAppCapabilities | boolean,
   app: { id: string, mode: AppModeEnum },
   redirectionFunc: (href: string) => void,
 ) => {
-  const redirectionPath = getRedirectionPath(isCurrentWorkspaceEditor, app)
+  const redirectionPath = getRedirectionPath(workspaceCapabilities, app)
   redirectionFunc(redirectionPath)
 }

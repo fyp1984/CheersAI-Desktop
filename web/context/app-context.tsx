@@ -25,6 +25,8 @@ export type AppContextValue = {
   isCurrentWorkspaceManager: boolean
   isCurrentWorkspaceOwner: boolean
   isCurrentWorkspaceEditor: boolean
+  canViewWorkflow: boolean
+  canEditWorkflow: boolean
   isCurrentWorkspaceDatasetOperator: boolean
   mutateCurrentWorkspace: VoidFunction
   langGeniusVersionInfo: LangGeniusVersionResponse
@@ -72,6 +74,8 @@ const AppContext = createContext<AppContextValue>({
   isCurrentWorkspaceManager: false,
   isCurrentWorkspaceOwner: false,
   isCurrentWorkspaceEditor: false,
+  canViewWorkflow: false,
+  canEditWorkflow: false,
   isCurrentWorkspaceDatasetOperator: false,
   mutateUserProfile: noop,
   mutateCurrentWorkspace: noop,
@@ -124,6 +128,14 @@ export const AppContextProvider: FC<AppContextProviderProps> = ({ children }) =>
   const isCurrentWorkspaceOwner = useMemo(() => currentWorkspace.role === 'owner', [currentWorkspace.role])
   const isCurrentWorkspaceEditor = useMemo(
     () => workspaceCapabilities.includes(WORKSPACE_CAPABILITIES.agentManage),
+    [workspaceCapabilities],
+  )
+  const canViewWorkflow = useMemo(
+    () => workspaceCapabilities.includes(WORKSPACE_CAPABILITIES.workflowView),
+    [workspaceCapabilities],
+  )
+  const canEditWorkflow = useMemo(
+    () => workspaceCapabilities.includes(WORKSPACE_CAPABILITIES.workflowEdit),
     [workspaceCapabilities],
   )
   const isCurrentWorkspaceDatasetOperator = useMemo(() => currentWorkspace.role === 'dataset_operator', [currentWorkspace.role])
@@ -206,6 +218,8 @@ export const AppContextProvider: FC<AppContextProviderProps> = ({ children }) =>
       isCurrentWorkspaceManager,
       isCurrentWorkspaceOwner,
       isCurrentWorkspaceEditor,
+      canViewWorkflow,
+      canEditWorkflow,
       isCurrentWorkspaceDatasetOperator,
       mutateCurrentWorkspace,
       isLoadingCurrentWorkspace,

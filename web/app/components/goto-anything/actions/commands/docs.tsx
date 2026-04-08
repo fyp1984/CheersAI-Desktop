@@ -9,6 +9,10 @@ import { registerCommands, unregisterCommands } from './command-bus'
 // Documentation command dependency types - no external dependencies needed
 type DocDeps = Record<string, never>
 
+const tr = (key: string, fallback: string, locale: string, ns: 'app' | 'common') => {
+  return getI18n()?.t?.(key as any, { ns, lng: locale }) ?? fallback
+}
+
 /**
  * Documentation command - Opens help documentation
  */
@@ -20,18 +24,17 @@ export const docsCommand: SlashCommandHandler<DocDeps> = {
   // Direct execution function
   execute: () => {
     const i18n = getI18n()
-    const currentLocale = i18n.language
+    const currentLocale = i18n?.language || 'en'
     const docLanguage = getDocLanguage(currentLocale)
     const url = `${defaultDocBaseUrl}/${docLanguage}`
     window.open(url, '_blank', 'noopener,noreferrer')
   },
 
   async search(args: string, locale: string = 'en') {
-    const i18n = getI18n()
     return [{
       id: 'doc',
-      title: i18n.t('userProfile.helpCenter', { ns: 'common', lng: locale }),
-      description: i18n.t('gotoAnything.actions.docDesc', { ns: 'app', lng: locale }) || 'Open help documentation',
+      title: tr('userProfile.helpCenter', 'Help Center', locale, 'common'),
+      description: tr('gotoAnything.actions.docDesc', 'Open help documentation', locale, 'app'),
       type: 'command' as const,
       icon: (
         <div className="flex h-6 w-6 items-center justify-center rounded-md border-[0.5px] border-divider-regular bg-components-panel-bg">
@@ -43,11 +46,9 @@ export const docsCommand: SlashCommandHandler<DocDeps> = {
   },
 
   register(_deps: DocDeps) {
-    const i18n = getI18n()
     registerCommands({
       'navigation.doc': async (_args) => {
-        // Get the current language from i18n
-        const currentLocale = i18n.language
+        const currentLocale = getI18n()?.language || 'en'
         const docLanguage = getDocLanguage(currentLocale)
         const url = `${defaultDocBaseUrl}/${docLanguage}`
         window.open(url, '_blank', 'noopener,noreferrer')

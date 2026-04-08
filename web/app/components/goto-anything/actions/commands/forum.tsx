@@ -7,6 +7,10 @@ import { registerCommands, unregisterCommands } from './command-bus'
 // Forum command dependency types
 type ForumDeps = Record<string, never>
 
+const tr = (key: string, fallback: string, locale: string, ns: 'app' | 'common') => {
+  return getI18n()?.t?.(key as any, { ns, lng: locale }) ?? fallback
+}
+
 /**
  * Forum command - Opens Dify community forum
  */
@@ -22,11 +26,10 @@ export const forumCommand: SlashCommandHandler<ForumDeps> = {
   },
 
   async search(args: string, locale: string = 'en') {
-    const i18n = getI18n()
     return [{
       id: 'forum',
-      title: i18n.t('userProfile.forum', { ns: 'common', lng: locale }),
-      description: i18n.t('gotoAnything.actions.feedbackDesc', { ns: 'app', lng: locale }) || 'Open community feedback discussions',
+      title: tr('userProfile.forum', 'Forum', locale, 'common'),
+      description: tr('gotoAnything.actions.feedbackDesc', 'Open community feedback discussions', locale, 'app'),
       type: 'command' as const,
       icon: (
         <div className="flex h-6 w-6 items-center justify-center rounded-md border-[0.5px] border-divider-regular bg-components-panel-bg">

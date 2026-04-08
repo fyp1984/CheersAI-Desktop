@@ -7,6 +7,10 @@ import { registerCommands, unregisterCommands } from './command-bus'
 // Community command dependency types
 type CommunityDeps = Record<string, never>
 
+const tr = (key: string, fallback: string, locale: string, ns: 'app' | 'common') => {
+  return getI18n()?.t?.(key as any, { ns, lng: locale }) ?? fallback
+}
+
 /**
  * Community command - Opens Discord community
  */
@@ -22,11 +26,10 @@ export const communityCommand: SlashCommandHandler<CommunityDeps> = {
   },
 
   async search(args: string, locale: string = 'en') {
-    const i18n = getI18n()
     return [{
       id: 'community',
-      title: i18n.t('userProfile.community', { ns: 'common', lng: locale }),
-      description: i18n.t('gotoAnything.actions.communityDesc', { ns: 'app', lng: locale }) || 'Open Discord community',
+      title: tr('userProfile.community', 'Community', locale, 'common'),
+      description: tr('gotoAnything.actions.communityDesc', 'Open Discord community', locale, 'app'),
       type: 'command' as const,
       icon: (
         <div className="flex h-6 w-6 items-center justify-center rounded-md border-[0.5px] border-divider-regular bg-components-panel-bg">

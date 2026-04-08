@@ -21,6 +21,9 @@ vi.mock('@/context/app-context', () => ({
   useAppContext: () => ({
     isCurrentWorkspaceEditor: mockIsCurrentWorkspaceEditor(),
     isCurrentWorkspaceDatasetOperator: mockIsCurrentWorkspaceDatasetOperator(),
+    isLoadingCurrentWorkspace: false,
+    canViewWorkflow: true,
+    canEditWorkflow: true,
   }),
 }))
 

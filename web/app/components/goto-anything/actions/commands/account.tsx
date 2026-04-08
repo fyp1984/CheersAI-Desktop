@@ -7,6 +7,10 @@ import { registerCommands, unregisterCommands } from './command-bus'
 // Account command dependency types - no external dependencies needed
 type AccountDeps = Record<string, never>
 
+const tr = (key: string, fallback: string, locale: string, ns: 'app' | 'common') => {
+  return getI18n()?.t?.(key as any, { ns, lng: locale }) ?? fallback
+}
+
 /**
  * Account command - Navigates to account page
  */
@@ -21,11 +25,10 @@ export const accountCommand: SlashCommandHandler<AccountDeps> = {
   },
 
   async search(args: string, locale: string = 'en') {
-    const i18n = getI18n()
     return [{
       id: 'account',
-      title: i18n.t('account.account', { ns: 'common', lng: locale }),
-      description: i18n.t('gotoAnything.actions.accountDesc', { ns: 'app', lng: locale }),
+      title: tr('account.account', 'Account', locale, 'common'),
+      description: tr('gotoAnything.actions.accountDesc', 'Open account settings', locale, 'app'),
       type: 'command' as const,
       icon: (
         <div className="flex h-6 w-6 items-center justify-center rounded-md border-[0.5px] border-divider-regular bg-components-panel-bg">

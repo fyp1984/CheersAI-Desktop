@@ -14,6 +14,7 @@ from controllers.console import console_ns
 from controllers.console.app.error import ConversationCompletedError, DraftWorkflowNotExist, DraftWorkflowNotSync
 from controllers.console.app.workflow_run import workflow_run_node_execution_model
 from controllers.console.app.wraps import get_app_model
+from controllers.console.workspace import require_workflow_edit_capability, require_workflow_view_capability
 from controllers.console.wraps import account_initialization_required, edit_permission_required, setup_required
 from controllers.web.error import InvokeRateLimitError as InvokeRateLimitHttpError
 from core.app.app_config.features.file_upload.manager import FileUploadConfigManager
@@ -217,6 +218,7 @@ class DraftWorkflowApi(Resource):
     @account_initialization_required
     @get_app_model(mode=[AppMode.ADVANCED_CHAT, AppMode.WORKFLOW])
     @marshal_with(workflow_model)
+    @require_workflow_view_capability
     @edit_permission_required
     def get(self, app_model: App):
         """
@@ -253,6 +255,7 @@ class DraftWorkflowApi(Resource):
     )
     @console_ns.response(400, "Invalid workflow configuration")
     @console_ns.response(403, "Permission denied")
+    @require_workflow_edit_capability
     @edit_permission_required
     def post(self, app_model: App):
         """
@@ -632,6 +635,7 @@ class PublishedWorkflowApi(Resource):
     @account_initialization_required
     @get_app_model(mode=[AppMode.ADVANCED_CHAT, AppMode.WORKFLOW])
     @marshal_with(workflow_model)
+    @require_workflow_view_capability
     @edit_permission_required
     def get(self, app_model: App):
         """
@@ -649,6 +653,7 @@ class PublishedWorkflowApi(Resource):
     @login_required
     @account_initialization_required
     @get_app_model(mode=[AppMode.ADVANCED_CHAT, AppMode.WORKFLOW])
+    @require_workflow_edit_capability
     @edit_permission_required
     def post(self, app_model: App):
         """
@@ -695,6 +700,7 @@ class DefaultBlockConfigsApi(Resource):
     @login_required
     @account_initialization_required
     @get_app_model(mode=[AppMode.ADVANCED_CHAT, AppMode.WORKFLOW])
+    @require_workflow_view_capability
     @edit_permission_required
     def get(self, app_model: App):
         """
@@ -717,6 +723,7 @@ class DefaultBlockConfigApi(Resource):
     @login_required
     @account_initialization_required
     @get_app_model(mode=[AppMode.ADVANCED_CHAT, AppMode.WORKFLOW])
+    @require_workflow_view_capability
     @edit_permission_required
     def get(self, app_model: App, block_type: str):
         """
@@ -783,6 +790,7 @@ class PublishedAllWorkflowApi(Resource):
     @account_initialization_required
     @get_app_model(mode=[AppMode.ADVANCED_CHAT, AppMode.WORKFLOW])
     @marshal_with(workflow_pagination_model)
+    @require_workflow_view_capability
     @edit_permission_required
     def get(self, app_model: App):
         """
@@ -833,6 +841,7 @@ class WorkflowByIdApi(Resource):
     @account_initialization_required
     @get_app_model(mode=[AppMode.ADVANCED_CHAT, AppMode.WORKFLOW])
     @marshal_with(workflow_model)
+    @require_workflow_edit_capability
     @edit_permission_required
     def patch(self, app_model: App, workflow_id: str):
         """
@@ -875,6 +884,7 @@ class WorkflowByIdApi(Resource):
     @login_required
     @account_initialization_required
     @get_app_model(mode=[AppMode.ADVANCED_CHAT, AppMode.WORKFLOW])
+    @require_workflow_edit_capability
     @edit_permission_required
     def delete(self, app_model: App, workflow_id: str):
         """
@@ -913,6 +923,7 @@ class DraftWorkflowNodeLastRunApi(Resource):
     @account_initialization_required
     @get_app_model(mode=[AppMode.ADVANCED_CHAT, AppMode.WORKFLOW])
     @marshal_with(workflow_run_node_execution_model)
+    @require_workflow_view_capability
     def get(self, app_model: App, node_id: str):
         srv = WorkflowService()
         workflow = srv.get_draft_workflow(app_model)
