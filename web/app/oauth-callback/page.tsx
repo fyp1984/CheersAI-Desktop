@@ -28,6 +28,7 @@ export default function OAuthCallbackPage() {
     }
 
     const storedState = sessionStorage.getItem('desktop-sso-state')
+    const codeVerifier = sessionStorage.getItem('desktop-sso-code-verifier')
     if (state !== storedState) {
       console.error('[SSO] State mismatch - stored:', storedState, 'received:', state)
       Toast.notify({ type: 'error', message: 'SSO login failed: state mismatch' })
@@ -35,11 +36,19 @@ export default function OAuthCallbackPage() {
       return
     }
 
+    if (!codeVerifier) {
+      console.error('[SSO] Missing PKCE code verifier')
+      Toast.notify({ type: 'error', message: 'SSO login failed: missing verifier' })
+      router.replace('/signin')
+      return
+    }
+
     const redirectUri = `${window.location.protocol}//${window.location.host}/oauth-callback`
 
-    exchangeSSOToken({ code, state, redirectUri })
+    exchangeSSOToken({ code, state, redirectUri, codeVerifier })
       .then(async () => {
         sessionStorage.removeItem('desktop-sso-state')
+        sessionStorage.removeItem('desktop-sso-code-verifier')
         await new Promise<void>((resolve) => {
           const redirectTimer = window.setTimeout(() => {
             window.clearTimeout(redirectTimer)
@@ -50,6 +59,8 @@ export default function OAuthCallbackPage() {
       })
       .catch((error) => {
         console.error('[SSO] Token exchange failed:', error)
+        sessionStorage.removeItem('desktop-sso-state')
+        sessionStorage.removeItem('desktop-sso-code-verifier')
         Toast.notify({ type: 'error', message: 'SSO login failed' })
         router.replace('/signin')
       })

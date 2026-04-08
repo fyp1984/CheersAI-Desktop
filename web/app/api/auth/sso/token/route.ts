@@ -7,7 +7,7 @@ import { generateSessionId, storeSession } from '@/lib/sso-session'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { code, state, redirectUri } = body
+    const { code, state, redirectUri, codeVerifier } = body
 
     if (!code || !state || !redirectUri) {
       return NextResponse.json(
@@ -29,6 +29,8 @@ export async function POST(request: NextRequest) {
     params.append('redirect_uri', redirectUri)
     params.append('client_id', clientId)
     params.append('client_secret', clientSecret)
+    if (codeVerifier)
+      params.append('code_verifier', codeVerifier)
 
     const tokenResponse = await fetch(tokenUrl.toString(), {
       method: 'POST',

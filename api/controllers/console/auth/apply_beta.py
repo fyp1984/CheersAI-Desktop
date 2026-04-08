@@ -1,7 +1,5 @@
-import os
 from uuid import uuid4
 
-import requests
 from flask import request
 from flask_restx import Resource
 from pydantic import BaseModel, Field
@@ -11,12 +9,10 @@ from controllers.console.wraps import setup_required
 from extensions.ext_database import db
 from libs.helper import email as validate_email
 from models.beta_application import BetaApplication
-from utils.sqlite_helper import SQLiteHelper
+from services.beta_application_notification_service import BetaApplicationNotificationService
 
 DEFAULT_REF_TEMPLATE_SWAGGER_2_0 = "#/definitions/{model}"
-
-# SSO API 配置
-SSO_API_URL = os.getenv("SSO_API_URL", "http://localhost:8000/api")
+BLOCK_DUPLICATE_STATUSES = ("pending", "provisioning", "success")
 
 
 class ApplyBetaPayload(BaseModel):
@@ -56,84 +52,48 @@ class ApplyBetaApi(Resource):
         except ValueError as e:
             return {"result": "fail", "data": str(e)}, 400
 
-        # 调用 SSO API 提交申请
+        # Duplicate check for active applications
         try:
-            sso_response = requests.post(
-                f"{SSO_API_URL}/apply-beta",
-                data={
-                    "email": normalized_email,
-                    "name": name,
-                    "company": company or "",
-                    "useCase": use_case or "",
-                },
-                timeout=10,
+            existing_application = (
+                db.session.query(BetaApplication)
+                .filter(
+                    BetaApplication.email == normalized_email,
+                    BetaApplication.status.in_(BLOCK_DUPLICATE_STATUSES),
+                )
+                .first()
             )
-
-            if sso_response.status_code == 200:
-                # SSO API 调用成功，同时保存到本地 SQLite 作为备份
-                try:
-                    sqlite_helper = SQLiteHelper()
-                    sqlite_helper.save_beta_application(
-                        email=normalized_email,
-                        name=name,
-                        company=company,
-                        use_case=use_case,
-                        status="pending",
-                        ip_address=request.remote_addr,
-                        user_agent=request.headers.get("User-Agent", "")[:500],
-                    )
-                except Exception as sqlite_error:
-                    print(f"SQLite backup save failed: {sqlite_error}")
-
-                return {
-                    "result": "success",
-                    "data": "Application submitted successfully. Please wait for administrator review.",
-                }, 201
-            else:
-                # SSO API 返回错误
-                error_data = sso_response.json() if sso_response.headers.get("content-type") == "application/json" else {}
-                error_message = error_data.get("msg", "Failed to submit application to SSO")
-                
-                # 如果是邮箱已存在错误，返回特定消息
-                if "already" in error_message.lower():
-                    return {
-                        "result": "fail",
-                        "data": "This email has already submitted a beta application.",
-                    }, 400
-                
-                return {"result": "fail", "data": error_message}, 400
-
-        except requests.exceptions.RequestException as e:
-            # 网络错误，降级到本地数据库
-            print(f"SSO API call failed, falling back to local database: {e}")
-            
-            # 检查本地数据库是否已存在
-            existing_application = db.session.query(BetaApplication).filter_by(email=normalized_email).first()
             if existing_application:
                 return {
                     "result": "fail",
                     "data": "This email has already submitted a beta application.",
                 }, 400
 
-            # 保存到本地 PostgreSQL 数据库
-            try:
-                beta_app = BetaApplication(
-                    id=str(uuid4()),
-                    email=normalized_email,
-                    name=name,
-                    company=company,
-                    use_case=use_case,
-                    status="pending",
-                    ip_address=request.remote_addr,
-                    user_agent=request.headers.get("User-Agent", "")[:500],
-                )
-                db.session.add(beta_app)
-                db.session.commit()
+            beta_app = BetaApplication(
+                id=str(uuid4()),
+                email=normalized_email,
+                name=name,
+                language=language,
+                company=company,
+                use_case=use_case,
+                status="pending",
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get("User-Agent", "")[:500],
+            )
+            db.session.add(beta_app)
+            db.session.commit()
+            BetaApplicationNotificationService.send_submitted_email(
+                application_id=beta_app.id,
+                to=beta_app.email,
+                name=beta_app.name,
+                language=language,
+            )
 
-                return {
-                    "result": "success",
-                    "data": "Application submitted successfully. Please wait for administrator review.",
-                }, 201
-            except Exception as db_error:
-                db.session.rollback()
-                return {"result": "fail", "data": f"Application failed: {str(db_error)}"}, 400
+            return {
+                "result": "success",
+                "data": "Application submitted successfully. Please wait for administrator review.",
+                "application_id": beta_app.id,
+                "status": beta_app.status,
+            }, 201
+        except Exception as db_error:
+            db.session.rollback()
+            return {"result": "fail", "data": f"Application failed: {str(db_error)}"}, 400
