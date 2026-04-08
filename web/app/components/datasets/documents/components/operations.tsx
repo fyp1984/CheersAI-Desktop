@@ -48,6 +48,7 @@ import RenameModal from './rename-modal'
 
 type OperationsProps = {
   embeddingAvailable: boolean
+  canEditKnowledge?: boolean
   detail: {
     name: string
     enabled: boolean
@@ -67,6 +68,7 @@ type OperationsProps = {
 
 const Operations = ({
   embeddingAvailable,
+  canEditKnowledge = true,
   datasetId,
   detail,
   selectedIds,
@@ -209,7 +211,7 @@ const Operations = ({
           <Divider className="!ml-4 !mr-2 !h-3" type="vertical" />
         </>
       )}
-      {embeddingAvailable && (
+      {embeddingAvailable && canEditKnowledge && (
         <>
           <Tooltip
             popupContent={t('list.action.settings', { ns: 'datasetDocuments' })}

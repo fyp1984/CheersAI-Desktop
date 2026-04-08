@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getCapabilitiesByRole, getWorkspaceCapabilities, hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from './workspace-capabilities'
+import { getCapabilitiesByRole, getWorkspaceCapabilities, hasPluginManageWorkspaceCapability, hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from './workspace-capabilities'
 
 describe('workspace capabilities', () => {
   it('returns configured capabilities for dataset operator role', () => {
@@ -28,5 +28,22 @@ describe('workspace capabilities', () => {
       role: 'normal',
       capabilities: [],
     }, WORKSPACE_CAPABILITIES.workflowEdit)).toBe(false)
+  })
+
+  it('treats plugin manage as compatible with legacy and new capability codes', () => {
+    expect(hasPluginManageWorkspaceCapability({
+      role: 'normal',
+      capabilities: [WORKSPACE_CAPABILITIES.agentManage],
+    })).toBe(true)
+
+    expect(hasPluginManageWorkspaceCapability({
+      role: 'normal',
+      capabilities: [WORKSPACE_CAPABILITIES.pluginManage],
+    })).toBe(true)
+
+    expect(hasPluginManageWorkspaceCapability({
+      role: 'editor',
+      capabilities: [],
+    })).toBe(true)
   })
 })

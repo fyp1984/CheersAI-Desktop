@@ -24,7 +24,7 @@ import { useMemo, useState } from 'react'
 import { useAppContext } from '@/context/app-context'
 import { useLogout } from '@/service/use-common'
 import { cn } from '@/utils/classnames'
-import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
+import { hasPluginManageWorkspaceCapability, hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import AccountDropdown from '../account-dropdown'
 import EnvNav from '../env-nav'
 
@@ -80,7 +80,7 @@ const SideNav = () => {
   const canUseAgent = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.agentUse), [currentWorkspace])
   const canUseChat = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.chatUse), [currentWorkspace])
   const canViewKnowledge = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.knowledgeView), [currentWorkspace])
-  const canManageAgent = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.agentManage), [currentWorkspace])
+  const canManagePlugin = useMemo(() => hasPluginManageWorkspaceCapability(currentWorkspace), [currentWorkspace])
   const canViewWorkflow = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.workflowView), [currentWorkspace])
   const canViewAppCenter = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.appView), [currentWorkspace])
   const canViewExplore = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.exploreView), [currentWorkspace])
@@ -121,13 +121,13 @@ const SideNav = () => {
     })
   }
 
-  if (canManageAgent) {
+  if (canManagePlugin) {
     navItems.push({
       id: 'plugins',
       href: '/plugins',
       icon: <RiPuzzle2Line className="h-5 w-5" />,
       activeIcon: <RiPuzzle2Fill className="h-5 w-5" />,
-      label: '智能体管理',
+      label: '工具插件',
       segments: ['plugins'],
     })
   }

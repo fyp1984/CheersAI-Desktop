@@ -1,16 +1,24 @@
+import hashlib
+import json
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from extensions.ext_redis import redis_client
 from models.account import TenantAccountRole
 
 DESKTOP_ACCESS_CAPABILITY = "desktop_access"
+DESKTOP_AGENT_MANAGE_CAPABILITY = "desktop_agent_manage"
+DESKTOP_PLUGIN_MANAGE_CAPABILITY = "desktop_plugin_manage"
+DESKTOP_SSO_PROJECTION_KEY_PREFIX = "desktop:sso:projection"
+DESKTOP_SSO_PROJECTION_TTL = 60 * 60 * 24 * 7
 
 WORKSPACE_ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
     TenantAccountRole.OWNER: frozenset({
         "desktop_access",
         "desktop_agent_use",
         "desktop_agent_test",
-        "desktop_agent_manage",
+        DESKTOP_AGENT_MANAGE_CAPABILITY,
+        DESKTOP_PLUGIN_MANAGE_CAPABILITY,
         "desktop_chat_use",
         "desktop_knowledge_view",
         "desktop_knowledge_edit",
@@ -29,7 +37,8 @@ WORKSPACE_ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
         "desktop_access",
         "desktop_agent_use",
         "desktop_agent_test",
-        "desktop_agent_manage",
+        DESKTOP_AGENT_MANAGE_CAPABILITY,
+        DESKTOP_PLUGIN_MANAGE_CAPABILITY,
         "desktop_chat_use",
         "desktop_knowledge_view",
         "desktop_knowledge_edit",
@@ -48,7 +57,8 @@ WORKSPACE_ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
         "desktop_access",
         "desktop_agent_use",
         "desktop_agent_test",
-        "desktop_agent_manage",
+        DESKTOP_AGENT_MANAGE_CAPABILITY,
+        DESKTOP_PLUGIN_MANAGE_CAPABILITY,
         "desktop_chat_use",
         "desktop_knowledge_view",
         "desktop_knowledge_edit",
@@ -113,6 +123,12 @@ WORKSPACE_ROLE_PRIORITY: dict[str, int] = {
     TenantAccountRole.ADMIN: 4,
     TenantAccountRole.OWNER: 5,
 }
+
+STANDARD_CAPABILITIES = frozenset({
+    capability
+    for capabilities in WORKSPACE_ROLE_CAPABILITIES.values()
+    for capability in capabilities
+})
 
 
 def normalize_sso_identifier(value: Any) -> str | None:
@@ -183,6 +199,132 @@ def get_role_capabilities(role: str | None) -> list[str]:
         return []
 
     return list(WORKSPACE_ROLE_CAPABILITIES.get(normalized_role, frozenset()))
+
+
+def resolve_workspace_capabilities(payload: Mapping[str, Any] | None, fallback_role: str | None = None) -> list[str]:
+    identifiers = collect_sso_identifiers(payload)
+    capabilities: set[str] = set()
+
+    for identifier in identifiers:
+        if identifier in STANDARD_CAPABILITIES:
+            capabilities.add(identifier)
+            continue
+
+        mapped_role = SSO_IDENTIFIER_TO_WORKSPACE_ROLE.get(identifier)
+        if mapped_role:
+            capabilities.update(get_role_capabilities(mapped_role))
+
+    if fallback_role:
+        capabilities.update(get_role_capabilities(fallback_role))
+
+    if has_desktop_access(payload):
+        capabilities.add(DESKTOP_ACCESS_CAPABILITY)
+
+    return sorted(capabilities)
+
+
+def build_desktop_sso_projection(
+    payload: Mapping[str, Any] | None,
+    *,
+    workspace_role: str | None,
+    mapped_role: str | None,
+) -> dict[str, Any]:
+    normalized_roles = [
+        normalized
+        for value in payload.get("roles", []) if payload and isinstance(payload.get("roles"), Iterable) and not isinstance(payload.get("roles"), (str, bytes))
+        for normalized in [normalize_sso_identifier(value)]
+        if normalized
+    ]
+    normalized_permissions = [
+        normalized
+        for value in payload.get("permissions", []) if payload and isinstance(payload.get("permissions"), Iterable) and not isinstance(payload.get("permissions"), (str, bytes))
+        for normalized in [normalize_sso_identifier(value)]
+        if normalized
+    ]
+    capabilities = resolve_workspace_capabilities(payload, workspace_role)
+    sync_hash_source = "|".join([
+        *(normalized_roles or []),
+        *(normalized_permissions or []),
+        *(capabilities or []),
+        workspace_role or "",
+        mapped_role or "",
+    ])
+
+    return {
+        "workspace_role": workspace_role,
+        "mapped_role": mapped_role,
+        "roles": normalized_roles,
+        "permissions": normalized_permissions,
+        "capabilities": capabilities,
+        "sync_hash": hashlib.sha256(sync_hash_source.encode("utf-8")).hexdigest(),
+    }
+
+
+def _desktop_sso_projection_key(account_id: str, tenant_id: str) -> str:
+    return f"{DESKTOP_SSO_PROJECTION_KEY_PREFIX}:{tenant_id}:{account_id}"
+
+
+def save_desktop_sso_projection(account_id: str, tenant_id: str, projection: Mapping[str, Any]) -> None:
+    try:
+        redis_client.set(
+            _desktop_sso_projection_key(account_id, tenant_id),
+            json.dumps(dict(projection)).encode("utf-8"),
+            ex=DESKTOP_SSO_PROJECTION_TTL,
+        )
+    except RuntimeError:
+        return
+
+
+def load_desktop_sso_projection(account_id: str, tenant_id: str) -> dict[str, Any] | None:
+    try:
+        projection = redis_client.get(_desktop_sso_projection_key(account_id, tenant_id))
+    except RuntimeError:
+        return None
+
+    if not projection:
+        return None
+
+    if isinstance(projection, bytes):
+        projection = projection.decode("utf-8")
+
+    try:
+        loaded_projection = json.loads(projection)
+    except json.JSONDecodeError:
+        return None
+
+    if not isinstance(loaded_projection, dict):
+        return None
+
+    return loaded_projection
+
+
+def get_current_workspace_role(account: Any) -> str | None:
+    for attr in ("current_role", "current_tenant_current_role", "role"):
+        value = getattr(account, attr, None)
+        if value:
+            return str(value)
+    return None
+
+
+def get_account_workspace_capabilities(account: Any, tenant_id: str | None = None) -> list[str]:
+    capabilities: set[str] = set()
+    account_id = getattr(account, "id", None)
+    resolved_tenant_id = tenant_id or getattr(account, "current_tenant_id", None)
+
+    if isinstance(account_id, str) and resolved_tenant_id:
+        projection = load_desktop_sso_projection(account_id, str(resolved_tenant_id))
+        if projection:
+            projection_capabilities = projection.get("capabilities")
+            if isinstance(projection_capabilities, list):
+                capabilities.update(capability for capability in projection_capabilities if isinstance(capability, str))
+
+    capabilities.update(get_role_capabilities(get_current_workspace_role(account)))
+    return sorted(capabilities)
+
+
+def has_any_workspace_capability(account: Any, capabilities: Iterable[str], tenant_id: str | None = None) -> bool:
+    capability_set = set(get_account_workspace_capabilities(account, tenant_id))
+    return any(capability in capability_set for capability in capabilities)
 
 
 def has_role_capability(role: str | None, capability: str) -> bool:

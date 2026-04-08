@@ -16,6 +16,7 @@ from controllers.console.apikey import (
 )
 from controllers.console.app.error import ProviderNotInitializeError
 from controllers.console.datasets.error import DatasetInUseError, DatasetNameDuplicateError, IndexingEstimateError
+from controllers.console.workspace import require_knowledge_edit_capability, require_knowledge_view_capability
 from controllers.console.wraps import (
     account_initialization_required,
     cloud_edition_billing_rate_limit_check,
@@ -287,6 +288,7 @@ class DatasetListApi(Resource):
     @login_required
     @account_initialization_required
     @enterprise_license_required
+    @require_knowledge_view_capability
     def get(self):
         current_user, current_tenant_id = current_account_with_tenant()
         # Convert query parameters to dict, handling list parameters correctly
@@ -358,6 +360,7 @@ class DatasetListApi(Resource):
     @login_required
     @account_initialization_required
     @cloud_edition_billing_rate_limit_check("knowledge")
+    @require_knowledge_edit_capability
     def post(self):
         payload = DatasetCreatePayload.model_validate(console_ns.payload or {})
         current_user, current_tenant_id = current_account_with_tenant()
@@ -395,6 +398,7 @@ class DatasetApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_view_capability
     def get(self, dataset_id):
         current_user, current_tenant_id = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
@@ -445,6 +449,7 @@ class DatasetApi(Resource):
     @login_required
     @account_initialization_required
     @cloud_edition_billing_rate_limit_check("knowledge")
+    @require_knowledge_edit_capability
     def patch(self, dataset_id):
         dataset_id_str = str(dataset_id)
         dataset = DatasetService.get_dataset(dataset_id_str)
@@ -492,6 +497,7 @@ class DatasetApi(Resource):
     @login_required
     @account_initialization_required
     @cloud_edition_billing_rate_limit_check("knowledge")
+    @require_knowledge_edit_capability
     def delete(self, dataset_id):
         dataset_id_str = str(dataset_id)
         current_user, _ = current_account_with_tenant()
@@ -518,6 +524,7 @@ class DatasetUseCheckApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_view_capability
     def get(self, dataset_id):
         dataset_id_str = str(dataset_id)
 
@@ -534,6 +541,7 @@ class DatasetQueryApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_view_capability
     def get(self, dataset_id):
         current_user, _ = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
@@ -570,6 +578,7 @@ class DatasetIndexingEstimateApi(Resource):
     @login_required
     @account_initialization_required
     @console_ns.expect(console_ns.models[IndexingEstimatePayload.__name__])
+    @require_knowledge_edit_capability
     def post(self):
         payload = IndexingEstimatePayload.model_validate(console_ns.payload or {})
         args = payload.model_dump()
@@ -667,6 +676,7 @@ class DatasetRelatedAppListApi(Resource):
     @login_required
     @account_initialization_required
     @marshal_with(related_app_list_model)
+    @require_knowledge_view_capability
     def get(self, dataset_id):
         current_user, _ = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
@@ -699,6 +709,7 @@ class DatasetIndexingStatusApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_view_capability
     def get(self, dataset_id):
         _, current_tenant_id = current_account_with_tenant()
         dataset_id = str(dataset_id)
@@ -754,6 +765,7 @@ class DatasetApiKeyApi(Resource):
     @login_required
     @account_initialization_required
     @marshal_with(api_key_list_model)
+    @require_knowledge_view_capability
     def get(self):
         _, current_tenant_id = current_account_with_tenant()
         keys = db.session.scalars(
@@ -766,6 +778,7 @@ class DatasetApiKeyApi(Resource):
     @is_admin_or_owner_required
     @account_initialization_required
     @marshal_with(api_key_item_model)
+    @require_knowledge_edit_capability
     def post(self):
         _, current_tenant_id = current_account_with_tenant()
 
@@ -804,6 +817,7 @@ class DatasetApiDeleteApi(Resource):
     @login_required
     @is_admin_or_owner_required
     @account_initialization_required
+    @require_knowledge_edit_capability
     def delete(self, api_key_id):
         _, current_tenant_id = current_account_with_tenant()
         api_key_id = str(api_key_id)
@@ -831,6 +845,7 @@ class DatasetEnableApiApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_edit_capability
     def post(self, dataset_id, status):
         dataset_id_str = str(dataset_id)
 
@@ -847,6 +862,7 @@ class DatasetApiBaseUrlApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_view_capability
     def get(self):
         return {"api_base_url": (dify_config.SERVICE_API_URL or request.host_url.rstrip("/")) + "/v1"}
 
@@ -873,6 +889,7 @@ class DatasetRetrievalSettingMockApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_view_capability
     def get(self, vector_type):
         return _get_retrieval_methods_by_vector_type(vector_type, is_mock=True)
 
@@ -887,6 +904,7 @@ class DatasetErrorDocs(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_view_capability
     def get(self, dataset_id):
         dataset_id_str = str(dataset_id)
         dataset = DatasetService.get_dataset(dataset_id_str)
@@ -908,6 +926,7 @@ class DatasetPermissionUserListApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_view_capability
     def get(self, dataset_id):
         current_user, _ = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
@@ -936,6 +955,7 @@ class DatasetAutoDisableLogApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_view_capability
     def get(self, dataset_id):
         dataset_id_str = str(dataset_id)
         dataset = DatasetService.get_dataset(dataset_id_str)

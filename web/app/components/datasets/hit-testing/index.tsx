@@ -10,6 +10,7 @@ import type {
 } from '@/models/datasets'
 import type { RetrievalConfig } from '@/types/app'
 import { useBoolean } from 'ahooks'
+import { useRouter } from 'next/navigation'
 import * as React from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -19,6 +20,7 @@ import FloatRightContainer from '@/app/components/base/float-right-container'
 import Loading from '@/app/components/base/loading'
 import Pagination from '@/app/components/base/pagination'
 import docStyle from '@/app/components/datasets/documents/detail/completed/style.module.css'
+import { useSelector as useAppContextWithSelector } from '@/context/app-context'
 import DatasetDetailContext from '@/context/dataset-detail'
 import useBreakpoints, { MediaType } from '@/hooks/use-breakpoints'
 import { useDatasetTestingRecords } from '@/service/knowledge/use-dataset'
@@ -27,6 +29,7 @@ import {
   useHitTesting,
 } from '@/service/knowledge/use-hit-testing'
 import { cn } from '@/utils/classnames'
+import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import { CardSkelton } from '../documents/detail/completed/skeleton/general-list-skeleton'
 import EmptyRecords from './components/empty-records'
 import QueryInput from './components/query-input'
@@ -43,6 +46,9 @@ type Props = {
 
 const HitTestingPage: FC<Props> = ({ datasetId }: Props) => {
   const { t } = useTranslation()
+  const router = useRouter()
+  const currentWorkspace = useAppContextWithSelector(state => state.currentWorkspace)
+  const canEditKnowledge = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.knowledgeEdit)
 
   const media = useBreakpoints()
   const isMobile = media === MediaType.mobile
@@ -112,6 +118,17 @@ const HitTestingPage: FC<Props> = ({ datasetId }: Props) => {
   useEffect(() => {
     setShowRightPanel(!isMobile)
   }, [isMobile, setShowRightPanel])
+
+  useEffect(() => {
+    if (!currentWorkspace.id)
+      return
+
+    if (!canEditKnowledge)
+      router.replace(`/datasets/${datasetId}/documents`)
+  }, [canEditKnowledge, currentWorkspace.id, datasetId, router])
+
+  if (!canEditKnowledge)
+    return <Loading type="app" />
 
   return (
     <div className="relative flex h-full w-full gap-x-6 overflow-y-auto pl-6">

@@ -6,11 +6,41 @@ from sqlalchemy.orm import Session
 from werkzeug.exceptions import Forbidden
 
 from extensions.ext_database import db
+from libs.desktop_auth import DESKTOP_AGENT_MANAGE_CAPABILITY, DESKTOP_PLUGIN_MANAGE_CAPABILITY
 from libs.login import current_account_with_tenant
 from models.account import TenantPluginPermission
 
 P = ParamSpec("P")
 R = TypeVar("R")
+
+
+def _require_workspace_capabilities(*capabilities: str):
+    from controllers.console.wraps import require_workspace_capabilities
+
+    return require_workspace_capabilities(*capabilities)
+
+
+def require_plugin_manage_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities(
+        DESKTOP_PLUGIN_MANAGE_CAPABILITY,
+        DESKTOP_AGENT_MANAGE_CAPABILITY,
+    )(view)
+
+
+def require_team_manage_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_team_manage")(view)
+
+
+def require_workspace_settings_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_settings_team")(view)
+
+
+def require_knowledge_view_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_knowledge_view")(view)
+
+
+def require_knowledge_edit_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_knowledge_edit")(view)
 
 
 def plugin_permission_required(

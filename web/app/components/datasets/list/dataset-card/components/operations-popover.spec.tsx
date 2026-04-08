@@ -30,7 +30,7 @@ describe('OperationsPopover', () => {
 
   const defaultProps = {
     dataset: createMockDataset(),
-    isCurrentWorkspaceDatasetOperator: false,
+    canEditKnowledge: true,
     openRenameModal: vi.fn(),
     handleExportPipeline: vi.fn(),
     detectIsUsedByApp: vi.fn(),
@@ -60,20 +60,20 @@ describe('OperationsPopover', () => {
   })
 
   describe('Props', () => {
-    it('should show delete option when not workspace dataset operator', () => {
-      render(<OperationsPopover {...defaultProps} isCurrentWorkspaceDatasetOperator={false} />)
+    it('should show delete option when knowledge edit is allowed', () => {
+      render(<OperationsPopover {...defaultProps} canEditKnowledge={true} />)
 
       // Click to open popover
       const triggerButton = document.querySelector('[class*="cursor-pointer"]')
       if (triggerButton)
         fireEvent.click(triggerButton)
 
-      // showDelete should be true (inverse of isCurrentWorkspaceDatasetOperator)
+      // showDelete should be true when knowledge edit is granted
       // This means delete operation will be visible
     })
 
-    it('should hide delete option when is workspace dataset operator', () => {
-      render(<OperationsPopover {...defaultProps} isCurrentWorkspaceDatasetOperator={true} />)
+    it('should hide delete option when knowledge edit is not allowed', () => {
+      render(<OperationsPopover {...defaultProps} canEditKnowledge={false} />)
 
       // Click to open popover
       const triggerButton = document.querySelector('[class*="cursor-pointer"]')

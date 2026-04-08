@@ -7,6 +7,7 @@ import services
 from controllers.common.schema import get_or_create_model, register_schema_models
 from controllers.console import console_ns
 from controllers.console.datasets.error import DatasetNameDuplicateError
+from controllers.console.workspace import require_knowledge_edit_capability
 from controllers.console.wraps import account_initialization_required, edit_permission_required, setup_required
 from fields.dataset_fields import (
     dataset_detail_fields,
@@ -278,6 +279,7 @@ class ExternalKnowledgeHitTestingApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_edit_capability
     def post(self, dataset_id):
         current_user, _ = current_account_with_tenant()
         dataset_id_str = str(dataset_id)

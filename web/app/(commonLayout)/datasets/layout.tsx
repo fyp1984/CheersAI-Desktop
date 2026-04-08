@@ -6,19 +6,21 @@ import Loading from '@/app/components/base/loading'
 import { useAppContext } from '@/context/app-context'
 import { ExternalApiPanelProvider } from '@/context/external-api-panel-context'
 import { ExternalKnowledgeApiProvider } from '@/context/external-knowledge-api-context'
+import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 
 export default function DatasetsLayout({ children }: { children: React.ReactNode }) {
-  const { isCurrentWorkspaceEditor, isCurrentWorkspaceDatasetOperator, currentWorkspace, isLoadingCurrentWorkspace } = useAppContext()
+  const { currentWorkspace, isLoadingCurrentWorkspace } = useAppContext()
   const router = useRouter()
+  const canViewKnowledge = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.knowledgeView)
 
   useEffect(() => {
     if (isLoadingCurrentWorkspace || !currentWorkspace.id)
       return
-    if (!(isCurrentWorkspaceEditor || isCurrentWorkspaceDatasetOperator))
+    if (!canViewKnowledge)
       router.replace('/apps')
-  }, [isCurrentWorkspaceEditor, isCurrentWorkspaceDatasetOperator, isLoadingCurrentWorkspace, currentWorkspace, router])
+  }, [canViewKnowledge, isLoadingCurrentWorkspace, currentWorkspace, router])
 
-  if (isLoadingCurrentWorkspace || !(isCurrentWorkspaceEditor || isCurrentWorkspaceDatasetOperator))
+  if (isLoadingCurrentWorkspace || !canViewKnowledge)
     return <Loading type="app" />
   return (
     <ExternalKnowledgeApiProvider>

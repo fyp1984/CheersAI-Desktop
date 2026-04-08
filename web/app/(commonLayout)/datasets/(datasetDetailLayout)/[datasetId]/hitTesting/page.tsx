@@ -1,9 +1,3 @@
-export const dynamicParams = false
-
-export async function generateStaticParams() {
-  return []
-}
-
 import * as React from 'react'
 import Main from '@/app/components/datasets/hit-testing'
 

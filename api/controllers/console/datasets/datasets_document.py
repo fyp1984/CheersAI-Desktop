@@ -16,6 +16,7 @@ from werkzeug.exceptions import Forbidden, NotFound
 import services
 from controllers.common.schema import get_or_create_model, register_schema_models
 from controllers.console import console_ns
+from controllers.console.workspace import require_knowledge_edit_capability, require_knowledge_view_capability
 from core.errors.error import (
     LLMBadRequestError,
     ModelCurrentlyNotSupportError,
@@ -243,6 +244,7 @@ class DatasetDocumentListApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_view_capability
     def get(self, dataset_id):
         current_user, current_tenant_id = current_account_with_tenant()
         dataset_id = str(dataset_id)
@@ -363,6 +365,7 @@ class DatasetDocumentListApi(Resource):
     @cloud_edition_billing_resource_check("vector_space")
     @cloud_edition_billing_rate_limit_check("knowledge")
     @console_ns.expect(console_ns.models[KnowledgeConfig.__name__])
+    @require_knowledge_edit_capability
     def post(self, dataset_id):
         current_user, _ = current_account_with_tenant()
         dataset_id = str(dataset_id)
@@ -406,6 +409,7 @@ class DatasetDocumentListApi(Resource):
     @login_required
     @account_initialization_required
     @cloud_edition_billing_rate_limit_check("knowledge")
+    @require_knowledge_edit_capability
     def delete(self, dataset_id):
         dataset_id = str(dataset_id)
         dataset = DatasetService.get_dataset(dataset_id)
@@ -882,6 +886,7 @@ class DocumentDownloadApi(DocumentResource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_view_capability
     @cloud_edition_billing_rate_limit_check("knowledge")
     def get(self, dataset_id: str, document_id: str) -> dict[str, Any]:
         # Reuse the shared permission/tenant checks implemented in DocumentResource.
@@ -898,6 +903,7 @@ class DocumentBatchDownloadZipApi(DocumentResource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_view_capability
     @cloud_edition_billing_rate_limit_check("knowledge")
     @console_ns.expect(console_ns.models[DocumentBatchDownloadZipPayload.__name__])
     def post(self, dataset_id: str):
@@ -942,6 +948,7 @@ class DocumentProcessingApi(DocumentResource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_edit_capability
     @cloud_edition_billing_rate_limit_check("knowledge")
     def patch(self, dataset_id, document_id, action: Literal["pause", "resume"]):
         current_user, _ = current_account_with_tenant()
@@ -995,6 +1002,7 @@ class DocumentMetadataApi(DocumentResource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_edit_capability
     def put(self, dataset_id, document_id):
         current_user, _ = current_account_with_tenant()
         dataset_id = str(dataset_id)
@@ -1043,6 +1051,7 @@ class DocumentStatusApi(DocumentResource):
     @account_initialization_required
     @cloud_edition_billing_resource_check("vector_space")
     @cloud_edition_billing_rate_limit_check("knowledge")
+    @require_knowledge_edit_capability
     def patch(self, dataset_id, action: Literal["enable", "disable", "archive", "un_archive"]):
         current_user, _ = current_account_with_tenant()
         dataset_id = str(dataset_id)
@@ -1079,6 +1088,7 @@ class DocumentPauseApi(DocumentResource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_edit_capability
     @cloud_edition_billing_rate_limit_check("knowledge")
     def patch(self, dataset_id, document_id):
         """pause document."""
@@ -1113,6 +1123,7 @@ class DocumentRecoverApi(DocumentResource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_edit_capability
     @cloud_edition_billing_rate_limit_check("knowledge")
     def patch(self, dataset_id, document_id):
         """recover document."""
@@ -1144,6 +1155,7 @@ class DocumentRetryApi(DocumentResource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_edit_capability
     @cloud_edition_billing_rate_limit_check("knowledge")
     @console_ns.expect(console_ns.models[DocumentRetryPayload.__name__])
     def post(self, dataset_id):
@@ -1188,6 +1200,7 @@ class DocumentRenameApi(DocumentResource):
     @account_initialization_required
     @marshal_with(document_model)
     @console_ns.expect(console_ns.models[DocumentRenamePayload.__name__])
+    @require_knowledge_edit_capability
     def post(self, dataset_id, document_id):
         # The role of the current user in the ta table must be admin, owner, editor, or dataset_operator
         current_user, _ = current_account_with_tenant()
@@ -1212,6 +1225,7 @@ class WebsiteDocumentSyncApi(DocumentResource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_edit_capability
     def get(self, dataset_id, document_id):
         """sync website document."""
         _, current_tenant_id = current_account_with_tenant()
@@ -1241,6 +1255,7 @@ class DocumentPipelineExecutionLogApi(DocumentResource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_view_capability
     def get(self, dataset_id, document_id):
         dataset_id = str(dataset_id)
         document_id = str(document_id)
@@ -1285,6 +1300,7 @@ class DocumentGenerateSummaryApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_edit_capability
     @cloud_edition_billing_rate_limit_check("knowledge")
     def post(self, dataset_id):
         """
@@ -1379,6 +1395,7 @@ class DocumentSummaryStatusApi(DocumentResource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_knowledge_view_capability
     def get(self, dataset_id, document_id):
         """
         Get summary index generation status for a document.

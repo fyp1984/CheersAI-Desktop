@@ -1,6 +1,7 @@
 from flask_restx import Resource, fields
 
 from controllers.common.schema import register_schema_model
+from controllers.console.workspace import require_knowledge_edit_capability
 from fields.hit_testing_fields import (
     child_chunk_fields,
     document_fields,
@@ -66,6 +67,7 @@ class HitTestingApi(Resource, DatasetsHitTestingBase):
     @login_required
     @account_initialization_required
     @cloud_edition_billing_rate_limit_check("knowledge")
+    @require_knowledge_edit_capability
     def post(self, dataset_id):
         dataset_id_str = str(dataset_id)
 

@@ -6,7 +6,12 @@ from flask_restx import Resource, fields
 from controllers.console import console_ns
 from extensions.ext_database import db
 from libs.datetime_utils import naive_utc_now
-from libs.desktop_auth import has_desktop_access, resolve_workspace_role
+from libs.desktop_auth import (
+    build_desktop_sso_projection,
+    has_desktop_access,
+    resolve_workspace_role,
+    save_desktop_sso_projection,
+)
 from libs.helper import extract_remote_ip
 from libs.token import (
     set_access_token_to_cookie,
@@ -70,6 +75,8 @@ class DesktopSSOLoginApi(Resource):
 
             account = AccountService.get_user_through_email(normalized_email)
 
+            tenant_join = None
+
             if not account:
                 logger.info("Creating new account for SSO user: %s with role: %s", normalized_email, system_role)
 
@@ -84,9 +91,7 @@ class DesktopSSOLoginApi(Resource):
                 TenantService.create_owner_tenant_if_not_exist(account, is_setup=True)
 
                 from models.account import TenantAccountJoin
-                tenant_join = db.session.query(TenantAccountJoin).filter_by(
-                    account_id=account.id
-                ).first()
+                tenant_join = db.session.query(TenantAccountJoin).filter_by(account_id=account.id).first()
                 if tenant_join:
                     tenant_join.role = system_role
                     db.session.commit()
@@ -106,9 +111,7 @@ class DesktopSSOLoginApi(Resource):
                     db.session.commit()
 
                 from models.account import TenantAccountJoin
-                tenant_join = db.session.query(TenantAccountJoin).filter_by(
-                    account_id=account.id
-                ).first()
+                tenant_join = db.session.query(TenantAccountJoin).filter_by(account_id=account.id).first()
 
                 if tenant_join:
                     old_role = tenant_join.role
@@ -129,6 +132,14 @@ class DesktopSSOLoginApi(Resource):
                         tenant_join.role = system_role
                         db.session.commit()
                         logger.info("Updated role from '%s' to '%s'", old_role, system_role)
+
+            if tenant_join:
+                projection = build_desktop_sso_projection(
+                    data,
+                    workspace_role=tenant_join.role,
+                    mapped_role=resolved_sso_role,
+                )
+                save_desktop_sso_projection(account.id, tenant_join.tenant_id, projection)
 
             logger.info("Generating tokens for: %s", normalized_email)
             token_pair = AccountService.login(
