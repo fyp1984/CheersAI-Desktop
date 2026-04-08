@@ -35,8 +35,14 @@ const TagSelector: FC<TagSelectorProps> = ({
   const setTagList = useTagStore(s => s.setTagList)
 
   const getTagList = useCallback(async () => {
-    const res = await fetchTagList(type)
-    setTagList(res)
+    try {
+      const res = await fetchTagList(type)
+      setTagList(res)
+    }
+    catch (err) {
+      console.warn('Failed to fetch tag list:', err)
+      setTagList([])
+    }
   }, [setTagList, type])
 
   const tags = useMemo(() => {

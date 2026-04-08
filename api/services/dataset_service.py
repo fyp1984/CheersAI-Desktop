@@ -1915,8 +1915,10 @@ class DocumentService:
             batch = time.strftime("%Y%m%d%H%M%S") + str(100000 + secrets.randbelow(exclusive_upper_bound=900000))
             # save process rule
             if not dataset_process_rule:
+                logger.info(f"No dataset_process_rule provided, attempting to find or create one for dataset {dataset.id}")
                 process_rule = knowledge_config.process_rule
                 if process_rule:
+                    logger.info(f"Found process_rule in knowledge_config with mode: {process_rule.mode}")
                     if process_rule.mode in ("custom", "hierarchical"):
                         if process_rule.rules:
                             dataset_process_rule = DatasetProcessRule(
@@ -1944,12 +1946,27 @@ class DocumentService:
                         return [], ""
                     db.session.add(dataset_process_rule)
                     db.session.flush()
+                    logger.info(f"Created new dataset_process_rule with id: {dataset_process_rule.id}")
                 else:
+                    logger.info("No process_rule in knowledge_config, using fallback logic")
                     # Fallback when no process_rule provided in knowledge_config:
                     # 1) reuse dataset.latest_process_rule if present
-                    # 2) otherwise create an automatic rule
-                    dataset_process_rule = getattr(dataset, "latest_process_rule", None)
+                    # 2) otherwise query database for latest process rule
+                    # 3) otherwise create an automatic rule
+                    dataset_process_rule = dataset.latest_process_rule
+                    logger.info(f"dataset.latest_process_rule: {dataset_process_rule.id if dataset_process_rule else None}")
                     if not dataset_process_rule:
+                        # Query from database to ensure we get the latest process rule
+                        dataset_process_rule = (
+                            db.session.query(DatasetProcessRule)
+                            .filter_by(dataset_id=dataset.id)
+                            .order_by(DatasetProcessRule.created_at.desc())
+                            .first()
+                        )
+                        logger.info(f"Queried database for process rule: {dataset_process_rule.id if dataset_process_rule else None}")
+                    if not dataset_process_rule:
+                        # Create a new automatic rule if none exists
+                        logger.info("No existing process rule found, creating automatic rule")
                         dataset_process_rule = DatasetProcessRule(
                             dataset_id=dataset.id,
                             mode="automatic",
@@ -1958,6 +1975,9 @@ class DocumentService:
                         )
                         db.session.add(dataset_process_rule)
                         db.session.flush()
+                        logger.info(f"Created automatic dataset_process_rule with id: {dataset_process_rule.id}")
+                    else:
+                        logger.info(f"Using existing dataset_process_rule with id: {dataset_process_rule.id}")
             lock_name = f"add_document_lock_dataset_id_{dataset.id}"
             try:
                 with redis_client.lock(lock_name, timeout=600):

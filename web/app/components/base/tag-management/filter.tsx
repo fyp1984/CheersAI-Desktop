@@ -65,6 +65,9 @@ const TagFilter: FC<TagFilterProps> = ({
   useMount(() => {
     fetchTagList(type).then((res) => {
       setTagList(res)
+    }).catch((err) => {
+      console.warn('Failed to fetch tag list:', err)
+      setTagList([])
     })
   })
 

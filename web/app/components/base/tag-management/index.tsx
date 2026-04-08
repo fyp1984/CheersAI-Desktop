@@ -28,8 +28,14 @@ const TagManagementModal = ({ show, type }: TagManagementModalProps) => {
   const setShowTagManagementModal = useTagStore(s => s.setShowTagManagementModal)
 
   const getTagList = useCallback(async (type: 'knowledge' | 'app') => {
-    const res = await fetchTagList(type)
-    setTagList(res)
+    try {
+      const res = await fetchTagList(type)
+      setTagList(res)
+    }
+    catch (err) {
+      console.warn('Failed to fetch tag list:', err)
+      setTagList([])
+    }
   }, [setTagList])
 
   const [name, setName] = useState<string>('')
