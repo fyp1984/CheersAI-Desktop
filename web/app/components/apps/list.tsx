@@ -57,7 +57,7 @@ const List: FC<Props> = ({
   const { t } = useTranslation()
 
   const router = useRouter()
-  const { isCurrentWorkspaceEditor, isCurrentWorkspaceDatasetOperator, isLoadingCurrentWorkspace } = useAppContext()
+  const { isCurrentWorkspaceEditor, isCurrentWorkspaceDatasetOperator, isLoadingCurrentWorkspace, canViewWorkflow, canEditWorkflow } = useAppContext()
   const showTagManagementModal = useTagStore(s => s.showTagManagementModal)
   const [activeTab, setActiveTab] = useQueryState(
     'category',
@@ -72,6 +72,9 @@ const List: FC<Props> = ({
   const containerRef = useRef<HTMLDivElement>(null)
   const [showCreateFromDSLModal, setShowCreateFromDSLModal] = useState(false)
   const [droppedDSLFile, setDroppedDSLFile] = useState<File | undefined>()
+  const isWorkflowCategory = activeTab === AppModeEnum.WORKFLOW || activeTab === AppModeEnum.ADVANCED_CHAT
+  const canAccessCurrentCategory = isWorkflowCategory ? canViewWorkflow : true
+  const canEditCurrentCategory = isWorkflowCategory ? canEditWorkflow : isCurrentWorkspaceEditor
   const setKeywords = useCallback((keywords: string) => {
     setQuery(prev => ({ ...prev, keywords }))
   }, [setQuery])
@@ -87,7 +90,7 @@ const List: FC<Props> = ({
   const { dragging } = useDSLDragDrop({
     onDSLFileDropped: handleDSLFileDropped,
     containerRef,
-    enabled: isCurrentWorkspaceEditor,
+    enabled: canEditCurrentCategory,
   })
 
   const appListQueryParams = {
@@ -130,6 +133,11 @@ const List: FC<Props> = ({
     if (isCurrentWorkspaceDatasetOperator)
       return router.replace('/datasets')
   }, [router, isCurrentWorkspaceDatasetOperator])
+
+  useEffect(() => {
+    if (isWorkflowCategory && !canAccessCurrentCategory)
+      router.replace('/apps')
+  }, [canAccessCurrentCategory, isWorkflowCategory, router])
 
   useEffect(() => {
     if (isCurrentWorkspaceDatasetOperator)
@@ -220,7 +228,7 @@ const List: FC<Props> = ({
           !hasAnyApp && 'overflow-hidden',
         )}
         >
-          {(isCurrentWorkspaceEditor || isLoadingCurrentWorkspace) && (
+          {(canEditCurrentCategory || isLoadingCurrentWorkspace) && (
             <NewAppCard
               ref={newAppCardRef}
               isLoading={isLoadingCurrentWorkspace}
@@ -247,7 +255,7 @@ const List: FC<Props> = ({
           )}
         </div>
 
-        {isCurrentWorkspaceEditor && (
+        {canEditCurrentCategory && (
           <div
             className={`flex items-center justify-center gap-2 py-4 ${dragging ? 'text-text-accent' : 'text-text-quaternary'}`}
             role="region"

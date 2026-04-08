@@ -15,7 +15,8 @@ import { downloadBlob } from '@/utils/download'
 import { useNodesSyncDraft } from './use-nodes-sync-draft'
 
 export const useDSL = () => {
-  const { t } = useTranslation()
+  const translation = useTranslation()
+  const t = translation?.t ?? ((key: string) => key)
   const { notify } = useToastContext()
   const { eventEmitter } = useEventEmitterContextContext()
   const [exporting, setExporting] = useState(false)

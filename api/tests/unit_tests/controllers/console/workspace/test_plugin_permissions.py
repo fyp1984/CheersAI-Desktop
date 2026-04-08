@@ -8,6 +8,8 @@ from controllers.console.workspace import (
     require_knowledge_view_capability,
     require_plugin_manage_capability,
     require_team_manage_capability,
+    require_workflow_edit_capability,
+    require_workflow_view_capability,
     require_workspace_settings_capability,
 )
 
@@ -97,6 +99,36 @@ class TestWorkspaceCapabilityDecorators:
         @require_knowledge_edit_capability
         def protected_view():
             return "knowledge-edit"
+
+        with app.test_request_context():
+            with patch("controllers.console.wraps.current_account_with_tenant", return_value=(DummyAccount(), "tenant-1")):
+                with pytest.raises(Exception) as exc_info:
+                    protected_view()
+
+        assert exc_info.value.code == 403
+
+    def test_should_allow_normalized_workflow_view_capability(self):
+        class DummyAccount:
+            current_role = "editor"
+
+        @require_workflow_view_capability
+        def protected_view():
+            return "workflow-view"
+
+        with patch("controllers.console.wraps.current_account_with_tenant", return_value=(DummyAccount(), "tenant-1")):
+            result = protected_view()
+
+        assert result == "workflow-view"
+
+    def test_should_reject_normal_role_to_edit_workflow(self):
+        app = Flask(__name__)
+
+        class DummyAccount:
+            current_role = "normal"
+
+        @require_workflow_edit_capability
+        def protected_view():
+            return "workflow-edit"
 
         with app.test_request_context():
             with patch("controllers.console.wraps.current_account_with_tenant", return_value=(DummyAccount(), "tenant-1")):

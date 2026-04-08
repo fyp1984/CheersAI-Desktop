@@ -9,16 +9,19 @@ type LanguageDeps = {
   setLocale?: (locale: string) => Promise<void>
 }
 
+const tr = (key: string, fallback: string) => {
+  return getI18n()?.t?.(key as any, { ns: 'app' }) ?? fallback
+}
+
 const buildLanguageCommands = (query: string): CommandSearchResult[] => {
   const q = query.toLowerCase()
   const list = languages.filter(item => item.supported && (
     !q || item.name.toLowerCase().includes(q) || String(item.value).toLowerCase().includes(q)
   ))
-  const i18n = getI18n()
   return list.map(item => ({
     id: `lang-${item.value}`,
     title: item.name,
-    description: i18n.t('gotoAnything.actions.languageChangeDesc', { ns: 'app' }),
+    description: tr('gotoAnything.actions.languageChangeDesc', 'Switch application language'),
     type: 'command' as const,
     data: { command: 'i18n.set', args: { locale: item.value } },
   }))

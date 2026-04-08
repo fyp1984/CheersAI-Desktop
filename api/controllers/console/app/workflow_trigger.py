@@ -15,6 +15,7 @@ from libs.login import current_user, login_required
 from models.enums import AppTriggerStatus
 from models.model import Account, App, AppMode
 from models.trigger import AppTrigger, WorkflowWebhookTrigger
+from ..workspace import require_workflow_edit_capability, require_workflow_view_capability
 
 from .. import console_ns
 from ..app.wraps import get_app_model
@@ -58,6 +59,7 @@ class WebhookTriggerApi(Resource):
     @account_initialization_required
     @get_app_model(mode=AppMode.WORKFLOW)
     @marshal_with(webhook_trigger_model)
+    @require_workflow_view_capability
     def get(self, app_model: App):
         """Get webhook trigger for a node"""
         args = Parser.model_validate(request.args.to_dict(flat=True))  # type: ignore
@@ -90,6 +92,7 @@ class AppTriggersApi(Resource):
     @account_initialization_required
     @get_app_model(mode=AppMode.WORKFLOW)
     @marshal_with(triggers_list_model)
+    @require_workflow_view_capability
     def get(self, app_model: App):
         """Get app triggers list"""
         assert isinstance(current_user, Account)
@@ -127,6 +130,7 @@ class AppTriggerEnableApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_workflow_edit_capability
     @edit_permission_required
     @get_app_model(mode=AppMode.WORKFLOW)
     @marshal_with(trigger_model)

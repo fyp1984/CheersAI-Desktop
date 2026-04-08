@@ -17,10 +17,15 @@ vi.mock('next/navigation', () => ({
 // Mock app context
 const mockIsCurrentWorkspaceEditor = vi.fn(() => true)
 const mockIsCurrentWorkspaceDatasetOperator = vi.fn(() => false)
+const mockCanViewWorkflow = vi.fn(() => true)
+const mockCanEditWorkflow = vi.fn(() => true)
 vi.mock('@/context/app-context', () => ({
   useAppContext: () => ({
     isCurrentWorkspaceEditor: mockIsCurrentWorkspaceEditor(),
     isCurrentWorkspaceDatasetOperator: mockIsCurrentWorkspaceDatasetOperator(),
+    isLoadingCurrentWorkspace: false,
+    canViewWorkflow: mockCanViewWorkflow(),
+    canEditWorkflow: mockCanEditWorkflow(),
   }),
 }))
 
@@ -58,8 +63,9 @@ vi.mock('./hooks/use-dsl-drag-drop', () => ({
 }))
 
 const mockSetActiveTab = vi.fn()
+let mockActiveTab: string | AppModeEnum = 'all'
 vi.mock('nuqs', () => ({
-  useQueryState: () => ['all', mockSetActiveTab],
+  useQueryState: () => [mockActiveTab, mockSetActiveTab],
   parseAsString: {
     withDefault: () => ({
       withOptions: () => ({}),
@@ -206,12 +212,6 @@ vi.mock('./empty', () => ({
   },
 }))
 
-vi.mock('./footer', () => ({
-  default: () => {
-    return React.createElement('footer', { 'data-testid': 'footer', 'role': 'contentinfo' }, 'Footer')
-  },
-}))
-
 // Store IntersectionObserver callback
 let intersectionCallback: IntersectionObserverCallback | null = null
 const mockObserve = vi.fn()
@@ -244,6 +244,9 @@ describe('List', () => {
     })
     mockIsCurrentWorkspaceEditor.mockReturnValue(true)
     mockIsCurrentWorkspaceDatasetOperator.mockReturnValue(false)
+    mockCanViewWorkflow.mockReturnValue(true)
+    mockCanEditWorkflow.mockReturnValue(true)
+    mockActiveTab = 'all'
     mockDragging = false
     mockOnDSLFileDropped = null
     mockTagFilterOnChange = null
@@ -261,19 +264,7 @@ describe('List', () => {
   describe('Rendering', () => {
     it('should render without crashing', () => {
       render(<List />)
-      // Tab slider renders app type tabs
-      expect(screen.getByText('app.types.all')).toBeInTheDocument()
-    })
-
-    it('should render tab slider with all app types', () => {
-      render(<List />)
-
-      expect(screen.getByText('app.types.all')).toBeInTheDocument()
-      expect(screen.getByText('app.types.workflow')).toBeInTheDocument()
-      expect(screen.getByText('app.types.advanced')).toBeInTheDocument()
-      expect(screen.getByText('app.types.chatbot')).toBeInTheDocument()
-      expect(screen.getByText('app.types.agent')).toBeInTheDocument()
-      expect(screen.getByText('app.types.completion')).toBeInTheDocument()
+      expect(screen.getByRole('textbox')).toBeInTheDocument()
     })
 
     it('should render search input', () => {
@@ -305,32 +296,9 @@ describe('List', () => {
       expect(screen.getByTestId('new-app-card')).toBeInTheDocument()
     })
 
-    it('should render footer when branding is disabled', () => {
-      render(<List />)
-      expect(screen.getByTestId('footer')).toBeInTheDocument()
-    })
-
     it('should render drop DSL hint for editors', () => {
       render(<List />)
       expect(screen.getByText('app.newApp.dropDSLToCreateApp')).toBeInTheDocument()
-    })
-  })
-
-  describe('Tab Navigation', () => {
-    it('should call setActiveTab when tab is clicked', () => {
-      render(<List />)
-
-      fireEvent.click(screen.getByText('app.types.workflow'))
-
-      expect(mockSetActiveTab).toHaveBeenCalledWith(AppModeEnum.WORKFLOW)
-    })
-
-    it('should call setActiveTab for all tab', () => {
-      render(<List />)
-
-      fireEvent.click(screen.getByText('app.types.all'))
-
-      expect(mockSetActiveTab).toHaveBeenCalledWith('all')
     })
   })
 
@@ -447,10 +415,10 @@ describe('List', () => {
   describe('Edge Cases', () => {
     it('should handle multiple renders without issues', () => {
       const { rerender } = render(<List />)
-      expect(screen.getByText('app.types.all')).toBeInTheDocument()
+      expect(screen.getByRole('textbox')).toBeInTheDocument()
 
       rerender(<List />)
-      expect(screen.getByText('app.types.all')).toBeInTheDocument()
+      expect(screen.getByRole('textbox')).toBeInTheDocument()
     })
 
     it('should render app cards correctly', () => {
@@ -473,36 +441,6 @@ describe('List', () => {
     it('should show drop hint when DSL feature is enabled for editors', () => {
       render(<List />)
       expect(screen.getByText('app.newApp.dropDSLToCreateApp')).toBeInTheDocument()
-    })
-  })
-
-  describe('App Type Tabs', () => {
-    it('should render all app type tabs', () => {
-      render(<List />)
-
-      expect(screen.getByText('app.types.all')).toBeInTheDocument()
-      expect(screen.getByText('app.types.workflow')).toBeInTheDocument()
-      expect(screen.getByText('app.types.advanced')).toBeInTheDocument()
-      expect(screen.getByText('app.types.chatbot')).toBeInTheDocument()
-      expect(screen.getByText('app.types.agent')).toBeInTheDocument()
-      expect(screen.getByText('app.types.completion')).toBeInTheDocument()
-    })
-
-    it('should call setActiveTab for each app type', () => {
-      render(<List />)
-
-      const appTypeTexts = [
-        { mode: AppModeEnum.WORKFLOW, text: 'app.types.workflow' },
-        { mode: AppModeEnum.ADVANCED_CHAT, text: 'app.types.advanced' },
-        { mode: AppModeEnum.CHAT, text: 'app.types.chatbot' },
-        { mode: AppModeEnum.AGENT_CHAT, text: 'app.types.agent' },
-        { mode: AppModeEnum.COMPLETION, text: 'app.types.completion' },
-      ]
-
-      appTypeTexts.forEach(({ mode, text }) => {
-        fireEvent.click(screen.getByText(text))
-        expect(mockSetActiveTab).toHaveBeenCalledWith(mode)
-      })
     })
   })
 
@@ -544,14 +482,6 @@ describe('List', () => {
     })
   })
 
-  describe('Footer Visibility', () => {
-    it('should render footer when branding is disabled', () => {
-      render(<List />)
-
-      expect(screen.getByTestId('footer')).toBeInTheDocument()
-    })
-  })
-
   // --------------------------------------------------------------------------
   // Additional Coverage Tests
   // --------------------------------------------------------------------------
@@ -564,13 +494,23 @@ describe('List', () => {
       expect(container).toBeInTheDocument()
     })
 
-    it('should handle app mode filter in query params', () => {
+    it('should redirect when workflow category is not accessible', () => {
+      mockActiveTab = AppModeEnum.WORKFLOW
+      mockCanViewWorkflow.mockReturnValue(false)
+
       render(<List />)
 
-      const workflowTab = screen.getByText('app.types.workflow')
-      fireEvent.click(workflowTab)
+      expect(mockReplace).toHaveBeenCalledWith('/apps')
+    })
 
-      expect(mockSetActiveTab).toHaveBeenCalledWith(AppModeEnum.WORKFLOW)
+    it('should disable workflow creation affordances without workflow edit capability', () => {
+      mockActiveTab = AppModeEnum.WORKFLOW
+      mockCanEditWorkflow.mockReturnValue(false)
+
+      render(<List />)
+
+      expect(screen.queryByTestId('new-app-card')).not.toBeInTheDocument()
+      expect(screen.queryByText('app.newApp.dropDSLToCreateApp')).not.toBeInTheDocument()
     })
 
     it('should render new app card for editors', () => {

@@ -10,6 +10,10 @@ type ThemeDeps = {
   setTheme?: (value: 'light' | 'dark' | 'system') => void
 }
 
+const tr = (key: string, fallback: string, locale?: string) => {
+  return getI18n()?.t?.(key as any, { ns: 'app', lng: locale }) ?? fallback
+}
+
 const THEME_ITEMS = [
   {
     id: 'system',
@@ -32,17 +36,16 @@ const THEME_ITEMS = [
 ] as const
 
 const buildThemeCommands = (query: string, locale?: string): CommandSearchResult[] => {
-  const i18n = getI18n()
   const q = query.toLowerCase()
   const list = THEME_ITEMS.filter(item =>
     !q
-    || i18n.t(item.titleKey, { ns: 'app', lng: locale }).toLowerCase().includes(q)
+    || tr(item.titleKey, item.id, locale).toLowerCase().includes(q)
     || item.id.includes(q),
   )
   return list.map(item => ({
     id: item.id,
-    title: i18n.t(item.titleKey, { ns: 'app', lng: locale }),
-    description: i18n.t(item.descKey, { ns: 'app', lng: locale }),
+    title: tr(item.titleKey, item.id, locale),
+    description: tr(item.descKey, item.id, locale),
     type: 'command' as const,
     icon: (
       <div className="flex h-6 w-6 items-center justify-center rounded-md border-[0.5px] border-divider-regular bg-components-panel-bg">

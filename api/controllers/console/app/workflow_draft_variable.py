@@ -13,6 +13,7 @@ from controllers.console.app.error import (
     DraftWorkflowNotExist,
 )
 from controllers.console.app.wraps import get_app_model
+from controllers.console.workspace import require_workflow_edit_capability
 from controllers.console.wraps import account_initialization_required, edit_permission_required, setup_required
 from controllers.web.error import InvalidArgumentError, NotFoundError
 from core.file import helpers as file_helpers
@@ -196,6 +197,7 @@ def _api_prerequisite(f: Callable[P, R]):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_workflow_edit_capability
     @edit_permission_required
     @get_app_model(mode=[AppMode.ADVANCED_CHAT, AppMode.WORKFLOW])
     @wraps(f)

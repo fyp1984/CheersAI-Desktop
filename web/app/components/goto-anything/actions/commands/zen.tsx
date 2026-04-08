@@ -8,6 +8,10 @@ import { registerCommands, unregisterCommands } from './command-bus'
 // Zen command dependency types - no external dependencies needed
 type ZenDeps = Record<string, never>
 
+const tr = (key: string, fallback: string, locale: string) => {
+  return getI18n()?.t?.(key as any, { ns: 'app', lng: locale }) ?? fallback
+}
+
 // Custom event name for zen toggle
 export const ZEN_TOGGLE_EVENT = 'zen-toggle-maximize'
 
@@ -32,11 +36,10 @@ export const zenCommand: SlashCommandHandler<ZenDeps> = {
   execute: toggleZenMode,
 
   async search(_args: string, locale: string = 'en') {
-    const i18n = getI18n()
     return [{
       id: 'zen',
-      title: i18n.t('gotoAnything.actions.zenTitle', { ns: 'app', lng: locale }) || 'Zen Mode',
-      description: i18n.t('gotoAnything.actions.zenDesc', { ns: 'app', lng: locale }) || 'Toggle canvas focus mode',
+      title: tr('gotoAnything.actions.zenTitle', 'Zen Mode', locale),
+      description: tr('gotoAnything.actions.zenDesc', 'Toggle canvas focus mode', locale),
       type: 'command' as const,
       icon: (
         <div className="flex h-6 w-6 items-center justify-center rounded-md border-[0.5px] border-divider-regular bg-components-panel-bg">
