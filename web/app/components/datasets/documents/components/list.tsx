@@ -63,6 +63,7 @@ const renderCount = (count: number | undefined) => {
 type LocalDoc = SimpleDocumentDetail & { percent?: number }
 type IDocumentListProps = {
   embeddingAvailable: boolean
+  canEditKnowledge?: boolean
   documents: LocalDoc[]
   selectedIds: string[]
   onSelectedIdChange: (selectedIds: string[]) => void
@@ -79,6 +80,7 @@ type IDocumentListProps = {
  */
 const DocumentList: FC<IDocumentListProps> = ({
   embeddingAvailable,
+  canEditKnowledge = true,
   documents = [],
   selectedIds,
   onSelectedIdChange,
@@ -348,7 +350,7 @@ const DocumentList: FC<IDocumentListProps> = ({
             <tr>
               <td className="w-12">
                 <div className="flex items-center" onClick={e => e.stopPropagation()}>
-                  {embeddingAvailable && (
+                  {embeddingAvailable && canEditKnowledge && (
                     <Checkbox
                       className="mr-2 shrink-0"
                       checked={isAllSelected}
@@ -390,7 +392,8 @@ const DocumentList: FC<IDocumentListProps> = ({
                 >
                   <td className="text-left align-middle text-xs text-text-tertiary">
                     <div className="flex items-center" onClick={e => e.stopPropagation()}>
-                      <Checkbox
+                      {canEditKnowledge && (
+                        <Checkbox
                         className="mr-2 shrink-0"
                         checked={selectedIds.includes(doc.id)}
                         onCheck={() => {
@@ -400,7 +403,8 @@ const DocumentList: FC<IDocumentListProps> = ({
                               : [...selectedIds, doc.id],
                           )
                         }}
-                      />
+                        />
+                      )}
                       {index + 1}
                     </div>
                   </td>
@@ -456,7 +460,8 @@ const DocumentList: FC<IDocumentListProps> = ({
                           </div>
                         )
                       }
-                      <div className="hidden shrink-0 group-hover:ml-auto group-hover:flex">
+                      {canEditKnowledge && (
+                        <div className="hidden shrink-0 group-hover:ml-auto group-hover:flex">
                         <Tooltip
                           popupContent={t('list.table.rename', { ns: 'datasetDocuments' })}
                         >
@@ -470,7 +475,8 @@ const DocumentList: FC<IDocumentListProps> = ({
                             <RiEditLine className="h-4 w-4 text-text-tertiary" />
                           </div>
                         </Tooltip>
-                      </div>
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td>
@@ -489,6 +495,7 @@ const DocumentList: FC<IDocumentListProps> = ({
                   </td>
                   <td>
                     <Operations
+                      canEditKnowledge={canEditKnowledge}
                       selectedIds={selectedIds}
                       onSelectedIdChange={onSelectedIdChange}
                       embeddingAvailable={embeddingAvailable}
@@ -503,7 +510,7 @@ const DocumentList: FC<IDocumentListProps> = ({
           </tbody>
         </table>
       </div>
-      {(selectedIds.length > 0) && (
+      {canEditKnowledge && (selectedIds.length > 0) && (
         <BatchAction
           className="absolute bottom-16 left-0 z-20"
           selectedIds={selectedIds}

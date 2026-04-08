@@ -10,7 +10,7 @@ from werkzeug.exceptions import Forbidden
 from configs import dify_config
 from controllers.common.schema import register_enum_models, register_schema_models
 from controllers.console import console_ns
-from controllers.console.workspace import plugin_permission_required
+from controllers.console.workspace import plugin_permission_required, require_plugin_manage_capability
 from controllers.console.wraps import account_initialization_required, is_admin_or_owner_required, setup_required
 from core.model_runtime.utils.encoders import jsonable_encoder
 from core.plugin.impl.exc import PluginDaemonClientSideError
@@ -174,6 +174,7 @@ class PluginDebuggingKeyApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     @plugin_permission_required(debug_required=True)
     def get(self):
         _, tenant_id = current_account_with_tenant()
@@ -194,6 +195,7 @@ class PluginListApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def get(self):
         _, tenant_id = current_account_with_tenant()
         args = ParserList.model_validate(request.args.to_dict(flat=True))  # type: ignore
@@ -211,6 +213,7 @@ class PluginListLatestVersionsApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def post(self):
         args = ParserLatest.model_validate(console_ns.payload)
 
@@ -228,6 +231,7 @@ class PluginListInstallationsFromIdsApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def post(self):
         _, tenant_id = current_account_with_tenant()
 
@@ -263,6 +267,7 @@ class PluginAssetApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def get(self):
         args = ParserAsset.model_validate(request.args.to_dict(flat=True))  # type: ignore
 
@@ -279,6 +284,7 @@ class PluginUploadFromPkgApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def post(self):
         _, tenant_id = current_account_with_tenant()
@@ -304,6 +310,7 @@ class PluginUploadFromGithubApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def post(self):
         _, tenant_id = current_account_with_tenant()
@@ -323,6 +330,7 @@ class PluginUploadFromBundleApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def post(self):
         _, tenant_id = current_account_with_tenant()
@@ -348,6 +356,7 @@ class PluginInstallFromPkgApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def post(self):
         _, tenant_id = current_account_with_tenant()
@@ -367,6 +376,7 @@ class PluginInstallFromGithubApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def post(self):
         _, tenant_id = current_account_with_tenant()
@@ -393,6 +403,7 @@ class PluginInstallFromMarketplaceApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def post(self):
         _, tenant_id = current_account_with_tenant()
@@ -413,6 +424,7 @@ class PluginFetchMarketplacePkgApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def get(self):
         _, tenant_id = current_account_with_tenant()
@@ -437,6 +449,7 @@ class PluginFetchManifestApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def get(self):
         _, tenant_id = current_account_with_tenant()
@@ -457,6 +470,7 @@ class PluginFetchInstallTasksApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def get(self):
         _, tenant_id = current_account_with_tenant()
@@ -474,6 +488,7 @@ class PluginFetchInstallTaskApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def get(self, task_id: str):
         _, tenant_id = current_account_with_tenant()
@@ -489,6 +504,7 @@ class PluginDeleteInstallTaskApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def post(self, task_id: str):
         _, tenant_id = current_account_with_tenant()
@@ -504,6 +520,7 @@ class PluginDeleteAllInstallTaskItemsApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def post(self):
         _, tenant_id = current_account_with_tenant()
@@ -519,6 +536,7 @@ class PluginDeleteInstallTaskItemApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def post(self, task_id: str, identifier: str):
         _, tenant_id = current_account_with_tenant()
@@ -535,6 +553,7 @@ class PluginUpgradeFromMarketplaceApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def post(self):
         _, tenant_id = current_account_with_tenant()
@@ -557,6 +576,7 @@ class PluginUpgradeFromGithubApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def post(self):
         _, tenant_id = current_account_with_tenant()
@@ -584,6 +604,7 @@ class PluginUninstallApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def post(self):
         args = ParserUninstall.model_validate(console_ns.payload)
@@ -602,6 +623,7 @@ class PluginChangePermissionApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def post(self):
         current_user, current_tenant_id = current_account_with_tenant()
         user = current_user
@@ -624,6 +646,7 @@ class PluginFetchPermissionApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def get(self):
         _, tenant_id = current_account_with_tenant()
 
@@ -649,6 +672,7 @@ class PluginFetchDynamicSelectOptionsApi(Resource):
     @console_ns.expect(console_ns.models[ParserDynamicOptions.__name__])
     @setup_required
     @login_required
+    @require_plugin_manage_capability
     @is_admin_or_owner_required
     @account_initialization_required
     def get(self):
@@ -679,6 +703,7 @@ class PluginFetchDynamicSelectOptionsWithCredentialsApi(Resource):
     @console_ns.expect(console_ns.models[ParserDynamicOptionsWithCredentials.__name__])
     @setup_required
     @login_required
+    @require_plugin_manage_capability
     @is_admin_or_owner_required
     @account_initialization_required
     def post(self):
@@ -711,6 +736,7 @@ class PluginChangePreferencesApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def post(self):
         user, tenant_id = current_account_with_tenant()
         if not user.is_admin_or_owner:
@@ -760,6 +786,7 @@ class PluginFetchPreferencesApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def get(self):
         _, tenant_id = current_account_with_tenant()
 
@@ -800,6 +827,7 @@ class PluginAutoUpgradeExcludePluginApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def post(self):
         # exclude one single plugin
         _, tenant_id = current_account_with_tenant()
@@ -815,6 +843,7 @@ class PluginReadmeApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def get(self):
         _, tenant_id = current_account_with_tenant()
         args = ParserReadme.model_validate(request.args.to_dict(flat=True))  # type: ignore

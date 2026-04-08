@@ -4,6 +4,7 @@ import { useHover } from 'ahooks'
 import { useRouter } from 'next/navigation'
 import { useMemo, useRef } from 'react'
 import { useSelector as useAppContextWithSelector } from '@/context/app-context'
+import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import CornerLabels from './components/corner-labels'
 import DatasetCardFooter from './components/dataset-card-footer'
 import DatasetCardHeader from './components/dataset-card-header'
@@ -26,7 +27,8 @@ const DatasetCard = ({
 }: DatasetCardProps) => {
   const { push } = useRouter()
 
-  const isCurrentWorkspaceDatasetOperator = useAppContextWithSelector(state => state.isCurrentWorkspaceDatasetOperator)
+  const currentWorkspace = useAppContextWithSelector(state => state.currentWorkspace)
+  const canEditKnowledge = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.knowledgeEdit)
   const tagSelectorRef = useRef<HTMLDivElement>(null)
   const isHoveringTagSelector = useHover(tagSelectorRef)
 
@@ -84,7 +86,7 @@ const DatasetCard = ({
         <DatasetCardFooter dataset={dataset} />
         <OperationsPopover
           dataset={dataset}
-          isCurrentWorkspaceDatasetOperator={isCurrentWorkspaceDatasetOperator}
+          canEditKnowledge={canEditKnowledge}
           openRenameModal={openRenameModal}
           handleExportPipeline={handleExportPipeline}
           detectIsUsedByApp={detectIsUsedByApp}

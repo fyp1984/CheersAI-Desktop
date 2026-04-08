@@ -18,6 +18,7 @@ from controllers.console.auth.error import (
     OwnerTransferLimitError,
 )
 from controllers.console.error import EmailSendIpLimitError, WorkspaceMembersLimitExceeded
+from controllers.console.workspace import require_team_manage_capability, require_workspace_settings_capability
 from controllers.console.wraps import (
     account_initialization_required,
     cloud_edition_billing_resource_check,
@@ -79,6 +80,7 @@ class MemberListApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_team_manage_capability
     @console_ns.response(200, "Success", console_ns.models[AccountWithRoleList.__name__])
     def get(self):
         current_user, _ = current_account_with_tenant()
@@ -98,6 +100,7 @@ class MemberInviteEmailApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_team_manage_capability
     @cloud_edition_billing_resource_check("members")
     def post(self):
         payload = console_ns.payload or {}
@@ -167,6 +170,7 @@ class MemberCancelInviteApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_team_manage_capability
     def delete(self, member_id):
         current_user, _ = current_account_with_tenant()
         if not current_user.current_tenant:
@@ -200,6 +204,7 @@ class MemberUpdateRoleApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_team_manage_capability
     def put(self, member_id):
         payload = console_ns.payload or {}
         args = MemberRoleUpdatePayload.model_validate(payload)
@@ -232,6 +237,7 @@ class DatasetOperatorMemberListApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_team_manage_capability
     @console_ns.response(200, "Success", console_ns.models[AccountWithRoleList.__name__])
     def get(self):
         current_user, _ = current_account_with_tenant()
@@ -251,6 +257,7 @@ class SendOwnerTransferEmailApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_workspace_settings_capability
     @is_allow_transfer_owner
     def post(self):
         payload = console_ns.payload or {}

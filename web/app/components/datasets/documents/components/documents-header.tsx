@@ -49,6 +49,7 @@ type DocumentsHeaderProps = {
 
   // Actions
   onAddDocument: () => void
+  canEditKnowledge?: boolean
 }
 
 const DocumentsHeader: FC<DocumentsHeaderProps> = ({
@@ -74,6 +75,7 @@ const DocumentsHeader: FC<DocumentsHeaderProps> = ({
   onDeleteMetaData,
   onBuiltInEnabledChange,
   onAddDocument,
+  canEditKnowledge = true,
 }) => {
   const { t } = useTranslation()
   const docLink = useDocLink()
@@ -168,7 +170,7 @@ const DocumentsHeader: FC<DocumentsHeaderProps> = ({
               description={t('embeddingModelNotAvailable', { ns: 'dataset' })}
             />
           )}
-          {embeddingAvailable && (
+          {embeddingAvailable && canEditKnowledge && (
             <Button variant="secondary" className="shrink-0" onClick={showEditMetadataModal}>
               <RiDraftLine className="mr-1 size-4" />
               {t('metadata.metadata', { ns: 'dataset' })}
@@ -186,7 +188,7 @@ const DocumentsHeader: FC<DocumentsHeaderProps> = ({
               onIsBuiltInEnabledChange={onBuiltInEnabledChange}
             />
           )}
-          {embeddingAvailable && (
+          {embeddingAvailable && canEditKnowledge && (
             <Button variant="primary" onClick={onAddDocument} className="shrink-0">
               <PlusIcon className="mr-2 h-4 w-4 stroke-current" />
               {addButtonText}

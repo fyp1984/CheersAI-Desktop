@@ -33,7 +33,7 @@ import { useAppContext } from '@/context/app-context'
 import { useProviderContext } from '@/context/provider-context'
 import useBreakpoints, { MediaType } from '@/hooks/use-breakpoints'
 import { cn } from '@/utils/classnames'
-import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
+import { hasPluginManageWorkspaceCapability, hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import Button from '../../base/button'
 import ApiBasedExtensionPage from './api-based-extension-page'
 import DataSourcePage from './data-source-page-new'
@@ -71,7 +71,7 @@ export default function AccountSetting({
   const canManageModels = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.modelManage)
   const canManageTeam = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.teamManage)
   const canEditKnowledge = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.knowledgeEdit)
-  const canManageAgent = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.agentManage)
+  const canManagePlugin = hasPluginManageWorkspaceCapability(currentWorkspace)
   const canManageWorkspaceSettings = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.settingsTeam)
 
   const workplaceGroupItems: GroupItem[] = (() => {
@@ -114,7 +114,7 @@ export default function AccountSetting({
       })
     }
 
-    if (canManageAgent) {
+    if (canManagePlugin) {
       items.push({
         key: ACCOUNT_SETTING_TAB.API_BASED_EXTENSION,
         name: t('settings.apiBasedExtension', { ns: 'common' }),

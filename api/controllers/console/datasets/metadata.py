@@ -6,6 +6,7 @@ from werkzeug.exceptions import NotFound
 
 from controllers.common.schema import register_schema_models
 from controllers.console import console_ns
+from controllers.console.workspace import require_knowledge_edit_capability, require_knowledge_view_capability
 from controllers.console.wraps import account_initialization_required, enterprise_license_required, setup_required
 from fields.dataset_fields import dataset_metadata_fields
 from libs.login import current_account_with_tenant, login_required
@@ -36,6 +37,7 @@ class DatasetMetadataCreateApi(Resource):
     @enterprise_license_required
     @marshal_with(dataset_metadata_fields)
     @console_ns.expect(console_ns.models[MetadataArgs.__name__])
+    @require_knowledge_edit_capability
     def post(self, dataset_id):
         current_user, _ = current_account_with_tenant()
         metadata_args = MetadataArgs.model_validate(console_ns.payload or {})
@@ -53,6 +55,7 @@ class DatasetMetadataCreateApi(Resource):
     @login_required
     @account_initialization_required
     @enterprise_license_required
+    @require_knowledge_view_capability
     def get(self, dataset_id):
         dataset_id_str = str(dataset_id)
         dataset = DatasetService.get_dataset(dataset_id_str)
@@ -69,6 +72,7 @@ class DatasetMetadataApi(Resource):
     @enterprise_license_required
     @marshal_with(dataset_metadata_fields)
     @console_ns.expect(console_ns.models[MetadataUpdatePayload.__name__])
+    @require_knowledge_edit_capability
     def patch(self, dataset_id, metadata_id):
         current_user, _ = current_account_with_tenant()
         payload = MetadataUpdatePayload.model_validate(console_ns.payload or {})
@@ -88,6 +92,7 @@ class DatasetMetadataApi(Resource):
     @login_required
     @account_initialization_required
     @enterprise_license_required
+    @require_knowledge_edit_capability
     def delete(self, dataset_id, metadata_id):
         current_user, _ = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
@@ -107,6 +112,7 @@ class DatasetMetadataBuiltInFieldApi(Resource):
     @login_required
     @account_initialization_required
     @enterprise_license_required
+    @require_knowledge_view_capability
     def get(self):
         built_in_fields = MetadataService.get_built_in_fields()
         return {"fields": built_in_fields}, 200
@@ -118,6 +124,7 @@ class DatasetMetadataBuiltInFieldActionApi(Resource):
     @login_required
     @account_initialization_required
     @enterprise_license_required
+    @require_knowledge_edit_capability
     def post(self, dataset_id, action: Literal["enable", "disable"]):
         current_user, _ = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
@@ -141,6 +148,7 @@ class DocumentMetadataEditApi(Resource):
     @account_initialization_required
     @enterprise_license_required
     @console_ns.expect(console_ns.models[MetadataOperationData.__name__])
+    @require_knowledge_edit_capability
     def post(self, dataset_id):
         current_user, _ = current_account_with_tenant()
         dataset_id_str = str(dataset_id)

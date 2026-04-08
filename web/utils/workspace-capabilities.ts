@@ -5,6 +5,7 @@ export const WORKSPACE_CAPABILITIES = {
   agentUse: 'desktop_agent_use',
   agentTest: 'desktop_agent_test',
   agentManage: 'desktop_agent_manage',
+  pluginManage: 'desktop_plugin_manage',
   chatUse: 'desktop_chat_use',
   knowledgeView: 'desktop_knowledge_view',
   knowledgeEdit: 'desktop_knowledge_edit',
@@ -26,6 +27,7 @@ const WORKSPACE_ROLE_CAPABILITIES: Record<string, string[]> = {
     WORKSPACE_CAPABILITIES.agentUse,
     WORKSPACE_CAPABILITIES.agentTest,
     WORKSPACE_CAPABILITIES.agentManage,
+    WORKSPACE_CAPABILITIES.pluginManage,
     WORKSPACE_CAPABILITIES.chatUse,
     WORKSPACE_CAPABILITIES.knowledgeView,
     WORKSPACE_CAPABILITIES.knowledgeEdit,
@@ -45,6 +47,7 @@ const WORKSPACE_ROLE_CAPABILITIES: Record<string, string[]> = {
     WORKSPACE_CAPABILITIES.agentUse,
     WORKSPACE_CAPABILITIES.agentTest,
     WORKSPACE_CAPABILITIES.agentManage,
+    WORKSPACE_CAPABILITIES.pluginManage,
     WORKSPACE_CAPABILITIES.chatUse,
     WORKSPACE_CAPABILITIES.knowledgeView,
     WORKSPACE_CAPABILITIES.knowledgeEdit,
@@ -64,6 +67,7 @@ const WORKSPACE_ROLE_CAPABILITIES: Record<string, string[]> = {
     WORKSPACE_CAPABILITIES.agentUse,
     WORKSPACE_CAPABILITIES.agentTest,
     WORKSPACE_CAPABILITIES.agentManage,
+    WORKSPACE_CAPABILITIES.pluginManage,
     WORKSPACE_CAPABILITIES.chatUse,
     WORKSPACE_CAPABILITIES.knowledgeView,
     WORKSPACE_CAPABILITIES.knowledgeEdit,
@@ -119,3 +123,10 @@ export const hasAnyWorkspaceCapability = (
   workspace: Pick<ICurrentWorkspace, 'role' | 'capabilities'> | null | undefined,
   capabilities: string[],
 ) => capabilities.some(capability => hasWorkspaceCapability(workspace, capability))
+
+export const hasPluginManageWorkspaceCapability = (
+  workspace: Pick<ICurrentWorkspace, 'role' | 'capabilities'> | null | undefined,
+) => hasAnyWorkspaceCapability(workspace, [
+  WORKSPACE_CAPABILITIES.pluginManage,
+  WORKSPACE_CAPABILITIES.agentManage,
+])

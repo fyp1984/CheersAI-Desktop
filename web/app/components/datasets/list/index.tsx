@@ -1,6 +1,6 @@
 'use client'
 
-import { useBoolean, useDebounceFn } from 'ahooks'
+import { useDebounceFn } from 'ahooks'
 import { useRouter } from 'next/navigation'
 // Libraries
 import { useEffect, useState } from 'react'
@@ -33,7 +33,7 @@ const List = () => {
   const { currentWorkspace, isCurrentWorkspaceOwner } = useAppContext()
   const showTagManagementModal = useTagStore(s => s.showTagManagementModal)
   const { showExternalApiPanel, setShowExternalApiPanel } = useExternalApiPanel()
-  const [includeAll, { toggle: toggleIncludeAll }] = useBoolean(false)
+  const [includeAll, setIncludeAll] = useState(false)
   useDocumentTitle(t('knowledge', { ns: 'dataset' }))
 
   const [keywords, setKeywords] = useState('')
@@ -60,6 +60,10 @@ const List = () => {
       return router.replace('/apps')
   }, [currentWorkspace, router])
 
+  useEffect(() => {
+    setIncludeAll(isCurrentWorkspaceOwner)
+  }, [currentWorkspace.id, isCurrentWorkspaceOwner])
+
   const isCurrentWorkspaceManager = useAppContextSelector(state => state.isCurrentWorkspaceManager)
   const { data: apiBaseInfo } = useDatasetApiBaseUrl()
 
@@ -70,7 +74,7 @@ const List = () => {
           {isCurrentWorkspaceOwner && (
             <CheckboxWithLabel
               isChecked={includeAll}
-              onChange={toggleIncludeAll}
+              onChange={() => setIncludeAll(value => !value)}
               label={t('allKnowledge', { ns: 'dataset' })}
               labelClassName="system-md-regular text-text-secondary"
               className="mr-2"

@@ -2,7 +2,7 @@ from flask_login import current_user
 
 from configs import dify_config
 from extensions.ext_database import db
-from libs.desktop_auth import get_role_capabilities
+from libs.desktop_auth import get_role_capabilities, load_desktop_sso_projection
 from models.account import Tenant, TenantAccountJoin, TenantAccountRole
 from services.account_service import TenantService
 from services.feature_service import FeatureService
@@ -32,6 +32,14 @@ class WorkspaceService:
         assert tenant_account_join is not None, "TenantAccountJoin not found"
         tenant_info["role"] = tenant_account_join.role
         tenant_info["capabilities"] = get_role_capabilities(tenant_account_join.role)
+
+        sso_projection = load_desktop_sso_projection(current_user.id, tenant.id)
+        if sso_projection:
+            projection_capabilities = sso_projection.get("capabilities")
+            if isinstance(projection_capabilities, list):
+                tenant_info["capabilities"] = [capability for capability in projection_capabilities if isinstance(capability, str)]
+            tenant_info["sso_mapped_role"] = sso_projection.get("mapped_role")
+            tenant_info["sso_sync_hash"] = sso_projection.get("sync_hash")
 
         feature = FeatureService.get_features(tenant.id)
         can_replace_logo = feature.can_replace_logo

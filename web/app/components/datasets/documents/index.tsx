@@ -3,12 +3,14 @@ import type { FC } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect } from 'react'
 import Loading from '@/app/components/base/loading'
+import { useSelector as useAppContextWithSelector } from '@/context/app-context'
 import { useDatasetDetailContextWithSelector } from '@/context/dataset-detail'
 import { useProviderContext } from '@/context/provider-context'
 import { DataSourceType } from '@/models/datasets'
 import { useDocumentList, useInvalidDocumentDetail, useInvalidDocumentList } from '@/service/knowledge/use-document'
 import { useChildSegmentListKey, useSegmentListKey } from '@/service/knowledge/use-segment'
 import { useInvalid } from '@/service/use-base'
+import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import useEditDocumentMetadata from '../metadata/hooks/use-edit-dataset-metadata'
 import DocumentsHeader from './components/documents-header'
 import EmptyElement from './components/empty-element'
@@ -26,6 +28,8 @@ const Documents: FC<IDocumentsProps> = ({ datasetId }) => {
 
   const dataset = useDatasetDetailContextWithSelector(s => s.dataset)
   const embeddingAvailable = !!dataset?.embedding_available
+  const currentWorkspace = useAppContextWithSelector(state => state.currentWorkspace)
+  const canEditKnowledge = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.knowledgeEdit)
 
   // Use custom hook for page state management
   const {
@@ -126,6 +130,7 @@ const Documents: FC<IDocumentsProps> = ({ datasetId }) => {
       return (
         <List
           embeddingAvailable={embeddingAvailable}
+          canEditKnowledge={canEditKnowledge}
           documents={documentsList || []}
           datasetId={datasetId}
           onUpdate={handleUpdate}
@@ -148,7 +153,7 @@ const Documents: FC<IDocumentsProps> = ({ datasetId }) => {
     const isDataSourceNotion = dataset?.data_source_type === DataSourceType.NOTION
     return (
       <EmptyElement
-        canAdd={embeddingAvailable}
+        canAdd={embeddingAvailable && canEditKnowledge}
         onClick={routeToDocCreate}
         type={isDataSourceNotion ? 'sync' : 'upload'}
       />
@@ -180,6 +185,7 @@ const Documents: FC<IDocumentsProps> = ({ datasetId }) => {
         onDeleteMetaData={handleDeleteMetaData}
         onBuiltInEnabledChange={setBuiltInEnabled}
         onAddDocument={routeToDocCreate}
+        canEditKnowledge={canEditKnowledge}
       />
       <div className="flex h-0 grow flex-col px-6 pt-4">
         {renderContent()}

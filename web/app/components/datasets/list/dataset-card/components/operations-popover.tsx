@@ -7,7 +7,7 @@ import Operations from '../operations'
 
 type OperationsPopoverProps = {
   dataset: DataSet
-  isCurrentWorkspaceDatasetOperator: boolean
+  canEditKnowledge: boolean
   openRenameModal: () => void
   handleExportPipeline: (include?: boolean) => void
   detectIsUsedByApp: () => void
@@ -15,7 +15,7 @@ type OperationsPopoverProps = {
 
 const OperationsPopover = ({
   dataset,
-  isCurrentWorkspaceDatasetOperator,
+  canEditKnowledge,
   openRenameModal,
   handleExportPipeline,
   detectIsUsedByApp,
@@ -24,7 +24,7 @@ const OperationsPopover = ({
     <CustomPopover
       htmlContent={(
         <Operations
-          showDelete={!isCurrentWorkspaceDatasetOperator}
+          showDelete={canEditKnowledge}
           showExportPipeline={dataset.runtime_mode === 'rag_pipeline'}
           openRenameModal={openRenameModal}
           handleExportPipeline={handleExportPipeline}

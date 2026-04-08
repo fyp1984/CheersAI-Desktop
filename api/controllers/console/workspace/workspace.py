@@ -17,6 +17,7 @@ from controllers.common.errors import (
 from controllers.console import console_ns
 from controllers.console.admin import admin_required
 from controllers.console.error import AccountNotLinkTenantError
+from controllers.console.workspace import require_workspace_settings_capability
 from controllers.console.wraps import (
     account_initialization_required,
     cloud_edition_billing_resource_check,
@@ -212,6 +213,7 @@ class CustomConfigWorkspaceApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_workspace_settings_capability
     @cloud_edition_billing_resource_check("workspace_custom")
     def post(self):
         _, current_tenant_id = current_account_with_tenant()
@@ -237,6 +239,7 @@ class WebappLogoWorkspaceApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_workspace_settings_capability
     @cloud_edition_billing_resource_check("workspace_custom")
     def post(self):
         current_user, _ = current_account_with_tenant()
@@ -278,6 +281,7 @@ class WorkspaceInfoApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_workspace_settings_capability
     # Change workspace name
     def post(self):
         _, current_tenant_id = current_account_with_tenant()

@@ -23,6 +23,7 @@ from controllers.console.wraps import (
 )
 from extensions.ext_database import db
 from fields.file_fields import FileResponse, UploadConfig
+from libs.desktop_auth import has_any_workspace_capability
 from libs.login import current_account_with_tenant, login_required
 from services.file_service import FileService
 
@@ -60,7 +61,7 @@ class FileApi(Resource):
     @cloud_edition_billing_resource_check("documents")
     @console_ns.response(201, "File uploaded successfully", console_ns.models[FileResponse.__name__])
     def post(self):
-        current_user, _ = current_account_with_tenant()
+        current_user, tenant_id = current_account_with_tenant()
         source_str = request.form.get("source")
         source: Literal["datasets"] | None = "datasets" if source_str == "datasets" else None
 
@@ -73,6 +74,8 @@ class FileApi(Resource):
 
         if not file.filename:
             raise FilenameNotExistsError
+        if source == "datasets" and not has_any_workspace_capability(current_user, ["desktop_knowledge_edit"], tenant_id):
+            raise Forbidden()
         if source == "datasets" and not current_user.is_dataset_editor:
             raise Forbidden()
 

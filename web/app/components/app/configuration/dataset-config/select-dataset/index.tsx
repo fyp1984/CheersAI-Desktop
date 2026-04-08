@@ -140,55 +140,64 @@ const SelectDataSet: FC<ISelectDataSetProps> = ({
       {datasets.length > 0 && (
         <>
           <div ref={listRef} className="mt-7 max-h-[286px] space-y-1 overflow-y-auto">
-            {datasets.map(item => (
-              <div
-                key={item.id}
-                className={cn(
-                  'flex h-10 cursor-pointer items-center rounded-lg border-[0.5px] border-components-panel-border-subtle bg-components-panel-on-panel-item-bg px-2 shadow-xs hover:border-components-panel-border hover:bg-components-panel-on-panel-item-bg-hover hover:shadow-sm',
-                  selected.some(i => i.id === item.id) && 'border-[1.5px] border-components-option-card-option-selected-border bg-state-accent-hover shadow-xs hover:border-components-option-card-option-selected-border hover:bg-state-accent-hover hover:shadow-xs',
-                  !item.embedding_available && 'hover:border-components-panel-border-subtle hover:bg-components-panel-on-panel-item-bg hover:shadow-xs',
-                )}
-                onClick={() => {
-                  if (!item.embedding_available)
-                    return
-                  toggleSelect(item)
-                }}
-              >
-                <div className="mr-1 flex grow items-center overflow-hidden">
-                  <div className={cn('mr-2', !item.embedding_available && 'opacity-30')}>
-                    <AppIcon
-                      size="tiny"
-                      iconType={item.icon_info.icon_type}
-                      icon={item.icon_info.icon}
-                      background={item.icon_info.icon_type === 'image' ? undefined : item.icon_info.icon_background}
-                      imageUrl={item.icon_info.icon_type === 'image' ? item.icon_info.icon_url : undefined}
-                    />
-                  </div>
-                  <div className={cn('max-w-[200px] truncate text-[13px] font-medium text-text-secondary', !item.embedding_available && '!max-w-[120px] opacity-30')}>{item.name}</div>
-                  {!item.embedding_available && (
-                    <span className="ml-1 shrink-0 rounded-md border border-divider-deep px-1 text-xs font-normal leading-[18px] text-text-tertiary">{t('unavailable', { ns: 'dataset' })}</span>
+            {datasets.map((item) => {
+              const iconInfo = item.icon_info || {
+                icon: '📙',
+                icon_type: 'emoji',
+                icon_background: '#FFF4ED',
+                icon_url: '',
+              }
+
+              return (
+                <div
+                  key={item.id}
+                  className={cn(
+                    'flex h-10 cursor-pointer items-center rounded-lg border-[0.5px] border-components-panel-border-subtle bg-components-panel-on-panel-item-bg px-2 shadow-xs hover:border-components-panel-border hover:bg-components-panel-on-panel-item-bg-hover hover:shadow-sm',
+                    selected.some(i => i.id === item.id) && 'border-[1.5px] border-components-option-card-option-selected-border bg-state-accent-hover shadow-xs hover:border-components-option-card-option-selected-border hover:bg-state-accent-hover hover:shadow-xs',
+                    !item.embedding_available && 'hover:border-components-panel-border-subtle hover:bg-components-panel-on-panel-item-bg hover:shadow-xs',
                   )}
-                </div>
-                {item.is_multimodal && (
-                  <div className="mr-1 shrink-0">
-                    <FeatureIcon feature={ModelFeatureEnum.vision} />
+                  onClick={() => {
+                    if (!item.embedding_available)
+                      return
+                    toggleSelect(item)
+                  }}
+                >
+                  <div className="mr-1 flex grow items-center overflow-hidden">
+                    <div className={cn('mr-2', !item.embedding_available && 'opacity-30')}>
+                      <AppIcon
+                        size="tiny"
+                        iconType={iconInfo.icon_type}
+                        icon={iconInfo.icon}
+                        background={iconInfo.icon_type === 'image' ? undefined : iconInfo.icon_background}
+                        imageUrl={iconInfo.icon_type === 'image' ? iconInfo.icon_url : undefined}
+                      />
+                    </div>
+                    <div className={cn('max-w-[200px] truncate text-[13px] font-medium text-text-secondary', !item.embedding_available && '!max-w-[120px] opacity-30')}>{item.name}</div>
+                    {!item.embedding_available && (
+                      <span className="ml-1 shrink-0 rounded-md border border-divider-deep px-1 text-xs font-normal leading-[18px] text-text-tertiary">{t('unavailable', { ns: 'dataset' })}</span>
+                    )}
                   </div>
-                )}
-                {
-                  !!item.indexing_technique && (
-                    <Badge
-                      className="shrink-0"
-                      text={formatIndexingTechniqueAndMethod(item.indexing_technique, item.retrieval_model_dict?.search_method)}
-                    />
-                  )
-                }
-                {
-                  item.provider === 'external' && (
-                    <Badge className="shrink-0" text={t('externalTag', { ns: 'dataset' })} />
-                  )
-                }
-              </div>
-            ))}
+                  {item.is_multimodal && (
+                    <div className="mr-1 shrink-0">
+                      <FeatureIcon feature={ModelFeatureEnum.vision} />
+                    </div>
+                  )}
+                  {
+                    !!item.indexing_technique && (
+                      <Badge
+                        className="shrink-0"
+                        text={formatIndexingTechniqueAndMethod(item.indexing_technique, item.retrieval_model_dict?.search_method)}
+                      />
+                    )
+                  }
+                  {
+                    item.provider === 'external' && (
+                      <Badge className="shrink-0" text={t('externalTag', { ns: 'dataset' })} />
+                    )
+                  }
+                </div>
+              )
+            })}
             {isFetchingNextPage && <Loading />}
           </div>
         </>
