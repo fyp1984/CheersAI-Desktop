@@ -3,9 +3,7 @@
 Audit Log Service - Database Logging
 """
 
-import json
 import logging
-from datetime import datetime
 from typing import Any, Optional
 from uuid import uuid4
 
@@ -110,11 +108,11 @@ def log_operation(
             session.add(log_entry)
             session.commit()
 
-        logger.info(f"[AUDIT] ✓ 记录操作日志: {action}, log_id: {log_id}")
+        logger.info("[AUDIT] ✓ 记录操作日志: %s, log_id: %s", action, log_id)
         return log_id
 
     except Exception as e:
-        logger.error(f"[AUDIT] ✗ 记录操作日志失败: {e}")
+        logger.error("[AUDIT] ✗ 记录操作日志失败: %s", e)
         return None
 
 
@@ -180,9 +178,9 @@ def write_log(
             session.add(log_entry)
             session.commit()
 
-        logger.info(f"[AUDIT] ✓ 写入操作日志: {action}, log_id: {log_id}")
+        logger.info("[AUDIT] ✓ 写入操作日志: %s, log_id: %s", action, log_id)
         return log_id
 
     except Exception as e:
-        logger.error(f"[AUDIT] ✗ 写入操作日志失败: {e}")
+        logger.error("[AUDIT] ✗ 写入操作日志失败: %s", e)
         return None

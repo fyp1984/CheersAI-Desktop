@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from configs import dify_config
 from controllers.common.schema import register_schema_models
+from controllers.console.workspace import require_data_source_manage_capability
 from libs.login import login_required
 from libs.oauth_data_source import NotionOAuth
 

@@ -64,7 +64,7 @@ def auto_fix_extractor_errors_task():
                 # Delete any existing segments
                 deleted_segments = db.session.query(DocumentSegment).filter_by(document_id=doc.id).delete()
                 if deleted_segments > 0:
-                    logger.info(f"Deleted {deleted_segments} incomplete segments")
+                    logger.info("Deleted %s incomplete segments", deleted_segments)
                 
                 # Modify data_source_info to bypass dify_extractor
                 data_source_info = json.loads(doc.data_source_info) if doc.data_source_info else {}
@@ -104,7 +104,7 @@ def auto_fix_extractor_errors_task():
                 failed_count += 1
         
         result = {"fixed": fixed_count, "failed": failed_count, "skipped": skipped_count}
-        logger.info(f"Auto-fix extractor errors task completed: {result}")
+        logger.info("Auto-fix extractor errors task completed: %s", result)
         return result
         
     except Exception as e:

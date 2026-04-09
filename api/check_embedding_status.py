@@ -1,5 +1,6 @@
 """Check document segment embedding status"""
 import os
+
 from sqlalchemy import create_engine, text
 
 # Get database URL from environment
@@ -44,6 +45,6 @@ with engine.connect() as conn:
             if row[7]:
                 print(f"    错误: {row[7]}")
         else:
-            print(f"  ⚠ 没有分段")
+            print("  ⚠ 没有分段")
     
     print("=" * 120)

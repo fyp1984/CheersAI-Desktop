@@ -1,9 +1,10 @@
 import sys
+
 sys.path.insert(0, 'E:/CheersAI-Desktop/api')
 
-from tasks.document_indexing_task import normal_document_indexing_task
-from models.account import TenantAccountJoin, Tenant
 from extensions.ext_database import db
+from models.account import Tenant, TenantAccountJoin
+from tasks.document_indexing_task import normal_document_indexing_task
 
 # 获取tenant_id
 tenant = db.session.query(Tenant).join(TenantAccountJoin).first()

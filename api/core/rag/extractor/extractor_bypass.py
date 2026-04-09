@@ -54,8 +54,8 @@ class ExtractorBypass:
         try:
             # For text-based files, use simple file reading
             if file_extension.lower() in ['.txt', '.md', '.markdown', '.csv', '.json', '.xml', '.html']:
-                logger.info(f"Using built-in text extractor for {file_extension}")
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                logger.info("Using built-in text extractor for %s", file_extension)
+                with open(file_path, encoding='utf-8', errors='ignore') as f:
                     return f.read()
             
             # For other files, try to use Unstructured directly
@@ -63,14 +63,14 @@ class ExtractorBypass:
             try:
                 from unstructured.partition.auto import partition
                 
-                logger.info(f"Using Unstructured library directly for {file_extension}")
+                logger.info("Using Unstructured library directly for %s", file_extension)
                 elements = partition(filename=file_path)
                 text = "\n\n".join([str(el) for el in elements])
                 return text
             except ImportError:
                 logger.warning("Unstructured library not available, using basic extraction")
                 # Fallback to basic text extraction
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                with open(file_path, encoding='utf-8', errors='ignore') as f:
                     return f.read()
                     
         except Exception as e:
@@ -87,7 +87,5 @@ class ExtractorBypass:
             original_error: The original error that triggered bypass
         """
         logger.warning(
-            f"BYPASS ACTIVATED for document {document_id}. "
-            f"Original error: {original_error}. "
-            f"Using built-in extractor instead of dify_extractor plugin."
+            "BYPASS ACTIVATED for document %s. Original error: %s. Using built-in extractor instead of dify_extractor plugin.", document_id, original_error
         )

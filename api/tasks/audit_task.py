@@ -5,9 +5,8 @@ Audit Log Sync and Cleanup Tasks
 
 import logging
 from datetime import datetime, timedelta
-from typing import Optional
 
-from sqlalchemy import func, or_
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from extensions.ext_database import db
