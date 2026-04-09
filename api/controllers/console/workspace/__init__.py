@@ -21,18 +21,63 @@ def _require_workspace_capabilities(*capabilities: str):
 
 
 def require_plugin_manage_capability(view: Callable[P, R]):
-    return _require_workspace_capabilities(
-        DESKTOP_PLUGIN_MANAGE_CAPABILITY,
-        DESKTOP_AGENT_MANAGE_CAPABILITY,
-    )(view)
+    return _require_workspace_capabilities(DESKTOP_PLUGIN_MANAGE_CAPABILITY, "desktop_api_extension_manage")(view)
 
 
 def require_team_manage_capability(view: Callable[P, R]):
     return _require_workspace_capabilities("desktop_team_manage")(view)
 
 
+def require_member_manage_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_member_manage", "desktop_team_manage")(view)
+
+
 def require_workspace_settings_capability(view: Callable[P, R]):
     return _require_workspace_capabilities("desktop_settings_team")(view)
+
+
+def require_model_provider_manage_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_model_provider_manage", "desktop_model_manage")(view)
+
+
+def require_data_source_manage_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_data_source_manage")(view)
+
+
+def require_api_extension_manage_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_api_extension_manage", DESKTOP_PLUGIN_MANAGE_CAPABILITY)(view)
+
+
+def require_data_security_manage_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_data_security_manage", "desktop_settings_team")(view)
+
+
+def require_language_manage_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_language_manage")(view)
+
+
+def require_chat_use_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_chat_use")(view)
+
+
+def require_app_view_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_app_view")(view)
+
+
+def require_app_run_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_app_run")(view)
+
+
+def require_app_edit_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_app_edit")(view)
+
+
+def require_explore_view_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_explore_view")(view)
+
+
+def require_audit_view_capability(view: Callable[P, R]):
+    return _require_workspace_capabilities("desktop_audit_view")(view)
 
 
 def require_knowledge_view_capability(view: Callable[P, R]):

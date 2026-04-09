@@ -25,6 +25,13 @@ export type AppContextValue = {
   isCurrentWorkspaceManager: boolean
   isCurrentWorkspaceOwner: boolean
   isCurrentWorkspaceEditor: boolean
+  canViewApps: boolean
+  canEditApps: boolean
+  canUseChat: boolean
+  canViewAudit: boolean
+  canManageWorkspaceSettings: boolean
+  canManageDataSecurity: boolean
+  canEditKnowledge: boolean
   canViewWorkflow: boolean
   canEditWorkflow: boolean
   isCurrentWorkspaceDatasetOperator: boolean
@@ -74,6 +81,13 @@ const AppContext = createContext<AppContextValue>({
   isCurrentWorkspaceManager: false,
   isCurrentWorkspaceOwner: false,
   isCurrentWorkspaceEditor: false,
+  canViewApps: false,
+  canEditApps: false,
+  canUseChat: false,
+  canViewAudit: false,
+  canManageWorkspaceSettings: false,
+  canManageDataSecurity: false,
+  canEditKnowledge: false,
   canViewWorkflow: false,
   canEditWorkflow: false,
   isCurrentWorkspaceDatasetOperator: false,
@@ -128,6 +142,34 @@ export const AppContextProvider: FC<AppContextProviderProps> = ({ children }) =>
   const isCurrentWorkspaceOwner = useMemo(() => currentWorkspace.role === 'owner', [currentWorkspace.role])
   const isCurrentWorkspaceEditor = useMemo(
     () => workspaceCapabilities.includes(WORKSPACE_CAPABILITIES.agentManage),
+    [workspaceCapabilities],
+  )
+  const canViewApps = useMemo(
+    () => workspaceCapabilities.includes(WORKSPACE_CAPABILITIES.appView),
+    [workspaceCapabilities],
+  )
+  const canEditApps = useMemo(
+    () => workspaceCapabilities.includes(WORKSPACE_CAPABILITIES.appEdit),
+    [workspaceCapabilities],
+  )
+  const canUseChat = useMemo(
+    () => workspaceCapabilities.includes(WORKSPACE_CAPABILITIES.chatUse),
+    [workspaceCapabilities],
+  )
+  const canViewAudit = useMemo(
+    () => workspaceCapabilities.includes(WORKSPACE_CAPABILITIES.auditView),
+    [workspaceCapabilities],
+  )
+  const canManageWorkspaceSettings = useMemo(
+    () => workspaceCapabilities.includes(WORKSPACE_CAPABILITIES.settingsTeam),
+    [workspaceCapabilities],
+  )
+  const canManageDataSecurity = useMemo(
+    () => workspaceCapabilities.includes(WORKSPACE_CAPABILITIES.dataSecurityManage),
+    [workspaceCapabilities],
+  )
+  const canEditKnowledge = useMemo(
+    () => workspaceCapabilities.includes(WORKSPACE_CAPABILITIES.knowledgeEdit),
     [workspaceCapabilities],
   )
   const canViewWorkflow = useMemo(
@@ -218,6 +260,13 @@ export const AppContextProvider: FC<AppContextProviderProps> = ({ children }) =>
       isCurrentWorkspaceManager,
       isCurrentWorkspaceOwner,
       isCurrentWorkspaceEditor,
+      canViewApps,
+      canEditApps,
+      canUseChat,
+      canViewAudit,
+      canManageWorkspaceSettings,
+      canManageDataSecurity,
+      canEditKnowledge,
       canViewWorkflow,
       canEditWorkflow,
       isCurrentWorkspaceDatasetOperator,

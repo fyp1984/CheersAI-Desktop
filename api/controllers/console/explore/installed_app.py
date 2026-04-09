@@ -47,6 +47,80 @@ installed_app_list_fields_copy["installed_apps"] = fields.List(fields.Nested(ins
 installed_app_list_model = get_or_create_model("InstalledAppList", installed_app_list_fields_copy)
 
 
+def _ensure_same_tenant_installed_apps(current_tenant_id: str, app_id: str | None = None) -> None:
+    app_query = select(App).where(App.tenant_id == current_tenant_id)
+    if app_id:
+        app_query = app_query.where(App.id == app_id)
+
+    owned_apps = db.session.scalars(app_query).all()
+    if not owned_apps:
+        return
+
+    owned_app_ids = [str(app.id) for app in owned_apps]
+    existing_installed_apps = db.session.scalars(
+        select(InstalledApp).where(
+            and_(InstalledApp.tenant_id == current_tenant_id, InstalledApp.app_id.in_(owned_app_ids))
+        )
+    ).all()
+    existing_installed_app_ids = {str(installed_app.app_id) for installed_app in existing_installed_apps}
+
+    has_changes = False
+    for owned_app in owned_apps:
+        if str(owned_app.id) in existing_installed_app_ids:
+            continue
+        db.session.add(
+            InstalledApp(
+                app_id=owned_app.id,
+                tenant_id=current_tenant_id,
+                app_owner_tenant_id=owned_app.tenant_id,
+                is_pinned=False,
+                last_used_at=None,
+            )
+        )
+        has_changes = True
+
+    if has_changes:
+        db.session.commit()
+
+
+def _filter_accessible_installed_apps(
+    installed_app_list: list[dict[str, Any]], current_tenant_id: str, user_id: str
+) -> list[dict[str, Any]]:
+    if not installed_app_list:
+        return installed_app_list
+
+    app_ids = [installed_app["app"].id for installed_app in installed_app_list]
+    webapp_settings = EnterpriseService.WebAppAuth.batch_get_app_access_mode_by_id(app_ids)
+
+    filtered_installed_apps = []
+    external_installed_apps = []
+    for installed_app in installed_app_list:
+        if installed_app["app_owner_tenant_id"] == current_tenant_id:
+            filtered_installed_apps.append(installed_app)
+            continue
+        app_id = installed_app["app"].id
+        webapp_setting = webapp_settings.get(app_id)
+        if not webapp_setting or webapp_setting.access_mode == "sso_verified":
+            continue
+        external_installed_apps.append(installed_app)
+
+    if not external_installed_apps:
+        return filtered_installed_apps
+
+    permissions = EnterpriseService.WebAppAuth.batch_is_user_allowed_to_access_webapps(
+        user_id=user_id,
+        app_ids=[installed_app["app"].id for installed_app in external_installed_apps],
+    )
+
+    filtered_installed_apps.extend(
+        installed_app
+        for installed_app in external_installed_apps
+        if permissions.get(installed_app["app"].id)
+    )
+
+    return filtered_installed_apps
+
+
 @console_ns.route("/installed-apps")
 class InstalledAppsListApi(Resource):
     @login_required
@@ -55,6 +129,7 @@ class InstalledAppsListApi(Resource):
     def get(self):
         query = InstalledAppsListQuery.model_validate(request.args.to_dict())
         current_user, current_tenant_id = current_account_with_tenant()
+        _ensure_same_tenant_installed_apps(current_tenant_id, query.app_id)
 
         if query.app_id:
             installed_apps = db.session.scalars(
@@ -87,34 +162,7 @@ class InstalledAppsListApi(Resource):
         # filter out apps that user doesn't have access to
         if FeatureService.get_system_features().webapp_auth.enabled:
             user_id = current_user.id
-            app_ids = [installed_app["app"].id for installed_app in installed_app_list]
-            webapp_settings = EnterpriseService.WebAppAuth.batch_get_app_access_mode_by_id(app_ids)
-
-            # Pre-filter out apps without setting or with sso_verified
-            filtered_installed_apps = []
-
-            for installed_app in installed_app_list:
-                app_id = installed_app["app"].id
-                webapp_setting = webapp_settings.get(app_id)
-                if not webapp_setting or webapp_setting.access_mode == "sso_verified":
-                    continue
-                filtered_installed_apps.append(installed_app)
-
-            # Batch permission check
-            app_ids = [installed_app["app"].id for installed_app in filtered_installed_apps]
-            permissions = EnterpriseService.WebAppAuth.batch_is_user_allowed_to_access_webapps(
-                user_id=user_id,
-                app_ids=app_ids,
-            )
-
-            # Keep only allowed apps
-            res = []
-            for installed_app in filtered_installed_apps:
-                app_id = installed_app["app"].id
-                if permissions.get(app_id):
-                    res.append(installed_app)
-
-            installed_app_list = res
+            installed_app_list = _filter_accessible_installed_apps(installed_app_list, current_tenant_id, user_id)
             logger.debug("installed_app_list: %s, user_id: %s", installed_app_list, user_id)
 
         installed_app_list.sort(
@@ -132,11 +180,6 @@ class InstalledAppsListApi(Resource):
     @cloud_edition_billing_resource_check("apps")
     def post(self):
         payload = InstalledAppCreatePayload.model_validate(console_ns.payload or {})
-
-        recommended_app = db.session.query(RecommendedApp).where(RecommendedApp.app_id == payload.app_id).first()
-        if recommended_app is None:
-            raise NotFound("Recommended app not found")
-
         _, current_tenant_id = current_account_with_tenant()
 
         app = db.session.query(App).where(App.id == payload.app_id).first()
@@ -144,8 +187,14 @@ class InstalledAppsListApi(Resource):
         if app is None:
             raise NotFound("App entity not found")
 
-        if not app.is_public:
-            raise Forbidden("You can't install a non-public app")
+        recommended_app = None
+        if app.tenant_id != current_tenant_id:
+            recommended_app = db.session.query(RecommendedApp).where(RecommendedApp.app_id == payload.app_id).first()
+            if recommended_app is None:
+                raise NotFound("Recommended app not found")
+
+            if not app.is_public:
+                raise Forbidden("You can't install a non-public app")
 
         installed_app = (
             db.session.query(InstalledApp)
@@ -155,7 +204,8 @@ class InstalledAppsListApi(Resource):
 
         if installed_app is None:
             # todo: position
-            recommended_app.install_count += 1
+            if recommended_app is not None:
+                recommended_app.install_count += 1
 
             new_installed_app = InstalledApp(
                 app_id=payload.app_id,

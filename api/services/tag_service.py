@@ -94,11 +94,12 @@ class TagService:
 
     @staticmethod
     def update_tags(args: dict, tag_id: str) -> Tag:
-        if TagService.get_tag_by_tag_name(args.get("type", ""), current_user.current_tenant_id, args.get("name", "")):
-            raise ValueError("Tag name already exists")
-        tag = db.session.query(Tag).where(Tag.id == tag_id).first()
+        tag = TagService.get_tag(tag_id)
         if not tag:
             raise NotFound("Tag not found")
+        existing_tags = TagService.get_tag_by_tag_name(args.get("type", ""), current_user.current_tenant_id, args.get("name", ""))
+        if any(str(existing_tag.id) != str(tag.id) for existing_tag in existing_tags):
+            raise ValueError("Tag name already exists")
         tag.name = args["name"]
         db.session.commit()
         return tag
@@ -110,7 +111,7 @@ class TagService:
 
     @staticmethod
     def delete_tag(tag_id: str):
-        tag = db.session.query(Tag).where(Tag.id == tag_id).first()
+        tag = TagService.get_tag(tag_id)
         if not tag:
             raise NotFound("Tag not found")
         db.session.delete(tag)
@@ -156,6 +157,10 @@ class TagService:
         if tag_bindings:
             db.session.delete(tag_bindings)
             db.session.commit()
+
+    @staticmethod
+    def get_tag(tag_id: str) -> Tag | None:
+        return db.session.query(Tag).where(Tag.id == tag_id).first()
 
     @staticmethod
     def check_target_exists(type: str, target_id: str):

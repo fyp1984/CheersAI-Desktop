@@ -6,15 +6,29 @@ import json
 from pathlib import Path
 
 from flask import Blueprint, request
+from werkzeug.exceptions import Forbidden
+
+from controllers.console.wraps import account_initialization_required
+from libs.desktop_auth import has_any_workspace_capability
+from libs.login import current_account_with_tenant, login_required
 
 audit_logs_bp = Blueprint("audit_logs", __name__, url_prefix="/console/api/audit-logs")
 
 AUDIT_LOG_FILE = Path("logs/audit.log")
 
 
+def _require_audit_view() -> None:
+    current_user, current_tenant_id = current_account_with_tenant()
+    if not has_any_workspace_capability(current_user, ["desktop_audit_view"], current_tenant_id):
+        raise Forbidden()
+
+
 @audit_logs_bp.route("", methods=["GET"])
+@login_required
+@account_initialization_required
 def get_audit_logs():
     """获取审计日志列表"""
+    _require_audit_view()
     try:
         page = int(request.args.get("page", 1))
         limit = int(request.args.get("limit", 10))
@@ -76,8 +90,11 @@ def get_audit_logs():
 
 
 @audit_logs_bp.route("/stats", methods=["GET"])
+@login_required
+@account_initialization_required
 def get_audit_stats():
     """获取审计日志统计"""
+    _require_audit_view()
     try:
         if not AUDIT_LOG_FILE.exists():
             return {
@@ -118,8 +135,11 @@ def get_audit_stats():
 
 
 @audit_logs_bp.route("/actions", methods=["GET"])
+@login_required
+@account_initialization_required
 def get_audit_actions():
     """获取所有操作类型"""
+    _require_audit_view()
     try:
         if not AUDIT_LOG_FILE.exists():
             return {"actions": []}

@@ -2,7 +2,6 @@
 import type { FC } from 'react'
 import type { CurrentTryAppParams } from '@/context/explore-context'
 import type { InstalledApp } from '@/models/explore'
-import { useRouter } from 'next/navigation'
 import * as React from 'react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -10,7 +9,6 @@ import Sidebar from '@/app/components/explore/sidebar'
 import { useAppContext } from '@/context/app-context'
 import ExploreContext from '@/context/explore-context'
 import useDocumentTitle from '@/hooks/use-document-title'
-import { useMembers } from '@/service/use-common'
 
 export type IExploreProps = {
   children: React.ReactNode
@@ -19,28 +17,17 @@ export type IExploreProps = {
 const Explore: FC<IExploreProps> = ({
   children,
 }) => {
-  const router = useRouter()
   const [controlUpdateInstalledApps, setControlUpdateInstalledApps] = useState(0)
-  const { userProfile, isCurrentWorkspaceDatasetOperator } = useAppContext()
+  const { canEditApps } = useAppContext()
   const [hasEditPermission, setHasEditPermission] = useState(false)
   const [installedApps, setInstalledApps] = useState<InstalledApp[]>([])
   const [isFetchingInstalledApps, setIsFetchingInstalledApps] = useState(false)
   const { t } = useTranslation()
-  const { data: membersData } = useMembers()
-
   useDocumentTitle(t('menus.explore', { ns: 'common' }))
 
   useEffect(() => {
-    if (!membersData?.accounts)
-      return
-    const currUser = membersData.accounts.find(account => account.id === userProfile.id)
-    setHasEditPermission(currUser?.role !== 'normal')
-  }, [membersData, userProfile.id])
-
-  useEffect(() => {
-    if (isCurrentWorkspaceDatasetOperator)
-      return router.replace('/datasets')
-  }, [isCurrentWorkspaceDatasetOperator])
+    setHasEditPermission(canEditApps)
+  }, [canEditApps])
 
   const [currentTryAppParams, setCurrentTryAppParams] = useState<CurrentTryAppParams | undefined>(undefined)
   const [isShowTryAppPanel, setIsShowTryAppPanel] = useState(false)

@@ -9,9 +9,10 @@ from configs import dify_config
 from controllers.common.schema import register_schema_models
 from libs.login import login_required
 from libs.oauth_data_source import NotionOAuth
+from controllers.console.workspace import require_data_source_manage_capability
 
 from .. import console_ns
-from ..wraps import account_initialization_required, is_admin_or_owner_required, setup_required
+from ..wraps import account_initialization_required, setup_required
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,10 @@ class OAuthDataSource(Resource):
     )
     @console_ns.response(400, "Invalid provider")
     @console_ns.response(403, "Admin privileges required")
-    @is_admin_or_owner_required
+    @setup_required
+    @login_required
+    @account_initialization_required
+    @require_data_source_manage_capability
     def get(self, provider: str):
         # The role of the current user in the table must be admin or owner
         OAUTH_DATASOURCE_PROVIDERS = get_oauth_providers()
@@ -123,6 +127,10 @@ class OAuthDataSourceBinding(Resource):
         console_ns.models[OAuthDataSourceBindingResponse.__name__],
     )
     @console_ns.response(400, "Invalid provider or code")
+    @setup_required
+    @login_required
+    @account_initialization_required
+    @require_data_source_manage_capability
     def get(self, provider: str):
         OAUTH_DATASOURCE_PROVIDERS = get_oauth_providers()
         with current_app.app_context():
@@ -158,6 +166,7 @@ class OAuthDataSourceSync(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_data_source_manage_capability
     def get(self, provider, binding_id):
         provider = str(provider)
         binding_id = str(binding_id)

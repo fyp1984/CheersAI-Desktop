@@ -7,6 +7,7 @@ from flask_restx import Resource
 from werkzeug.exceptions import NotFound
 
 from controllers.console.explore.error import AppAccessDeniedError, TrialAppLimitExceeded, TrialAppNotAllowed
+from controllers.console.workspace import require_app_run_capability, require_explore_view_capability
 from controllers.console.wraps import account_initialization_required
 from extensions.ext_database import db
 from libs.login import current_account_with_tenant, login_required
@@ -133,6 +134,8 @@ class InstalledAppResource(Resource):
     method_decorators = [
         user_allowed_to_access_app,
         installed_app_required,
+        require_app_run_capability,
+        require_explore_view_capability,
         account_initialization_required,
         login_required,
     ]
@@ -143,6 +146,8 @@ class TrialAppResource(Resource):
 
     method_decorators = [
         trial_app_required,
+        require_app_run_capability,
+        require_explore_view_capability,
         account_initialization_required,
         login_required,
     ]

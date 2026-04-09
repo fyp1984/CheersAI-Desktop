@@ -260,10 +260,11 @@ export const useOneMoreStep = () => {
   })
 }
 
-export const useModelProviders = () => {
+export const useModelProviders = (enabled = true) => {
   return useQuery<{ data: ModelProvider[] }>({
     queryKey: commonQueryKeys.modelProviders,
     queryFn: () => get<{ data: ModelProvider[] }>('/workspaces/current/model-providers'),
+    enabled,
   })
 }
 

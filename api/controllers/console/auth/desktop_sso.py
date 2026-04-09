@@ -1,3 +1,4 @@
+import hashlib
 import logging
 
 from flask import request
@@ -5,6 +6,7 @@ from flask_restx import Resource, fields
 
 from controllers.console import console_ns
 from extensions.ext_database import db
+from extensions.ext_redis import redis_client
 from libs.datetime_utils import naive_utc_now
 from libs.desktop_auth import (
     build_desktop_sso_projection,
@@ -19,9 +21,11 @@ from libs.token import (
     set_refresh_token_to_cookie,
 )
 from models import AccountStatus
+from models.account import Account, Tenant, TenantAccountJoin, TenantStatus
 from services.account_service import AccountService, TenantService
 
 logger = logging.getLogger(__name__)
+SSO_GROUP_TENANT_CACHE_PREFIX = 'desktop:sso:group-tenant:'
 
 desktop_sso_login_model = console_ns.model('DesktopSSOLoginPayload', {
     'sub': fields.String(required=True, description='SSO subject'),
@@ -36,6 +40,80 @@ desktop_sso_login_model = console_ns.model('DesktopSSOLoginPayload', {
     'iss': fields.String(required=False, description='SSO issuer'),
     'aud': fields.String(required=False, description='SSO client id'),
 })
+
+
+def _get_sso_group_name(payload: dict) -> str | None:
+    groups = payload.get('groups')
+    if not isinstance(groups, list):
+        return None
+
+    for group in groups:
+        if not isinstance(group, str):
+            continue
+        normalized_group = group.strip()
+        if normalized_group:
+            return normalized_group
+
+    return None
+
+
+def _get_sso_group_tenant_cache_key(group_name: str) -> str:
+    group_hash = hashlib.sha256(group_name.strip().lower().encode('utf-8')).hexdigest()
+    return f'{SSO_GROUP_TENANT_CACHE_PREFIX}{group_hash}'
+
+
+def _get_preferred_tenant_join(account: Account) -> TenantAccountJoin | None:
+    return (
+        db.session.query(TenantAccountJoin)
+        .join(Tenant, TenantAccountJoin.tenant_id == Tenant.id)
+        .filter(TenantAccountJoin.account_id == account.id, Tenant.status == TenantStatus.NORMAL)
+        .order_by(TenantAccountJoin.current.desc(), TenantAccountJoin.id.asc())
+        .first()
+    )
+
+
+def _resolve_shared_tenant(account: Account, payload: dict) -> Tenant | None:
+    group_name = _get_sso_group_name(payload)
+    if not group_name:
+        tenant_join = _get_preferred_tenant_join(account)
+        return tenant_join.tenant if tenant_join else None
+
+    cache_key = _get_sso_group_tenant_cache_key(group_name)
+    cached_tenant_id = redis_client.get(cache_key)
+    if isinstance(cached_tenant_id, bytes):
+        cached_tenant_id = cached_tenant_id.decode('utf-8')
+
+    tenant = None
+    if isinstance(cached_tenant_id, str) and cached_tenant_id:
+        tenant = db.session.query(Tenant).filter_by(id=cached_tenant_id, status=TenantStatus.NORMAL).first()
+
+    if not tenant:
+        tenant_join = _get_preferred_tenant_join(account)
+        tenant = tenant_join.tenant if tenant_join else None
+
+    if not tenant:
+        tenant = TenantService.create_tenant(name=group_name, is_setup=True)
+
+    redis_client.set(cache_key, tenant.id)
+    return tenant
+
+
+def _ensure_desktop_sso_tenant_join(account: Account, system_role: str, payload: dict) -> TenantAccountJoin:
+    tenant = _resolve_shared_tenant(account, payload)
+    if not tenant:
+        TenantService.create_owner_tenant_if_not_exist(account, is_setup=True)
+        tenant_join = _get_preferred_tenant_join(account)
+        if not tenant_join:
+            raise Exception('Failed to create tenant membership')
+        if tenant_join.role != system_role:
+            tenant_join.role = system_role
+            db.session.commit()
+        TenantService.switch_tenant(account, tenant_join.tenant_id)
+        return tenant_join
+
+    tenant_join = TenantService.create_tenant_member(tenant, account, role=system_role)
+    TenantService.switch_tenant(account, tenant.id)
+    return tenant_join
 
 
 @console_ns.route('/auth/desktop-sso/login')
@@ -75,8 +153,6 @@ class DesktopSSOLoginApi(Resource):
 
             account = AccountService.get_user_through_email(normalized_email)
 
-            tenant_join = None
-
             if not account:
                 logger.info("Creating new account for SSO user: %s with role: %s", normalized_email, system_role)
 
@@ -87,15 +163,6 @@ class DesktopSSOLoginApi(Resource):
                     password=None,
                     is_setup=True,
                 )
-
-                TenantService.create_owner_tenant_if_not_exist(account, is_setup=True)
-
-                from models.account import TenantAccountJoin
-                tenant_join = db.session.query(TenantAccountJoin).filter_by(account_id=account.id).first()
-                if tenant_join:
-                    tenant_join.role = system_role
-                    db.session.commit()
-                    logger.info("Set workspace role to '%s' for new user", system_role)
 
                 account.status = AccountStatus.ACTIVE
                 account.initialized_at = naive_utc_now()
@@ -110,28 +177,8 @@ class DesktopSSOLoginApi(Resource):
                     account.initialized_at = naive_utc_now()
                     db.session.commit()
 
-                from models.account import TenantAccountJoin
-                tenant_join = db.session.query(TenantAccountJoin).filter_by(account_id=account.id).first()
-
-                if tenant_join:
-                    old_role = tenant_join.role
-                    logger.info("Attempting to update role from '%s' to '%s'", old_role, system_role)
-
-                    if old_role == 'owner':
-                        owner_count = db.session.query(TenantAccountJoin).filter_by(
-                            tenant_id=tenant_join.tenant_id,
-                            role='owner'
-                        ).count()
-                        if owner_count > 1:
-                            tenant_join.role = system_role
-                            db.session.commit()
-                            logger.info("Updated role from 'owner' to '%s' (multiple owners exist)", system_role)
-                        else:
-                            logger.info("Keeping 'owner' role (only owner in workspace)")
-                    elif old_role != system_role:
-                        tenant_join.role = system_role
-                        db.session.commit()
-                        logger.info("Updated role from '%s' to '%s'", old_role, system_role)
+            tenant_join = _ensure_desktop_sso_tenant_join(account, system_role, data)
+            logger.info("Using tenant %s with workspace role '%s'", tenant_join.tenant_id, tenant_join.role)
 
             if tenant_join:
                 projection = build_desktop_sso_projection(

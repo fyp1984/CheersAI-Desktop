@@ -1,12 +1,15 @@
 'use client'
 
 import { RiAddLine, RiArrowDownSLine, RiArrowLeftSLine, RiArrowRightSLine, RiAttachmentLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiDownloadLine, RiFileCopyLine, RiMicFill, RiMicLine, RiMoreLine, RiRefreshLine, RiSearchLine } from '@remixicon/react'
+import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Loading from '@/app/components/base/loading'
 import { Markdown } from '@/app/components/base/markdown'
 import { SandboxFilePicker } from '@/app/components/base/sandbox-file-picker'
 import Toast from '@/app/components/base/toast'
 import { ModelTypeEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
 import { useDefaultModel, useModelList } from '@/app/components/header/account-setting/model-provider-page/hooks'
+import { useAppContext } from '@/context/app-context'
 import { sendSimpleChatMessage } from '@/service/chat'
 import { cn } from '@/utils/classnames'
 
@@ -138,6 +141,8 @@ function getInitialConversations(storageKey: string): Conversation[] {
 const ChatPage = () => {
   const STORAGE_KEY = 'cheersai_conversations'
   const SIDEBAR_STORAGE_KEY = 'cheersai_sidebar_collapsed'
+  const router = useRouter()
+  const { canUseChat, isLoadingCurrentWorkspace } = useAppContext()
 
   const [conversations, setConversations] = useState<Conversation[]>(() => getInitialConversations(STORAGE_KEY))
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
@@ -177,6 +182,14 @@ const ChatPage = () => {
   const [renameDraft, setRenameDraft] = useState('')
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const inputValueRef = useRef('')
+
+  useEffect(() => {
+    if (!isLoadingCurrentWorkspace && !canUseChat)
+      router.replace('/apps')
+  }, [canUseChat, isLoadingCurrentWorkspace, router])
+
+  if (isLoadingCurrentWorkspace || !canUseChat)
+    return <Loading type="app" />
 
   // 保存侧边栏状态到本地存储
   useEffect(() => {
