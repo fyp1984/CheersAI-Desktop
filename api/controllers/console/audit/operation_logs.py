@@ -1,3 +1,9 @@
+from datetime import datetime
+from io import BytesIO
+from typing import Optional
+
+import xlsxwriter
+from flask import Blueprint, Response, request
 from flask_login import current_user
 from flask_restx import Resource, fields
 from sqlalchemy import desc, func, or_
@@ -6,6 +12,7 @@ from sqlalchemy.orm import Session
 from controllers.console import console_ns
 from controllers.console.wraps import account_initialization_required, require_workspace_capabilities
 from extensions.ext_database import db
+from libs.desktop_auth import has_role_capability
 from libs.helper import TimestampField
 from libs.login import login_required
 from models.account import Account
@@ -23,6 +30,16 @@ operation_log_model = console_ns.model(
         "content": fields.Raw(description="Action content"),
         "created_at": TimestampField(description="Created time"),
         "created_ip": fields.String(description="IP address"),
+        "operation_type": fields.String(description="Operation type"),
+        "request_content": fields.String(description="Request content"),
+        "response_content": fields.String(description="Response content"),
+        "desensitize_status": fields.String(description="Desensitize status"),
+        "device_info": fields.String(description="Device info"),
+        "duration": fields.Integer(description="Duration (ms)"),
+        "sync_status": fields.String(description="Sync status"),
+        "sync_time": TimestampField(description="Sync time"),
+        "is_expired": fields.Boolean(description="Is expired"),
+        "error_message": fields.String(description="Error message"),
     },
 )
 
@@ -47,6 +64,8 @@ stats_model = console_ns.model(
     },
 )
 
+operation_logs_bp = Blueprint("operation_logs", __name__, url_prefix="/console/api")
+
 
 @console_ns.route("/operation-logs")
 class OperationLogListApi(Resource):
@@ -61,9 +80,12 @@ class OperationLogListApi(Resource):
         parser.add_argument("limit", type=int, default=20, location="args")
         parser.add_argument("action", type=str, location="args")
         parser.add_argument("account_id", type=str, location="args")
+        parser.add_argument("account_name", type=str, location="args")
         parser.add_argument("keyword", type=str, location="args")
         parser.add_argument("start_date", type=str, location="args")
         parser.add_argument("end_date", type=str, location="args")
+        parser.add_argument("operation_type", type=str, location="args")
+        parser.add_argument("sync_status", type=str, location="args")
         args = parser.parse_args()
 
         page = max(1, args["page"])
@@ -71,17 +93,20 @@ class OperationLogListApi(Resource):
         offset = (page - 1) * limit
 
         with Session(db.engine) as session:
-            # Base query
-            query = session.query(OperationLog, Account).join(
-                Account, OperationLog.account_id == Account.id
-            ).filter(OperationLog.tenant_id == current_user.current_tenant_id)
+            query = (
+                session.query(OperationLog, Account)
+                .join(Account, OperationLog.account_id == Account.id)
+                .filter(OperationLog.tenant_id == current_user.current_tenant_id)
+            )
 
-            # Apply filters
             if args.get("action"):
                 query = query.filter(OperationLog.action == args["action"])
 
             if args.get("account_id"):
                 query = query.filter(OperationLog.account_id == args["account_id"])
+
+            if args.get("account_name"):
+                query = query.filter(Account.name.ilike(f"%{args['account_name']}%"))
 
             if args.get("keyword"):
                 keyword = f"%{args['keyword']}%"
@@ -99,13 +124,16 @@ class OperationLogListApi(Resource):
             if args.get("end_date"):
                 query = query.filter(OperationLog.created_at <= args["end_date"])
 
-            # Get total count
+            if args.get("operation_type"):
+                query = query.filter(OperationLog.operation_type == args["operation_type"])
+
+            if args.get("sync_status"):
+                query = query.filter(OperationLog.sync_status == args["sync_status"])
+
             total = query.count()
 
-            # Get paginated results
             results = query.order_by(desc(OperationLog.created_at)).offset(offset).limit(limit).all()
 
-            # Format response
             data = []
             for log, account in results:
                 data.append(
@@ -113,12 +141,22 @@ class OperationLogListApi(Resource):
                         "id": log.id,
                         "tenant_id": log.tenant_id,
                         "account_id": log.account_id,
-                        "account_name": account.name,
+                        "account_name": log.account_name or account.name,
                         "account_email": account.email,
                         "action": log.action,
                         "content": log.content,
                         "created_at": int(log.created_at.timestamp()),
                         "created_ip": log.created_ip,
+                        "operation_type": log.operation_type,
+                        "request_content": log.request_content,
+                        "response_content": log.response_content,
+                        "desensitize_status": log.desensitize_status,
+                        "device_info": log.device_info,
+                        "duration": log.duration,
+                        "sync_status": log.sync_status,
+                        "sync_time": int(log.sync_time.timestamp()) if log.sync_time else None,
+                        "is_expired": log.is_expired,
+                        "error_message": log.error_message,
                     }
                 )
 
@@ -140,9 +178,6 @@ class OperationLogStatsApi(Resource):
     def get(self):
         """Get operation logs statistics"""
         with Session(db.engine) as session:
-            # Today's count
-            from datetime import datetime
-
             today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             today_count = (
                 session.query(func.count(OperationLog.id))
@@ -153,14 +188,12 @@ class OperationLogStatsApi(Resource):
                 .scalar()
             )
 
-            # Total count
             total_count = (
                 session.query(func.count(OperationLog.id))
                 .filter(OperationLog.tenant_id == current_user.current_tenant_id)
                 .scalar()
             )
 
-            # Verified count (actions that typically indicate success)
             verified_actions = ["login", "create", "update", "delete"]
             verified_count = (
                 session.query(func.count(OperationLog.id))
@@ -171,7 +204,6 @@ class OperationLogStatsApi(Resource):
                 .scalar()
             )
 
-            # Failed count (you can customize this based on your action naming)
             failed_count = (
                 session.query(func.count(OperationLog.id))
                 .filter(
@@ -205,3 +237,116 @@ class OperationLogActionsApi(Resource):
             )
 
             return {"actions": [action[0] for action in actions]}
+
+
+@console_ns.route("/operation-logs/export")
+class OperationLogExportApi(Resource):
+    @login_required
+    @account_initialization_required
+    @require_workspace_capabilities("desktop_audit_view")
+    def post(self):
+        """Export operation logs to Excel or PDF"""
+        if not has_role_capability(current_user.role, "desktop_audit_view"):
+            return {"error": "Permission denied"}, 403
+
+        parser = console_ns.parser()
+        parser.add_argument("format", type=str, default="excel", location="json")
+        parser.add_argument("action", type=str, location="json")
+        parser.add_argument("account_id", type=str, location="json")
+        parser.add_argument("account_name", type=str, location="json")
+        parser.add_argument("keyword", type=str, location="json")
+        parser.add_argument("start_date", type=str, location="json")
+        parser.add_argument("end_date", type=str, location="json")
+        parser.add_argument("operation_type", type=str, location="json")
+        parser.add_argument("sync_status", type=str, location="json")
+        args = parser.parse_args()
+
+        with Session(db.engine) as session:
+            query = (
+                session.query(OperationLog, Account)
+                .join(Account, OperationLog.account_id == Account.id)
+                .filter(OperationLog.tenant_id == current_user.current_tenant_id)
+            )
+
+            if args.get("action"):
+                query = query.filter(OperationLog.action == args["action"])
+
+            if args.get("account_id"):
+                query = query.filter(OperationLog.account_id == args["account_id"])
+
+            if args.get("account_name"):
+                query = query.filter(Account.name.ilike(f"%{args['account_name']}%"))
+
+            if args.get("keyword"):
+                keyword = f"%{args['keyword']}%"
+                query = query.filter(
+                    or_(
+                        Account.name.ilike(keyword),
+                        Account.email.ilike(keyword),
+                        OperationLog.action.ilike(keyword),
+                    )
+                )
+
+            if args.get("start_date"):
+                query = query.filter(OperationLog.created_at >= args["start_date"])
+
+            if args.get("end_date"):
+                query = query.filter(OperationLog.created_at <= args["end_date"])
+
+            if args.get("operation_type"):
+                query = query.filter(OperationLog.operation_type == args["operation_type"])
+
+            if args.get("sync_status"):
+                query = query.filter(OperationLog.sync_status == args["sync_status"])
+
+            results = query.order_by(desc(OperationLog.created_at)).all()
+
+            if args.get("format") == "excel":
+                return self._export_excel(results)
+            else:
+                return self._export_excel(results)
+
+    def _export_excel(self, results):
+        """Export to Excel format"""
+        output = BytesIO()
+        workbook = xlsxwriter.Workbook(output, {"in_memory": True})
+        worksheet = workbook.add_worksheet("审计日志")
+
+        headers = [
+            "时间",
+            "操作类型",
+            "操作行为",
+            "账户名称",
+            "IP地址",
+            "设备信息",
+            "执行耗时(ms)",
+            "脱敏状态",
+            "同步状态",
+            "错误信息",
+        ]
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header)
+
+        for row, (log, account) in enumerate(results, start=1):
+            worksheet.write(row, 0, log.created_at.strftime("%Y-%m-%d %H:%M:%S") if log.created_at else "")
+            worksheet.write(row, 1, log.operation_type or "")
+            worksheet.write(row, 2, log.action or "")
+            worksheet.write(row, 3, log.account_name or account.name if account else "")
+            worksheet.write(row, 4, log.created_ip or "")
+            worksheet.write(row, 5, log.device_info or "")
+            worksheet.write(row, 6, log.duration or 0)
+            worksheet.write(row, 7, log.desensitize_status or "")
+            worksheet.write(row, 8, log.sync_status or "")
+            worksheet.write(row, 9, log.error_message or "")
+
+        workbook.close()
+        output.seek(0)
+
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        filename = f"CheersAI审计日志_{timestamp}.xlsx"
+
+        return Response(
+            output.getvalue(),
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )

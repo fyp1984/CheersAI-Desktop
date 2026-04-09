@@ -1603,6 +1603,8 @@ class OperationLog(TypeBase):
     __table_args__ = (
         sa.PrimaryKeyConstraint("id", name="operation_log_pkey"),
         sa.Index("operation_log_account_action_idx", "tenant_id", "account_id", "action"),
+        sa.Index("operation_log_sync_idx", "tenant_id", "sync_status", "is_expired"),
+        sa.Index("operation_log_type_idx", "tenant_id", "operation_type", "created_at"),
     )
 
     id: Mapped[str] = mapped_column(
@@ -1610,6 +1612,7 @@ class OperationLog(TypeBase):
     )
     tenant_id: Mapped[str] = mapped_column(StringUUID, nullable=False)
     account_id: Mapped[str] = mapped_column(StringUUID, nullable=False)
+    account_name: Mapped[str] = mapped_column(String(255), nullable=False)
     action: Mapped[str] = mapped_column(String(255), nullable=False)
     content: Mapped[Any | None] = mapped_column(sa.JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -1623,6 +1626,17 @@ class OperationLog(TypeBase):
         onupdate=func.current_timestamp(),
         init=False,
     )
+    operation_type: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    request_content: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    response_content: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    desensitize_status: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    device_info: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    duration: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
+    sync_status: Mapped[str | None] = mapped_column(String(16), nullable=True, server_default=sa.text("'pending'"))
+    sync_time: Mapped[datetime | None] = mapped_column(sa.DateTime, nullable=True)
+    is_expired: Mapped[bool | None] = mapped_column(sa.Boolean, nullable=True, server_default=sa.text("false"))
+    error_message: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    nexus_sync_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class DefaultEndUserSessionID(StrEnum):
