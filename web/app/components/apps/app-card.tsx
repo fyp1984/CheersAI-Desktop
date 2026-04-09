@@ -266,8 +266,22 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
         Toast.notify({ type: 'error', message: `${e.message || e}` })
       }
     }
+    const onClickOrchestrate = async (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation()
+      props.onClick?.()
+      e.preventDefault()
+      getRedirection(isCurrentWorkspaceEditor, app, push)
+    }
     return (
       <div className="relative flex w-full flex-col py-1" onMouseLeave={onMouseLeave}>
+        {isCurrentWorkspaceEditor && (
+          <>
+            <button type="button" className="mx-1 flex h-8 cursor-pointer items-center gap-2 rounded-lg px-3 hover:bg-state-base-hover" onClick={onClickOrchestrate}>
+              <span className="system-sm-regular text-text-secondary">{t('orchestrate', { ns: 'app' })}</span>
+            </button>
+            <Divider className="my-1" />
+          </>
+        )}
         <button type="button" className="mx-1 flex h-8 cursor-pointer items-center gap-2 rounded-lg px-3 hover:bg-state-base-hover" onClick={onClickSettings}>
           <span className="system-sm-regular text-text-secondary">{t('editApp', { ns: 'app' })}</span>
         </button>
@@ -351,13 +365,21 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
   return (
     <>
       <div
-        onClick={(e) => {
+        onClick={async (e) => {
           e.preventDefault()
-          getRedirection({
-            canEditApp: isCurrentWorkspaceEditor,
-            canViewWorkflow,
-            canEditWorkflow,
-          }, app, push)
+          // 所有用户点击应用时，都直接在探索中打开（运行智能体）
+          try {
+            const { installed_apps }: any = await fetchInstalledAppList(app.id) || {}
+            if (installed_apps?.length > 0) {
+              push(`${basePath}/explore/installed/${installed_apps[0].id}`)
+            }
+            else {
+              Toast.notify({ type: 'error', message: t('appNotFoundInExplore', { ns: 'app' }) })
+            }
+          }
+          catch (e: any) {
+            Toast.notify({ type: 'error', message: `${e.message || e}` })
+          }
         }}
         className="group relative col-span-1 inline-flex h-[160px] cursor-pointer flex-col rounded-xl border-[1px] border-solid border-components-card-border bg-components-card-bg shadow-sm transition-all duration-200 ease-in-out hover:shadow-lg"
       >

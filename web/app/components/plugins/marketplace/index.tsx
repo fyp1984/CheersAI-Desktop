@@ -14,7 +14,7 @@ type MarketplaceProps = {
   searchParams?: Promise<SearchParams>
 }
 
-const Marketplace = async ({
+const Marketplace = ({
   showInstallButton = true,
   pluginTypeSwitchClassName,
   searchParams,

@@ -185,6 +185,21 @@ def init_app(app: DifyApp) -> Celery:
             "task": "schedule.trigger_provider_refresh_task.trigger_provider_refresh",
             "schedule": timedelta(minutes=dify_config.TRIGGER_PROVIDER_REFRESH_INTERVAL),
         }
+    
+    # Auto-fix documents missing process rule (always enabled for now)
+    imports.append("schedule.auto_fix_documents_process_rule")
+    beat_schedule["auto_fix_documents_process_rule"] = {
+        "task": "schedule.auto_fix_documents_process_rule.auto_fix_documents_process_rule_task",
+        "schedule": timedelta(minutes=2),  # Run every 2 minutes
+    }
+    
+    # Auto-fix documents with dify_extractor errors (always enabled)
+    imports.append("schedule.auto_fix_extractor_errors")
+    beat_schedule["auto_fix_extractor_errors"] = {
+        "task": "schedule.auto_fix_extractor_errors.auto_fix_extractor_errors_task",
+        "schedule": timedelta(seconds=30),  # Run every 30 seconds for quick recovery
+    }
+    
     celery_app.conf.update(beat_schedule=beat_schedule, imports=imports)
 
     return celery_app
