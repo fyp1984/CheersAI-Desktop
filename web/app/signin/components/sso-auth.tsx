@@ -6,7 +6,7 @@ import Button from '@/app/components/base/button'
 import { Lock01 } from '@/app/components/base/icons/src/vender/solid/security'
 import Toast from '@/app/components/base/toast'
 import { getDesktopSSOLoginUrl, getUserOAuth2SSOUrl, getUserOIDCSSOUrl, getUserSAMLSSOUrl } from '@/service/sso'
-import { generateRandomState, getDesktopCallbackUrl, isDesktopSSOEnabled } from '@/service/sso-desktop-auth'
+import { generateCodeChallenge, generateCodeVerifier, generateRandomState, getDesktopCallbackUrl, isDesktopSSOEnabled } from '@/service/sso-desktop-auth'
 import { SSOProtocol } from '@/types/feature'
 
 type SSOAuthProps = {
@@ -27,15 +27,30 @@ const SSOAuth: FC<SSOAuthProps> = ({
     if (isDesktopSSOEnabled()) {
       const state = generateRandomState()
       const protocol = (process.env.NEXT_PUBLIC_DESKTOP_SSO_PROTOCOL || 'oauth').replace('oauth2', 'oauth')
-      const loginUrl = getDesktopSSOLoginUrl({
-        clientId: process.env.NEXT_PUBLIC_DESKTOP_SSO_CLIENT_ID || '35f82ac3f099085a6fd0',
-        redirectUri: getDesktopCallbackUrl(),
-        state,
-        protocol,
-      })
+      const codeVerifier = generateCodeVerifier()
 
-      sessionStorage.setItem('desktop-sso-state', state)
-      window.location.href = loginUrl
+      generateCodeChallenge(codeVerifier)
+        .then((codeChallenge) => {
+          const loginUrl = getDesktopSSOLoginUrl({
+            clientId: process.env.NEXT_PUBLIC_DESKTOP_SSO_CLIENT_ID || '35f82ac3f099085a6fd0',
+            redirectUri: getDesktopCallbackUrl(),
+            state,
+            protocol,
+            codeChallenge,
+            codeChallengeMethod: 'S256',
+          })
+
+          sessionStorage.setItem('desktop-sso-state', state)
+          sessionStorage.setItem('desktop-sso-code-verifier', codeVerifier)
+          window.location.href = loginUrl
+        })
+        .catch(() => {
+          Toast.notify({
+            type: 'error',
+            message: 'Failed to initialize SSO login',
+          })
+          setIsLoading(false)
+        })
       return
     }
 

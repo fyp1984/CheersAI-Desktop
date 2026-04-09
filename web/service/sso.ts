@@ -20,10 +20,12 @@ export type DesktopSSOLoginUrlParams = {
   redirectUri: string
   state: string
   protocol?: string
+  codeChallenge?: string
+  codeChallengeMethod?: string
 }
 
 export const getDesktopSSOLoginUrl = (params: DesktopSSOLoginUrlParams) => {
-  const { clientId, redirectUri, state, protocol = 'oauth' } = params
+  const { clientId, redirectUri, state, protocol = 'oauth', codeChallenge, codeChallengeMethod = 'S256' } = params
   const ssoBaseUrl = process.env.NEXT_PUBLIC_DESKTOP_SSO_LOGIN_URL || 'http://localhost:8000'
   const normalizedProtocol = protocol === 'oauth2' ? 'oauth' : protocol
   const authUrl = new URL(`/login/${normalizedProtocol}/authorize`, ssoBaseUrl)
@@ -32,6 +34,10 @@ export const getDesktopSSOLoginUrl = (params: DesktopSSOLoginUrlParams) => {
   authUrl.searchParams.set('state', state)
   authUrl.searchParams.set('response_type', 'code')
   authUrl.searchParams.set('scope', 'openid profile email')
+  if (codeChallenge) {
+    authUrl.searchParams.set('code_challenge', codeChallenge)
+    authUrl.searchParams.set('code_challenge_method', codeChallengeMethod)
+  }
   return authUrl.toString()
 }
 
@@ -39,6 +45,7 @@ export type ExchangeTokenParams = {
   code: string
   state: string
   redirectUri: string
+  codeVerifier?: string
 }
 
 export type SSOUserInfo = {

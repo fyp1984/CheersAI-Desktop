@@ -65,6 +65,32 @@ def test_http_timeout_defaults(monkeypatch: pytest.MonkeyPatch):
     assert config.HTTP_REQUEST_MAX_CONNECT_TIMEOUT == 10
     assert config.HTTP_REQUEST_MAX_READ_TIMEOUT == 600
     assert config.HTTP_REQUEST_MAX_WRITE_TIMEOUT == 600
+    assert config.BETA_PROVISION_LOCK_TIMEOUT == 600
+
+
+@pytest.mark.parametrize(
+    ("debug_value", "expected"),
+    [
+        ("release", False),
+        ("production", False),
+        ("debug", True),
+        ("development", True),
+    ],
+)
+def test_debug_env_accepts_common_non_boolean_values(monkeypatch: pytest.MonkeyPatch, debug_value: str, expected: bool):
+    os.environ.clear()
+
+    monkeypatch.setenv("DB_TYPE", "postgresql")
+    monkeypatch.setenv("DB_USERNAME", "postgres")
+    monkeypatch.setenv("DB_PASSWORD", "postgres")
+    monkeypatch.setenv("DB_HOST", "localhost")
+    monkeypatch.setenv("DB_PORT", "5432")
+    monkeypatch.setenv("DB_DATABASE", "dify")
+    monkeypatch.setenv("DEBUG", debug_value)
+
+    config = DifyConfig()
+
+    assert config.DEBUG is expected
 
 
 # NOTE: If there is a `.env` file in your Workspace, this test might not succeed as expected.

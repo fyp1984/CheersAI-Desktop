@@ -35,6 +35,7 @@ for module_name in RESOURCE_MODULES:
 from . import (
     admin,
     apikey,
+    beta_applications,
     extension,
     feature,
     init_validate,
@@ -165,6 +166,7 @@ __all__ = [
     "audio",
     "banner",
     "billing",
+    "beta_applications",
     "bp",
     "completion",
     "compliance",

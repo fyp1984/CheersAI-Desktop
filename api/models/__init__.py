@@ -9,6 +9,10 @@ from .account import (
     TenantStatus,
 )
 from .api_based_extension import APIBasedExtension, APIBasedExtensionPoint
+from .beta_application import BetaApplication
+from .beta_application_notification import BetaApplicationNotification
+from .beta_application_provision_task import BetaApplicationProvisionTask
+from .beta_application_step import BetaApplicationStep
 from .dataset import (
     AppDatasetJoin,
     Dataset,
@@ -133,6 +137,10 @@ __all__ = [
     "AppTrigger",
     "AppTriggerStatus",
     "AppTriggerType",
+    "BetaApplication",
+    "BetaApplicationNotification",
+    "BetaApplicationProvisionTask",
+    "BetaApplicationStep",
     "BuiltinToolProvider",
     "CeleryTask",
     "CeleryTaskSet",

@@ -384,5 +384,26 @@ export const resetEmail = (body: { new_email: string, token: string }): Promise<
 export const checkEmailExisted = (body: { email: string }): Promise<CommonResponse> =>
   post<CommonResponse>('/account/change-email/check-email-unique', { body }, { silent: true })
 
-export const applyForBeta = (body: { email: string, name: string, language?: string }): Promise<CommonResponse> =>
-  post<CommonResponse>('/apply-beta', { body })
+const NEXUS_BETA_APPLY_PROXY_PATH = '/api/nexus/beta-applications/apply'
+
+export const applyForBeta = async (body: { email: string, name: string, language?: string }): Promise<CommonResponse> => {
+  const response = await globalThis.fetch(NEXUS_BETA_APPLY_PROXY_PATH, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+
+  const contentType = response.headers.get('content-type') || ''
+  const responseData = contentType.includes('application/json')
+    ? await response.json() as CommonResponse & { message?: string, data?: string }
+    : null
+
+  if (!response.ok || responseData?.result === 'fail') {
+    const errorMessage = responseData?.message || responseData?.data || '申请失败，请重试'
+    throw new Error(errorMessage)
+  }
+
+  return responseData || { result: 'success' }
+}

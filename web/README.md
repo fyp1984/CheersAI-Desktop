@@ -48,6 +48,10 @@ NEXT_PUBLIC_COOKIE_DOMAIN=
 # example: http://udify.app/api
 NEXT_PUBLIC_PUBLIC_API_PREFIX=http://localhost:5001/api
 
+# Nexus API base URL for beta-application proxy route (required)
+# example: https://uat-nexus.cheersai.cloud
+NEXUS_API_BASE_URL=
+
 # SENTRY
 NEXT_PUBLIC_SENTRY_DSN=
 ```
@@ -56,6 +60,7 @@ NEXT_PUBLIC_SENTRY_DSN=
 >
 > 1. When the frontend and backend run on different subdomains, set NEXT_PUBLIC_COOKIE_DOMAIN=1. The frontend and backend must be under the same top-level domain in order to share authentication cookies.
 > 1. It's necessary to set NEXT_PUBLIC_API_PREFIX and NEXT_PUBLIC_PUBLIC_API_PREFIX to the correct backend API URL.
+> 1. For beta application submission integration, configure NEXUS_API_BASE_URL. If missing, `/api/nexus/beta-applications/apply` will return 500.
 
 Finally, run the development server:
 

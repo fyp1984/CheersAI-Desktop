@@ -87,6 +87,11 @@ export const MARKETPLACE_URL_PREFIX = getStringConfig(
   DatasetAttr.DATA_MARKETPLACE_URL_PREFIX,
   '',
 )
+export const NEXUS_API_PREFIX = normalizeUrlPrefix(getStringConfig(
+  process.env.NEXT_PUBLIC_NEXUS_API_PREFIX,
+  DatasetAttr.DATA_NEXUS_API_PREFIX,
+  '',
+))
 
 const EDITION = getStringConfig(
   process.env.NEXT_PUBLIC_EDITION,

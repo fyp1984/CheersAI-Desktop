@@ -150,6 +150,76 @@ def _get_cache_configuration() -> CacheConfig | None:
     return CacheConfig()
 
 
+def _parse_redis_major_version(redis_version: Any) -> int | None:
+    """Parse the major version number from a Redis version string."""
+    if not redis_version:
+        return None
+
+    version_text = str(redis_version).strip()
+    if not version_text:
+        return None
+
+    major_version = version_text.split(".", maxsplit=1)[0]
+    try:
+        return int(major_version)
+    except (TypeError, ValueError):
+        return None
+
+
+def _resolve_standalone_protocol(
+    connection_class: type[Union[Connection, SSLConnection]],
+    ssl_kwargs: dict[str, Any],
+    requested_protocol: int,
+) -> int:
+    """Downgrade to RESP2 when a standalone Redis server does not support RESP3 HELLO."""
+    if requested_protocol < 3:
+        return requested_protocol
+
+    probe_client: redis.Redis | None = None
+    try:
+        probe_client = redis.Redis(
+            host=dify_config.REDIS_HOST,
+            port=dify_config.REDIS_PORT,
+            username=dify_config.REDIS_USERNAME,
+            password=dify_config.REDIS_PASSWORD or None,
+            db=dify_config.REDIS_DB,
+            connection_class=connection_class,
+            encoding="utf-8",
+            encoding_errors="strict",
+            decode_responses=True,
+            **ssl_kwargs,
+        )
+        server_info = probe_client.info("server")
+        redis_version = server_info.get("redis_version") if isinstance(server_info, dict) else None
+        redis_major_version = _parse_redis_major_version(redis_version)
+
+        if redis_major_version is not None and redis_major_version < 6:
+            logger.warning(
+                "Redis server %s:%s reports version %s, which does not support RESP3 HELLO. "
+                "Falling back to RESP2.",
+                dify_config.REDIS_HOST,
+                dify_config.REDIS_PORT,
+                redis_version,
+            )
+            return 2
+    except RedisError as e:
+        logger.warning(
+            "Redis protocol probe failed for %s:%s. Continuing with RESP%s. Error: %s",
+            dify_config.REDIS_HOST,
+            dify_config.REDIS_PORT,
+            requested_protocol,
+            str(e),
+        )
+    finally:
+        if probe_client is not None:
+            try:
+                probe_client.close()
+            except RedisError:
+                pass
+
+    return requested_protocol
+
+
 def _get_base_redis_params() -> dict[str, Any]:
     """Get base Redis connection parameters."""
     return {
@@ -209,12 +279,19 @@ def _create_cluster_client() -> Union[redis.Redis, RedisCluster]:
 def _create_standalone_client(redis_params: dict[str, Any]) -> Union[redis.Redis, RedisCluster]:
     """Create standalone Redis client."""
     connection_class, ssl_kwargs = _get_ssl_configuration()
+    resolved_protocol = _resolve_standalone_protocol(
+        connection_class=connection_class,
+        ssl_kwargs=ssl_kwargs,
+        requested_protocol=redis_params.get("protocol", dify_config.REDIS_SERIALIZATION_PROTOCOL),
+    )
 
     redis_params.update(
         {
             "host": dify_config.REDIS_HOST,
             "port": dify_config.REDIS_PORT,
             "connection_class": connection_class,
+            "protocol": resolved_protocol,
+            "cache_config": None if resolved_protocol < 3 else _get_cache_configuration(),
         }
     )
 
