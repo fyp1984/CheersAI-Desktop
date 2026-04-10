@@ -14,8 +14,6 @@ import {
   RiMoneyDollarCircleLine,
   RiPuzzle2Fill,
   RiPuzzle2Line,
-  RiShieldKeyholeFill,
-  RiShieldKeyholeLine,
   RiTranslate2,
 } from '@remixicon/react'
 import { useEffect, useRef, useState } from 'react'
@@ -23,7 +21,6 @@ import { useTranslation } from 'react-i18next'
 import Input from '@/app/components/base/input'
 import BillingPage from '@/app/components/billing/billing-page'
 import CustomPage from '@/app/components/custom/custom-page'
-import { SandboxConfig } from '@/app/components/data-masking/sandbox-config'
 import {
   ACCOUNT_SETTING_TAB,
 
@@ -120,15 +117,6 @@ export default function AccountSetting({
         name: t('settings.apiBasedExtension', { ns: 'common' }),
         icon: <RiPuzzle2Line className={iconClassName} />,
         activeIcon: <RiPuzzle2Fill className={iconClassName} />,
-      })
-    }
-
-    if (canManageWorkspaceSettings) {
-      items.push({
-        key: ACCOUNT_SETTING_TAB.DATA_SECURITY,
-        name: t('settings.dataSecurity', { ns: 'common' }),
-        icon: <RiShieldKeyholeLine className={iconClassName} />,
-        activeIcon: <RiShieldKeyholeFill className={iconClassName} />,
       })
     }
 
@@ -270,7 +258,6 @@ export default function AccountSetting({
               {effectiveActiveMenu === 'billing' && <BillingPage />}
               {effectiveActiveMenu === 'data-source' && <DataSourcePage />}
               {effectiveActiveMenu === 'api-based-extension' && <ApiBasedExtensionPage />}
-              {effectiveActiveMenu === 'data-security' && <SandboxConfig />}
               {effectiveActiveMenu === 'custom' && <CustomPage />}
               {effectiveActiveMenu === 'language' && <LanguagePage />}
             </div>

@@ -24,6 +24,7 @@ from core.provider_manager import ProviderManager
 from extensions.ext_redis import redis_client
 from models.provider import ProviderType
 from services.enterprise.plugin_manager_service import PluginCredentialType
+from services.model_usage_record_service import ModelUsageRecordService
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +160,7 @@ class ModelInstance:
         """
         if not isinstance(self.model_type_instance, LargeLanguageModel):
             raise Exception("Model type instance is not LargeLanguageModel")
-        return cast(
+        result = cast(
             Union[LLMResult, Generator],
             self._round_robin_invoke(
                 function=self.model_type_instance.invoke,
@@ -174,6 +175,10 @@ class ModelInstance:
                 callbacks=callbacks,
             ),
         )
+        if isinstance(result, LLMResult):
+            self._record_llm_usage(result=result, user=user, stream=stream)
+            return result
+        return self._wrap_llm_stream_with_usage_record(result=result, user=user)
 
     def get_llm_num_tokens(
         self, prompt_messages: Sequence[PromptMessage], tools: Sequence[PromptMessageTool] | None = None
@@ -211,7 +216,7 @@ class ModelInstance:
         """
         if not isinstance(self.model_type_instance, TextEmbeddingModel):
             raise Exception("Model type instance is not TextEmbeddingModel")
-        return cast(
+        result = cast(
             EmbeddingResult,
             self._round_robin_invoke(
                 function=self.model_type_instance.invoke,
@@ -222,6 +227,8 @@ class ModelInstance:
                 input_type=input_type,
             ),
         )
+        self._record_embedding_usage(result=result, user=user)
+        return result
 
     def invoke_multimodal_embedding(
         self,
@@ -239,7 +246,7 @@ class ModelInstance:
         """
         if not isinstance(self.model_type_instance, TextEmbeddingModel):
             raise Exception("Model type instance is not TextEmbeddingModel")
-        return cast(
+        result = cast(
             EmbeddingResult,
             self._round_robin_invoke(
                 function=self.model_type_instance.invoke,
@@ -250,6 +257,8 @@ class ModelInstance:
                 input_type=input_type,
             ),
         )
+        self._record_embedding_usage(result=result, user=user)
+        return result
 
     def get_text_embedding_num_tokens(self, texts: list[str]) -> list[int]:
         """
@@ -458,6 +467,39 @@ class ModelInstance:
                 continue
             except Exception as e:
                 raise e
+
+    def _wrap_llm_stream_with_usage_record(self, result: Generator, user: str | None = None) -> Generator:
+        final_result: LLMResult | None = None
+        try:
+            for chunk in result:
+                yield chunk
+                if getattr(chunk.delta, "usage", None):
+                    final_result = LLMResult(
+                        model=chunk.model,
+                        prompt_messages=chunk.prompt_messages,
+                        message=chunk.delta.message,
+                        usage=chunk.delta.usage,
+                        system_fingerprint=chunk.system_fingerprint,
+                    )
+        finally:
+            if final_result is not None:
+                self._record_llm_usage(result=final_result, user=user, stream=True)
+
+    def _record_llm_usage(self, result: LLMResult, user: str | None, stream: bool) -> None:
+        ModelUsageRecordService.record_llm_usage(
+            model_instance=self,
+            usage=result.usage,
+            user_id=user,
+            metadata={"stream": stream, "resolved_model": result.model},
+        )
+
+    def _record_embedding_usage(self, result: EmbeddingResult, user: str | None) -> None:
+        ModelUsageRecordService.record_embedding_usage(
+            model_instance=self,
+            usage=result.usage,
+            user_id=user,
+            metadata={"resolved_model": result.model},
+        )
 
     def get_tts_voices(self, language: str | None = None):
         """

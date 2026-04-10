@@ -1,0 +1,42 @@
+#!/usr/bin/env python
+"""Retry failed documents."""
+
+import sys
+from pathlib import Path
+
+API_ROOT = Path(__file__).resolve().parents[3]
+if str(API_ROOT) not in sys.path:
+    sys.path.insert(0, str(API_ROOT))
+
+from extensions.ext_database import db
+from models.dataset import Document, Dataset
+from tasks.retry_document_indexing_task import retry_document_indexing_task
+
+# Get error documents
+error_docs = (
+    db.session.query(Document)
+    .filter_by(
+        dataset_id='36adfd03-f829-4eb6-a3b5-041064ef714a',
+        indexing_status='error'
+    )
+    .order_by(Document.created_at.desc())
+    .limit(3)
+    .all()
+)
+
+print(f'\nFound {len(error_docs)} error documents\n')
+
+for doc in error_docs:
+    print(f'Retrying: {doc.name}')
+    
+    # Get dataset
+    dataset = db.session.query(Dataset).filter_by(id=doc.dataset_id).first()
+    if dataset:
+        # Trigger retry with correct parameters: (dataset_id, document_ids list, user_id)
+        retry_document_indexing_task.delay(dataset.id, [doc.id], doc.created_by)
+        print(f'  ✓ Retry task triggered')
+    else:
+        print(f'  ✗ Dataset not found')
+    print()
+
+print('All retry tasks have been triggered!')

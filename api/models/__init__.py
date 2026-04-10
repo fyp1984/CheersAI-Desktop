@@ -71,6 +71,7 @@ from .model import (
     TrialApp,
     UploadFile,
 )
+from .model_usage import ModelUsageRecord
 from .oauth import DatasourceOauthParamConfig, DatasourceProvider
 from .provider import (
     LoadBalancingModelConfig,
@@ -177,6 +178,7 @@ __all__ = [
     "MessageChain",
     "MessageFeedback",
     "MessageFile",
+    "ModelUsageRecord",
     "OperationLog",
     "PinnedConversation",
     "Provider",
