@@ -1,9 +1,8 @@
 from datetime import datetime
 from io import BytesIO
-from typing import Optional
 
 import xlsxwriter
-from flask import Blueprint, Response, request
+from flask import Blueprint, Response
 from flask_login import current_user
 from flask_restx import Resource, fields
 from sqlalchemy import desc, func, or_

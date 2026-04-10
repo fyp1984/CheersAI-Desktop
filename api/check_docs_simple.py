@@ -1,6 +1,6 @@
 """Simple script to check document status without loading full app"""
 import os
-import sys
+
 from sqlalchemy import create_engine, text
 
 # Get database URL from environment

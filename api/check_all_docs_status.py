@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 """Check all documents status."""
 
+from sqlalchemy import func
+
 from app_factory import create_app
 from extensions.ext_database import db
 from models.dataset import Document
-from sqlalchemy import func
 
 app = create_app()
 
@@ -34,7 +35,7 @@ with app.app_context():
     )
 
     if error_docs:
-        print(f'\nRecent error documents:')
+        print('\nRecent error documents:')
         for doc in error_docs:
             print(f'  - {doc.name}')
             print(f'    Error: {doc.error}')

@@ -2,13 +2,15 @@
 Reindex completed documents that don't have embeddings (index_node_id is None)
 """
 import sys
+
 sys.path.insert(0, '/app')
+
+import json
 
 from app_factory import create_app
 from extensions.ext_database import db
 from models.dataset import Document, DocumentSegment
 from services.document_indexing_proxy.document_indexing_task_proxy import DocumentIndexingTaskProxy
-import json
 
 app = create_app()
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """Check dify_extractor tool configuration."""
 
+
 import psycopg2
-import json
 
 conn = psycopg2.connect(
     host="127.0.0.1",
@@ -35,7 +35,7 @@ cur.execute("""
 
 rows = cur.fetchall()
 if rows:
-    print(f"\nFound dify_extractor installation:")
+    print("\nFound dify_extractor installation:")
     print(rows[0])
 else:
     print("\nNo dify_extractor installations found")

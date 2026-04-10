@@ -10,7 +10,7 @@ doc = db.session.query(Document).filter_by(
 ).order_by(Document.created_at.desc()).first()
 
 if doc:
-    print(f'\nLatest document:')
+    print('\nLatest document:')
     print(f'  ID: {doc.id}')
     print(f'  Name: {doc.name}')
     print(f'  Status: {doc.indexing_status}')
