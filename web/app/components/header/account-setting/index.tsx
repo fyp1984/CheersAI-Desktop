@@ -68,16 +68,17 @@ export default function AccountSetting({
   const { t } = useTranslation()
   const { enableBilling, enableReplaceWebAppLogo } = useProviderContext()
   const { currentWorkspace } = useAppContext()
-  const canManageModels = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.modelManage)
-  const canManageTeam = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.teamManage)
-  const canEditKnowledge = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.knowledgeEdit)
+  const canManageModelProviders = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.modelProviderManage)
+  const canManageMembers = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.memberManage)
+  const canManageDataSource = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.dataSourceManage)
   const canManagePlugin = hasPluginManageWorkspaceCapability(currentWorkspace)
   const canManageWorkspaceSettings = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.settingsTeam)
+  const canManageDataSecurity = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.dataSecurityManage)
 
   const workplaceGroupItems: GroupItem[] = (() => {
     const items: GroupItem[] = []
 
-    if (canManageModels) {
+    if (canManageModelProviders) {
       items.push({
         key: ACCOUNT_SETTING_TAB.PROVIDER,
         name: t('settings.provider', { ns: 'common' }),
@@ -86,7 +87,7 @@ export default function AccountSetting({
       })
     }
 
-    if (canManageTeam) {
+    if (canManageMembers) {
       items.push({
         key: ACCOUNT_SETTING_TAB.MEMBERS,
         name: t('settings.members', { ns: 'common' }),
@@ -105,7 +106,7 @@ export default function AccountSetting({
       })
     }
 
-    if (canEditKnowledge) {
+    if (canManageDataSource) {
       items.push({
         key: ACCOUNT_SETTING_TAB.DATA_SOURCE,
         name: t('settings.dataSource', { ns: 'common' }),
@@ -123,7 +124,7 @@ export default function AccountSetting({
       })
     }
 
-    if (canManageWorkspaceSettings) {
+    if (canManageDataSecurity) {
       items.push({
         key: ACCOUNT_SETTING_TAB.DATA_SECURITY,
         name: t('settings.dataSecurity', { ns: 'common' }),

@@ -18,7 +18,8 @@ const StartNodeSelectionPanel: FC<StartNodeSelectionPanelProps> = ({
   onSelectUserInput,
   onSelectTrigger,
 }) => {
-  const { t } = useTranslation()
+  const translation = useTranslation()
+  const t = translation?.t ?? ((key: string) => key)
   const [showTriggerSelector, setShowTriggerSelector] = useState(false)
 
   const handleTriggerClick = useCallback(() => {

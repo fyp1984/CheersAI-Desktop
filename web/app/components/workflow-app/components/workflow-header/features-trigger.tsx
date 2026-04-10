@@ -45,7 +45,8 @@ import { useInvalidateAppWorkflow, usePublishWorkflow, useResetWorkflowVersionHi
 import { cn } from '@/utils/classnames'
 
 const FeaturesTrigger = () => {
-  const { t } = useTranslation()
+  const translation = useTranslation()
+  const t = translation?.t ?? ((key: string) => key)
   const { theme } = useTheme()
   const isChatMode = useIsChatMode()
   const workflowStore = useWorkflowStore()

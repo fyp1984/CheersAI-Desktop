@@ -13,6 +13,7 @@ from controllers.common.helpers import FileInfo
 from controllers.common.schema import register_enum_models, register_schema_models
 from controllers.console import console_ns
 from controllers.console.app.wraps import get_app_model
+from controllers.console.workspace import require_app_edit_capability, require_app_view_capability
 from controllers.console.workspace.models import LoadBalancingPayload
 from controllers.console.wraps import (
     account_initialization_required,
@@ -465,6 +466,7 @@ class AppListApi(Resource):
     @login_required
     @account_initialization_required
     @enterprise_license_required
+    @require_app_view_capability
     def get(self):
         """Get app list"""
         current_user, current_tenant_id = current_account_with_tenant()
@@ -534,6 +536,7 @@ class AppListApi(Resource):
     @login_required
     @account_initialization_required
     @cloud_edition_billing_resource_check("apps")
+    @require_app_edit_capability
     @edit_permission_required
     def post(self):
         """Create app"""
@@ -557,6 +560,7 @@ class AppApi(Resource):
     @account_initialization_required
     @enterprise_license_required
     @get_app_model(mode=None)
+    @require_app_view_capability
     def get(self, app_model):
         """Get app detail"""
         app_service = AppService()
@@ -581,6 +585,7 @@ class AppApi(Resource):
     @login_required
     @account_initialization_required
     @get_app_model(mode=None)
+    @require_app_edit_capability
     @edit_permission_required
     def put(self, app_model):
         """Update app"""
@@ -610,6 +615,7 @@ class AppApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_app_edit_capability
     @edit_permission_required
     def delete(self, app_model):
         """Delete app"""
@@ -631,6 +637,7 @@ class AppCopyApi(Resource):
     @login_required
     @account_initialization_required
     @get_app_model(mode=None)
+    @require_app_edit_capability
     @edit_permission_required
     def post(self, app_model):
         """Copy app"""
@@ -673,6 +680,7 @@ class AppExportApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_app_edit_capability
     @edit_permission_required
     def get(self, app_model):
         """Export app"""
@@ -699,6 +707,7 @@ class AppNameApi(Resource):
     @login_required
     @account_initialization_required
     @get_app_model(mode=None)
+    @require_app_edit_capability
     @edit_permission_required
     def post(self, app_model):
         args = AppNamePayload.model_validate(console_ns.payload)
@@ -721,6 +730,7 @@ class AppIconApi(Resource):
     @login_required
     @account_initialization_required
     @get_app_model(mode=None)
+    @require_app_edit_capability
     @edit_permission_required
     def post(self, app_model):
         args = AppIconPayload.model_validate(console_ns.payload or {})
@@ -743,6 +753,7 @@ class AppSiteStatus(Resource):
     @login_required
     @account_initialization_required
     @get_app_model(mode=None)
+    @require_app_edit_capability
     @edit_permission_required
     def post(self, app_model):
         args = AppSiteStatusPayload.model_validate(console_ns.payload)
@@ -766,6 +777,7 @@ class AppApiStatus(Resource):
     @is_admin_or_owner_required
     @account_initialization_required
     @get_app_model(mode=None)
+    @require_app_edit_capability
     def post(self, app_model):
         args = AppApiStatusPayload.model_validate(console_ns.payload)
 
@@ -784,6 +796,7 @@ class AppTraceApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_app_view_capability
     def get(self, app_id):
         """Get app trace"""
         app_trace_config = OpsTraceManager.get_app_tracing_config(app_id=app_id)
@@ -799,6 +812,7 @@ class AppTraceApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_app_edit_capability
     @edit_permission_required
     def post(self, app_id):
         # add app trace

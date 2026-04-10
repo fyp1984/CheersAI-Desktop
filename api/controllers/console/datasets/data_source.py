@@ -34,6 +34,7 @@ from tasks.document_indexing_sync_task import document_indexing_sync_task
 
 from .. import console_ns
 from ..wraps import account_initialization_required, setup_required
+from ..workspace import require_data_source_manage_capability
 
 
 class NotionEstimatePayload(BaseModel):
@@ -107,6 +108,7 @@ class DataSourceApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_data_source_manage_capability
     @marshal_with(integrate_list_model)
     def get(self):
         _, current_tenant_id = current_account_with_tenant()
@@ -157,6 +159,7 @@ class DataSourceApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_data_source_manage_capability
     def patch(self, binding_id, action: Literal["enable", "disable"]):
         binding_id = str(binding_id)
         with Session(db.engine) as session:

@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 from constants import HIDDEN_VALUE
 from fields.api_based_extension_fields import api_based_extension_fields
+from controllers.console.workspace import require_api_extension_manage_capability
 from libs.login import current_account_with_tenant, login_required
 from models.api_based_extension import APIBasedExtension
 from services.api_based_extension_service import APIBasedExtensionService
@@ -48,6 +49,7 @@ class CodeBasedExtensionAPI(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_api_extension_manage_capability
     def get(self):
         query = CodeBasedExtensionQuery.model_validate(request.args.to_dict(flat=True))  # type: ignore
 
@@ -62,6 +64,7 @@ class APIBasedExtensionAPI(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_api_extension_manage_capability
     @marshal_with(api_based_extension_model)
     def get(self):
         _, tenant_id = current_account_with_tenant()
@@ -74,6 +77,7 @@ class APIBasedExtensionAPI(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_api_extension_manage_capability
     @marshal_with(api_based_extension_model)
     def post(self):
         payload = APIBasedExtensionPayload.model_validate(console_ns.payload or {})
@@ -98,6 +102,7 @@ class APIBasedExtensionDetailAPI(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_api_extension_manage_capability
     @marshal_with(api_based_extension_model)
     def get(self, id):
         api_based_extension_id = str(id)
@@ -113,6 +118,7 @@ class APIBasedExtensionDetailAPI(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_api_extension_manage_capability
     @marshal_with(api_based_extension_model)
     def post(self, id):
         api_based_extension_id = str(id)
@@ -137,6 +143,7 @@ class APIBasedExtensionDetailAPI(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_api_extension_manage_capability
     def delete(self, id):
         api_based_extension_id = str(id)
         _, current_tenant_id = current_account_with_tenant()

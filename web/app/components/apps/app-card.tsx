@@ -65,7 +65,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
   const { t } = useTranslation()
   const { notify } = useContext(ToastContext)
   const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
-  const { isCurrentWorkspaceEditor, canViewWorkflow, canEditWorkflow } = useAppContext()
+  const { canEditApps, canViewWorkflow, canEditWorkflow } = useAppContext()
   const { onPlanInfoChanged } = useProviderContext()
   const { push } = useRouter()
   const openAsyncWindow = useAsyncWindowOpen()
@@ -150,7 +150,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
         onRefresh()
       onPlanInfoChanged()
       getRedirection({
-        canEditApp: isCurrentWorkspaceEditor,
+        canEditApp: canEditApps,
         canViewWorkflow,
         canEditWorkflow,
       }, newApp, push)
@@ -266,22 +266,8 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
         Toast.notify({ type: 'error', message: `${e.message || e}` })
       }
     }
-    const onClickOrchestrate = async (e: React.MouseEvent<HTMLButtonElement>) => {
-      e.stopPropagation()
-      props.onClick?.()
-      e.preventDefault()
-      getRedirection(isCurrentWorkspaceEditor, app, push)
-    }
     return (
       <div className="relative flex w-full flex-col py-1" onMouseLeave={onMouseLeave}>
-        {isCurrentWorkspaceEditor && (
-          <>
-            <button type="button" className="mx-1 flex h-8 cursor-pointer items-center gap-2 rounded-lg px-3 hover:bg-state-base-hover" onClick={onClickOrchestrate}>
-              <span className="system-sm-regular text-text-secondary">{t('orchestrate', { ns: 'app' })}</span>
-            </button>
-            <Divider className="my-1" />
-          </>
-        )}
         <button type="button" className="mx-1 flex h-8 cursor-pointer items-center gap-2 rounded-lg px-3 hover:bg-state-base-hover" onClick={onClickSettings}>
           <span className="system-sm-regular text-text-secondary">{t('editApp', { ns: 'app' })}</span>
         </button>
@@ -327,7 +313,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
         }
         <Divider className="my-1" />
         {
-          systemFeatures.webapp_auth.enabled && isCurrentWorkspaceEditor && (
+          systemFeatures.webapp_auth.enabled && canEditApps && (
             <>
               <button type="button" className="mx-1 flex h-8 cursor-pointer items-center rounded-lg px-3 hover:bg-state-base-hover" onClick={onClickAccessControl}>
                 <span className="text-sm leading-5 text-text-secondary">{t('accessControl', { ns: 'app' })}</span>
@@ -365,21 +351,13 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
   return (
     <>
       <div
-        onClick={async (e) => {
+        onClick={(e) => {
           e.preventDefault()
-          // 所有用户点击应用时，都直接在探索中打开（运行智能体）
-          try {
-            const { installed_apps }: any = await fetchInstalledAppList(app.id) || {}
-            if (installed_apps?.length > 0) {
-              push(`${basePath}/explore/installed/${installed_apps[0].id}`)
-            }
-            else {
-              Toast.notify({ type: 'error', message: t('appNotFoundInExplore', { ns: 'app' }) })
-            }
-          }
-          catch (e: any) {
-            Toast.notify({ type: 'error', message: `${e.message || e}` })
-          }
+          getRedirection({
+            canEditApp: canEditApps,
+            canViewWorkflow,
+            canEditWorkflow,
+          }, app, push)
         }}
         className="group relative col-span-1 inline-flex h-[160px] cursor-pointer flex-col rounded-xl border-[1px] border-solid border-components-card-border bg-components-card-bg shadow-sm transition-all duration-200 ease-in-out hover:shadow-lg"
       >
@@ -436,7 +414,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
           </div>
         </div>
         <div className="absolute bottom-1 left-0 right-0 flex h-[42px] shrink-0 items-center pb-[6px] pl-[14px] pr-[6px] pt-1">
-          {isCurrentWorkspaceEditor && (
+          {canEditApps && (
             <>
               <div
                 className={cn('flex w-0 grow items-center gap-1')}

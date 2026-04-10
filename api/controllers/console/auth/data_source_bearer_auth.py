@@ -3,10 +3,11 @@ from pydantic import BaseModel, Field
 
 from libs.login import current_account_with_tenant, login_required
 from services.auth.api_key_auth_service import ApiKeyAuthService
+from controllers.console.workspace import require_data_source_manage_capability
 
 from .. import console_ns
 from ..auth.error import ApiKeyAuthFailedError
-from ..wraps import account_initialization_required, is_admin_or_owner_required, setup_required
+from ..wraps import account_initialization_required, setup_required
 
 DEFAULT_REF_TEMPLATE_SWAGGER_2_0 = "#/definitions/{model}"
 
@@ -28,6 +29,7 @@ class ApiKeyAuthDataSource(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_data_source_manage_capability
     def get(self):
         _, current_tenant_id = current_account_with_tenant()
         data_source_api_key_bindings = ApiKeyAuthService.get_provider_auth_list(current_tenant_id)
@@ -53,7 +55,7 @@ class ApiKeyAuthDataSourceBinding(Resource):
     @setup_required
     @login_required
     @account_initialization_required
-    @is_admin_or_owner_required
+    @require_data_source_manage_capability
     @console_ns.expect(console_ns.models[ApiKeyAuthBindingPayload.__name__])
     def post(self):
         # The role of the current user in the table must be admin or owner
@@ -73,7 +75,7 @@ class ApiKeyAuthDataSourceBindingDelete(Resource):
     @setup_required
     @login_required
     @account_initialization_required
-    @is_admin_or_owner_required
+    @require_data_source_manage_capability
     def delete(self, binding_id):
         # The role of the current user in the table must be admin or owner
         _, current_tenant_id = current_account_with_tenant()

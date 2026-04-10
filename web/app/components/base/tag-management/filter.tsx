@@ -13,11 +13,11 @@ import {
   PortalToFollowElemContent,
   PortalToFollowElemTrigger,
 } from '@/app/components/base/portal-to-follow-elem'
-import { useAppContext } from '@/context/app-context'
 import { fetchTagList } from '@/service/tag'
 import { cn } from '@/utils/classnames'
 
 import { useStore as useTagStore } from './store'
+import useCanManageTags from './use-can-manage-tags'
 
 type TagFilterProps = {
   type: 'knowledge' | 'app'
@@ -30,7 +30,7 @@ const TagFilter: FC<TagFilterProps> = ({
   onChange,
 }) => {
   const { t } = useTranslation()
-  const { isCurrentWorkspaceEditor } = useAppContext()
+  const canManageTags = useCanManageTags(type)
   const [open, setOpen] = useState(false)
 
   const tagList = useTagStore(s => s.tagList)
@@ -65,9 +65,6 @@ const TagFilter: FC<TagFilterProps> = ({
   useMount(() => {
     fetchTagList(type).then((res) => {
       setTagList(res)
-    }).catch((err) => {
-      console.warn('Failed to fetch tag list:', err)
-      setTagList([])
     })
   })
 
@@ -146,7 +143,7 @@ const TagFilter: FC<TagFilterProps> = ({
                 </div>
               )}
             </div>
-            {isCurrentWorkspaceEditor && (
+            {canManageTags && (
               <>
                 <div className="border-t-[0.5px] border-divider-regular" />
                 <div className="p-1">

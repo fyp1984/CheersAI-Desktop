@@ -17,6 +17,8 @@ vi.mock('next/navigation', () => ({
 // Mock app context
 const mockIsCurrentWorkspaceEditor = vi.fn(() => true)
 const mockIsCurrentWorkspaceDatasetOperator = vi.fn(() => false)
+const mockCanViewApps = vi.fn(() => true)
+const mockCanEditApps = vi.fn(() => true)
 const mockCanViewWorkflow = vi.fn(() => true)
 const mockCanEditWorkflow = vi.fn(() => true)
 vi.mock('@/context/app-context', () => ({
@@ -24,6 +26,8 @@ vi.mock('@/context/app-context', () => ({
     isCurrentWorkspaceEditor: mockIsCurrentWorkspaceEditor(),
     isCurrentWorkspaceDatasetOperator: mockIsCurrentWorkspaceDatasetOperator(),
     isLoadingCurrentWorkspace: false,
+    canViewApps: mockCanViewApps(),
+    canEditApps: mockCanEditApps(),
     canViewWorkflow: mockCanViewWorkflow(),
     canEditWorkflow: mockCanEditWorkflow(),
   }),
@@ -244,6 +248,8 @@ describe('List', () => {
     })
     mockIsCurrentWorkspaceEditor.mockReturnValue(true)
     mockIsCurrentWorkspaceDatasetOperator.mockReturnValue(false)
+    mockCanViewApps.mockReturnValue(true)
+    mockCanEditApps.mockReturnValue(true)
     mockCanViewWorkflow.mockReturnValue(true)
     mockCanEditWorkflow.mockReturnValue(true)
     mockActiveTab = 'all'
@@ -376,6 +382,7 @@ describe('List', () => {
   describe('Non-Editor User', () => {
     it('should not render new app card for non-editors', () => {
       mockIsCurrentWorkspaceEditor.mockReturnValue(false)
+      mockCanEditApps.mockReturnValue(false)
 
       render(<List />)
 
@@ -384,6 +391,7 @@ describe('List', () => {
 
     it('should not render drop DSL hint for non-editors', () => {
       mockIsCurrentWorkspaceEditor.mockReturnValue(false)
+      mockCanEditApps.mockReturnValue(false)
 
       render(<List />)
 
@@ -391,13 +399,13 @@ describe('List', () => {
     })
   })
 
-  describe('Dataset Operator Redirect', () => {
-    it('should redirect dataset operators to datasets page', () => {
-      mockIsCurrentWorkspaceDatasetOperator.mockReturnValue(true)
+  describe('App Access Redirect', () => {
+    it('should redirect users without app access to chat', () => {
+      mockCanViewApps.mockReturnValue(false)
 
       render(<List />)
 
-      expect(mockReplace).toHaveBeenCalledWith('/datasets')
+      expect(mockReplace).toHaveBeenCalledWith('/chat')
     })
   })
 

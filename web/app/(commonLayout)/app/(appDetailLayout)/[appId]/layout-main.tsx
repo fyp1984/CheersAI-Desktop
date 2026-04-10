@@ -45,12 +45,13 @@ const AppDetailLayout: FC<IAppDetailLayoutProps> = (props) => {
     children,
     appId, // get appId in path
   } = props
-  const { t } = useTranslation()
+  const translation = useTranslation()
+  const t = translation?.t ?? ((key: string) => key)
   const router = useRouter()
   const pathname = usePathname()
   const media = useBreakpoints()
   const isMobile = media === MediaType.mobile
-  const { isCurrentWorkspaceEditor, isLoadingCurrentWorkspace, currentWorkspace, canViewWorkflow, canEditWorkflow } = useAppContext()
+  const { isLoadingCurrentWorkspace, currentWorkspace, canViewWorkflow, canEditWorkflow, canViewApps, canEditApps } = useAppContext()
   const { appDetail, setAppDetail, setAppSidebarExpand } = useStore(useShallow(state => ({
     appDetail: state.appDetail,
     setAppDetail: state.setAppDetail,
@@ -136,9 +137,9 @@ const AppDetailLayout: FC<IAppDetailLayoutProps> = (props) => {
     const res = appDetailRes
     const isWorkflowApp = res.mode === AppModeEnum.WORKFLOW || res.mode === AppModeEnum.ADVANCED_CHAT
     // redirection
-    const canIEditApp = isWorkflowApp ? canEditWorkflow : isCurrentWorkspaceEditor
-    const canAccessWorkflowApp = isWorkflowApp ? canViewWorkflow : true
-    if (!canAccessWorkflowApp) {
+    const canIEditApp = isWorkflowApp ? canEditWorkflow : canEditApps
+    const canAccessCurrentApp = isWorkflowApp ? canViewWorkflow : canViewApps
+    if (!canAccessCurrentApp) {
       router.replace('/apps')
       return
     }
@@ -156,7 +157,7 @@ const AppDetailLayout: FC<IAppDetailLayoutProps> = (props) => {
       setAppDetail({ ...res, enable_sso: false })
       setNavigation(getNavigationConfig(appId, canIEditApp, res.mode))
     }
-  }, [appDetailRes, canEditWorkflow, canViewWorkflow, getNavigationConfig, appId, currentWorkspace.id, isCurrentWorkspaceEditor, isLoadingAppDetail, isLoadingCurrentWorkspace, pathname, router, setAppDetail])
+  }, [appDetailRes, canEditApps, canEditWorkflow, canViewApps, canViewWorkflow, getNavigationConfig, appId, currentWorkspace.id, isLoadingAppDetail, isLoadingCurrentWorkspace, pathname, router, setAppDetail])
 
   useUnmount(() => {
     setAppDetail()

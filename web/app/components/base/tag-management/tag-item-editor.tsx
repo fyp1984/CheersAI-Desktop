@@ -11,13 +11,13 @@ import { useContext } from 'use-context-selector'
 import Confirm from '@/app/components/base/confirm'
 import { ToastContext } from '@/app/components/base/toast'
 import Tooltip from '@/app/components/base/tooltip'
-import { useAppContext } from '@/context/app-context'
 import {
   deleteTag,
   updateTag,
 } from '@/service/tag'
 import { cn } from '@/utils/classnames'
 import { useStore as useTagStore } from './store'
+import useCanManageTags from './use-can-manage-tags'
 
 type TagItemEditorProps = {
   tag: Tag
@@ -27,7 +27,7 @@ const TagItemEditor: FC<TagItemEditorProps> = ({
 }) => {
   const { t } = useTranslation()
   const { notify } = useContext(ToastContext)
-  const { isCurrentWorkspaceEditor } = useAppContext()
+  const canManageTags = useCanManageTags(tag.type as 'knowledge' | 'app')
   const tagList = useTagStore(s => s.tagList)
   const setTagList = useTagStore(s => s.setTagList)
 
@@ -35,7 +35,7 @@ const TagItemEditor: FC<TagItemEditorProps> = ({
   const [name, setName] = useState(tag.name)
   const editingRef = useRef(false)
   const editTag = async (tagID: string, name: string) => {
-    if (!isCurrentWorkspaceEditor) {
+    if (!canManageTags) {
       notify({ type: 'error', message: t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }) })
       return
     }
@@ -72,8 +72,8 @@ const TagItemEditor: FC<TagItemEditorProps> = ({
       notify({ type: 'success', message: t('actionMsg.modifiedSuccessfully', { ns: 'common' }) })
       setName(trimmedName)
     }
-    catch {
-      notify({ type: 'error', message: t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }) })
+    catch (error: any) {
+      notify({ type: 'error', message: error?.message || t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }) })
       setName(tag.name)
       const recoverList = tagList.map((tag) => {
         if (tag.id === tagID) {
@@ -96,7 +96,7 @@ const TagItemEditor: FC<TagItemEditorProps> = ({
   const [showRemoveModal, setShowRemoveModal] = useState(false)
   const [pending, setPending] = useState<boolean>(false)
   const removeTag = async (tagID: string) => {
-    if (!isCurrentWorkspaceEditor) {
+    if (!canManageTags) {
       notify({ type: 'error', message: t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }) })
       return
     }
@@ -112,8 +112,8 @@ const TagItemEditor: FC<TagItemEditorProps> = ({
       ])
       setPending(false)
     }
-    catch {
-      notify({ type: 'error', message: t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }) })
+    catch (error: any) {
+      notify({ type: 'error', message: error?.message || t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }) })
       setPending(false)
     }
   }
@@ -137,7 +137,7 @@ const TagItemEditor: FC<TagItemEditorProps> = ({
             >
               <div className="leading-4.5 shrink-0 px-1 text-sm font-medium text-text-tertiary">{tag.binding_count}</div>
             </Tooltip>
-            {isCurrentWorkspaceEditor && (
+            {canManageTags && (
               <>
                 <div className="group/edit shrink-0 cursor-pointer rounded-md p-1 hover:bg-state-base-hover" onClick={() => setIsEditing(true)}>
                   <RiEditLine className="h-3 w-3 text-text-tertiary group-hover/edit:text-text-secondary" />

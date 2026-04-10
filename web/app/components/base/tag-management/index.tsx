@@ -6,13 +6,13 @@ import { useTranslation } from 'react-i18next'
 import { useContext } from 'use-context-selector'
 import Modal from '@/app/components/base/modal'
 import { ToastContext } from '@/app/components/base/toast'
-import { useAppContext } from '@/context/app-context'
 import {
   createTag,
   fetchTagList,
 } from '@/service/tag'
 import { useStore as useTagStore } from './store'
 import TagItemEditor from './tag-item-editor'
+import useCanManageTags from './use-can-manage-tags'
 
 type TagManagementModalProps = {
   type: 'knowledge' | 'app'
@@ -22,20 +22,14 @@ type TagManagementModalProps = {
 const TagManagementModal = ({ show, type }: TagManagementModalProps) => {
   const { t } = useTranslation()
   const { notify } = useContext(ToastContext)
-  const { isCurrentWorkspaceEditor } = useAppContext()
+  const canManageTags = useCanManageTags(type)
   const tagList = useTagStore(s => s.tagList)
   const setTagList = useTagStore(s => s.setTagList)
   const setShowTagManagementModal = useTagStore(s => s.setShowTagManagementModal)
 
   const getTagList = useCallback(async (type: 'knowledge' | 'app') => {
-    try {
-      const res = await fetchTagList(type)
-      setTagList(res)
-    }
-    catch (err) {
-      console.warn('Failed to fetch tag list:', err)
-      setTagList([])
-    }
+    const res = await fetchTagList(type)
+    setTagList(res)
   }, [setTagList])
 
   const [name, setName] = useState<string>('')
@@ -45,7 +39,7 @@ const TagManagementModal = ({ show, type }: TagManagementModalProps) => {
   }, [trimmedName, tagList, type])
   const pendingRef = useRef(false)
   const createNewTag = async () => {
-    if (!isCurrentWorkspaceEditor) {
+    if (!canManageTags) {
       notify({ type: 'error', message: t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }) })
       return
     }
@@ -63,8 +57,8 @@ const TagManagementModal = ({ show, type }: TagManagementModalProps) => {
       ])
       setName('')
     }
-    catch {
-      notify({ type: 'error', message: t('tag.failed', { ns: 'common' }) })
+    catch (error: any) {
+      notify({ type: 'error', message: error?.message || t('tag.failed', { ns: 'common' }) })
     }
     finally {
       pendingRef.current = false
@@ -86,7 +80,7 @@ const TagManagementModal = ({ show, type }: TagManagementModalProps) => {
         <RiCloseLine className="h-4 w-4 text-text-tertiary" />
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        {isCurrentWorkspaceEditor && (
+        {canManageTags && (
           <form
             className="flex shrink-0 items-center gap-2"
             onSubmit={(e) => {
