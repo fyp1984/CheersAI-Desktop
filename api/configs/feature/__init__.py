@@ -298,6 +298,42 @@ class EndpointConfig(BaseSettings):
     TRIGGER_URL: str = Field(description="Template url for triggers", default="http://localhost:5001")
 
 
+class NexusAuditConfig(BaseSettings):
+    """
+    Configuration for Nexus audit log synchronization
+    """
+
+    NEXUS_AUDIT_API_URL: str = Field(
+        description="Nexus audit log API base URL (e.g., http://localhost:8087)",
+        default="",
+    )
+
+    NEXUS_AUDIT_API_KEY: str | None = Field(
+        description="API key for Nexus audit log service",
+        default=None,
+    )
+
+    NEXUS_AUDIT_SYNC_ENABLED: bool = Field(
+        description="Enable automatic sync of audit logs to Nexus",
+        default=False,
+    )
+
+    NEXUS_AUDIT_SYNC_BATCH_SIZE: PositiveInt = Field(
+        description="Number of logs to sync in each batch",
+        default=100,
+    )
+
+    NEXUS_AUDIT_SYNC_RETRY_TIMES: PositiveInt = Field(
+        description="Number of retry attempts for failed sync",
+        default=3,
+    )
+
+    NEXUS_AUDIT_SYNC_TIMEOUT: PositiveFloat = Field(
+        description="Timeout in seconds for each sync request",
+        default=30.0,
+    )
+
+
 class FileAccessConfig(BaseSettings):
     """
     Configuration for file access and handling
@@ -1341,6 +1377,7 @@ class FeatureConfig(
     ModelLoadBalanceConfig,
     ModerationConfig,
     MultiModalTransferConfig,
+    NexusAuditConfig,
     PositionConfig,
     RagEtlConfig,
     RepositoryConfig,
