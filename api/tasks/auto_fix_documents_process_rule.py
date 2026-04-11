@@ -75,10 +75,10 @@ def auto_fix_documents_process_rule_task(self):
                     triggered_count += len(doc_ids)
                     logger.info(f"Triggered indexing for {len(doc_ids)} documents in dataset {ds_id}")
                 except Exception as e:
-                    logger.error(f"Failed to trigger indexing for dataset {ds_id}: {e}")
+                    logger.error("Failed to trigger indexing for dataset %s: %s", ds_id, e)
 
         return {"fixed": fixed_count, "triggered": triggered_count}
 
     except Exception as e:
-        logger.error(f"Error in auto_fix_documents_process_rule_task: {e}")
+        logger.error("Error in auto_fix_documents_process_rule_task: %s", e)
         raise

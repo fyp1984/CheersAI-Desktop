@@ -267,12 +267,14 @@ export const useOneMoreStep = () => {
 export const useModelProviders = () => {
   const { data: workspace } = useCurrentWorkspace()
   const { data: userProfile } = useUserProfile()
+export const useModelProviders = (enabled = true) => {
   return useQuery<{ data: ModelProvider[] }>({
     queryKey: commonQueryKeys.modelProviders(workspace?.id, userProfile?.profile?.id),
     queryFn: () => get<{ data: ModelProvider[] }>('/workspaces/current/model-providers'),
     refetchOnWindowFocus: true,
     refetchOnMount: 'always',
     refetchInterval: 5000,
+    enabled,
   })
 }
 

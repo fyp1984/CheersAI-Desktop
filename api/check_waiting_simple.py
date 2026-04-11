@@ -1,5 +1,6 @@
 """Check waiting documents"""
 import os
+
 from sqlalchemy import create_engine, text
 
 # Get database URL from environment

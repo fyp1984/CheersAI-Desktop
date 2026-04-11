@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """Check dify_extractor plugin configuration."""
 
+
 import psycopg2
-import json
 
 conn = psycopg2.connect(
     host="127.0.0.1",

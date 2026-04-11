@@ -2,7 +2,7 @@
 """Retry failed documents."""
 
 from extensions.ext_database import db
-from models.dataset import Document, Dataset
+from models.dataset import Dataset, Document
 from tasks.retry_document_indexing_task import retry_document_indexing_task
 
 # Get error documents
@@ -27,9 +27,9 @@ for doc in error_docs:
     if dataset:
         # Trigger retry with correct parameters: (dataset_id, document_ids list, user_id)
         retry_document_indexing_task.delay(dataset.id, [doc.id], doc.created_by)
-        print(f'  ✓ Retry task triggered')
+        print('  ✓ Retry task triggered')
     else:
-        print(f'  ✗ Dataset not found')
+        print('  ✗ Dataset not found')
     print()
 
 print('All retry tasks have been triggered!')

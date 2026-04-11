@@ -5,11 +5,12 @@ Audit Log Sync and Cleanup Tasks
 
 import logging
 from datetime import datetime, timedelta
-from typing import Optional
 
-from sqlalchemy import func, or_
+import httpx
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+from configs import dify_config
 from extensions.ext_database import db
 from models.model import OperationLog
 
@@ -27,6 +28,14 @@ def sync_logs_to_nexus(tenant_id: str, max_retry: int = 3) -> dict:
     Returns:
         同步结果统计
     """
+    if not dify_config.NEXUS_AUDIT_SYNC_ENABLED:
+        logger.info("[AUDIT SYNC] Nexus sync is disabled, skipping")
+        return {"success": 0, "failed": 0, "skipped": 0, "disabled": True}
+
+    if not dify_config.NEXUS_AUDIT_API_URL:
+        logger.warning("[AUDIT SYNC] NEXUS_AUDIT_API_URL not configured, skipping")
+        return {"success": 0, "failed": 0, "skipped": 0, "not_configured": True}
+
     result = {"success": 0, "failed": 0, "skipped": 0}
 
     with Session(db.engine) as session:
@@ -37,7 +46,7 @@ def sync_logs_to_nexus(tenant_id: str, max_retry: int = 3) -> dict:
                 OperationLog.sync_status == "pending",
                 or_(OperationLog.is_expired.is_(None), OperationLog.is_expired == False),
             )
-            .limit(100)
+            .limit(dify_config.NEXUS_AUDIT_SYNC_BATCH_SIZE)
             .all()
         )
 
@@ -55,14 +64,16 @@ def sync_logs_to_nexus(tenant_id: str, max_retry: int = 3) -> dict:
                 else:
                     log.sync_status = "failed"
                     result["failed"] += 1
-            except Exception as e:
-                logger.error(f"[AUDIT SYNC] 同步日志失败: {log.id}, error: {e}")
+            except Exception:
+                logger.exception("[AUDIT SYNC] 同步日志失败: %s", log.id)
                 log.sync_status = "failed"
                 result["failed"] += 1
 
         session.commit()
 
-    logger.info(f"[AUDIT SYNC] 同步完成: tenant={tenant_id}, success={result['success']}, failed={result['failed']}")
+    logger.info(
+        "[AUDIT SYNC] 同步完成: tenant=%s, success=%s, failed=%s", tenant_id, result["success"], result["failed"]
+    )
     return result
 
 
@@ -73,7 +84,96 @@ def _do_sync_to_nexus(log: OperationLog, session: Session) -> bool:
     Returns:
         是否成功
     """
-    return True
+    if not dify_config.NEXUS_AUDIT_API_URL or not dify_config.NEXUS_AUDIT_SYNC_ENABLED:
+        return False
+
+    try:
+        log_data = _transform_log_to_nexus_format(log)
+
+        headers = {
+            "Content-Type": "application/json",
+        }
+        if dify_config.NEXUS_AUDIT_API_KEY:
+            headers["X-API-Key"] = dify_config.NEXUS_AUDIT_API_KEY
+
+        timeout = httpx.Timeout(dify_config.NEXUS_AUDIT_SYNC_TIMEOUT, connect=10.0)
+
+        with httpx.Client(timeout=timeout) as client:
+            response = client.post(
+                f"{dify_config.NEXUS_AUDIT_API_URL}/api/v1/audit-logs",
+                json=log_data,
+                headers=headers,
+            )
+
+            if response.status_code in (200, 201):
+                logger.debug("[AUDIT SYNC] 成功同步日志: %s", log.id)
+                return True
+            else:
+                logger.warning(
+                    "[AUDIT SYNC] Nexus API 返回错误: status=%s, response=%s",
+                    response.status_code,
+                    response.text[:200],
+                )
+                return False
+
+    except httpx.RequestError:
+        logger.exception("[AUDIT SYNC] 网络请求失败: %s", log.id)
+        raise
+    except Exception:
+        logger.exception("[AUDIT SYNC] 同步日志时发生未知错误: %s", log.id)
+        raise
+
+
+def _transform_log_to_nexus_format(log: OperationLog) -> dict:
+    """
+    将 Desktop 的 OperationLog 转换为 Nexus AuditLogDTO 格式
+
+    Args:
+        log: Desktop 操作日志
+
+    Returns:
+        Nexus 格式的审计日志数据
+    """
+    action_mapping = {
+        "file_mask": "file_desensitize",
+        "file_restore": "file_restore",
+        "knowledge_sync": "knowledge_sync",
+        "chat": "chat",
+        "search": "search",
+        "workflow": "workflow",
+    }
+
+    log_type = "user_action"
+    if log.operation_type == "chat":
+        log_type = "user_action"
+    elif log.operation_type in ("desensitize", "restore"):
+        log_type = "admin_action"
+    else:
+        log_type = "user_action"
+
+    action = action_mapping.get(log.operation_type or log.action, log.action or "unknown")
+
+    target_type = None
+    target_id = None
+    if log.content and isinstance(log.content, dict):
+        target_type = log.content.get("resource_type")
+        target_id = log.content.get("resource_id")
+
+    return {
+        "id": log.id,
+        "logType": log_type,
+        "action": action,
+        "operatorId": log.account_id,
+        "operatorName": log.account_name,
+        "targetType": target_type,
+        "targetId": target_id,
+        "beforeData": None,
+        "afterData": log.content,
+        "ipAddress": log.created_ip,
+        "userAgent": log.device_info,
+        "result": "success" if log.error_message is None else "failure",
+        "errorMessage": log.error_message,
+    }
 
 
 def cleanup_expired_logs(tenant_id: str, retention_days: int = 90) -> dict:
@@ -113,13 +213,19 @@ def cleanup_expired_logs(tenant_id: str, retention_days: int = 90) -> dict:
         result["cleaned"] = len(expired_logs)
         session.commit()
 
-    logger.info(f"[AUDIT CLEANUP] 清理完成: tenant={tenant_id}, cleaned={result['cleaned']}")
+    logger.info("[AUDIT CLEANUP] 清理完成: tenant=%s, cleaned=%s", tenant_id, result["cleaned"])
     return result
 
 
 def get_audit_retention_days(tenant_id: str) -> int:
     """
-    从 Nexus 获取审计日志保留天数
+    获取审计日志保留天数
+
+    根据日志类型使用不同的保留策略:
+    - user_action (用户行为): 90天
+    - admin_action (管理操作): 365天
+    - system_event (系统事件): 30天
+    - security_event (安全事件): 365天
 
     Args:
         tenant_id: 租户ID

@@ -28,6 +28,7 @@ import {
 import {
   useEducationStatus,
 } from '@/service/use-education'
+import { useSelector as useAppContextSelector } from './app-context'
 
 export type ProviderContextState = {
   modelProviders: ModelProvider[]
@@ -114,7 +115,11 @@ export const ProviderContextProvider = ({
   children,
 }: ProviderContextProviderProps) => {
   const queryClient = useQueryClient()
-  const { data: providersData } = useModelProviders()
+  const canManageModelProviders = useAppContextSelector((state) => {
+    const capabilities = state.currentWorkspace.capabilities || []
+    return capabilities.includes('desktop_model_provider_manage') || capabilities.includes('desktop_model_manage')
+  })
+  const { data: providersData } = useModelProviders(canManageModelProviders)
   const { data: textGenerationModelList } = useModelListByType(ModelTypeEnum.textGeneration)
   const { data: supportRetrievalMethods } = useSupportRetrievalMethods()
 

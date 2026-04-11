@@ -12,8 +12,9 @@
 """
 
 import argparse
-import psycopg2
 from typing import Optional
+
+import psycopg2
 
 
 class KnowledgeBaseTools:
@@ -243,19 +244,19 @@ class KnowledgeBaseTools:
         
         dataset_info = cur.fetchone()
         
-        print(f'\n{"="*60}')
-        print(f'知识库摘要')
-        print(f'{"="*60}')
+        print(f'\n{"=" * 60}')
+        print('知识库摘要')
+        print(f'{"=" * 60}')
         
         if dataset_info:
             print(f'名称: {dataset_info[0]}')
             print(f'创建时间: {dataset_info[1]}')
         
         print(f'ID: {self.dataset_id}')
-        print(f'\n文档统计:')
+        print('\n文档统计:')
         print(f'  总计: {total}')
-        print(f'  已完成: {completed} ({completed/total*100:.1f}%)' if total > 0 else '  已完成: 0')
-        print(f'  错误: {error} ({error/total*100:.1f}%)' if total > 0 else '  错误: 0')
+        print(f'  已完成: {completed} ({completed / total * 100:.1f}%)' if total > 0 else '  已完成: 0')
+        print(f'  错误: {error} ({error / total * 100:.1f}%)' if total > 0 else '  错误: 0')
         print(f'  等待中: {waiting}')
         print(f'  处理中: {indexing}')
         
@@ -273,7 +274,7 @@ class KnowledgeBaseTools:
             
             print(f'\n健康度: {health_score:.1f}% ({health_status})')
         
-        print(f'{"="*60}\n')
+        print(f'{"=" * 60}\n')
         
         cur.close()
         conn.close()

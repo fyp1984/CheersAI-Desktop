@@ -65,7 +65,7 @@ def auto_bypass_dify_extractor_task():
             try:
                 dataset = db.session.query(Dataset).filter_by(id=dataset_id).first()
                 if not dataset:
-                    logger.warning(f"Dataset {dataset_id} not found")
+                    logger.warning("Dataset %s not found", dataset_id)
                     failed_count += len(docs)
                     continue
                 
@@ -84,7 +84,7 @@ def auto_bypass_dify_extractor_task():
                         break
                 
                 if needs_bypass:
-                    logger.info(f"Dataset {dataset_id} may use dify_extractor, ensuring proper configuration")
+                    logger.info("Dataset %s may use dify_extractor, ensuring proper configuration", dataset_id)
                     
                     # Ensure dataset has a proper process rule
                     process_rule = (
@@ -96,7 +96,7 @@ def auto_bypass_dify_extractor_task():
                     
                     if not process_rule:
                         # Create a default automatic process rule
-                        logger.info(f"Creating automatic process rule for dataset {dataset_id}")
+                        logger.info("Creating automatic process rule for dataset %s", dataset_id)
                         process_rule = DatasetProcessRule(
                             dataset_id=dataset_id,
                             mode="automatic",
@@ -133,7 +133,7 @@ def auto_bypass_dify_extractor_task():
                 failed_count += len(docs)
         
         result = {"bypassed": bypassed_count, "failed": failed_count}
-        logger.info(f"Auto-bypass task completed: {result}")
+        logger.info("Auto-bypass task completed: %s", result)
         return result
         
     except Exception as e:

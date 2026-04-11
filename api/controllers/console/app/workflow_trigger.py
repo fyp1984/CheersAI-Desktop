@@ -15,10 +15,10 @@ from libs.login import current_user, login_required
 from models.enums import AppTriggerStatus
 from models.model import Account, App, AppMode
 from models.trigger import AppTrigger, WorkflowWebhookTrigger
-from ..workspace import require_workflow_edit_capability, require_workflow_view_capability
 
 from .. import console_ns
 from ..app.wraps import get_app_model
+from ..workspace import require_workflow_edit_capability, require_workflow_view_capability
 from ..wraps import account_initialization_required, edit_permission_required, setup_required
 
 logger = logging.getLogger(__name__)

@@ -3,6 +3,7 @@
 触发等待中的文档进行索引
 """
 import sys
+
 sys.path.insert(0, '/app')
 
 from app_factory import create_app

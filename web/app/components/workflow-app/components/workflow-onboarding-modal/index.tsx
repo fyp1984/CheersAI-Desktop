@@ -22,7 +22,8 @@ const WorkflowOnboardingModal: FC<WorkflowOnboardingModalProps> = ({
   onClose,
   onSelectStartNode,
 }) => {
-  const { t } = useTranslation()
+  const translation = useTranslation()
+  const t = translation?.t ?? ((key: string) => key)
 
   const handleSelectUserInput = useCallback(() => {
     onSelectStartNode(BlockEnum.Start)

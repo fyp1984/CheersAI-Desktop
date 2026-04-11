@@ -36,7 +36,7 @@ vi.mock('use-context-selector', () => ({
 // Mock app context
 vi.mock('@/context/app-context', () => ({
   useAppContext: () => ({
-    isCurrentWorkspaceEditor: true,
+    canEditApps: true,
     canViewWorkflow: true,
     canEditWorkflow: true,
   }),

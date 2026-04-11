@@ -5,6 +5,7 @@ from flask_restx import Resource
 from pydantic import BaseModel, Field
 
 from controllers.console import console_ns
+from controllers.console.workspace import require_chat_use_capability
 from controllers.console.wraps import account_initialization_required, setup_required
 from core.model_manager import ModelManager
 from core.model_runtime.entities.message_entities import SystemPromptMessage, UserPromptMessage
@@ -36,6 +37,7 @@ class SimpleChatApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_chat_use_capability
     @console_ns.expect(console_ns.models[SimpleChatPayload.__name__])
     def post(self):
         """Send a chat message using configured model."""

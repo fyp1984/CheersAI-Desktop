@@ -6,7 +6,8 @@ describe('workspace capabilities', () => {
     const capabilities = getCapabilitiesByRole('dataset_operator')
 
     expect(capabilities).toContain(WORKSPACE_CAPABILITIES.knowledgeEdit)
-    expect(capabilities).not.toContain(WORKSPACE_CAPABILITIES.teamManage)
+    expect(capabilities).toContain(WORKSPACE_CAPABILITIES.appView)
+    expect(capabilities).not.toContain(WORKSPACE_CAPABILITIES.memberManage)
   })
 
   it('prefers workspace capabilities from backend payload', () => {
@@ -30,10 +31,44 @@ describe('workspace capabilities', () => {
     }, WORKSPACE_CAPABILITIES.workflowEdit)).toBe(false)
   })
 
-  it('treats plugin manage as compatible with legacy and new capability codes', () => {
+  it('grants member users shared view and run capabilities', () => {
+    expect(hasWorkspaceCapability({
+      role: 'normal',
+      capabilities: [],
+    }, WORKSPACE_CAPABILITIES.appView)).toBe(true)
+
+    expect(hasWorkspaceCapability({
+      role: 'normal',
+      capabilities: [],
+    }, WORKSPACE_CAPABILITIES.workflowRun)).toBe(true)
+
+    expect(hasWorkspaceCapability({
+      role: 'normal',
+      capabilities: [],
+    }, WORKSPACE_CAPABILITIES.languageManage)).toBe(true)
+  })
+
+  it('grants editors model provider and data source management but not member management', () => {
+    expect(hasWorkspaceCapability({
+      role: 'editor',
+      capabilities: [],
+    }, WORKSPACE_CAPABILITIES.modelProviderManage)).toBe(true)
+
+    expect(hasWorkspaceCapability({
+      role: 'editor',
+      capabilities: [],
+    }, WORKSPACE_CAPABILITIES.dataSourceManage)).toBe(true)
+
+    expect(hasWorkspaceCapability({
+      role: 'editor',
+      capabilities: [],
+    }, WORKSPACE_CAPABILITIES.memberManage)).toBe(false)
+  })
+
+  it('treats plugin manage as compatible with legacy and new API extension capabilities', () => {
     expect(hasPluginManageWorkspaceCapability({
       role: 'normal',
-      capabilities: [WORKSPACE_CAPABILITIES.agentManage],
+      capabilities: [WORKSPACE_CAPABILITIES.apiExtensionManage],
     })).toBe(true)
 
     expect(hasPluginManageWorkspaceCapability({
@@ -44,6 +79,6 @@ describe('workspace capabilities', () => {
     expect(hasPluginManageWorkspaceCapability({
       role: 'editor',
       capabilities: [],
-    })).toBe(true)
+    })).toBe(false)
   })
 })

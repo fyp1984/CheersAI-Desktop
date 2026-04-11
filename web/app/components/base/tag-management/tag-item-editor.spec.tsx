@@ -23,7 +23,8 @@ vi.mock('ahooks', () => ({
 
 vi.mock('@/context/app-context', () => ({
   useAppContext: () => ({
-    isCurrentWorkspaceEditor: true,
+    canEditApps: true,
+    canEditKnowledge: true,
   }),
 }))
 

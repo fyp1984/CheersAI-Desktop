@@ -12,7 +12,9 @@ import {
   RiRefreshLine,
   RiFolderLine,
 } from '@remixicon/react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Loading from '@/app/components/base/loading'
+import { useAppContext } from '@/context/app-context'
 import useDocumentTitle from '@/hooks/use-document-title'
 import { RulesManager } from '@/lib/data-masking/rules-manager'
 import type { MaskingRule } from '@/lib/data-masking/types'
@@ -125,6 +127,8 @@ function RulesPanel({
 function DataMaskingPage() {
   useDocumentTitle('数据脱敏')
 
+  const router = useRouter()
+  const { canManageDataSecurity, isLoadingCurrentWorkspace } = useAppContext()
   const searchParams = useSearchParams()
   const activeTab = (searchParams.get('tab') as TabType) || 'mask'
   const [sandboxPath, setSandboxPath] = useState('')
@@ -133,6 +137,14 @@ function DataMaskingPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingRule, setEditingRule] = useState<MaskingRule | undefined>()
   const rulesManagerRef = useRef<RulesManager | null>(null)
+
+  useEffect(() => {
+    if (!isLoadingCurrentWorkspace && !canManageDataSecurity)
+      router.replace('/apps')
+  }, [canManageDataSecurity, isLoadingCurrentWorkspace, router])
+
+  if (isLoadingCurrentWorkspace || !canManageDataSecurity)
+    return <Loading type="app" />
 
   useEffect(() => {
     const saved = localStorage.getItem('sandbox_path')

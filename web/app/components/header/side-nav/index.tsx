@@ -88,7 +88,7 @@ const SideNav = () => {
 
   const navItems: NavItemConfig[] = []
 
-  if (canUseAgent) {
+  if (canUseAgent || canViewAppCenter) {
     navItems.push({
       id: 'apps',
       href: '/apps',

@@ -1,7 +1,8 @@
 """Reset documents for reindexing using direct SQL"""
-import os
-import psycopg2
 import json
+import os
+
+import psycopg2
 
 # Database connection
 db_url = os.getenv('DB_URI', 'postgresql://postgres:difyai123456@localhost:5432/dify')

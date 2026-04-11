@@ -1,5 +1,6 @@
 """Check dataset process rule configuration"""
 import os
+
 from sqlalchemy import create_engine, text
 
 # Get database URL from environment

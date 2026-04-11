@@ -57,7 +57,7 @@ const List: FC<Props> = ({
   const { t } = useTranslation()
 
   const router = useRouter()
-  const { isCurrentWorkspaceEditor, isCurrentWorkspaceDatasetOperator, isLoadingCurrentWorkspace, canViewWorkflow, canEditWorkflow } = useAppContext()
+  const { isCurrentWorkspaceEditor, isLoadingCurrentWorkspace, canViewWorkflow, canEditWorkflow, canViewApps, canEditApps } = useAppContext()
   const showTagManagementModal = useTagStore(s => s.showTagManagementModal)
   const [activeTab, setActiveTab] = useQueryState(
     'category',
@@ -73,8 +73,8 @@ const List: FC<Props> = ({
   const [showCreateFromDSLModal, setShowCreateFromDSLModal] = useState(false)
   const [droppedDSLFile, setDroppedDSLFile] = useState<File | undefined>()
   const isWorkflowCategory = activeTab === AppModeEnum.WORKFLOW || activeTab === AppModeEnum.ADVANCED_CHAT
-  const canAccessCurrentCategory = isWorkflowCategory ? canViewWorkflow : true
-  const canEditCurrentCategory = isWorkflowCategory ? canEditWorkflow : isCurrentWorkspaceEditor
+  const canAccessCurrentCategory = isWorkflowCategory ? canViewWorkflow : canViewApps
+  const canEditCurrentCategory = isWorkflowCategory ? canEditWorkflow : canEditApps
   const setKeywords = useCallback((keywords: string) => {
     setQuery(prev => ({ ...prev, keywords }))
   }, [setQuery])
@@ -111,7 +111,7 @@ const List: FC<Props> = ({
     hasNextPage,
     error,
     refetch,
-  } = useInfiniteAppList(appListQueryParams, { enabled: !isCurrentWorkspaceDatasetOperator })
+  } = useInfiniteAppList(appListQueryParams, { enabled: true })
 
   useEffect(() => {
     if (controlRefreshList > 0) {
@@ -130,18 +130,13 @@ const List: FC<Props> = ({
   }, [refetch])
 
   useEffect(() => {
-    if (isCurrentWorkspaceDatasetOperator)
-      return router.replace('/datasets')
-  }, [router, isCurrentWorkspaceDatasetOperator])
-
-  useEffect(() => {
     if (isWorkflowCategory && !canAccessCurrentCategory)
       router.replace('/apps')
+    if (!isWorkflowCategory && !canAccessCurrentCategory)
+      router.replace('/chat')
   }, [canAccessCurrentCategory, isWorkflowCategory, router])
 
   useEffect(() => {
-    if (isCurrentWorkspaceDatasetOperator)
-      return
     const hasMore = hasNextPage ?? true
     let observer: IntersectionObserver | undefined
 
@@ -167,7 +162,7 @@ const List: FC<Props> = ({
       observer.observe(anchorRef.current)
     }
     return () => observer?.disconnect()
-  }, [isLoading, isFetchingNextPage, fetchNextPage, error, hasNextPage, isCurrentWorkspaceDatasetOperator])
+  }, [isLoading, isFetchingNextPage, fetchNextPage, error, hasNextPage])
 
   const { run: handleSearch } = useDebounceFn(() => {
     setSearchKeywords(keywords)

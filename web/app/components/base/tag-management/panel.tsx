@@ -5,16 +5,16 @@ import { RiAddLine, RiPriceTag3Line } from '@remixicon/react'
 import { useUnmount } from 'ahooks'
 import { noop } from 'es-toolkit/function'
 import * as React from 'react'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useContext } from 'use-context-selector'
 import Checkbox from '@/app/components/base/checkbox'
 import Divider from '@/app/components/base/divider'
 import Input from '@/app/components/base/input'
 import { ToastContext } from '@/app/components/base/toast'
-import { useAppContext } from '@/context/app-context'
 import { bindTag, createTag, unBindTag } from '@/service/tag'
 import { useStore as useTagStore } from './store'
+import useCanManageTags from './use-can-manage-tags'
 
 type PanelProps = {
   onCreate: () => void
@@ -23,13 +23,17 @@ type PanelProps = {
 const Panel = (props: PanelProps) => {
   const { t } = useTranslation()
   const { notify } = useContext(ToastContext)
-  const { isCurrentWorkspaceEditor } = useAppContext()
   const { targetID, type, value, selectedTags, onCacheUpdate, onChange, onCreate } = props
+  const canManageTags = useCanManageTags(type)
   const tagList = useTagStore(s => s.tagList)
   const setTagList = useTagStore(s => s.setTagList)
   const setShowTagManagementModal = useTagStore(s => s.setShowTagManagementModal)
   const [selectedTagIDs, setSelectedTagIDs] = useState<string[]>(value)
   const [keywords, setKeywords] = useState('')
+  useEffect(() => {
+    onCreate()
+  }, [onCreate])
+
   const handleKeywordsChange = (value: string) => {
     setKeywords(value)
   }
@@ -47,7 +51,7 @@ const Panel = (props: PanelProps) => {
 
   const creatingRef = useRef(false)
   const createNewTag = async () => {
-    if (!isCurrentWorkspaceEditor) {
+    if (!canManageTags) {
       notify({ type: 'error', message: t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }) })
       return
     }
@@ -59,16 +63,20 @@ const Panel = (props: PanelProps) => {
     creatingRef.current = true
     try {
       const newTag = await createTag(trimmedKeywords, type)
-      notify({ type: 'success', message: t('tag.created', { ns: 'common' }) })
-      setTagList([
-        ...tagList,
-        newTag,
-      ])
+      const nextTagList = [...tagList, newTag]
+      const nextSelectedTagIDs = [...selectedTagIDs, newTag.id]
+      setTagList(nextTagList)
+      setSelectedTagIDs(nextSelectedTagIDs)
+      onCacheUpdate(nextTagList.filter(tag => nextSelectedTagIDs.includes(tag.id)))
+      await bindTag([newTag.id], targetID, type)
       setKeywords('')
+      notify({ type: 'success', message: t('tag.created', { ns: 'common' }) })
       onCreate()
+      if (onChange)
+        onChange()
     }
-    catch {
-      notify({ type: 'error', message: t('tag.failed', { ns: 'common' }) })
+    catch (error: any) {
+      notify({ type: 'error', message: error?.message || t('tag.failed', { ns: 'common' }) })
     }
     finally {
       creatingRef.current = false
@@ -143,10 +151,11 @@ const Panel = (props: PanelProps) => {
           onClear={() => handleKeywordsChange('')}
         />
       </div>
-      {isCurrentWorkspaceEditor && keywords && notExisted && (
+      {canManageTags && keywords && notExisted && (
         <div className="p-1">
-          <div
-            className="flex cursor-pointer items-center gap-x-1 rounded-lg px-2 py-1.5 hover:bg-state-base-hover"
+          <button
+            type="button"
+            className="flex w-full items-center gap-x-1 rounded-lg px-2 py-1.5 hover:bg-state-base-hover"
             onClick={createNewTag}
           >
             <RiAddLine className="h-4 w-4 text-text-tertiary" />
@@ -154,7 +163,7 @@ const Panel = (props: PanelProps) => {
               {`${t('tag.create', { ns: 'common' })} `}
               <span className="system-md-medium">{`'${keywords}'`}</span>
             </div>
-          </div>
+          </button>
         </div>
       )}
       {keywords && notExisted && filteredTagList.length > 0 && (
@@ -211,17 +220,18 @@ const Panel = (props: PanelProps) => {
         </div>
       )}
       <Divider type="horizontal" className="my-0 h-px bg-divider-subtle" />
-      {isCurrentWorkspaceEditor && (
+      {canManageTags && (
         <div className="p-1">
-          <div
-            className="flex cursor-pointer items-center gap-x-1 rounded-lg px-2 py-1.5 hover:bg-state-base-hover"
+          <button
+            type="button"
+            className="flex w-full items-center gap-x-1 rounded-lg px-2 py-1.5 hover:bg-state-base-hover"
             onClick={() => setShowTagManagementModal(true)}
           >
             <RiPriceTag3Line className="h-4 w-4 text-text-tertiary" />
             <div className="system-md-regular grow truncate px-1 text-text-secondary">
               {t('tag.manageTags', { ns: 'common' })}
             </div>
-          </div>
+          </button>
         </div>
       )}
     </div>

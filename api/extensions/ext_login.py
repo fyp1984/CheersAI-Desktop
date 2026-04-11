@@ -52,7 +52,7 @@ def load_user_from_request(request_from_flask_login):
 
     if is_console_api_request:
         if not auth_token:
-            raise Unauthorized("Invalid Authorization token.")
+            return None
         decoded = PassportService().verify(auth_token)
         user_id = decoded.get("user_id")
         source = decoded.get("token_source")

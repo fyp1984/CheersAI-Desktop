@@ -25,7 +25,8 @@ type Props = {
 const GotoAnything: FC<Props> = ({
   onHide,
 }) => {
-  const { t } = useTranslation()
+  const translation = useTranslation()
+  const t = translation?.t ?? ((key: string) => key)
   const { isWorkflowPage, isRagPipelinePage } = useGotoAnythingContext()
   const prevShowRef = useRef(false)
 

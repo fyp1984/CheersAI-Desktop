@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from constants.languages import languages
 from controllers.common.schema import get_or_create_model
 from controllers.console import console_ns
+from controllers.console.workspace import require_explore_view_capability
 from controllers.console.wraps import account_initialization_required
 from libs.helper import AppIconUrlField
 from libs.login import current_user, login_required
@@ -60,6 +61,7 @@ class RecommendedAppListApi(Resource):
     @console_ns.expect(console_ns.models[RecommendedAppsQuery.__name__])
     @login_required
     @account_initialization_required
+    @require_explore_view_capability
     @marshal_with(recommended_app_list_model)
     def get(self):
         # language args
@@ -79,6 +81,7 @@ class RecommendedAppListApi(Resource):
 class RecommendedAppApi(Resource):
     @login_required
     @account_initialization_required
+    @require_explore_view_capability
     def get(self, app_id):
         app_id = str(app_id)
         return RecommendedAppService.get_recommend_app_detail(app_id)

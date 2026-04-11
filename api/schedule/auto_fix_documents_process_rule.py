@@ -7,7 +7,6 @@ and automatically fixes them by assigning the latest process rule and triggering
 """
 
 import logging
-import time
 
 from celery import shared_task
 from sqlalchemy import and_
@@ -111,7 +110,7 @@ def auto_fix_documents_process_rule_task():
                 failed_count += len(docs)
         
         result = {"fixed": fixed_count, "failed": failed_count, "triggered": triggered_count}
-        logger.info(f"Auto-fix task completed: {result}")
+        logger.info("Auto-fix task completed: %s", result)
         return result
         
     except Exception as e:

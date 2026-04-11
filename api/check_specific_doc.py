@@ -1,5 +1,6 @@
 """Check specific document details including segments"""
 import os
+
 from sqlalchemy import create_engine, text
 
 # Get database URL from environment
