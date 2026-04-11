@@ -15,6 +15,33 @@ import {
 } from '@/contract/router'
 import { request } from './base'
 
+const MARKETPLACE_REQUEST_TIMEOUT = 8000
+
+const marketplaceFetch = (request: Request | URL | string, init?: RequestInit) => {
+  const controller = new AbortController()
+  const timeoutId = globalThis.setTimeout(() => {
+    controller.abort()
+  }, MARKETPLACE_REQUEST_TIMEOUT)
+
+  const abortListener = () => controller.abort()
+
+  if (init?.signal) {
+    if (init.signal.aborted)
+      controller.abort()
+    else
+      init.signal.addEventListener('abort', abortListener, { once: true })
+  }
+
+  return globalThis.fetch(request, {
+    ...init,
+    cache: 'no-store',
+    signal: controller.signal,
+  }).finally(() => {
+    globalThis.clearTimeout(timeoutId)
+    init?.signal?.removeEventListener('abort', abortListener)
+  })
+}
+
 const getMarketplaceHeaders = () => new Headers({
   'X-Dify-Version': !IS_MARKETPLACE ? APP_VERSION : '999.0.0',
 })
@@ -23,10 +50,7 @@ const marketplaceLink = new OpenAPILink(marketplaceRouterContract, {
   url: MARKETPLACE_API_PREFIX,
   headers: () => (getMarketplaceHeaders()),
   fetch: (request, init) => {
-    return globalThis.fetch(request, {
-      ...init,
-      cache: 'no-store',
-    })
+    return marketplaceFetch(request, init)
   },
   interceptors: [
     onError((error) => {

@@ -1,5 +1,6 @@
 'use client'
 
+import { RiLoader4Line } from '@remixicon/react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/utils/classnames'
 import './style.css'
@@ -24,12 +25,10 @@ const Loading = (props?: ILoadingProps) => {
       aria-live="polite"
       aria-label={t('loading', { ns: 'appApi' })}
     >
-      <img
-        src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/logo/CheersAI.png`}
-        className="spin-animation w-8 h-8 object-contain"
-        alt="Loading..."
+      <RiLoader4Line
+        className="spin-animation h-8 w-8 text-text-accent"
+        aria-hidden="true"
       />
-
     </div>
   )
 }
