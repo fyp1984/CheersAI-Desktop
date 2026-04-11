@@ -20,6 +20,16 @@ import {
 import { useDeleteModel } from '@/service/use-models'
 import { useAuthService } from './use-auth-service'
 
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error)
+    return error.message
+
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string')
+    return error.message
+
+  return undefined
+}
+
 export const useAuth = (
   provider: ModelProvider,
   configurationMethod: ConfigurationMethodEnum,
@@ -135,7 +145,7 @@ export const useAuth = (
   }, [notify, t, handleSetDoingAction, getDeleteCredentialService, isModelCredential, closeConfirmDelete, handleRefreshModel, provider, configurationMethod, deleteModelService])
   const handleSaveCredential = useCallback(async (payload: Record<string, any>) => {
     if (doingActionRef.current)
-      return
+      return false
     try {
       handleSetDoingAction(true)
 
@@ -148,12 +158,23 @@ export const useAuth = (
       if (res.result === 'success') {
         notify({ type: 'success', message: t('actionMsg.modifiedSuccessfully', { ns: 'common' }) })
         handleRefreshModel(provider, undefined, !payload.credential_id)
+        return true
       }
+
+      notify({ type: 'error', message: t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }) })
+      return false
+    }
+    catch (error) {
+      notify({
+        type: 'error',
+        message: getErrorMessage(error) || t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }),
+      })
+      return false
     }
     finally {
       handleSetDoingAction(false)
     }
-  }, [notify, t, handleSetDoingAction, getEditCredentialService, getAddCredentialService])
+  }, [notify, t, handleSetDoingAction, getEditCredentialService, getAddCredentialService, handleRefreshModel, provider])
   const handleOpenModal = useCallback((credential?: Credential, model?: CustomModel) => {
     handleOpenModelModal(
       provider,

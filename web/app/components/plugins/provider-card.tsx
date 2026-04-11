@@ -62,7 +62,7 @@ const ProviderCardComponent: FC<Props> = ({
       </div>
       <Description className="mt-3" text={getValueFromI18nObject(payload.brief)} descriptionLineRows={2}></Description>
       <div className="mt-3 flex space-x-0.5">
-        {payload.tags.map(tag => (
+        {(payload.tags || []).map(tag => (
           <Badge key={tag.name} text={tag.name} />
         ))}
       </div>

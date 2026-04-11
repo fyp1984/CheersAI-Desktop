@@ -24,17 +24,26 @@ export const getPluginIconInMarketplace = (plugin: Plugin) => {
 }
 
 export const getFormattedPlugin = (bundle: Plugin): Plugin => {
+  const normalized = {
+    ...bundle,
+    tags: Array.isArray(bundle.tags) ? bundle.tags : [],
+    badges: Array.isArray((bundle as Plugin & { badges?: unknown[] }).badges) ? (bundle as Plugin & { badges?: unknown[] }).badges : [],
+    label: bundle.label || {},
+    brief: bundle.brief || bundle.description || {},
+    description: bundle.description || {},
+  }
+
   if (bundle.type === 'bundle') {
     return {
-      ...bundle,
+      ...normalized,
       icon: getPluginIconInMarketplace(bundle),
-      brief: bundle.description,
+      brief: bundle.description || {},
       // @ts-expect-error I do not have enough information
-      label: bundle.labels,
+      label: bundle.labels || {},
     }
   }
   return {
-    ...bundle,
+    ...normalized,
     icon: getPluginIconInMarketplace(bundle),
   }
 }

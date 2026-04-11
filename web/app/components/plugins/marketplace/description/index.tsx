@@ -1,3 +1,5 @@
+'use client'
+
 import { useLocale, useTranslation } from '#i18n'
 
 const Description = () => {

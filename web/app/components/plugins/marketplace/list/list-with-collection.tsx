@@ -26,6 +26,7 @@ const ListWithCollection = ({
   const { t } = useTranslation()
   const locale = useLocale()
   const onMoreClick = useMarketplaceMoreClick()
+  const language = getLanguage(locale)
 
   return (
     <>
@@ -39,8 +40,8 @@ const ListWithCollection = ({
           >
             <div className="flex items-end justify-between">
               <div>
-                <div className="title-xl-semi-bold text-text-primary">{collection.label[getLanguage(locale)]}</div>
-                <div className="system-xs-regular text-text-tertiary">{collection.description[getLanguage(locale)]}</div>
+                <div className="title-xl-semi-bold text-text-primary">{collection.label?.[language] || collection.name}</div>
+                <div className="system-xs-regular text-text-tertiary">{collection.description?.[language] || ''}</div>
               </div>
               {
                 collection.searchable && (

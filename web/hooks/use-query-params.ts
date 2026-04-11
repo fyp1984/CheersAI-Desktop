@@ -106,16 +106,25 @@ type BundleInfoQuery = {
 
 const parseAsPackageId = createParser<string>({
   parse: (value) => {
+    const normalizePackageId = (input: string | null) => {
+      if (!input)
+        return null
+      const normalized = input.trim().replace(/^"+|"+$/g, '')
+      return normalized || null
+    }
+
     try {
       const parsed = JSON.parse(value)
       if (Array.isArray(parsed)) {
         const first = parsed[0]
-        return typeof first === 'string' ? first : null
+        return typeof first === 'string' ? normalizePackageId(first) : null
       }
-      return value
+      if (typeof parsed === 'string')
+        return normalizePackageId(parsed)
+      return normalizePackageId(value)
     }
     catch {
-      return value
+      return normalizePackageId(value)
     }
   },
   serialize: value => JSON.stringify([value]),

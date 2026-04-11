@@ -20,6 +20,19 @@ import { pluginManifestInMarketToPluginProps } from '../../utils'
 
 const i18nPrefix = 'installModal'
 
+const getInstallErrorMessage = (error: unknown) => {
+  if (typeof error === 'string')
+    return error
+
+  if (error instanceof Error)
+    return error.message
+
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string')
+    return error.message
+
+  return undefined
+}
+
 type Props = {
   uniqueIdentifier: string
   payload: PluginManifestInMarket | Plugin
@@ -113,11 +126,7 @@ const Installed: FC<Props> = ({
       onInstalled(true)
     }
     catch (e) {
-      if (typeof e === 'string') {
-        onFailed(e)
-        return
-      }
-      onFailed()
+      onFailed(getInstallErrorMessage(e))
     }
   }
 

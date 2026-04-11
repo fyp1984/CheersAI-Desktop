@@ -76,7 +76,7 @@ const PluginsPanel = () => {
     const filteredList = pluginListWithLatestVersion.filter((plugin) => {
       return (
         (categories.length === 0 || categories.includes(plugin.declaration.category))
-        && (tags.length === 0 || tags.some(tag => plugin.declaration.tags.includes(tag)))
+        && (tags.length === 0 || tags.some(tag => (plugin.declaration.tags || []).includes(tag)))
         && matchesSearchQuery(plugin, searchQuery, locale)
       )
     })

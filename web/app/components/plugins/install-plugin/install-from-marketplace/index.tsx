@@ -5,6 +5,7 @@ import * as React from 'react'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Modal from '@/app/components/base/modal'
+import { useToastContext } from '@/app/components/base/toast'
 import { cn } from '@/utils/classnames'
 import { InstallStep } from '../../types'
 import Installed from '../base/installed'
@@ -33,6 +34,7 @@ const InstallFromMarketplace: React.FC<InstallFromMarketplaceProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation()
+  const { notify } = useToastContext()
   // readyToInstall -> check installed -> installed/failed
   const [step, setStep] = useState<InstallStep>(InstallStep.readyToInstall)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -60,14 +62,16 @@ const InstallFromMarketplace: React.FC<InstallFromMarketplaceProps> = ({
     if (!notRefresh)
       refreshPluginList(manifest)
     setIsInstalling(false)
-  }, [manifest, refreshPluginList, setIsInstalling])
+    notify({ type: 'success', message: t(`${i18nPrefix}.installedSuccessfullyDesc`, { ns: 'plugin' }) })
+  }, [manifest, refreshPluginList, setIsInstalling, notify, t])
 
   const handleFailed = useCallback((errorMsg?: string) => {
     setStep(InstallStep.installFailed)
     setIsInstalling(false)
     if (errorMsg)
       setErrorMsg(errorMsg)
-  }, [setIsInstalling])
+    notify({ type: 'error', message: errorMsg || t(`${i18nPrefix}.installFailedDesc`, { ns: 'plugin' }) })
+  }, [setIsInstalling, notify, t])
 
   return (
     <Modal

@@ -1,3 +1,5 @@
+'use client'
+
 import type { Tag } from '../../../hooks'
 import { useTranslation } from '#i18n'
 import { RiArrowDownSLine, RiCloseCircleFill, RiFilter3Line } from '@remixicon/react'
