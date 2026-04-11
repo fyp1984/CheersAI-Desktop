@@ -21,10 +21,10 @@ This skill manages remote server operations safely and efficiently by utilizing 
 Use this when you have made local code changes and need to update the server.
 
 ```bash
-./scripts/local_push.sh
+bash "/Users/FYP/Documents/WorkSpace/CheersAI/CheersAI - docs/技术/scripts/desktop-uat/01-push-code.sh"
 ```
 
-**Note**: This script uses `rsync` to efficiently synchronize `api/`, `web/`, and `scripts/` directories.
+**Note**: This flow uses `rsync` to synchronize `api/`, `web/`, root lock files, and deployment scripts to the UAT host. Set `PLUGIN_DAEMON_UPLOAD=yes` when you need to refresh the plugin daemon binary.
 
 ### 2. Remote Build & Deploy
 
@@ -33,18 +33,18 @@ Use this to rebuild the application on the server. This is critical after code c
 **Command (Run on Local Machine via SSH):**
 
 ```bash
-ssh -t cheersai@62.234.210.100 "nohup /home/cheersai/CheersAI-Desktop/scripts/server_build.sh > /home/cheersai/logs/build_$(date +%Y%m%d_%H%M%S).log 2>&1 &"
+ssh -t desktop@121.41.195.46 "nohup /home/desktop/CheersAI-Desktop/scripts/server_build.sh > /home/desktop/logs/build_$(date +%Y%m%d_%H%M%S).log 2>&1 &"
 ```
 
-38→**Why `nohup`?**
-39→- Prevents the build process from being killed if the SSH connection times out (common during long builds).
-40→- Redirects output to a log file for later inspection.
-41→- **Note**: The build script will automatically detect non-interactive environments and skip service restart if sudo password is required. You may need to run the restart command manually.
-42→
-43→**Monitoring the Build:**
+**Why `nohup`?**
+- Prevents the build process from being killed if the SSH connection times out (common during long builds).
+- Redirects output to a log file for later inspection.
+- **Note**: The build script will automatically detect non-interactive environments and skip service restart if sudo password is required. You may need to run the restart command manually.
+
+**Monitoring the Build:**
 
 ```bash
-ssh -t cheersai@62.234.210.100 "tail -f /home/cheersai/logs/build_*.log"
+ssh -t desktop@121.41.195.46 "tail -f /home/desktop/logs/build_*.log"
 ```
 
 ### 3. Service Management (Restart/Status)
@@ -54,29 +54,32 @@ Use this to quickly restart services without rebuilding.
 **Restart All Services:**
 
 ```bash
-ssh -t cheersai@62.234.210.100 "sudo /home/cheersai/CheersAI-Desktop/scripts/server_manage.sh restart"
+ssh -t sso@121.41.195.46 "sudo /home/desktop/CheersAI-Desktop/scripts/server_manage.sh restart"
 ```
 
 **Check Status:**
 
 ```bash
-ssh -t cheersai@62.234.210.100 "sudo /home/cheersai/CheersAI-Desktop/scripts/server_manage.sh status"
+ssh -t sso@121.41.195.46 "sudo /home/desktop/CheersAI-Desktop/scripts/server_manage.sh status"
 ```
 
 ## Recommended Workflow for Fixes
 
-67→When applying a fix (e.g., frontend code change):
-68→
-69→1.  **Edit**: Modify the code locally.
-70→2.  **Sync**: Run `./scripts/local_push.sh` to upload changes.
-71→3.  **Build**: Trigger the remote build script via SSH with `nohup`.
-72→4.  **Monitor**: Watch the log file until completion.
-73→5.  **Verify**: Check the website.
-74→6.  **Commit**: Commit changes to Git (optional but recommended).
+When applying a fix (e.g., frontend code change):
+
+1.  **Edit**: Modify the code locally.
+2.  **Sync**: Run `bash "/Users/FYP/Documents/WorkSpace/CheersAI/CheersAI - docs/技术/scripts/desktop-uat/01-push-code.sh"` to upload changes.
+3.  **Build**: Trigger the remote build script via SSH with `nohup`.
+4.  **Monitor**: Watch the log file until completion.
+5.  **Verify**: Check the website.
+6.  **Commit**: Commit changes to Git (optional but recommended).
 
 ## Configuration
 
-- **Server IP**: `62.234.210.100`
-- **User**: `cheersai`
-- **App Directory**: `/home/cheersai/CheersAI-Desktop`
-- **Log Directory**: `/home/cheersai/logs`
+- **Server IP**: `121.41.195.46`
+- **Deploy User**: `desktop`
+- **Privileged User**: `sso`
+- **App Directory**: `/home/desktop/CheersAI-Desktop`
+- **Log Directory**: `/home/desktop/logs`
+- **API / Web / Plugin Ports**: `8080 / 3100 / 5002-5003`
+- **Weaviate Ports**: `8081 / 50051`
