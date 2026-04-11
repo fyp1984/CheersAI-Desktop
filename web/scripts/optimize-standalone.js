@@ -12,7 +12,9 @@ const __dirname = path.dirname(__filename)
 
 console.log('🔧 Optimizing standalone output...')
 
+const nextDir = path.join(__dirname, '..', '.next')
 const standaloneDir = path.join(__dirname, '..', '.next', 'standalone')
+const standaloneWebDir = path.join(standaloneDir, 'web')
 
 // Check if standalone directory exists
 if (!fs.existsSync(standaloneDir)) {
@@ -106,6 +108,19 @@ console.log('🗑️  Removing unnecessary files...')
 for (const pathToRemove of pathsToRemove) {
   removePath(standaloneDir, pathToRemove)
 }
+
+function syncPath(sourcePath, targetPath) {
+  if (!fs.existsSync(sourcePath))
+    return
+  fs.rmSync(targetPath, { recursive: true, force: true })
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true })
+  fs.cpSync(sourcePath, targetPath, { recursive: true })
+  console.log(`✅ Synced: ${path.relative(path.join(__dirname, '..'), targetPath)}`)
+}
+
+console.log('📦 Syncing runtime assets...')
+syncPath(path.join(nextDir, 'static'), path.join(standaloneWebDir, '.next', 'static'))
+syncPath(path.join(__dirname, '..', 'public'), path.join(standaloneWebDir, 'public'))
 
 // Calculate size reduction
 console.log('\n📊 Optimization complete!')
