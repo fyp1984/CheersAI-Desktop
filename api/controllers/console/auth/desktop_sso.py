@@ -164,6 +164,25 @@ class DesktopSSOLoginApi(Resource):
                     is_setup=True,
                 )
 
+                TenantService.create_owner_tenant_if_not_exist(account, is_setup=True)
+
+                from models.account import TenantAccountJoin
+                tenant_join = (
+                    db.session.query(TenantAccountJoin)
+                    .filter_by(account_id=account.id, current=True)
+                    .order_by(TenantAccountJoin.updated_at.desc(), TenantAccountJoin.created_at.desc())
+                    .first()
+                ) or (
+                    db.session.query(TenantAccountJoin)
+                    .filter_by(account_id=account.id)
+                    .order_by(TenantAccountJoin.current.desc(), TenantAccountJoin.updated_at.desc(), TenantAccountJoin.created_at.desc())
+                    .first()
+                )
+                if tenant_join:
+                    tenant_join.role = system_role
+                    db.session.commit()
+                    logger.info("Set workspace role to '%s' for new user", system_role)
+
                 account.status = AccountStatus.ACTIVE
                 account.initialized_at = naive_utc_now()
                 db.session.commit()
@@ -177,6 +196,38 @@ class DesktopSSOLoginApi(Resource):
                     account.initialized_at = naive_utc_now()
                     db.session.commit()
 
+                from models.account import TenantAccountJoin
+                tenant_join = (
+                    db.session.query(TenantAccountJoin)
+                    .filter_by(account_id=account.id, current=True)
+                    .order_by(TenantAccountJoin.updated_at.desc(), TenantAccountJoin.created_at.desc())
+                    .first()
+                ) or (
+                    db.session.query(TenantAccountJoin)
+                    .filter_by(account_id=account.id)
+                    .order_by(TenantAccountJoin.current.desc(), TenantAccountJoin.updated_at.desc(), TenantAccountJoin.created_at.desc())
+                    .first()
+                )
+
+                if tenant_join:
+                    old_role = tenant_join.role
+                    logger.info("Attempting to update role from '%s' to '%s'", old_role, system_role)
+
+                    if old_role == 'owner':
+                        owner_count = db.session.query(TenantAccountJoin).filter_by(
+                            tenant_id=tenant_join.tenant_id,
+                            role='owner'
+                        ).count()
+                        if owner_count > 1:
+                            tenant_join.role = system_role
+                            db.session.commit()
+                            logger.info("Updated role from 'owner' to '%s' (multiple owners exist)", system_role)
+                        else:
+                            logger.info("Keeping 'owner' role (only owner in workspace)")
+                    elif old_role != system_role:
+                        tenant_join.role = system_role
+                        db.session.commit()
+                        logger.info("Updated role from '%s' to '%s'", old_role, system_role)
             tenant_join = _ensure_desktop_sso_tenant_join(account, system_role, data)
             logger.info("Using tenant %s with workspace role '%s'", tenant_join.tenant_id, tenant_join.role)
 

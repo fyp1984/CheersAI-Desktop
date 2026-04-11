@@ -8,6 +8,7 @@ import WarningMask from '.'
 export type IHasNotSetAPIProps = {
   isTrailFinished: boolean
   onSetting: () => void
+  canManageModels?: boolean
 }
 
 const icon = (
@@ -20,19 +21,26 @@ const icon = (
 const HasNotSetAPI: FC<IHasNotSetAPIProps> = ({
   isTrailFinished,
   onSetting,
+  canManageModels = true,
 }) => {
   const { t } = useTranslation()
 
   return (
     <WarningMask
       title={isTrailFinished ? t('notSetAPIKey.trailFinished', { ns: 'appDebug' }) : t('notSetAPIKey.title', { ns: 'appDebug' })}
-      description={t('notSetAPIKey.description', { ns: 'appDebug' })}
-      footer={(
-        <Button variant="primary" className="flex space-x-2" onClick={onSetting}>
-          <span>{t('notSetAPIKey.settingBtn', { ns: 'appDebug' })}</span>
-          {icon}
-        </Button>
-      )}
+      description={t(canManageModels ? 'notSetAPIKey.description' : 'notSetAPIKey.sharedDescription', { ns: 'appDebug' })}
+      footer={canManageModels
+        ? (
+            <Button variant="primary" className="flex space-x-2" onClick={onSetting}>
+              <span>{t('notSetAPIKey.settingBtn', { ns: 'appDebug' })}</span>
+              {icon}
+            </Button>
+          )
+        : (
+            <div className="text-sm text-text-tertiary">
+              {t('notSetAPIKey.contactAdmin', { ns: 'appDebug' })}
+            </div>
+          )}
     />
   )
 }

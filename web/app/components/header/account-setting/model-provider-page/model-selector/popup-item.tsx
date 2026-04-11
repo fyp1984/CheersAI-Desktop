@@ -79,7 +79,7 @@ const PopupItem: FC<PopupItemProps> = ({
       {
         model.models.map(modelItem => (
           <Tooltip
-            key={modelItem.model}
+            key={`${model.provider}-${modelItem.model}-${modelItem.model_type || 'unknown'}-${modelItem.fetch_from || 'default'}`}
             position="right"
             popupClassName="p-3 !w-[206px] bg-components-panel-bg-blur backdrop-blur-sm border-[0.5px] border-components-panel-border rounded-xl"
             popupContent={(
@@ -119,7 +119,7 @@ const PopupItem: FC<PopupItemProps> = ({
                       <div className="system-2xs-medium-uppercase mb-1 text-text-tertiary">{t('model.capabilities', { ns: 'common' })}</div>
                       <div className="flex flex-wrap gap-1">
                         {modelItem.features?.map(feature => (
-                          <FeatureIcon
+              <FeatureIcon
                             key={feature}
                             feature={feature}
                             showFeaturesLabel
@@ -132,7 +132,6 @@ const PopupItem: FC<PopupItemProps> = ({
             )}
           >
             <div
-              key={modelItem.model}
               className={cn('group relative flex h-8 items-center gap-1 rounded-lg px-3 py-1.5', modelItem.status === ModelStatusEnum.active ? 'cursor-pointer hover:bg-state-base-hover' : 'cursor-not-allowed hover:bg-state-base-hover-alt')}
               onClick={() => handleSelect(model.provider, modelItem)}
             >

@@ -37,9 +37,12 @@ export const commonQueryKeys = {
   filePreview: (fileID: string) => [NAME_SPACE, 'file-preview', fileID] as const,
   schemaDefinitions: [NAME_SPACE, 'schema-type-definitions'] as const,
   isLogin: [NAME_SPACE, 'is-login'] as const,
-  modelProviders: [NAME_SPACE, 'model-providers'] as const,
-  modelList: (type: ModelTypeEnum) => [NAME_SPACE, 'model-list', type] as const,
-  defaultModel: (type: ModelTypeEnum) => [NAME_SPACE, 'default-model', type] as const,
+  modelProviders: (workspaceId?: string, userId?: string) =>
+    [NAME_SPACE, 'model-providers', workspaceId ?? '', userId ?? ''] as const,
+  modelList: (type: ModelTypeEnum, workspaceId?: string, userId?: string) =>
+    [NAME_SPACE, 'model-list', type, workspaceId ?? '', userId ?? ''] as const,
+  defaultModel: (type: ModelTypeEnum, workspaceId?: string, userId?: string) =>
+    [NAME_SPACE, 'default-model', type, workspaceId ?? '', userId ?? ''] as const,
   retrievalMethods: [NAME_SPACE, 'support-retrieval-methods'] as const,
   accountIntegrates: [NAME_SPACE, 'account-integrates'] as const,
   pluginProviders: [NAME_SPACE, 'plugin-providers'] as const,
@@ -58,6 +61,7 @@ export const commonQueryKeys = {
   langGeniusVersion: (currentVersion?: string | null) => [NAME_SPACE, 'langgenius-version', currentVersion] as const,
   forgotPasswordValidity: (token?: string | null) => [NAME_SPACE, 'forgot-password-validity', token] as const,
   dataSourceIntegrates: [NAME_SPACE, 'data-source-integrates'] as const,
+  tokenBillingUsage: (scope: 'workspace' | 'self') => [NAME_SPACE, 'token-billing-usage', scope] as const,
 }
 
 export const useFileUploadConfig = () => {
@@ -260,27 +264,43 @@ export const useOneMoreStep = () => {
   })
 }
 
+export const useModelProviders = () => {
+  const { data: workspace } = useCurrentWorkspace()
+  const { data: userProfile } = useUserProfile()
 export const useModelProviders = (enabled = true) => {
   return useQuery<{ data: ModelProvider[] }>({
-    queryKey: commonQueryKeys.modelProviders,
+    queryKey: commonQueryKeys.modelProviders(workspace?.id, userProfile?.profile?.id),
     queryFn: () => get<{ data: ModelProvider[] }>('/workspaces/current/model-providers'),
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    refetchInterval: 5000,
     enabled,
   })
 }
 
 export const useModelListByType = (type: ModelTypeEnum, enabled = true) => {
+  const { data: workspace } = useCurrentWorkspace()
+  const { data: userProfile } = useUserProfile()
   return useQuery<{ data: Model[] }>({
-    queryKey: commonQueryKeys.modelList(type),
+    queryKey: commonQueryKeys.modelList(type, workspace?.id, userProfile?.profile?.id),
     queryFn: () => get<{ data: Model[] }>(`/workspaces/current/models/model-types/${type}`),
     enabled,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    refetchInterval: 5000,
   })
 }
 
 export const useDefaultModelByType = (type: ModelTypeEnum, enabled = true) => {
+  const { data: workspace } = useCurrentWorkspace()
+  const { data: userProfile } = useUserProfile()
   return useQuery({
-    queryKey: commonQueryKeys.defaultModel(type),
+    queryKey: commonQueryKeys.defaultModel(type, workspace?.id, userProfile?.profile?.id),
     queryFn: () => get(`/workspaces/current/default-model?model_type=${type}`),
     enabled,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    refetchInterval: 5000,
   })
 }
 
@@ -315,6 +335,63 @@ export const useDataSourceIntegrates = (options: DataSourceIntegratesOptions = {
 
 export const useInvalidDataSourceIntegrates = () => {
   return useInvalid(commonQueryKeys.dataSourceIntegrates)
+}
+
+export type TokenBillingSummary = {
+  total_tokens: number
+  total_cost: string
+  currency: string
+  records_last_7d: number
+  tokens_last_7d: number
+  cost_last_7d: string
+  records_last_30d: number
+  tokens_last_30d: number
+  cost_last_30d: string
+}
+
+export type TokenBillingRecord = {
+  id: string
+  provider: string
+  provider_type: string
+  model_name: string
+  model_type: string
+  user_id: string | null
+  is_cloud: boolean
+  invocation_source: string | null
+  input_tokens: number
+  output_tokens: number
+  total_tokens: number
+  input_price: string
+  output_price: string
+  total_price: string
+  currency: string
+  latency: number
+  created_at: string | null
+}
+
+export type TokenBillingLeaderboardItem = {
+  user_id: string | null
+  name: string | null
+  email: string | null
+  total_tokens: number
+  total_cost: string
+  record_count: number
+}
+
+export type TokenBillingUsage = {
+  table_ready: boolean
+  summary: TokenBillingSummary
+  records: TokenBillingRecord[]
+  leaderboard: TokenBillingLeaderboardItem[]
+}
+
+export const useTokenBillingUsage = (scope: 'workspace' | 'self') => {
+  return useQuery<TokenBillingUsage>({
+    queryKey: commonQueryKeys.tokenBillingUsage(scope),
+    queryFn: () => get<TokenBillingUsage>('/token-billing/usage', { params: { scope } }),
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
+  })
 }
 
 export const usePluginProviders = () => {

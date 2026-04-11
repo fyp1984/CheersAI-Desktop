@@ -55,6 +55,7 @@ import {
 type IDebug = {
   isAPIKeySet: boolean
   onSetting: () => void
+  canManageModels?: boolean
   inputs: Inputs
   modelParameterParams: Pick<ModelParameterModalProps, 'setModel' | 'onCompletionParamsChange'>
   debugWithMultipleModel: boolean
@@ -65,6 +66,7 @@ type IDebug = {
 const Debug: FC<IDebug> = ({
   isAPIKeySet = true,
   onSetting,
+  canManageModels = true,
   inputs,
   modelParameterParams,
   debugWithMultipleModel,
@@ -570,7 +572,13 @@ const Debug: FC<IDebug> = ({
           />
         )
       }
-      {!isAPIKeySet && !readonly && (<HasNotSetAPIKEY isTrailFinished={!IS_CE_EDITION} onSetting={onSetting} />)}
+      {!isAPIKeySet && !readonly && (
+        <HasNotSetAPIKEY
+          isTrailFinished={!IS_CE_EDITION}
+          onSetting={onSetting}
+          canManageModels={canManageModels}
+        />
+      )}
     </>
   )
 }

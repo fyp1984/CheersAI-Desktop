@@ -242,6 +242,8 @@
   "modelConfig.title": "Model and Parameters",
   "noResult": "Output will be displayed here.",
   "notSetAPIKey.description": "The LLM provider key has not been set, and it needs to be set before debugging.",
+  "notSetAPIKey.sharedDescription": "Model configuration is managed at the workspace level. Please ask a workspace admin to finish the setup before debugging.",
+  "notSetAPIKey.contactAdmin": "Please contact a workspace admin to enable models.",
   "notSetAPIKey.settingBtn": "Go to settings",
   "notSetAPIKey.title": "LLM provider key has not been set",
   "notSetAPIKey.trailFinished": "Trail finished",

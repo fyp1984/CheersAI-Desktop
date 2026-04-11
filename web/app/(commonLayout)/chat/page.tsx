@@ -12,6 +12,7 @@ import { useDefaultModel, useModelList } from '@/app/components/header/account-s
 import { useAppContext } from '@/context/app-context'
 import { sendSimpleChatMessage } from '@/service/chat'
 import { cn } from '@/utils/classnames'
+import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 
 type Message = {
   id: string
@@ -141,6 +142,8 @@ function getInitialConversations(storageKey: string): Conversation[] {
 const ChatPage = () => {
   const STORAGE_KEY = 'cheersai_conversations'
   const SIDEBAR_STORAGE_KEY = 'cheersai_sidebar_collapsed'
+  const { currentWorkspace } = useAppContext()
+  const canManageModels = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.modelManage)
   const router = useRouter()
   const { canUseChat, isLoadingCurrentWorkspace } = useAppContext()
 
@@ -1126,22 +1129,31 @@ const ChatPage = () => {
                                 </div>
                                 <div className="mt-3 border-t border-gray-100 pt-3">
                                   <div className="mb-2 text-xs text-gray-400">
-                                    想要更多模型？
+                                    {canManageModels ? '想要更多模型？' : '模型配置由工作区统一管理'}
                                   </div>
-                                  <button
-                                    onClick={() => {
-                                      window.open('/apps/?action=showSettings&tab=provider', '_blank')
-                                    }}
-                                    className="rounded bg-blue-500 px-3 py-1.5 text-xs text-white transition-colors hover:bg-blue-600"
-                                  >
-                                    配置更多提供商
-                                  </button>
+                                  {canManageModels ? (
+                                    <button
+                                      onClick={() => {
+                                        window.open('/apps/?action=showSettings&tab=provider', '_blank')
+                                      }}
+                                      className="rounded bg-blue-500 px-3 py-1.5 text-xs text-white transition-colors hover:bg-blue-600"
+                                    >
+                                      配置更多提供商
+                                    </button>
+                                  ) : (
+                                    <div className="text-xs text-gray-500">
+                                      如需更多模型，请联系工作区管理员统一配置。
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             )
                           : (
                               modelListData.map((provider) => {
-                                const activeModels = provider.models?.filter(model => model.status === 'active') || []
+                                const activeModels = (provider.models?.filter(model => model.status === 'active') || [])
+                                  .filter((model, index, models) => {
+                                    return index === models.findIndex(item => item.model === model.model)
+                                  })
 
                                 if (activeModels.length === 0)
                                   return null

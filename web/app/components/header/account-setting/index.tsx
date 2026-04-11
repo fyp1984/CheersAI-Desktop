@@ -12,10 +12,10 @@ import {
   RiGroup2Line,
   RiMoneyDollarCircleFill,
   RiMoneyDollarCircleLine,
+  RiReceiptFill,
+  RiReceiptLine,
   RiPuzzle2Fill,
   RiPuzzle2Line,
-  RiShieldKeyholeFill,
-  RiShieldKeyholeLine,
   RiTranslate2,
 } from '@remixicon/react'
 import { useEffect, useRef, useState } from 'react'
@@ -23,7 +23,6 @@ import { useTranslation } from 'react-i18next'
 import Input from '@/app/components/base/input'
 import BillingPage from '@/app/components/billing/billing-page'
 import CustomPage from '@/app/components/custom/custom-page'
-import { SandboxConfig } from '@/app/components/data-masking/sandbox-config'
 import {
   ACCOUNT_SETTING_TAB,
 
@@ -40,6 +39,7 @@ import DataSourcePage from './data-source-page-new'
 import LanguagePage from './language-page'
 import MembersPage from './members-page'
 import ModelProviderPage from './model-provider-page'
+import TokenBillingPage from './token-billing-page'
 
 const iconClassName = `
   w-5 h-5 mr-2
@@ -106,6 +106,17 @@ export default function AccountSetting({
       })
     }
 
+    if (currentWorkspace?.id) {
+      items.push({
+        key: ACCOUNT_SETTING_TAB.TOKEN_BILLING,
+        name: t('settings.tokenBilling', { ns: 'common' }),
+        description: t('tokenBilling.pageDescription', { ns: 'common' }),
+        icon: <RiReceiptLine className={iconClassName} />,
+        activeIcon: <RiReceiptFill className={iconClassName} />,
+      })
+    }
+
+    if (canEditKnowledge) {
     if (canManageDataSource) {
       items.push({
         key: ACCOUNT_SETTING_TAB.DATA_SOURCE,
@@ -269,9 +280,9 @@ export default function AccountSetting({
               {effectiveActiveMenu === 'provider' && <ModelProviderPage searchText={searchValue} />}
               {effectiveActiveMenu === 'members' && <MembersPage />}
               {effectiveActiveMenu === 'billing' && <BillingPage />}
+              {effectiveActiveMenu === 'token-billing' && <TokenBillingPage />}
               {effectiveActiveMenu === 'data-source' && <DataSourcePage />}
               {effectiveActiveMenu === 'api-based-extension' && <ApiBasedExtensionPage />}
-              {effectiveActiveMenu === 'data-security' && <SandboxConfig />}
               {effectiveActiveMenu === 'custom' && <CustomPage />}
               {effectiveActiveMenu === 'language' && <LanguagePage />}
             </div>

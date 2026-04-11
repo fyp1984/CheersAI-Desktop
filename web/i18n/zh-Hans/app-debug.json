@@ -242,6 +242,8 @@
   "modelConfig.title": "模型及参数",
   "noResult": "输出结果展示在这",
   "notSetAPIKey.description": "在调试之前需要设置 LLM 提供者的密钥。",
+  "notSetAPIKey.sharedDescription": "当前工作区的模型配置由管理员统一维护。请联系管理员完成模型配置后再进行调试。",
+  "notSetAPIKey.contactAdmin": "如需启用模型，请联系工作区管理员。",
   "notSetAPIKey.settingBtn": "去设置",
   "notSetAPIKey.title": "LLM 提供者的密钥未设置",
   "notSetAPIKey.trailFinished": "试用已结束",

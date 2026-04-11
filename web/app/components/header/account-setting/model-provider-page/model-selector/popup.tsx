@@ -13,8 +13,10 @@ import { useTranslation } from 'react-i18next'
 import { XCircle } from '@/app/components/base/icons/src/vender/solid/general'
 import { tooltipManager } from '@/app/components/base/tooltip/TooltipManager'
 import { ACCOUNT_SETTING_TAB } from '@/app/components/header/account-setting/constants'
+import { useAppContext } from '@/context/app-context'
 import { useModalContext } from '@/context/modal-context'
 import { supportFunctionCall } from '@/utils/tool-call'
+import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import { ModelFeatureEnum } from '../declarations'
 import { useLanguage } from '../hooks'
 import PopupItem from './popup-item'
@@ -36,7 +38,9 @@ const Popup: FC<PopupProps> = ({
   const { t } = useTranslation()
   const language = useLanguage()
   const [searchText, setSearchText] = useState('')
+  const { currentWorkspace } = useAppContext()
   const { setShowAccountSettingModal } = useModalContext()
+  const canManageModels = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.modelManage)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Close any open tooltips when the user scrolls to prevent them from appearing
@@ -130,16 +134,22 @@ const Popup: FC<PopupProps> = ({
           )
         }
       </div>
-      <div
-        className="sticky bottom-0 flex cursor-pointer items-center rounded-b-lg border-t border-divider-subtle bg-components-panel-bg px-4 py-2 text-text-accent-light-mode-only"
-        onClick={() => {
-          onHide()
-          setShowAccountSettingModal({ payload: ACCOUNT_SETTING_TAB.PROVIDER })
-        }}
-      >
-        <span className="system-xs-medium">{t('model.settingsLink', { ns: 'common' })}</span>
-        <RiArrowRightUpLine className="ml-0.5 h-3 w-3" />
-      </div>
+      {canManageModels ? (
+        <div
+          className="sticky bottom-0 flex cursor-pointer items-center rounded-b-lg border-t border-divider-subtle bg-components-panel-bg px-4 py-2 text-text-accent-light-mode-only"
+          onClick={() => {
+            onHide()
+            setShowAccountSettingModal({ payload: ACCOUNT_SETTING_TAB.PROVIDER })
+          }}
+        >
+          <span className="system-xs-medium">{t('model.settingsLink', { ns: 'common' })}</span>
+          <RiArrowRightUpLine className="ml-0.5 h-3 w-3" />
+        </div>
+      ) : (
+        <div className="sticky bottom-0 rounded-b-lg border-t border-divider-subtle bg-components-panel-bg px-4 py-2 text-xs text-text-tertiary">
+          {t('model.sharedConfigHint', { ns: 'common' })}
+        </div>
+      )}
     </div>
   )
 }

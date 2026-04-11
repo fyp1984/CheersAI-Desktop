@@ -60,7 +60,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/',
-        destination: '/apps',
+        destination: '/signin',
         permanent: false,
       },
     ]
@@ -74,9 +74,18 @@ const nextConfig: NextConfig = {
     turbopackFileSystemCacheForDev: false,
   },
   allowedDevOrigins: [
+    '192.168.0.3',
+    'http://192.168.0.3',
     'http://192.168.0.3:3000',
+    'localhost',
+    'http://localhost',
     'http://localhost:3000',
+    '127.0.0.1',
+    'http://127.0.0.1',
     'http://127.0.0.1:3000',
+    '0.0.0.0',
+    'http://0.0.0.0',
+    'http://0.0.0.0:3000',
   ],
 }
 
