@@ -64,7 +64,7 @@ export type SSOUserInfo = {
 
 export const exchangeSSOToken = async (params: ExchangeTokenParams) => {
   // 1. Exchange OAuth code for SSO access_token
-  const response = await fetch('/api/auth/sso/token/', {
+  const response = await fetch('/oauth-api/auth/sso/token/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
@@ -77,7 +77,7 @@ export const exchangeSSOToken = async (params: ExchangeTokenParams) => {
   }
 
   // 2. Fetch User Info from SSO using the token
-  const userInfoResponse = await fetch('/api/auth/sso/userinfo/', {
+  const userInfoResponse = await fetch('/oauth-api/auth/sso/userinfo/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   })
@@ -108,7 +108,7 @@ export const exchangeSSOToken = async (params: ExchangeTokenParams) => {
 }
 
 export const getSSOUserInfo = async () => {
-  const response = await fetch('/api/auth/sso/userinfo/', {
+  const response = await fetch('/oauth-api/auth/sso/userinfo/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   })

@@ -99,20 +99,17 @@ const validateUserInfo = (userInfo: ReturnType<typeof normalizeUserInfo>) => {
 const canFallbackToTokenClaims = (status: number) => [400, 414, 431].includes(status)
 
 const refreshAccessToken = async (sessionId: string, refreshToken: string) => {
-  const { ssoBaseUrl, clientId, clientSecret } = getSSOConfig()
+  const { ssoBaseUrl, clientId } = getSSOConfig()
   const tokenUrl = new URL('/api/login/oauth/access_token', ssoBaseUrl)
-  const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
   const params = new URLSearchParams()
   params.append('grant_type', 'refresh_token')
   params.append('refresh_token', refreshToken)
   params.append('client_id', clientId)
-  params.append('client_secret', clientSecret)
 
   const response = await fetch(tokenUrl.toString(), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'Authorization': `Basic ${authString}`,
       'Accept': 'application/json',
     },
     body: params.toString(),

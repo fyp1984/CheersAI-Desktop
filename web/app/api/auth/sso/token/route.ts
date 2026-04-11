@@ -19,26 +19,33 @@ export async function POST(request: NextRequest) {
     const ssoBaseUrl = process.env.NEXT_PUBLIC_DESKTOP_SSO_LOGIN_URL || 'http://localhost:8000'
     const clientId = process.env.NEXT_PUBLIC_DESKTOP_SSO_CLIENT_ID || '35f82ac3f099085a6fd0'
     const clientSecret = process.env.DESKTOP_SSO_CLIENT_SECRET || ''
+    const usePkcePublicClient = Boolean(codeVerifier)
 
     const tokenUrl = new URL('/api/login/oauth/access_token', ssoBaseUrl)
-    const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
 
     const params = new URLSearchParams()
     params.append('grant_type', 'authorization_code')
     params.append('code', code)
     params.append('redirect_uri', redirectUri)
     params.append('client_id', clientId)
-    params.append('client_secret', clientSecret)
+    if (!usePkcePublicClient && clientSecret)
+      params.append('client_secret', clientSecret)
     if (codeVerifier)
       params.append('code_verifier', codeVerifier)
 
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json',
+    }
+
+    if (!usePkcePublicClient && clientSecret) {
+      const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+      headers.Authorization = `Basic ${authString}`
+    }
+
     const tokenResponse = await fetch(tokenUrl.toString(), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${authString}`,
-        'Accept': 'application/json',
-      },
+      headers,
       body: params.toString(),
     })
 
