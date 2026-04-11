@@ -61,6 +61,7 @@ const PluginItem: FC<Props> = ({
     deprecated_reason,
   } = plugin
   const { category, author, name, label, description, icon, icon_dark, verified, meta: declarationMeta } = plugin.declaration
+  const categoryLabel = categoriesMap[category]?.label ?? category ?? ''
 
   const orgName = useMemo(() => {
     return [PluginSource.github, PluginSource.marketplace].includes(source) ? author : ''
@@ -105,7 +106,7 @@ const PluginItem: FC<Props> = ({
       }}
     >
       <div className={cn('hover-bg-components-panel-on-panel-item-bg relative z-10 rounded-xl border-[0.5px] border-components-panel-border bg-components-panel-on-panel-item-bg p-4 pb-3 shadow-xs', className)}>
-        <CornerMark text={categoriesMap[category].label} />
+        <CornerMark text={categoryLabel} />
         {/* Header */}
         <div className="flex">
           <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border-[1px] border-components-panel-border-subtle">

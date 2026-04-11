@@ -30,6 +30,7 @@ import {
   PortalToFollowElem,
   PortalToFollowElemContent,
 } from '@/app/components/base/portal-to-follow-elem'
+import { useToastContext } from '@/app/components/base/toast'
 import {
   useAuth,
   useCredentialData,
@@ -102,6 +103,7 @@ const ModelModal: FC<ModelModalProps> = ({
 
   const { isCurrentWorkspaceManager } = useAppContext()
   const { t } = useTranslation()
+  const { notify } = useToastContext()
   const language = useLanguage()
   const {
     formSchemas,
@@ -154,8 +156,10 @@ const ModelModal: FC<ModelModalProps> = ({
       needCheckValidatedValues: true,
       needTransformWhenSecretFieldIsPristine: true,
     }) || { isCheckValidated: false, values: {} }
-    if (!isCheckValidated || !modelNameAndTypeIsCheckValidated)
+    if (!isCheckValidated || !modelNameAndTypeIsCheckValidated) {
+      notify({ type: 'error', message: t('actionMsg.modifiedUnsuccessfully', { ns: 'common' }) })
       return
+    }
 
     const {
       __model_name,
@@ -165,8 +169,9 @@ const ModelModal: FC<ModelModalProps> = ({
       __authorization_name__,
       ...rest
     } = values
+    let saved = false
     if (__model_name && __model_type) {
-      await handleSaveCredential({
+      saved = await handleSaveCredential({
         credential_id: credential?.credential_id,
         credentials: rest,
         name: __authorization_name__,
@@ -175,14 +180,15 @@ const ModelModal: FC<ModelModalProps> = ({
       })
     }
     else {
-      await handleSaveCredential({
+      saved = await handleSaveCredential({
         credential_id: credential?.credential_id,
         credentials: rest,
         name: __authorization_name__,
       })
     }
-    onSave(values)
-  }, [handleSaveCredential, credential?.credential_id, model, onSave, mode, selectedCredential, handleActiveCredential])
+    if (saved)
+      onSave(values)
+  }, [handleSaveCredential, credential?.credential_id, model, onSave, mode, selectedCredential, handleActiveCredential, notify, t])
 
   const modalTitle = useMemo(() => {
     let label = t('modelProvider.auth.apiKeyModal.title', { ns: 'common' })

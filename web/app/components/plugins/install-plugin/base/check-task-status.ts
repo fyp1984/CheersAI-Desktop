@@ -4,6 +4,7 @@ import { sleep } from '@/utils'
 import { TaskStatus } from '../../types'
 
 const INTERVAL = 10 * 1000 // 10 seconds
+const MAX_CHECK_DURATION = 5 * 60 * 1000
 
 type Params = {
   taskId: string
@@ -13,6 +14,7 @@ type Params = {
 function checkTaskStatus() {
   let nextStatus = TaskStatus.running
   let isStop = false
+  const startedAt = Date.now()
 
   const doCheckStatus = async ({
     taskId,
@@ -35,6 +37,13 @@ function checkTaskStatus() {
     }
     nextStatus = plugin.status
     if (nextStatus === TaskStatus.running) {
+      if (Date.now() - startedAt >= MAX_CHECK_DURATION) {
+        nextStatus = TaskStatus.failed
+        return {
+          status: TaskStatus.failed,
+          error: 'Plugin installation timed out',
+        }
+      }
       await sleep(INTERVAL)
       return await doCheckStatus({
         taskId,

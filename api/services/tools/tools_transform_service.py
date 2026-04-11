@@ -2,6 +2,7 @@ import json
 import logging
 from collections.abc import Mapping
 from typing import Any, Union
+from urllib.parse import urlsplit, urlunsplit
 
 from pydantic import ValidationError
 from yarl import URL
@@ -33,6 +34,19 @@ logger = logging.getLogger(__name__)
 
 
 class ToolTransformService:
+    @staticmethod
+    def _get_console_base_url() -> str:
+        console_api_url = dify_config.CONSOLE_API_URL or "/"
+        if console_api_url.startswith("/"):
+            return console_api_url.rstrip("/")
+
+        parts = urlsplit(console_api_url)
+        normalized_path = parts.path.rstrip("/")
+        if normalized_path.endswith("/console/api"):
+            normalized_path = normalized_path[: -len("/console/api")]
+
+        return urlunsplit((parts.scheme, parts.netloc, normalized_path or "", parts.query, parts.fragment)) or "/"
+
     @classmethod
     def get_tool_provider_icon_url(
         cls, provider_type: str, provider_name: str, icon: str | Mapping[str, str]
@@ -40,9 +54,7 @@ class ToolTransformService:
         """
         get tool provider icon url
         """
-        url_prefix = (
-            URL(dify_config.CONSOLE_API_URL or "/") / "console" / "api" / "workspaces" / "current" / "tool-provider"
-        )
+        url_prefix = URL(cls._get_console_base_url() or "/") / "console" / "api" / "workspaces" / "current" / "tool-provider"
 
         if provider_type == ToolProviderType.BUILT_IN:
             return str(url_prefix / "builtin" / provider_name / "icon")

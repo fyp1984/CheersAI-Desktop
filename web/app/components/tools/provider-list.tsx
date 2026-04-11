@@ -1,11 +1,11 @@
 'use client'
 import type { Collection } from './types'
+import { useLocale } from '#i18n'
+import { RiArrowRightUpLine, RiArrowUpDoubleLine } from '@remixicon/react'
+import { useTheme } from 'next-themes'
 import { useQueryState } from 'nuqs'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { RiArrowRightUpLine, RiArrowUpDoubleLine } from '@remixicon/react'
 import { useTranslation } from 'react-i18next'
-import { useTheme } from 'next-themes'
-import { useLocale } from '#i18n'
 import Input from '@/app/components/base/input'
 import Loading from '@/app/components/base/loading'
 import Card from '@/app/components/plugins/card'
@@ -51,7 +51,7 @@ const ProviderList = () => {
   const { enable_marketplace } = useGlobalPublicStore(s => s.systemFeatures)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const [activeTab, setActiveTab] = useQueryState('category', {
+  const [activeTab] = useQueryState('category', {
     defaultValue: 'builtin',
   })
   const [tagFilterValue, setTagFilterValue] = useState<string[]>([])
@@ -70,7 +70,7 @@ const ProviderList = () => {
       if (tagFilterValue.length > 0 && (!collection.labels || collection.labels.every(label => !tagFilterValue.includes(label))))
         return false
       if (keywords)
-        return Object.values(collection.label).some(value => value.toLowerCase().includes(keywords.toLowerCase()))
+        return Object.values(collection.label || {}).some(value => String(value).toLowerCase().includes(keywords.toLowerCase()))
       return true
     })
   }, [activeTab, tagFilterValue, keywords, collectionList])

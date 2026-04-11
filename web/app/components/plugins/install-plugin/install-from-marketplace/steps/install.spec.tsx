@@ -549,7 +549,7 @@ describe('Install Component (steps/install.tsx)', () => {
       })
     })
 
-    it('should call onFailed without message for non-string error', async () => {
+    it('should call onFailed with error message for non-string error', async () => {
       mockInstallPackageFromMarketPlace.mockRejectedValue(new Error('Error object'))
       render(<Install {...defaultProps} />)
 
@@ -558,7 +558,7 @@ describe('Install Component (steps/install.tsx)', () => {
       })
 
       await waitFor(() => {
-        expect(defaultProps.onFailed).toHaveBeenCalledWith()
+        expect(defaultProps.onFailed).toHaveBeenCalledWith('Error object')
       })
     })
   })

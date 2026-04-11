@@ -68,33 +68,56 @@ const PluginPage = ({
   const [manifest, setManifest] = useState<PluginDeclaration | PluginManifestInMarket | null>(null)
 
   useEffect(() => {
-    (async () => {
+    let isCancelled = false
+
+    ;(async () => {
       setUniqueIdentifier(null)
+      setManifest(null)
       await sleep(100)
       if (packageId) {
-        const { data } = await fetchManifestFromMarketPlace(encodeURIComponent(packageId))
-        const { plugin, version } = data
-        setManifest({
-          ...plugin,
-          version: version.version,
-          icon: `${MARKETPLACE_API_PREFIX}/plugins/${plugin.org}/${plugin.name}/icon`,
-        })
-        setUniqueIdentifier(packageId)
-        showInstallFromMarketplace()
+        try {
+          const { data } = await fetchManifestFromMarketPlace(encodeURIComponent(packageId))
+          if (isCancelled)
+            return
+
+          const { plugin, version } = data
+          setManifest({
+            ...plugin,
+            version: version.version,
+            icon: `${MARKETPLACE_API_PREFIX}/plugins/${plugin.org}/${plugin.name}/icon`,
+          })
+          setUniqueIdentifier(packageId)
+          showInstallFromMarketplace()
+        }
+        catch (error) {
+          if (!isCancelled) {
+            console.error('Failed to load plugin manifest:', error)
+            setInstallState(null)
+          }
+        }
         return
       }
       if (bundleInfo) {
         try {
           const { data } = await fetchBundleInfoFromMarketPlace(bundleInfo)
+          if (isCancelled)
+            return
           setDependencies(data.version.dependencies)
           showInstallFromMarketplace()
         }
         catch (error) {
-          console.error('Failed to load bundle info:', error)
+          if (!isCancelled) {
+            console.error('Failed to load bundle info:', error)
+            setInstallState(null)
+          }
         }
       }
     })()
-  }, [packageId, bundleInfo, showInstallFromMarketplace])
+
+    return () => {
+      isCancelled = true
+    }
+  }, [packageId, bundleInfo, showInstallFromMarketplace, setInstallState])
 
   const {
     referenceSetting,
