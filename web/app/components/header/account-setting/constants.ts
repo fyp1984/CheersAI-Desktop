@@ -4,6 +4,7 @@ export const ACCOUNT_SETTING_TAB = {
   PROVIDER: 'provider',
   MEMBERS: 'members',
   BILLING: 'billing',
+  TOKEN_BILLING: 'token-billing',
   DATA_SOURCE: 'data-source',
   API_BASED_EXTENSION: 'api-based-extension',
   CUSTOM: 'custom',

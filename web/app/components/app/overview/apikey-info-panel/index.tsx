@@ -8,15 +8,19 @@ import Button from '@/app/components/base/button'
 import { LinkExternal02 } from '@/app/components/base/icons/src/vender/line/general'
 import { ACCOUNT_SETTING_TAB } from '@/app/components/header/account-setting/constants'
 import { IS_CE_EDITION } from '@/config'
+import { useAppContext } from '@/context/app-context'
 import { useModalContext } from '@/context/modal-context'
 import { useProviderContext } from '@/context/provider-context'
 import { cn } from '@/utils/classnames'
+import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 
 const APIKeyInfoPanel: FC = () => {
   const isCloud = !IS_CE_EDITION
 
   const { isAPIKeySet } = useProviderContext()
+  const { currentWorkspace } = useAppContext()
   const { setShowAccountSettingModal } = useModalContext()
+  const canManageModels = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.modelManage)
 
   const { t } = useTranslation()
 
@@ -38,22 +42,39 @@ const APIKeyInfoPanel: FC = () => {
             )
           : (
               <div>
-                <div>{t('apiKeyInfo.selfHost.title.row1', { ns: 'appOverview' })}</div>
-                <div>{t('apiKeyInfo.selfHost.title.row2', { ns: 'appOverview' })}</div>
+                {canManageModels
+                  ? (
+                      <>
+                        <div>{t('apiKeyInfo.selfHost.title.row1', { ns: 'appOverview' })}</div>
+                        <div>{t('apiKeyInfo.selfHost.title.row2', { ns: 'appOverview' })}</div>
+                      </>
+                    )
+                  : (
+                      <>
+                        <div>{t('apiKeyInfo.selfHost.sharedTitle.row1', { ns: 'appOverview' })}</div>
+                        <div>{t('apiKeyInfo.selfHost.sharedTitle.row2', { ns: 'appOverview' })}</div>
+                      </>
+                    )}
               </div>
             )}
       </div>
       {isCloud && (
         <div className="mt-1 text-sm font-normal text-text-tertiary">{t(`apiKeyInfo.cloud.${'trial'}.description`, { ns: 'appOverview' })}</div>
       )}
-      <Button
-        variant="primary"
-        className="mt-2 space-x-2"
-        onClick={() => setShowAccountSettingModal({ payload: ACCOUNT_SETTING_TAB.PROVIDER })}
-      >
-        <div className="text-sm font-medium">{t('apiKeyInfo.setAPIBtn', { ns: 'appOverview' })}</div>
-        <LinkExternal02 className="h-4 w-4" />
-      </Button>
+      {canManageModels ? (
+        <Button
+          variant="primary"
+          className="mt-2 space-x-2"
+          onClick={() => setShowAccountSettingModal({ payload: ACCOUNT_SETTING_TAB.PROVIDER })}
+        >
+          <div className="text-sm font-medium">{t('apiKeyInfo.setAPIBtn', { ns: 'appOverview' })}</div>
+          <LinkExternal02 className="h-4 w-4" />
+        </Button>
+      ) : (
+        <div className="mt-3 rounded-xl bg-background-section-burn px-3 py-2 text-sm text-text-tertiary">
+          {t('apiKeyInfo.sharedModelHint', { ns: 'appOverview' })}
+        </div>
+      )}
       {!isCloud && (
         <a
           className="mt-2 flex h-[26px] items-center space-x-1  p-1 text-xs font-medium text-[#155EEF]"

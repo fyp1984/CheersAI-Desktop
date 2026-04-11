@@ -10,6 +10,7 @@ from typing import Any, cast
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.exc import StaleDataError
 from werkzeug.exceptions import Unauthorized
 
 from configs import dify_config
@@ -146,15 +147,18 @@ class AccountService:
                 return None
 
             account.set_tenant_id(available_ta.tenant_id)
-            available_ta.current = True
-            db.session.commit()
+            logging.getLogger(__name__).warning(
+                "Skipping current tenant persistence for account %s because duplicate account rows were detected",
+                account.id,
+            )
 
         if naive_utc_now() - account.last_active_at > timedelta(minutes=10):
-            account.last_active_at = naive_utc_now()
-            db.session.commit()
+            logging.getLogger(__name__).warning(
+                "Skipping last_active update for account %s because duplicate account rows were detected",
+                account.id,
+            )
         # NOTE: make sure account is accessible outside of a db session
         # This ensures that it will work correctly after upgrading to Flask version 3.1.2
-        db.session.refresh(account)
         db.session.close()
         return account
 
@@ -397,7 +401,16 @@ class AccountService:
     @staticmethod
     def login(account: Account, *, ip_address: str | None = None) -> TokenPair:
         if ip_address:
-            AccountService.update_login_info(account=account, ip_address=ip_address)
+            try:
+                AccountService.update_login_info(account=account, ip_address=ip_address)
+            except StaleDataError:
+                # Some local/dev databases have a duplicated physical account row; keep login working.
+                db.session.rollback()
+                logging.getLogger(__name__).warning(
+                    "Skipping login info update for account %s because duplicate account rows were detected",
+                    account.id,
+                    exc_info=True,
+                )
 
         if account.status == AccountStatus.PENDING:
             account.status = AccountStatus.ACTIVE

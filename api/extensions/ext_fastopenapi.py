@@ -20,6 +20,9 @@ def _patched_add_route(self: FlaskRouter, path: str, method: str, endpoint: Call
         flask_path = re.sub(r"{(\w+)}", r"<\1>", path)
 
         def view_func(**path_params):
+            if request.method == "OPTIONS":
+                return Response(status=204)
+
             json_data = request.get_json(silent=True) or {}
             query_params = {}
             for key in request.args:
@@ -48,7 +51,7 @@ def _patched_add_route(self: FlaskRouter, path: str, method: str, endpoint: Call
             result = self._serialize_response(result)
             return jsonify(result), status_code
 
-        self.app.add_url_rule(flask_path, endpoint.__name__, view_func, methods=[method.upper()])
+        self.app.add_url_rule(flask_path, endpoint.__name__, view_func, methods=[method.upper(), "OPTIONS"])
 
 
 FlaskRouter.add_route = _patched_add_route

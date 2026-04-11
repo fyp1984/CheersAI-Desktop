@@ -84,6 +84,7 @@ import { fetchAndMergeValidCompletionParams } from '@/utils/completion-params'
 import { promptVariablesToUserInputsForm, userInputsFormToPromptVariables } from '@/utils/model-config'
 import { supportFunctionCall } from '@/utils/tool-call'
 import { basePath } from '@/utils/var'
+import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 
 type PublishConfig = {
   modelConfig: ModelConfig
@@ -94,6 +95,7 @@ const Configuration: FC = () => {
   const { t } = useTranslation()
   const { notify } = useContext(ToastContext)
   const { isLoadingCurrentWorkspace, currentWorkspace } = useAppContext()
+  const canManageModels = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.modelManage)
 
   const { appDetail, showAppConfigureFeaturesModal, setAppSidebarExpand, setShowAppConfigureFeaturesModal } = useAppStore(useShallow(state => ({
     appDetail: state.appDetail,
@@ -1039,6 +1041,7 @@ const Configuration: FC = () => {
                     <Debug
                       isAPIKeySet={isAPIKeySet}
                       onSetting={() => setShowAccountSettingModal({ payload: ACCOUNT_SETTING_TAB.PROVIDER })}
+                      canManageModels={canManageModels}
                       inputs={inputs}
                       modelParameterParams={{
                         setModel: setModel as any,
@@ -1092,6 +1095,7 @@ const Configuration: FC = () => {
               <Debug
                 isAPIKeySet={isAPIKeySet}
                 onSetting={() => setShowAccountSettingModal({ payload: ACCOUNT_SETTING_TAB.PROVIDER })}
+                canManageModels={canManageModels}
                 inputs={inputs}
                 modelParameterParams={{
                   setModel: setModel as any,

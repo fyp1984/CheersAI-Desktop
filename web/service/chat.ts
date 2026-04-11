@@ -1,6 +1,6 @@
 // Chat API service
 import Cookies from 'js-cookie'
-import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '@/config'
+import { API_PREFIX, CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '@/config'
 import { del, get, post } from './base'
 
 // Types
@@ -112,7 +112,7 @@ export const sendSimpleChatMessage = async (
   onData?: (data: string) => void,
   onError?: (error: string) => void,
 ) => {
-  const response = await fetch('/console/api/simple-chat', {
+  const response = await fetch(`${API_PREFIX}/simple-chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

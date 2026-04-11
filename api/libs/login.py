@@ -36,6 +36,7 @@ from typing import ParamSpec, TypeVar
 
 P = ParamSpec("P")
 R = TypeVar("R")
+CSRF_PROTECTED_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 
 def login_required(func: Callable[P, R]):
@@ -80,7 +81,8 @@ def login_required(func: Callable[P, R]):
             return current_app.login_manager.unauthorized()  # type: ignore
         # we put csrf validation here for less conflicts
         # TODO: maybe find a better place for it.
-        check_csrf_token(request, current_user.id)
+        if request.method in CSRF_PROTECTED_METHODS:
+            check_csrf_token(request, current_user.id)
         return current_app.ensure_sync(func)(*args, **kwargs)
 
     return decorated_view

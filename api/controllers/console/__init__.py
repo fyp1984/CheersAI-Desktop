@@ -42,6 +42,7 @@ from . import (
     ping,
     setup,
     spec,
+    token_billing,
     version,
 )
 
@@ -219,6 +220,7 @@ __all__ = [
     "spec",
     "statistic",
     "tags",
+    "token_billing",
     "tool_providers",
     "trial",
     "trigger_providers",

@@ -31,7 +31,7 @@ import {
   fetchModelProviderCredentials,
   getPayUrl,
 } from '@/service/common'
-import { commonQueryKeys } from '@/service/use-common'
+import { commonQueryKeys, useCurrentWorkspace, useUserProfile } from '@/service/use-common'
 import {
   ConfigurationMethodEnum,
   CustomConfigurationStatusEnum,
@@ -136,9 +136,14 @@ export const useProviderCredentialsAndLoadBalancing = (
 }
 
 export const useModelList = (type: ModelTypeEnum) => {
+  const { data: workspace } = useCurrentWorkspace()
+  const { data: userProfile } = useUserProfile()
   const { data, refetch, isPending } = useQuery({
-    queryKey: commonQueryKeys.modelList(type),
+    queryKey: commonQueryKeys.modelList(type, workspace?.id, userProfile?.profile?.id),
     queryFn: () => fetchModelList(`/workspaces/current/models/model-types/${type}`),
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    refetchInterval: 5000,
   })
 
   return {
@@ -149,9 +154,14 @@ export const useModelList = (type: ModelTypeEnum) => {
 }
 
 export const useDefaultModel = (type: ModelTypeEnum) => {
+  const { data: workspace } = useCurrentWorkspace()
+  const { data: userProfile } = useUserProfile()
   const { data, refetch, isPending } = useQuery({
-    queryKey: commonQueryKeys.defaultModel(type),
+    queryKey: commonQueryKeys.defaultModel(type, workspace?.id, userProfile?.profile?.id),
     queryFn: () => fetchDefaultModal(`/workspaces/current/default-model?model_type=${type}`),
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    refetchInterval: 5000,
   })
 
   return {
@@ -247,7 +257,7 @@ export const useUpdateModelProviders = () => {
   const queryClient = useQueryClient()
 
   const updateModelProviders = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: commonQueryKeys.modelProviders })
+    queryClient.invalidateQueries({ queryKey: [commonQueryKeys.modelProviders()[0], commonQueryKeys.modelProviders()[1]] })
   }, [queryClient])
 
   return updateModelProviders

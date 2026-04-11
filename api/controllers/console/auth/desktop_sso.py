@@ -91,7 +91,17 @@ class DesktopSSOLoginApi(Resource):
                 TenantService.create_owner_tenant_if_not_exist(account, is_setup=True)
 
                 from models.account import TenantAccountJoin
-                tenant_join = db.session.query(TenantAccountJoin).filter_by(account_id=account.id).first()
+                tenant_join = (
+                    db.session.query(TenantAccountJoin)
+                    .filter_by(account_id=account.id, current=True)
+                    .order_by(TenantAccountJoin.updated_at.desc(), TenantAccountJoin.created_at.desc())
+                    .first()
+                ) or (
+                    db.session.query(TenantAccountJoin)
+                    .filter_by(account_id=account.id)
+                    .order_by(TenantAccountJoin.current.desc(), TenantAccountJoin.updated_at.desc(), TenantAccountJoin.created_at.desc())
+                    .first()
+                )
                 if tenant_join:
                     tenant_join.role = system_role
                     db.session.commit()
@@ -111,7 +121,17 @@ class DesktopSSOLoginApi(Resource):
                     db.session.commit()
 
                 from models.account import TenantAccountJoin
-                tenant_join = db.session.query(TenantAccountJoin).filter_by(account_id=account.id).first()
+                tenant_join = (
+                    db.session.query(TenantAccountJoin)
+                    .filter_by(account_id=account.id, current=True)
+                    .order_by(TenantAccountJoin.updated_at.desc(), TenantAccountJoin.created_at.desc())
+                    .first()
+                ) or (
+                    db.session.query(TenantAccountJoin)
+                    .filter_by(account_id=account.id)
+                    .order_by(TenantAccountJoin.current.desc(), TenantAccountJoin.updated_at.desc(), TenantAccountJoin.created_at.desc())
+                    .first()
+                )
 
                 if tenant_join:
                     old_role = tenant_join.role
