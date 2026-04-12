@@ -76,7 +76,7 @@ def _resolve_shared_tenant(account: Account, payload: dict) -> Tenant | None:
     group_name = _get_sso_group_name(payload)
     if not group_name:
         tenant_join = _get_preferred_tenant_join(account)
-        return tenant_join.tenant if tenant_join else None
+        return db.session.query(Tenant).filter_by(id=tenant_join.tenant_id, status=TenantStatus.NORMAL).first() if tenant_join else None
 
     cache_key = _get_sso_group_tenant_cache_key(group_name)
     cached_tenant_id = redis_client.get(cache_key)
@@ -89,7 +89,7 @@ def _resolve_shared_tenant(account: Account, payload: dict) -> Tenant | None:
 
     if not tenant:
         tenant_join = _get_preferred_tenant_join(account)
-        tenant = tenant_join.tenant if tenant_join else None
+        tenant = db.session.query(Tenant).filter_by(id=tenant_join.tenant_id, status=TenantStatus.NORMAL).first() if tenant_join else None
 
     if not tenant:
         tenant = TenantService.create_tenant(name=group_name, is_setup=True)

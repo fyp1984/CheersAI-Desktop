@@ -34,11 +34,15 @@ vi.mock('use-context-selector', () => ({
 }))
 
 // Mock app context
+let mockIsCurrentWorkspaceManager = false
+let mockIsCurrentWorkspaceDatasetOperator = false
 vi.mock('@/context/app-context', () => ({
   useAppContext: () => ({
     canEditApps: true,
     canViewWorkflow: true,
     canEditWorkflow: true,
+    isCurrentWorkspaceManager: mockIsCurrentWorkspaceManager,
+    isCurrentWorkspaceDatasetOperator: mockIsCurrentWorkspaceDatasetOperator,
   }),
 }))
 
@@ -255,6 +259,8 @@ describe('AppCard', () => {
     vi.clearAllMocks()
     mockOpenAsyncWindow.mockReset()
     mockWebappAuthEnabled = false
+    mockIsCurrentWorkspaceManager = false
+    mockIsCurrentWorkspaceDatasetOperator = false
   })
 
   describe('Rendering', () => {
@@ -358,15 +364,32 @@ describe('AppCard', () => {
       expect(card).toBeInTheDocument()
     })
 
-    it('should call getRedirection on card click', () => {
+    it('should open installed app in explore on card click when available', async () => {
       render(<AppCard app={mockApp} />)
       const card = screen.getByTitle('Test App').closest('[class*="cursor-pointer"]')!
       fireEvent.click(card)
-      expect(mockGetRedirection).toHaveBeenCalledWith({
-        canEditApp: true,
-        canViewWorkflow: true,
-        canEditWorkflow: true,
-      }, mockApp, mockPush)
+
+      await waitFor(() => {
+        expect(exploreService.fetchInstalledAppList).toHaveBeenCalledWith(mockApp.id)
+        expect(mockPush).toHaveBeenCalledWith('/explore/installed/installed-1')
+      })
+      expect(mockGetRedirection).not.toHaveBeenCalled()
+    })
+
+    it('should fall back to getRedirection when no installed app exists', async () => {
+      (exploreService.fetchInstalledAppList as Mock).mockResolvedValueOnce({ installed_apps: [] })
+
+      render(<AppCard app={mockApp} />)
+      const card = screen.getByTitle('Test App').closest('[class*="cursor-pointer"]')!
+      fireEvent.click(card)
+
+      await waitFor(() => {
+        expect(mockGetRedirection).toHaveBeenCalledWith({
+          canEditApp: true,
+          canViewWorkflow: true,
+          canEditWorkflow: true,
+        }, mockApp, mockPush)
+      })
     })
   })
 
@@ -847,6 +870,28 @@ describe('AppCard', () => {
 
       await waitFor(() => {
         expect(screen.getByText('app.openInExplore')).toBeInTheDocument()
+      })
+    })
+
+    it('should show open edit page for manager users', async () => {
+      mockIsCurrentWorkspaceManager = true
+      render(<AppCard app={mockApp} />)
+
+      fireEvent.click(screen.getByTestId('popover-trigger'))
+
+      await waitFor(() => {
+        expect(screen.getByText('app.openEditPage')).toBeInTheDocument()
+      })
+    })
+
+    it('should show open edit page for dataset operator users', async () => {
+      mockIsCurrentWorkspaceDatasetOperator = true
+      render(<AppCard app={mockApp} />)
+
+      fireEvent.click(screen.getByTestId('popover-trigger'))
+
+      await waitFor(() => {
+        expect(screen.getByText('app.openEditPage')).toBeInTheDocument()
       })
     })
   })
