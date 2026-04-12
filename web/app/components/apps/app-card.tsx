@@ -29,6 +29,7 @@ import { AccessMode } from '@/models/access-control'
 import { useGetUserCanAccessApp } from '@/service/access-control'
 import { copyApp, deleteApp, exportAppConfig, updateAppInfo } from '@/service/apps'
 import { fetchInstalledAppList } from '@/service/explore'
+import { useInvalidateAppList } from '@/service/use-apps'
 import { fetchWorkflowDraft } from '@/service/workflow'
 import { AppModeEnum } from '@/types/app'
 import { getRedirection } from '@/utils/app-redirection'
@@ -67,6 +68,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
   const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
   const { canEditApps, canViewWorkflow, canEditWorkflow } = useAppContext()
   const { onPlanInfoChanged } = useProviderContext()
+  const invalidateAppList = useInvalidateAppList()
   const { push } = useRouter()
   const openAsyncWindow = useAsyncWindowOpen()
 
@@ -119,6 +121,8 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
         type: 'success',
         message: t('editDone', { ns: 'app' }),
       })
+      localStorage.setItem(NEED_REFRESH_APP_LIST_KEY, '1')
+      invalidateAppList()
       if (onRefresh)
         onRefresh()
     }
@@ -128,7 +132,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
         message: e.message || t('editFailed', { ns: 'app' }),
       })
     }
-  }, [app.id, notify, onRefresh, t])
+  }, [app.id, invalidateAppList, notify, onRefresh, t])
 
   const onCopy: DuplicateAppModalProps['onConfirm'] = async ({ name, icon_type, icon, icon_background }) => {
     try {

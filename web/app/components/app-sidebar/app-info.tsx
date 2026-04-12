@@ -105,12 +105,14 @@ const AppInfo = ({ expand, onlyShowDetail = false, openState = false, onDetailEx
         type: 'success',
         message: t('editDone', { ns: 'app' }),
       })
+      localStorage.setItem(NEED_REFRESH_APP_LIST_KEY, '1')
+      invalidateAppList()
       setAppDetail(app)
     }
     catch {
       notify({ type: 'error', message: t('editFailed', { ns: 'app' }) })
     }
-  }, [appDetail, notify, setAppDetail, t])
+  }, [appDetail, invalidateAppList, notify, setAppDetail, t])
 
   const onCopy: DuplicateAppModalProps['onConfirm'] = async ({ name, icon_type, icon, icon_background }) => {
     if (!appDetail)

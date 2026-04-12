@@ -191,9 +191,6 @@ const ChatPage = () => {
       router.replace('/apps')
   }, [canUseChat, isLoadingCurrentWorkspace, router])
 
-  if (isLoadingCurrentWorkspace || !canUseChat)
-    return <Loading type="app" />
-
   // 保存侧边栏状态到本地存储
   useEffect(() => {
     try {
@@ -943,6 +940,9 @@ const ChatPage = () => {
   const searchResultText = searchQuery.trim()
     ? `找到 ${filteredConversations.length} 条相关对话`
     : `共 ${conversations.length} 条对话`
+
+  if (isLoadingCurrentWorkspace || !canUseChat)
+    return <Loading type="app" />
 
   return (
     <div className="flex h-full bg-[#f9fafb] font-sans text-[#111827]">

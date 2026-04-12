@@ -76,6 +76,11 @@ vi.mock('@/service/explore', () => ({
   fetchInstalledAppList: vi.fn(() => Promise.resolve({ installed_apps: [{ id: 'installed-1' }] })),
 }))
 
+const mockInvalidateAppList = vi.fn()
+vi.mock('@/service/use-apps', () => ({
+  useInvalidateAppList: () => mockInvalidateAppList,
+}))
+
 vi.mock('@/service/access-control', () => ({
   useGetUserCanAccessApp: () => ({
     data: { result: true },
@@ -646,6 +651,31 @@ describe('AppCard', () => {
 
       await waitFor(() => {
         expect(appsService.updateAppInfo).toHaveBeenCalled()
+      })
+    })
+
+    it('should invalidate app list and mark refresh when editing app', async () => {
+      localStorage.clear()
+
+      render(<AppCard app={mockApp} onRefresh={mockOnRefresh} />)
+
+      fireEvent.click(screen.getByTestId('popover-trigger'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('popover-content')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByText('app.editApp'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('edit-app-modal')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByTestId('confirm-edit-modal'))
+
+      await waitFor(() => {
+        expect(localStorage.getItem('needRefreshAppList')).toBe('1')
+        expect(mockInvalidateAppList).toHaveBeenCalledTimes(1)
       })
     })
 

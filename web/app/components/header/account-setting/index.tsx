@@ -14,6 +14,8 @@ import {
   RiMoneyDollarCircleLine,
   RiReceiptFill,
   RiReceiptLine,
+  RiShieldKeyholeFill,
+  RiShieldKeyholeLine,
   RiPuzzle2Fill,
   RiPuzzle2Line,
   RiTranslate2,
@@ -116,7 +118,6 @@ export default function AccountSetting({
       })
     }
 
-    if (canEditKnowledge) {
     if (canManageDataSource) {
       items.push({
         key: ACCOUNT_SETTING_TAB.DATA_SOURCE,

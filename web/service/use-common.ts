@@ -264,10 +264,9 @@ export const useOneMoreStep = () => {
   })
 }
 
-export const useModelProviders = () => {
+export const useModelProviders = (enabled = true) => {
   const { data: workspace } = useCurrentWorkspace()
   const { data: userProfile } = useUserProfile()
-export const useModelProviders = (enabled = true) => {
   return useQuery<{ data: ModelProvider[] }>({
     queryKey: commonQueryKeys.modelProviders(workspace?.id, userProfile?.profile?.id),
     queryFn: () => get<{ data: ModelProvider[] }>('/workspaces/current/model-providers'),

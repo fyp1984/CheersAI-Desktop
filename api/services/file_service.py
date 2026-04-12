@@ -213,8 +213,21 @@ class FileService:
 
         return generator, upload_file.mime_type
 
-    def get_file_generator_by_file_id(self, file_id: str, timestamp: str, nonce: str, sign: str):
-        result = file_helpers.verify_file_signature(upload_file_id=file_id, timestamp=timestamp, nonce=nonce, sign=sign)
+    def get_file_generator_by_file_id(
+        self,
+        file_id: str,
+        timestamp: str,
+        nonce: str,
+        sign: str,
+        expires: str | None = None,
+    ):
+        result = file_helpers.verify_file_signature(
+            upload_file_id=file_id,
+            timestamp=timestamp,
+            nonce=nonce,
+            sign=sign,
+            expires=expires,
+        )
         if not result:
             raise NotFound("File not found or signature is invalid")
 

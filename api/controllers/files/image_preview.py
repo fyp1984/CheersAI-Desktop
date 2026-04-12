@@ -20,6 +20,7 @@ class FileSignatureQuery(BaseModel):
     timestamp: str = Field(..., description="Unix timestamp used in the signature")
     nonce: str = Field(..., description="Random string for signature")
     sign: str = Field(..., description="HMAC signature")
+    expires: str | None = Field(default=None, description="Custom signature lifetime in seconds")
 
 
 class FilePreviewQuery(FileSignatureQuery):
@@ -86,6 +87,7 @@ class FilePreviewApi(Resource):
             "timestamp": "Unix timestamp used in the signature",
             "nonce": "Random string used in the signature",
             "sign": "HMAC signature verifying the request",
+            "expires": "Optional signature lifetime in seconds",
             "as_attachment": "Whether to download the file as an attachment",
         }
     )
@@ -108,6 +110,7 @@ class FilePreviewApi(Resource):
                 timestamp=args.timestamp,
                 nonce=args.nonce,
                 sign=args.sign,
+                expires=args.expires,
             )
         except services.errors.file.UnsupportedFileTypeError:
             raise UnsupportedFileTypeError()

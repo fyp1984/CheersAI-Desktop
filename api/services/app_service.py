@@ -280,15 +280,25 @@ class AppService:
 
         return app
 
-    def update_app_icon(self, app: App, icon: str, icon_background: str) -> App:
+    def update_app_icon(
+        self,
+        app: App,
+        *,
+        icon_type: str | None = None,
+        icon: str,
+        icon_background: str,
+    ) -> App:
         """
         Update app icon
         :param app: App instance
+        :param icon_type: new icon_type
         :param icon: new icon
         :param icon_background: new icon_background
         :return: App instance
         """
         assert current_user is not None
+        if icon_type is not None:
+            app.icon_type = icon_type
         app.icon = icon
         app.icon_background = icon_background
         app.updated_by = current_user.id
