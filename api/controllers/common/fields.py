@@ -55,5 +55,9 @@ class Site(BaseModel):
     @property
     def icon_url(self) -> str | None:
         if self.icon and self.icon_type == IconType.IMAGE:
-            return file_helpers.get_signed_file_url(self.icon)
+            return file_helpers.get_signed_file_url(
+                self.icon,
+                timeout=file_helpers.APP_ICON_URL_TIMEOUT,
+                use_proxy_path=True,
+            )
         return None

@@ -125,6 +125,7 @@ class AppNamePayload(BaseModel):
 
 
 class AppIconPayload(BaseModel):
+    icon_type: str | None = Field(default=None, description="Icon type")
     icon: str | None = Field(default=None, description="Icon data")
     icon_background: str | None = Field(default=None, description="Icon background color")
 
@@ -174,7 +175,11 @@ def _build_icon_url(icon_type: str | IconType | None, icon: str | None) -> str |
     icon_type_value = icon_type.value if isinstance(icon_type, IconType) else str(icon_type)
     if icon_type_value.lower() != IconType.IMAGE:
         return None
-    return file_helpers.get_signed_file_url(icon)
+    return file_helpers.get_signed_file_url(
+        icon,
+        timeout=file_helpers.APP_ICON_URL_TIMEOUT,
+        use_proxy_path=True,
+    )
 
 
 class Tag(ResponseModel):
@@ -736,8 +741,13 @@ class AppIconApi(Resource):
         args = AppIconPayload.model_validate(console_ns.payload or {})
 
         app_service = AppService()
-        app_model = app_service.update_app_icon(app_model, args.icon or "", args.icon_background or "")
-        response_model = AppDetail.model_validate(app_model, from_attributes=True)
+        app_model = app_service.update_app_icon(
+            app_model,
+            icon_type=args.icon_type,
+            icon=args.icon or "",
+            icon_background=args.icon_background or "",
+        )
+        response_model = AppDetailWithSite.model_validate(app_model, from_attributes=True)
         return response_model.model_dump(mode="json")
 
 

@@ -24,9 +24,11 @@ import type {
 import type { ModerationConfig, PromptVariable } from '@/models/debug'
 import { noop } from 'es-toolkit/function'
 import dynamic from 'next/dynamic'
+import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createContext, useContext, useContextSelector } from 'use-context-selector'
 import {
+  ACCOUNT_SETTING_MODAL_ACTION,
   DEFAULT_ACCOUNT_SETTING_TAB,
   isValidAccountSettingTab,
 } from '@/app/components/header/account-setting/constants'
@@ -159,12 +161,16 @@ export const ModalContextProvider = ({
   // Use nuqs hooks for URL-based modal state management
   const [showPricingModal, setPricingModalOpen] = usePricingModal()
   const [urlAccountModalState, setUrlAccountModalState] = useAccountSettingModal<AccountSettingTab>()
+  const searchParams = useSearchParams()
 
   const accountSettingCallbacksRef = useRef<Omit<ModalState<AccountSettingTab>, 'payload'> | null>(null)
-  const accountSettingTab = urlAccountModalState.isOpen
+  const searchAction = searchParams.get('action')
+  const searchTab = searchParams.get('tab')
+  const isAccountSettingOpen = urlAccountModalState.isOpen || searchAction === ACCOUNT_SETTING_MODAL_ACTION
+  const accountSettingTab = isAccountSettingOpen
     ? (isValidAccountSettingTab(urlAccountModalState.payload)
         ? urlAccountModalState.payload
-        : DEFAULT_ACCOUNT_SETTING_TAB)
+        : (isValidAccountSettingTab(searchTab) ? searchTab : DEFAULT_ACCOUNT_SETTING_TAB))
     : null
   const [showApiBasedExtensionModal, setShowApiBasedExtensionModal] = useState<ModalState<ApiBasedExtension> | null>(null)
   const [showModerationSettingModal, setShowModerationSettingModal] = useState<ModalState<ModerationConfig> | null>(null)
@@ -211,6 +217,14 @@ export const ModalContextProvider = ({
     accountSettingCallbacksRef.current = callbacks
     setUrlAccountModalState({ payload })
   }, [accountSettingTab, setUrlAccountModalState])
+
+  useEffect(() => {
+    if (searchAction === ACCOUNT_SETTING_MODAL_ACTION
+      && isValidAccountSettingTab(searchTab)
+      && !urlAccountModalState.isOpen) {
+      setUrlAccountModalState({ payload: searchTab })
+    }
+  }, [searchAction, searchTab, setUrlAccountModalState, urlAccountModalState.isOpen])
 
   useEffect(() => {
     if (!urlAccountModalState.isOpen)

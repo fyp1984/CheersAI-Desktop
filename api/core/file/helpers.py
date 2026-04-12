@@ -7,18 +7,34 @@ import urllib.parse
 
 from configs import dify_config
 
+APP_ICON_URL_TIMEOUT = 60 * 60 * 24 * 30
 
-def get_signed_file_url(upload_file_id: str, as_attachment=False, for_external: bool = True) -> str:
-    base_url = dify_config.FILES_URL if for_external else (dify_config.INTERNAL_FILES_URL or dify_config.FILES_URL)
-    url = f"{base_url}/files/{upload_file_id}/file-preview"
+
+def get_signed_file_url(
+    upload_file_id: str,
+    as_attachment=False,
+    for_external: bool = True,
+    timeout: int | None = None,
+    use_proxy_path: bool = False,
+) -> str:
+    if use_proxy_path:
+        url = f"/oauth-api/files/{upload_file_id}/file-preview"
+    else:
+        base_url = dify_config.FILES_URL if for_external else (dify_config.INTERNAL_FILES_URL or dify_config.FILES_URL)
+        url = f"{base_url}/files/{upload_file_id}/file-preview"
 
     timestamp = str(int(time.time()))
     nonce = os.urandom(16).hex()
     key = dify_config.SECRET_KEY.encode()
     msg = f"file-preview|{upload_file_id}|{timestamp}|{nonce}"
+    query = {"timestamp": timestamp, "nonce": nonce}
+    if timeout is not None:
+        expires = str(timeout)
+        msg = f"{msg}|{expires}"
+        query["expires"] = expires
     sign = hmac.new(key, msg.encode(), hashlib.sha256).digest()
     encoded_sign = base64.urlsafe_b64encode(sign).decode()
-    query = {"timestamp": timestamp, "nonce": nonce, "sign": encoded_sign}
+    query["sign"] = encoded_sign
     if as_attachment:
         query["as_attachment"] = "true"
     query_string = urllib.parse.urlencode(query)
@@ -69,8 +85,17 @@ def verify_image_signature(*, upload_file_id: str, timestamp: str, nonce: str, s
     return current_time - int(timestamp) <= dify_config.FILES_ACCESS_TIMEOUT
 
 
-def verify_file_signature(*, upload_file_id: str, timestamp: str, nonce: str, sign: str) -> bool:
+def verify_file_signature(
+    *,
+    upload_file_id: str,
+    timestamp: str,
+    nonce: str,
+    sign: str,
+    expires: str | None = None,
+) -> bool:
     data_to_sign = f"file-preview|{upload_file_id}|{timestamp}|{nonce}"
+    if expires is not None:
+        data_to_sign = f"{data_to_sign}|{expires}"
     secret_key = dify_config.SECRET_KEY.encode()
     recalculated_sign = hmac.new(secret_key, data_to_sign.encode(), hashlib.sha256).digest()
     recalculated_encoded_sign = base64.urlsafe_b64encode(recalculated_sign).decode()
@@ -80,4 +105,7 @@ def verify_file_signature(*, upload_file_id: str, timestamp: str, nonce: str, si
         return False
 
     current_time = int(time.time())
-    return current_time - int(timestamp) <= dify_config.FILES_ACCESS_TIMEOUT
+    timeout = dify_config.FILES_ACCESS_TIMEOUT
+    if expires is not None:
+        timeout = max(0, int(expires))
+    return current_time - int(timestamp) <= timeout

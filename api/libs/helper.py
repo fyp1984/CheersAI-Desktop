@@ -103,7 +103,11 @@ class AppIconUrlField(fields.Raw):
             obj = obj["app"]
 
         if isinstance(obj, App | Site) and obj.icon_type == IconType.IMAGE:
-            return file_helpers.get_signed_file_url(obj.icon)
+            return file_helpers.get_signed_file_url(
+                obj.icon,
+                timeout=file_helpers.APP_ICON_URL_TIMEOUT,
+                use_proxy_path=True,
+            )
         return None
 
 
