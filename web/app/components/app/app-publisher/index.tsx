@@ -155,6 +155,7 @@ const AppPublisher = ({
 
   const appMode = (appDetail?.mode !== AppModeEnum.COMPLETION && appDetail?.mode !== AppModeEnum.WORKFLOW) ? AppModeEnum.CHAT : appDetail.mode
   const appURL = `${appBaseURL}${basePath}/${appMode}/${accessToken}`
+  const appDevelopURL = appDetail?.id ? `${basePath}/app/${appDetail.id}/develop` : undefined
   const isChatApp = [AppModeEnum.CHAT, AppModeEnum.AGENT_CHAT, AppModeEnum.COMPLETION].includes(appDetail?.mode || AppModeEnum.CHAT)
 
   const { data: userCanAccessApp, isLoading: isGettingUserCanAccessApp, refetch } = useGetUserCanAccessApp({ appId: appDetail?.id, enabled: false })
@@ -238,6 +239,21 @@ const AppPublisher = ({
       },
     })
   }, [appDetail?.id, openAsyncWindow])
+
+  const handleRunApp = useCallback(async () => {
+    await openAsyncWindow(async () => {
+      if (!appDetail?.id)
+        throw new Error('App not found')
+      const { installed_apps }: any = await fetchInstalledAppList(appDetail.id) || {}
+      if (installed_apps?.length > 0)
+        return `${basePath}/explore/installed/${installed_apps[0].id}`
+      return appURL
+    }, {
+      onError: (err) => {
+        Toast.notify({ type: 'error', message: `${err.message || err}` })
+      },
+    })
+  }, [appDetail?.id, appURL, openAsyncWindow])
 
   const handleAccessControlUpdate = useCallback(async () => {
     if (!appDetail)
@@ -407,7 +423,10 @@ const AppPublisher = ({
                             <SuggestedAction
                               className="flex-1"
                               disabled={disabledFunctionButton}
-                              link={appURL}
+                              onClick={() => {
+                                if (publishedAt)
+                                  handleRunApp()
+                              }}
                               icon={<RiPlayCircleLine className="h-4 w-4" />}
                             >
                               {t('common.runApp', { ns: 'workflow' })}
@@ -455,7 +474,7 @@ const AppPublisher = ({
                             <SuggestedAction
                               className="flex-1"
                               disabled={!publishedAt || missingStartNode}
-                              link="./develop"
+                              link={appDevelopURL}
                               icon={<RiTerminalBoxLine className="h-4 w-4" />}
                             >
                               {t('common.accessAPIReference', { ns: 'workflow' })}

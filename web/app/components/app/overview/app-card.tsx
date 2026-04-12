@@ -33,9 +33,11 @@ import { BlockEnum } from '@/app/components/workflow/types'
 import { useAppContext } from '@/context/app-context'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 import { useDocLink } from '@/context/i18n'
+import { useAsyncWindowOpen } from '@/hooks/use-async-window-open'
 import { AccessMode } from '@/models/access-control'
 import { useAppWhiteListSubjects } from '@/service/access-control'
 import { fetchAppDetailDirect } from '@/service/apps'
+import { fetchInstalledAppList } from '@/service/explore'
 import { useAppWorkflow } from '@/service/use-workflow'
 import { AppModeEnum } from '@/types/app'
 import { asyncRunSafe } from '@/utils'
@@ -76,6 +78,7 @@ function AppCard({
   const { isCurrentWorkspaceManager, isCurrentWorkspaceEditor } = useAppContext()
   const { data: currentWorkflow } = useAppWorkflow(appInfo.mode === AppModeEnum.WORKFLOW ? appInfo.id : '')
   const docLink = useDocLink()
+  const openAsyncWindow = useAsyncWindowOpen()
   const appDetail = useAppStore(state => state.appDetail)
   const setAppDetail = useAppStore(state => state.setAppDetail)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
@@ -124,11 +127,20 @@ function AppCard({
   const appUrl = `${app_base_url}${basePath}/${appMode}/${access_token}`
   const apiUrl = appInfo?.api_base_url
 
+  const handleLaunch = useCallback(async () => {
+    await openAsyncWindow(async () => {
+      const { installed_apps }: any = await fetchInstalledAppList(appInfo.id) || {}
+      if (installed_apps?.length > 0)
+        return `${basePath}/explore/installed/${installed_apps[0].id}`
+      return appUrl
+    })
+  }, [appInfo.id, appUrl, openAsyncWindow])
+
   const genClickFuncByName = (opName: string) => {
     switch (opName) {
       case t('overview.appInfo.launch', { ns: 'appOverview' }):
         return () => {
-          window.open(appUrl, '_blank')
+          handleLaunch()
         }
       case t('overview.appInfo.customize.entry', { ns: 'appOverview' }):
         return () => {

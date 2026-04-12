@@ -73,7 +73,6 @@ export default function AccountSetting({
   const canManageDataSource = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.dataSourceManage)
   const canManagePlugin = hasPluginManageWorkspaceCapability(currentWorkspace)
   const canManageWorkspaceSettings = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.settingsTeam)
-  const canManageDataSecurity = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.dataSecurityManage)
 
   const workplaceGroupItems: GroupItem[] = (() => {
     const items: GroupItem[] = []
@@ -116,7 +115,6 @@ export default function AccountSetting({
       })
     }
 
-    if (canEditKnowledge) {
     if (canManageDataSource) {
       items.push({
         key: ACCOUNT_SETTING_TAB.DATA_SOURCE,
@@ -132,15 +130,6 @@ export default function AccountSetting({
         name: t('settings.apiBasedExtension', { ns: 'common' }),
         icon: <RiPuzzle2Line className={iconClassName} />,
         activeIcon: <RiPuzzle2Fill className={iconClassName} />,
-      })
-    }
-
-    if (canManageDataSecurity) {
-      items.push({
-        key: ACCOUNT_SETTING_TAB.DATA_SECURITY,
-        name: t('settings.dataSecurity', { ns: 'common' }),
-        icon: <RiShieldKeyholeLine className={iconClassName} />,
-        activeIcon: <RiShieldKeyholeFill className={iconClassName} />,
       })
     }
 

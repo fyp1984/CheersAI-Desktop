@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next'
 import { getProcessedFilesFromResponse } from '@/app/components/base/file-uploader/utils'
 import { useToastContext } from '@/app/components/base/toast'
 import { InputVarType } from '@/app/components/workflow/types'
+import { useAppContext } from '@/context/app-context'
 import { useWebAppStore } from '@/context/web-app-context'
 import { useAppFavicon } from '@/hooks/use-app-favicon'
 import { changeLanguage } from '@/i18n-config/client'
@@ -42,7 +43,7 @@ import {
 } from '@/service/use-share'
 import { TransferMethod } from '@/types/app'
 import { addFileInfos, sortAgentSorts } from '../../../tools/utils'
-import { CONVERSATION_ID_INFO } from '../constants'
+import { CONVERSATION_ID_INFO, INSTALLED_APP_CONVERSATION_ID_INFO } from '../constants'
 import { buildChatItemTree, getProcessedSystemVariablesFromUrlParams, getRawInputsFromUrlParams, getRawUserVariablesFromUrlParams } from '../utils'
 
 function getFormattedChatList(messages: any[]) {
@@ -73,6 +74,7 @@ function getFormattedChatList(messages: any[]) {
 
 export const useChatWithHistory = (installedAppInfo?: InstalledApp) => {
   const isInstalledApp = useMemo(() => !!installedAppInfo, [installedAppInfo])
+  const { userProfile } = useAppContext()
   const appSourceType = isInstalledApp ? AppSourceType.installedApp : AppSourceType.webApp
   const appInfo = useWebAppStore(s => s.appInfo)
   const appParams = useWebAppStore(s => s.appParams)
@@ -151,10 +153,29 @@ export const useChatWithHistory = (installedAppInfo?: InstalledApp) => {
       }
     }
   }, [appId, setSidebarCollapseState])
-  const [conversationIdInfo, setConversationIdInfo] = useLocalStorageState<Record<string, Record<string, string>>>(CONVERSATION_ID_INFO, {
+  const conversationStorageKey = isInstalledApp ? INSTALLED_APP_CONVERSATION_ID_INFO : CONVERSATION_ID_INFO
+  const [conversationIdInfo, setConversationIdInfo] = useLocalStorageState<Record<string, Record<string, string>>>(conversationStorageKey, {
     defaultValue: {},
   })
-  const currentConversationId = useMemo(() => conversationIdInfo?.[appId || '']?.[userId || 'DEFAULT'] || '', [appId, conversationIdInfo, userId])
+  const conversationScopeKey = useMemo(() => {
+    if (!isInstalledApp)
+      return userId || 'DEFAULT'
+
+    return `${userProfile.id || 'ANONYMOUS'}:${userId || 'DEFAULT'}`
+  }, [isInstalledApp, userId, userProfile.id])
+  const currentConversationId = useMemo(() => conversationIdInfo?.[appId || '']?.[conversationScopeKey] || '', [appId, conversationIdInfo, conversationScopeKey])
+  const previousAccountIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!isInstalledApp || !userProfile.id)
+      return
+
+    if (previousAccountIdRef.current && previousAccountIdRef.current !== userProfile.id)
+      setConversationIdInfo({})
+
+    previousAccountIdRef.current = userProfile.id
+  }, [isInstalledApp, setConversationIdInfo, userProfile.id])
+
   const handleConversationIdInfoChange = useCallback((changeConversationId: string) => {
     if (appId) {
       let prevValue = conversationIdInfo?.[appId || '']
@@ -164,11 +185,11 @@ export const useChatWithHistory = (installedAppInfo?: InstalledApp) => {
         ...conversationIdInfo,
         [appId || '']: {
           ...prevValue,
-          [userId || 'DEFAULT']: changeConversationId,
+          [conversationScopeKey]: changeConversationId,
         },
       })
     }
-  }, [appId, conversationIdInfo, setConversationIdInfo, userId])
+  }, [appId, conversationIdInfo, conversationScopeKey, setConversationIdInfo])
 
   const [newConversationId, setNewConversationId] = useState('')
   const chatShouldReloadKey = useMemo(() => {

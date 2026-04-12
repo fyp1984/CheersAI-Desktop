@@ -11,7 +11,7 @@ import {
   generationConversationName,
 } from '@/service/share'
 import { shareQueryKeys } from '@/service/use-share'
-import { CONVERSATION_ID_INFO } from '../constants'
+import { CONVERSATION_ID_INFO, INSTALLED_APP_CONVERSATION_ID_INFO } from '../constants'
 import { useChatWithHistory } from './hooks'
 
 vi.mock('@/hooks/use-app-favicon', () => ({
@@ -38,6 +38,15 @@ const useWebAppStoreMock = vi.fn((selector?: (state: typeof mockStoreState) => u
 
 vi.mock('@/context/web-app-context', () => ({
   useWebAppStore: (selector?: (state: typeof mockStoreState) => unknown) => useWebAppStoreMock(selector),
+}))
+
+let mockUserProfileId = 'account-1'
+vi.mock('@/context/app-context', () => ({
+  useAppContext: () => ({
+    userProfile: {
+      id: mockUserProfileId,
+    },
+  }),
 }))
 
 vi.mock('../utils', async () => {
@@ -128,6 +137,8 @@ describe('useChatWithHistory', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.removeItem(CONVERSATION_ID_INFO)
+    localStorage.removeItem(INSTALLED_APP_CONVERSATION_ID_INFO)
+    mockUserProfileId = 'account-1'
     mockStoreState.appInfo = {
       app_id: 'app-1',
       custom_config: null,
@@ -145,6 +156,7 @@ describe('useChatWithHistory', () => {
 
   afterEach(() => {
     localStorage.removeItem(CONVERSATION_ID_INFO)
+    localStorage.removeItem(INSTALLED_APP_CONVERSATION_ID_INFO)
   })
 
   // Scenario: share query results populate conversation lists and trigger chat list fetch.
@@ -273,6 +285,42 @@ describe('useChatWithHistory', () => {
         const storedUserId = parsed['app-1']?.['user-1']
         const storedDefaultId = parsed['app-1']?.DEFAULT
         expect([storedUserId, storedDefaultId]).toContain('conversation-new')
+      })
+    })
+  })
+
+  describe('Installed app account switching', () => {
+    it('should clear installed app conversation cache when account changes', async () => {
+      localStorage.setItem(INSTALLED_APP_CONVERSATION_ID_INFO, JSON.stringify({
+        'installed-app-1': {
+          'account-1:user-1': 'conversation-old',
+        },
+      }))
+
+      const installedApp = {
+        id: 'installed-app-1',
+        app: {
+          name: 'Installed App',
+          icon_type: 'emoji',
+          icon: '🤖',
+          icon_background: '#fff',
+          icon_url: '',
+          use_icon_as_answer_icon: false,
+        },
+      } as any
+
+      const { rerender } = renderWithClient(() => useChatWithHistory(installedApp))
+
+      await waitFor(() => {
+        const stored = JSON.parse(localStorage.getItem(INSTALLED_APP_CONVERSATION_ID_INFO) || '{}')
+        expect(stored['installed-app-1']?.['account-1:user-1']).toBe('conversation-old')
+      })
+
+      mockUserProfileId = 'account-2'
+      rerender()
+
+      await waitFor(() => {
+        expect(localStorage.getItem(INSTALLED_APP_CONVERSATION_ID_INFO)).toBe('{}')
       })
     })
   })
