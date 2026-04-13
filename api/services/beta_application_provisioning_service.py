@@ -225,6 +225,7 @@ class BetaApplicationProvisioningService:
             name=application.name,
             language=application.language,
             sso_username=application.sso_username,
+            sso_initial_password=None,
             filebay_repo=application.filebay_repo,
         )
         return self.serialize_application(application, include_steps=True)

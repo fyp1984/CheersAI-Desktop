@@ -41,10 +41,11 @@ def _render_template_with_strategy(body: str, substitutions: Mapping[str, str]) 
     raise ValueError(f"Unsupported mail templating mode: {mode}")
 
 
-@shared_task(queue="mail")
-def send_inner_email_task(to: list[str], subject: str, body: str, substitutions: Mapping[str, str]):
+def send_inner_email(to: list[str], subject: str, body: str, substitutions: Mapping[str, str] | None = None) -> bool:
+    substitutions = substitutions or {}
     if not mail.is_inited():
-        return
+        logger.warning("Skip enterprise mail to %s because mail client is not initialized", to)
+        return False
 
     logger.info(click.style(f"Start enterprise mail to {to} with subject {subject}", fg="green"))
     start_at = time.perf_counter()
@@ -57,5 +58,12 @@ def send_inner_email_task(to: list[str], subject: str, body: str, substitutions:
 
         end_at = time.perf_counter()
         logger.info(click.style(f"Send enterprise mail to {to} succeeded: latency: {end_at - start_at}", fg="green"))
+        return True
     except Exception:
         logger.exception("Send enterprise mail to %s failed", to)
+        raise
+
+
+@shared_task(queue="mail")
+def send_inner_email_task(to: list[str], subject: str, body: str, substitutions: Mapping[str, str]):
+    send_inner_email(to=to, subject=subject, body=body, substitutions=substitutions)
