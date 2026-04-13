@@ -1,6 +1,5 @@
-from urllib import parse
-
 import logging
+from urllib import parse
 
 from flask import abort, request
 from flask_restx import Resource
@@ -174,7 +173,7 @@ class MemberInviteEmailApi(Resource):
                 resource_type="member",
             )
         except Exception as e:
-            logger.warning(f"Failed to record member invite audit log: {e}")
+            logger.warning("Failed to record member invite audit log: %s", e)
 
         return {
             "result": "success",
@@ -214,7 +213,7 @@ class MemberCancelInviteApi(Resource):
                         resource_id=str(member_id),
                     )
                 except Exception as e:
-                    logger.warning(f"Failed to record member remove audit log: {e}")
+                    logger.warning("Failed to record member remove audit log: %s", e)
 
                 TenantService.remove_member_from_tenant(current_user.current_tenant, member, current_user)
             except services.errors.account.CannotOperateSelfError as e:

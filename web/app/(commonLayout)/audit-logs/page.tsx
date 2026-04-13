@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Loading from '@/app/components/base/loading'
+import Toast from '@/app/components/base/toast'
 import { useAppContext } from '@/context/app-context'
 import { fetchOperationLogs, fetchOperationLogStats, fetchOperationLogActions, exportAuditLogs } from '@/service/audit'
 import type { OperationLog, OperationLogStats } from '@/service/audit'
@@ -106,8 +107,24 @@ const AuditLogsPage = () => {
 
   const handleExport = async () => {
     try {
+      console.log('Starting export with filters:', filters)
       const response = await exportAuditLogs('excel', filters)
+      console.log('Export response:', response)
+      
+      if (!response || !response.body) {
+        console.error('Invalid response:', response)
+        Toast.notify({ type: 'error', message: '导出失败：无效的响应' })
+        return
+      }
+      
       const blob = await response.blob()
+      console.log('Blob:', blob, blob.type)
+      
+      if (blob.size === 0) {
+        Toast.notify({ type: 'error', message: '导出失败：文件为空' })
+        return
+      }
+      
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -118,6 +135,7 @@ const AuditLogsPage = () => {
       document.body.removeChild(a)
     } catch (error) {
       console.error('Failed to export audit logs:', error)
+      Toast.notify({ type: 'error', message: `导出失败: ${error instanceof Error ? error.message : '未知错误'}` })
     }
   }
 

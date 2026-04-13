@@ -18,7 +18,6 @@ from controllers.console.app.error import (
 )
 from controllers.console.app.wraps import get_app_model
 from controllers.console.wraps import account_initialization_required, edit_permission_required, setup_required
-from libs.login import current_account_with_tenant
 from services.audit_service import log_operation
 
 logger = logging.getLogger(__name__)
@@ -118,7 +117,7 @@ class CompletionMessageApi(Resource):
                     },
                 )
             except Exception as e:
-                logger.warning(f"Failed to record completion audit log: {e}")
+                logger.warning("Failed to record completion audit log: %s", e)
 
             return helper.compact_generate_response(response)
         except services.errors.conversation.ConversationNotExistsError:

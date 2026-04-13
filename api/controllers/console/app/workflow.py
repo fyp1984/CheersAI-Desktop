@@ -357,7 +357,7 @@ class AdvancedChatDraftWorkflowRunApi(Resource):
                     },
                 )
             except Exception as e:
-                logger.warning(f"Failed to record workflow audit log: {e}")
+                logger.warning("Failed to record workflow audit log: %s", e)
 
             return helper.compact_generate_response(response)
         except services.errors.conversation.ConversationNotExistsError:
@@ -570,7 +570,7 @@ class DraftWorkflowRunApi(Resource):
                     },
                 )
             except Exception as e:
-                logger.warning(f"Failed to record workflow audit log: {e}")
+                logger.warning("Failed to record workflow audit log: %s", e)
 
             return helper.compact_generate_response(response)
         except InvokeRateLimitError as ex:

@@ -229,7 +229,7 @@ class WorkflowRunByIdApi(Resource):
                     },
                 )
             except Exception as e:
-                logger.warning(f"Failed to record workflow audit log: {e}")
+                logger.warning("Failed to record workflow audit log: %s", e)
 
             return helper.compact_generate_response(response)
         except WorkflowNotFoundError as ex:

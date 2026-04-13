@@ -1,6 +1,5 @@
-from typing import Literal
-
 import logging
+from typing import Literal
 
 from flask import request
 from flask_restx import Resource
@@ -119,7 +118,7 @@ class FileApi(Resource):
                 resource_id=str(upload_file.id),
             )
         except Exception as e:
-            logger.warning(f"Failed to record file upload audit log: {e}")
+            logger.warning("Failed to record file upload audit log: %s", e)
 
         response = FileResponse.model_validate(upload_file, from_attributes=True)
         return response.model_dump(mode="json"), 201

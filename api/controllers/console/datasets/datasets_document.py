@@ -891,7 +891,7 @@ class DocumentApi(DocumentResource):
             except Exception as e:
                 import logging
 
-                logging.getLogger(__name__).warning(f"Failed to record document delete audit log: {e}")
+                logging.getLogger(__name__).warning("Failed to record document delete audit log: %s", e)
 
         except services.errors.document.DocumentIndexingError:
             raise DocumentIndexingError("Cannot delete document during indexing.")
@@ -932,7 +932,7 @@ class DocumentDownloadApi(DocumentResource):
         except Exception as e:
             import logging
 
-            logging.getLogger(__name__).warning(f"Failed to record document download audit log: {e}")
+            logging.getLogger(__name__).warning("Failed to record document download audit log: %s", e)
 
         return {"url": DocumentService.get_document_download_url(document)}
 

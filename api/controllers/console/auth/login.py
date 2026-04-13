@@ -1,6 +1,5 @@
-from typing import Any
-
 import logging
+from typing import Any
 
 import flask_login
 from flask import make_response, request
@@ -171,7 +170,7 @@ class LoginApi(Resource):
                     created_ip=extract_remote_ip(request),
                 )
         except Exception as e:
-            logger.warning(f"Failed to record login audit log: {e}")
+            logger.warning("Failed to record login audit log: %s", e)
 
         return response
 
@@ -193,7 +192,7 @@ class LogoutApi(Resource):
                     content={"email": account.email},
                 )
             except Exception as e:
-                logger.warning(f"Failed to record logout audit log: {e}")
+                logger.warning("Failed to record logout audit log: %s", e)
 
             AccountService.logout(account=account)
             flask_login.logout_user()

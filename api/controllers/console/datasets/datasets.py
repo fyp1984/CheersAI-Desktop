@@ -529,7 +529,7 @@ class DatasetApi(Resource):
                 except Exception as e:
                     import logging
 
-                    logging.getLogger(__name__).warning(f"Failed to record knowledge delete audit log: {e}")
+                    logging.getLogger(__name__).warning("Failed to record knowledge delete audit log: %s", e)
 
                 return {"result": "success"}, 204
             else:
