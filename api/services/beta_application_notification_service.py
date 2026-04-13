@@ -3,8 +3,9 @@ from uuid import uuid4
 
 from configs import dify_config
 from extensions.ext_database import db
+from extensions.ext_mail import mail
 from models.beta_application_notification import BetaApplicationNotification
-from tasks.mail_inner_task import send_inner_email_task
+from tasks.mail_inner_task import send_inner_email, send_inner_email_task
 
 logger = logging.getLogger(__name__)
 
@@ -20,15 +21,17 @@ class BetaApplicationNotificationService:
         to: str,
         name: str | None,
         language: str | None,
-    ):
+        sync: bool = False,
+    ) -> bool:
         subject, body = cls._build_submitted_message(language)
-        cls._dispatch_email(
+        return cls._dispatch_email(
             application_id=application_id,
             event="submitted",
             to=to,
             subject=subject,
             body=body,
             substitutions={"name": name or ""},
+            sync=sync,
         )
 
     @classmethod
@@ -40,9 +43,10 @@ class BetaApplicationNotificationService:
         name: str | None,
         language: str | None,
         reason: str,
-    ):
+        sync: bool = False,
+    ) -> bool:
         subject, body = cls._build_rejected_message(language)
-        cls._dispatch_email(
+        return cls._dispatch_email(
             application_id=application_id,
             event="rejected",
             to=to,
@@ -52,6 +56,7 @@ class BetaApplicationNotificationService:
                 "name": name or "",
                 "reason": reason,
             },
+            sync=sync,
         )
 
     @classmethod
@@ -63,10 +68,12 @@ class BetaApplicationNotificationService:
         name: str | None,
         language: str | None,
         sso_username: str | None,
+        sso_initial_password: str | None,
         filebay_repo: str | None,
-    ):
+        sync: bool = False,
+    ) -> bool:
         subject, body = cls._build_success_message(language)
-        cls._dispatch_email(
+        return cls._dispatch_email(
             application_id=application_id,
             event="provision_success",
             to=to,
@@ -75,10 +82,13 @@ class BetaApplicationNotificationService:
             substitutions={
                 "name": name or "",
                 "sso_username": sso_username or "",
+                "sso_initial_password": sso_initial_password or "",
+                "has_sso_initial_password": "1" if sso_initial_password else "",
                 "filebay_repo": filebay_repo or "",
                 "desktop_url": cls._get_desktop_url(),
                 "sso_login_url": cls._get_sso_login_url(),
             },
+            sync=sync,
         )
 
     @classmethod
@@ -90,9 +100,10 @@ class BetaApplicationNotificationService:
         name: str | None,
         language: str | None,
         error_message: str,
-    ):
+        sync: bool = False,
+    ) -> bool:
         subject, body = cls._build_failed_message(language)
-        cls._dispatch_email(
+        return cls._dispatch_email(
             application_id=application_id,
             event="provision_failed",
             to=to,
@@ -102,6 +113,7 @@ class BetaApplicationNotificationService:
                 "name": name or "",
                 "error_message": error_message,
             },
+            sync=sync,
         )
 
     @classmethod
@@ -114,20 +126,32 @@ class BetaApplicationNotificationService:
         subject: str,
         body: str,
         substitutions: dict[str, str],
-    ):
+        sync: bool = False,
+    ) -> bool:
         if not to:
-            return
+            return False
         notification = cls._create_notification(
             application_id=application_id,
             event=event,
             receiver=to,
         )
+        if not mail.is_inited():
+            logger.warning("Skip beta application mail for %s because mail client is not initialized", to)
+            cls._mark_notification_failed(notification, error_message="Mail client is not initialized.")
+            return False
         try:
-            task = send_inner_email_task.delay(to=[to], subject=subject, body=body, substitutions=substitutions)
-            cls._mark_notification_sent(notification, provider_message_id=getattr(task, "id", None))
+            if sync:
+                send_inner_email(to=[to], subject=subject, body=body, substitutions=substitutions)
+                provider_message_id = None
+            else:
+                task = send_inner_email_task.delay(to=[to], subject=subject, body=body, substitutions=substitutions)
+                provider_message_id = getattr(task, "id", None)
+            cls._mark_notification_sent(notification, provider_message_id=provider_message_id)
+            return True
         except Exception:
             logger.exception("Failed to enqueue beta application mail for %s", to)
             cls._mark_notification_failed(notification, error_message="Failed to enqueue mail task.")
+            return False
 
     @classmethod
     def _create_notification(
@@ -243,8 +267,13 @@ class BetaApplicationNotificationService:
                 <p>Desktop 入口：<a href="{{ desktop_url }}">{{ desktop_url }}</a></p>
                 <p>SSO 登录入口：<a href="{{ sso_login_url }}">{{ sso_login_url }}</a></p>
                 <p>SSO 用户名：{{ sso_username }}</p>
+                {% if has_sso_initial_password %}
+                <p>SSO 初始密码：{{ sso_initial_password }}</p>
+                <p>首次登录后请立即修改密码并妥善保管。</p>
+                {% else %}
+                <p>SSO 密码：沿用您当前密码；如忘记请联系管理员重置。</p>
+                {% endif %}
                 <p>FileBay 私有仓库：{{ filebay_repo }}</p>
-                <p>说明：若您尚未设置 SSO 密码，请留意 SSO 系统邮件，或联系管理员协助处理。</p>
                 <p>安全提醒：请勿共享账号，不要上传映射文件到 FileBay。</p>
                 """,
             )
@@ -256,8 +285,13 @@ class BetaApplicationNotificationService:
             <p>Desktop entry: <a href="{{ desktop_url }}">{{ desktop_url }}</a></p>
             <p>SSO login: <a href="{{ sso_login_url }}">{{ sso_login_url }}</a></p>
             <p>SSO username: {{ sso_username }}</p>
+            {% if has_sso_initial_password %}
+            <p>SSO temporary password: {{ sso_initial_password }}</p>
+            <p>Please change your password immediately after first login.</p>
+            {% else %}
+            <p>SSO password: use your current password; contact admin if you need a reset.</p>
+            {% endif %}
             <p>FileBay repository: {{ filebay_repo }}</p>
-            <p>If you have not set your SSO password yet, please check your SSO email or contact the administrator.</p>
             <p>Please do not share your account or upload mapping files to FileBay.</p>
             """,
         )
