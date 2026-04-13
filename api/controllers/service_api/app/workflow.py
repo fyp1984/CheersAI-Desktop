@@ -37,6 +37,7 @@ from libs.helper import TimestampField
 from models.model import App, AppMode, EndUser
 from repositories.factory import DifyAPIRepositoryFactory
 from services.app_generate_service import AppGenerateService
+from services.audit_service import log_operation
 from services.errors.app import IsDraftWorkflowError, WorkflowIdFormatError, WorkflowNotFoundError
 from services.errors.llm import InvokeRateLimitError
 from services.workflow_app_service import WorkflowAppService
@@ -215,6 +216,20 @@ class WorkflowRunByIdApi(Resource):
             response = AppGenerateService.generate(
                 app_model=app_model, user=end_user, args=args, invoke_from=InvokeFrom.SERVICE_API, streaming=streaming
             )
+
+            # 记录审计日志
+            try:
+                log_operation(
+                    action="workflow",
+                    operation_type="workflow",
+                    content={
+                        "app_id": str(app_model.id),
+                        "app_name": app_model.name,
+                        "mode": "service_api",
+                    },
+                )
+            except Exception as e:
+                logger.warning(f"Failed to record workflow audit log: {e}")
 
             return helper.compact_generate_response(response)
         except WorkflowNotFoundError as ex:

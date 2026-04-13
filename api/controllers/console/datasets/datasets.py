@@ -500,14 +500,37 @@ class DatasetApi(Resource):
     @require_knowledge_edit_capability
     def delete(self, dataset_id):
         dataset_id_str = str(dataset_id)
-        current_user, _ = current_account_with_tenant()
+        current_user, current_tenant_id = current_account_with_tenant()
 
         if not (current_user.has_edit_permission or current_user.is_dataset_operator):
             raise Forbidden()
 
         try:
+            dataset = DatasetService.get_dataset(dataset_id_str)
+            dataset_name = dataset.name if dataset else "unknown"
+
             if DatasetService.delete_dataset(dataset_id_str, current_user):
                 DatasetPermissionService.clear_partial_member_list(dataset_id_str)
+
+                # 记录审计日志 - 知识库删除
+                try:
+                    from services.audit_service import log_operation
+
+                    log_operation(
+                        action="knowledge_delete",
+                        content={
+                            "dataset_id": dataset_id_str,
+                            "dataset_name": dataset_name,
+                        },
+                        resource_type="dataset",
+                        resource_id=dataset_id_str,
+                        operation_type="desensitize",
+                    )
+                except Exception as e:
+                    import logging
+
+                    logging.getLogger(__name__).warning(f"Failed to record knowledge delete audit log: {e}")
+
                 return {"result": "success"}, 204
             else:
                 raise NotFound("Dataset not found.")

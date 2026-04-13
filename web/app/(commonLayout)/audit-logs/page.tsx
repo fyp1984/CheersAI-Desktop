@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Loading from '@/app/components/base/loading'
 import { useAppContext } from '@/context/app-context'
-import { fetchOperationLogs, fetchOperationLogStats, fetchOperationLogActions } from '@/service/audit'
+import { fetchOperationLogs, fetchOperationLogStats, fetchOperationLogActions, exportAuditLogs } from '@/service/audit'
 import type { OperationLog, OperationLogStats } from '@/service/audit'
 
 const AuditLogsPage = () => {
@@ -14,25 +14,55 @@ const AuditLogsPage = () => {
   const [stats, setStats] = useState<OperationLogStats | null>(null)
   const [actions, setActions] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [isAutoRefresh, setIsAutoRefresh] = useState(false)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
+  
+  // 获取今天的日期 yyyy-MM-dd
+  const getToday = () => {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  
   const [filters, setFilters] = useState({
     action: '',
     keyword: '',
+    start_date: getToday(),
+    end_date: getToday(),
   })
 
   const pageSize = 10
+  const AUTO_REFRESH_INTERVAL = 30000 // 30秒自动刷新
 
   // 操作类型中文映射
   const actionNameMap: Record<string, string> = {
+    'login': '用户登录',
+    'logout': '用户登出',
     'file_mask': '文件脱敏',
     'file_delete': '文件删除',
     'file_restore': '文件恢复',
+    'file_upload': '文件上传',
     'knowledge_sync': '知识库同步',
+    'member_invite': '成员邀请',
+    'member_remove': '成员移除',
     'rule_create': '规则创建',
     'rule_update': '规则更新',
     'rule_delete': '规则删除',
   }
+
+  // 自动刷新定时器
+  useEffect(() => {
+    if (!canViewAudit) return
+    
+    const interval = setInterval(() => {
+      loadData(true)
+    }, AUTO_REFRESH_INTERVAL)
+    
+    return () => clearInterval(interval)
+  }, [canViewAudit, filters])
 
   useEffect(() => {
     if (!isLoadingCurrentWorkspace && !canViewAudit)
@@ -48,9 +78,9 @@ const AuditLogsPage = () => {
   if (isLoadingCurrentWorkspace || !canViewAudit)
     return <Loading type="app" />
 
-  const loadData = async () => {
+  const loadData = async (isAutoRefresh = false) => {
     try {
-      setLoading(true)
+      if (!isAutoRefresh) setLoading(true)
       const [logsRes, statsRes, actionsRes] = await Promise.all([
         fetchOperationLogs({ page, limit: pageSize, ...filters }),
         fetchOperationLogStats(),
@@ -70,11 +100,60 @@ const AuditLogsPage = () => {
     }
   }
 
+  const handleToggleAutoRefresh = () => {
+    setIsAutoRefresh(!isAutoRefresh)
+  }
+
+  const handleExport = async () => {
+    try {
+      const response = await exportAuditLogs('excel', filters)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `审计日志_${new Date().toISOString().slice(0,10)}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Failed to export audit logs:', error)
+    }
+  }
+
+  const handleRefresh = () => {
+    loadData()
+  }
+
   return (
     <div className="relative flex h-0 shrink-0 grow flex-col overflow-y-auto bg-background-body">
       {/* Top header bar */}
       <div className="sticky top-0 z-10 flex items-center justify-between bg-background-body px-12 pb-4 pt-7">
         <h2 className="text-lg font-semibold text-text-primary">仪表盘</h2>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleToggleAutoRefresh}
+            className={`px-4 py-2 text-sm border rounded-lg transition-colors ${
+              isAutoRefresh 
+                ? 'text-components-button-primary-solid-bg bg-components-button-primary-solid-bg bg-opacity-10 border-components-button-primary-bg' 
+                : 'text-text-secondary border-divider-regular hover:bg-state-base-hover'
+            }`}
+          >
+            {isAutoRefresh ? '自动刷新中' : '开启自动刷新'}
+          </button>
+          <button
+            onClick={() => loadData()}
+            className="px-4 py-2 text-sm text-text-secondary border border-divider-regular rounded-lg hover:bg-state-base-hover transition-colors"
+          >
+            刷新
+          </button>
+          <button
+            onClick={handleExport}
+            className="px-4 py-2 text-sm text-white bg-components-button-primary-bg rounded-lg hover:bg-components-button-primary-hover-bg transition-colors"
+          >
+            导出
+          </button>
+        </div>
       </div>
 
       {/* Content area */}
@@ -84,18 +163,18 @@ const AuditLogsPage = () => {
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-components-panel-bg border border-divider-regular rounded-lg p-4">
               <div className="text-xs text-text-tertiary mb-1">总操作数</div>
-              <div className="text-2xl font-semibold text-text-primary">{stats.total || 0}</div>
+              <div className="text-2xl font-semibold text-text-primary">{stats.total_count || 0}</div>
             </div>
             <div className="bg-components-panel-bg border border-divider-regular rounded-lg p-4">
               <div className="text-xs text-text-tertiary mb-1">今日操作</div>
-              <div className="text-2xl font-semibold text-text-primary">{stats.today || 0}</div>
+              <div className="text-2xl font-semibold text-text-primary">{stats.today_count || 0}</div>
             </div>
           </div>
         )}
 
         {/* Filters */}
         <div className="bg-components-panel-bg border border-divider-regular rounded-lg p-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <div>
               <label className="block text-xs font-medium text-text-secondary mb-1.5">操作类型</label>
               <select
@@ -126,6 +205,24 @@ const AuditLogsPage = () => {
                 placeholder="搜索日志..."
                 value={filters.keyword}
                 onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">开始日期</label>
+              <input
+                type="date"
+                className="w-full border border-divider-regular rounded-lg px-3 py-2 text-sm text-text-primary bg-components-input-bg-normal focus:outline-none focus:ring-2 focus:ring-components-button-primary-bg"
+                value={filters.start_date}
+                onChange={(e) => setFilters({ ...filters, start_date: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">结束日期</label>
+              <input
+                type="date"
+                className="w-full border border-divider-regular rounded-lg px-3 py-2 text-sm text-text-primary bg-components-input-bg-normal focus:outline-none focus:ring-2 focus:ring-components-button-primary-bg"
+                value={filters.end_date}
+                onChange={(e) => setFilters({ ...filters, end_date: e.target.value })}
               />
             </div>
           </div>

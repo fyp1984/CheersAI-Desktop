@@ -45,6 +45,7 @@ from models import App
 from models.model import AppMode
 from models.workflow import Workflow
 from services.app_generate_service import AppGenerateService
+from services.audit_service import log_operation
 from services.errors.app import WorkflowHashNotEqualError
 from services.errors.llm import InvokeRateLimitError
 from services.workflow_service import DraftWorkflowDeletionError, WorkflowInUseError, WorkflowService
@@ -344,6 +345,20 @@ class AdvancedChatDraftWorkflowRunApi(Resource):
                 app_model=app_model, user=current_user, args=args, invoke_from=InvokeFrom.DEBUGGER, streaming=True
             )
 
+            # 记录审计日志
+            try:
+                log_operation(
+                    action="workflow",
+                    operation_type="workflow",
+                    content={
+                        "app_id": str(app_model.id),
+                        "app_name": app_model.name,
+                        "mode": "advanced_chat",
+                    },
+                )
+            except Exception as e:
+                logger.warning(f"Failed to record workflow audit log: {e}")
+
             return helper.compact_generate_response(response)
         except services.errors.conversation.ConversationNotExistsError:
             raise NotFound("Conversation Not Exists.")
@@ -542,6 +557,20 @@ class DraftWorkflowRunApi(Resource):
                 invoke_from=InvokeFrom.DEBUGGER,
                 streaming=True,
             )
+
+            # 记录审计日志
+            try:
+                log_operation(
+                    action="workflow",
+                    operation_type="workflow",
+                    content={
+                        "app_id": str(app_model.id),
+                        "app_name": app_model.name,
+                        "mode": "workflow",
+                    },
+                )
+            except Exception as e:
+                logger.warning(f"Failed to record workflow audit log: {e}")
 
             return helper.compact_generate_response(response)
         except InvokeRateLimitError as ex:

@@ -119,7 +119,7 @@ redis_client: RedisClientWrapper = RedisClientWrapper()
 def _get_ssl_configuration() -> tuple[type[Union[Connection, SSLConnection]], dict[str, Any]]:
     """Get SSL configuration for Redis connection."""
     if not dify_config.REDIS_USE_SSL:
-        return Connection, {}
+        return None, {}
 
     cert_reqs_map = {
         "CERT_NONE": ssl.CERT_NONE,
@@ -135,7 +135,7 @@ def _get_ssl_configuration() -> tuple[type[Union[Connection, SSLConnection]], di
         "ssl_keyfile": dify_config.REDIS_SSL_KEYFILE,
     }
 
-    return SSLConnection, ssl_kwargs
+    return None, ssl_kwargs
 
 
 def _get_cache_configuration() -> CacheConfig | None:
@@ -167,7 +167,6 @@ def _parse_redis_major_version(redis_version: Any) -> int | None:
 
 
 def _resolve_standalone_protocol(
-    connection_class: type[Union[Connection, SSLConnection]],
     ssl_kwargs: dict[str, Any],
     requested_protocol: int,
 ) -> int:
@@ -177,26 +176,26 @@ def _resolve_standalone_protocol(
 
     probe_client: redis.Redis | None = None
     try:
-        probe_client = redis.Redis(
-            host=dify_config.REDIS_HOST,
-            port=dify_config.REDIS_PORT,
-            username=dify_config.REDIS_USERNAME,
-            password=dify_config.REDIS_PASSWORD or None,
-            db=dify_config.REDIS_DB,
-            connection_class=connection_class,
-            encoding="utf-8",
-            encoding_errors="strict",
-            decode_responses=True,
-            **ssl_kwargs,
-        )
+        connect_kwargs = {
+            "host": dify_config.REDIS_HOST,
+            "port": dify_config.REDIS_PORT,
+            "username": dify_config.REDIS_USERNAME,
+            "password": dify_config.REDIS_PASSWORD or None,
+            "db": dify_config.REDIS_DB,
+            "encoding": "utf-8",
+            "encoding_errors": "strict",
+            "decode_responses": True,
+        }
+        connect_kwargs.update(ssl_kwargs)
+
+        probe_client = redis.Redis(**connect_kwargs)
         server_info = probe_client.info("server")
         redis_version = server_info.get("redis_version") if isinstance(server_info, dict) else None
         redis_major_version = _parse_redis_major_version(redis_version)
 
         if redis_major_version is not None and redis_major_version < 6:
             logger.warning(
-                "Redis server %s:%s reports version %s, which does not support RESP3 HELLO. "
-                "Falling back to RESP2.",
+                "Redis server %s:%s reports version %s, which does not support RESP3 HELLO. Falling back to RESP2.",
                 dify_config.REDIS_HOST,
                 dify_config.REDIS_PORT,
                 redis_version,
@@ -278,9 +277,8 @@ def _create_cluster_client() -> Union[redis.Redis, RedisCluster]:
 
 def _create_standalone_client(redis_params: dict[str, Any]) -> Union[redis.Redis, RedisCluster]:
     """Create standalone Redis client."""
-    connection_class, ssl_kwargs = _get_ssl_configuration()
+    _, ssl_kwargs = _get_ssl_configuration()
     resolved_protocol = _resolve_standalone_protocol(
-        connection_class=connection_class,
         ssl_kwargs=ssl_kwargs,
         requested_protocol=redis_params.get("protocol", dify_config.REDIS_SERIALIZATION_PROTOCOL),
     )
@@ -289,7 +287,6 @@ def _create_standalone_client(redis_params: dict[str, Any]) -> Union[redis.Redis
         {
             "host": dify_config.REDIS_HOST,
             "port": dify_config.REDIS_PORT,
-            "connection_class": connection_class,
             "protocol": resolved_protocol,
             "cache_config": None if resolved_protocol < 3 else _get_cache_configuration(),
         }

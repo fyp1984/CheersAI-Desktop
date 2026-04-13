@@ -18,6 +18,10 @@ from controllers.console.app.error import (
 )
 from controllers.console.app.wraps import get_app_model
 from controllers.console.wraps import account_initialization_required, edit_permission_required, setup_required
+from libs.login import current_account_with_tenant
+from services.audit_service import log_operation
+
+logger = logging.getLogger(__name__)
 from controllers.web.error import InvokeRateLimitError as InvokeRateLimitHttpError
 from core.app.entities.app_invoke_entities import InvokeFrom
 from core.errors.error import (
@@ -101,6 +105,20 @@ class CompletionMessageApi(Resource):
             response = AppGenerateService.generate(
                 app_model=app_model, user=current_user, args=args, invoke_from=InvokeFrom.DEBUGGER, streaming=streaming
             )
+
+            # 记录审计日志
+            try:
+                log_operation(
+                    action="chat_completion",
+                    operation_type="chat",
+                    content={
+                        "app_id": str(app_model.id),
+                        "app_name": app_model.name,
+                        "query_length": len(args.get("query", "")),
+                    },
+                )
+            except Exception as e:
+                logger.warning(f"Failed to record completion audit log: {e}")
 
             return helper.compact_generate_response(response)
         except services.errors.conversation.ConversationNotExistsError:

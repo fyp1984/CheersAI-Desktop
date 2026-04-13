@@ -55,6 +55,7 @@ from extensions.ext_database import db
 from extensions.ext_redis import redis_client
 from libs.json_in_md_parser import parse_and_check_json_markdown
 from models.dataset import Dataset, DatasetMetadata, Document, RateLimitLog
+from services.audit_service import log_operation
 from services.feature_service import FeatureService
 
 from .entities import KnowledgeRetrievalNodeData
@@ -198,6 +199,20 @@ class KnowledgeRetrievalNode(LLMUsageTrackingMixin, Node[KnowledgeRetrievalNodeD
                 },
                 llm_usage=usage,
             )
+
+            try:
+                log_operation(
+                    action="search",
+                    operation_type="search",
+                    content={
+                        "query": variables.get("query", "")[:500],
+                        "datasets": [str(d.id) for d in node_data.dataset_ids],
+                        "result_count": len(results),
+                    },
+                    request_content=variables.get("query"),
+                )
+            except Exception as e:
+                logger.warning("Failed to record search audit log: %s", e)
 
         except KnowledgeRetrievalNodeError as e:
             logger.warning("Error when running knowledge retrieval node")

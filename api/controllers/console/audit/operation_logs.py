@@ -91,11 +91,23 @@ class OperationLogListApi(Resource):
         limit = min(100, max(1, args["limit"]))
         offset = (page - 1) * limit
 
+        # Get tenant_id from user's tenant joins if current_tenant_id is None
+        tenant_id = current_user.current_tenant_id
+        if not tenant_id:
+            from models.account import TenantAccountJoin
+
+            join = session.query(TenantAccountJoin).filter(TenantAccountJoin.account_id == str(current_user.id)).first()
+            if join:
+                tenant_id = join.tenant_id
+
+        if not tenant_id:
+            return {"data": [], "total": 0, "page": page, "limit": limit, "has_more": False}
+
         with Session(db.engine) as session:
             query = (
                 session.query(OperationLog, Account)
                 .join(Account, OperationLog.account_id == Account.id)
-                .filter(OperationLog.tenant_id == current_user.current_tenant_id)
+                .filter(OperationLog.tenant_id == tenant_id)
             )
 
             if args.get("action"):
@@ -117,11 +129,20 @@ class OperationLogListApi(Resource):
                     )
                 )
 
-            if args.get("start_date"):
-                query = query.filter(OperationLog.created_at >= args["start_date"])
+            if args.get("start_date") and args["start_date"]:
+                try:
+                    start = datetime.strptime(args["start_date"], "%Y-%m-%d")
+                    query = query.filter(OperationLog.created_at >= start)
+                except (ValueError, TypeError):
+                    pass
 
-            if args.get("end_date"):
-                query = query.filter(OperationLog.created_at <= args["end_date"])
+            if args.get("end_date") and args["end_date"]:
+                try:
+                    end = datetime.strptime(args["end_date"], "%Y-%m-%d")
+                    end = end.replace(hour=23, minute=59, second=59)
+                    query = query.filter(OperationLog.created_at <= end)
+                except (ValueError, TypeError):
+                    pass
 
             if args.get("operation_type"):
                 query = query.filter(OperationLog.operation_type == args["operation_type"])
@@ -144,7 +165,7 @@ class OperationLogListApi(Resource):
                         "account_email": account.email,
                         "action": log.action,
                         "content": log.content,
-                        "created_at": int(log.created_at.timestamp()),
+                        "created_at": int(log.created_at.timestamp() * 1000),
                         "created_ip": log.created_ip,
                         "operation_type": log.operation_type,
                         "request_content": log.request_content,
@@ -176,28 +197,40 @@ class OperationLogStatsApi(Resource):
     @console_ns.marshal_with(stats_model)
     def get(self):
         """Get operation logs statistics"""
+        # Get tenant_id from user context
+        tenant_id = current_user.current_tenant_id
+        if not tenant_id:
+            from models.account import TenantAccountJoin
+
+            join = (
+                db.session.query(TenantAccountJoin).filter(TenantAccountJoin.account_id == str(current_user.id)).first()
+            )
+            if join:
+                tenant_id = join.tenant_id
+
+        if not tenant_id:
+            return {"today_count": 0, "total_count": 0, "verified_count": 0, "failed_count": 0}
+
         with Session(db.engine) as session:
             today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             today_count = (
                 session.query(func.count(OperationLog.id))
                 .filter(
-                    OperationLog.tenant_id == current_user.current_tenant_id,
+                    OperationLog.tenant_id == tenant_id,
                     OperationLog.created_at >= today_start,
                 )
                 .scalar()
             )
 
             total_count = (
-                session.query(func.count(OperationLog.id))
-                .filter(OperationLog.tenant_id == current_user.current_tenant_id)
-                .scalar()
+                session.query(func.count(OperationLog.id)).filter(OperationLog.tenant_id == tenant_id).scalar()
             )
 
             verified_actions = ["login", "create", "update", "delete"]
             verified_count = (
                 session.query(func.count(OperationLog.id))
                 .filter(
-                    OperationLog.tenant_id == current_user.current_tenant_id,
+                    OperationLog.tenant_id == tenant_id,
                     OperationLog.action.in_(verified_actions),
                 )
                 .scalar()
@@ -206,7 +239,7 @@ class OperationLogStatsApi(Resource):
             failed_count = (
                 session.query(func.count(OperationLog.id))
                 .filter(
-                    OperationLog.tenant_id == current_user.current_tenant_id,
+                    OperationLog.tenant_id == tenant_id,
                     OperationLog.action.like("%fail%"),
                 )
                 .scalar()
@@ -227,13 +260,22 @@ class OperationLogActionsApi(Resource):
     @require_workspace_capabilities("desktop_audit_view")
     def get(self):
         """Get all unique action types"""
-        with Session(db.engine) as session:
-            actions = (
-                session.query(OperationLog.action)
-                .filter(OperationLog.tenant_id == current_user.current_tenant_id)
-                .distinct()
-                .all()
+        # Get tenant_id from user context
+        tenant_id = current_user.current_tenant_id
+        if not tenant_id:
+            from models.account import TenantAccountJoin
+
+            join = (
+                db.session.query(TenantAccountJoin).filter(TenantAccountJoin.account_id == str(current_user.id)).first()
             )
+            if join:
+                tenant_id = join.tenant_id
+
+        if not tenant_id:
+            return {"actions": []}
+
+        with Session(db.engine) as session:
+            actions = session.query(OperationLog.action).filter(OperationLog.tenant_id == tenant_id).distinct().all()
 
             return {"actions": [action[0] for action in actions]}
 
@@ -286,11 +328,20 @@ class OperationLogExportApi(Resource):
                     )
                 )
 
-            if args.get("start_date"):
-                query = query.filter(OperationLog.created_at >= args["start_date"])
+            if args.get("start_date") and args["start_date"]:
+                try:
+                    start = datetime.strptime(args["start_date"], "%Y-%m-%d")
+                    query = query.filter(OperationLog.created_at >= start)
+                except (ValueError, TypeError):
+                    pass
 
-            if args.get("end_date"):
-                query = query.filter(OperationLog.created_at <= args["end_date"])
+            if args.get("end_date") and args["end_date"]:
+                try:
+                    end = datetime.strptime(args["end_date"], "%Y-%m-%d")
+                    end = end.replace(hour=23, minute=59, second=59)
+                    query = query.filter(OperationLog.created_at <= end)
+                except (ValueError, TypeError):
+                    pass
 
             if args.get("operation_type"):
                 query = query.filter(OperationLog.operation_type == args["operation_type"])

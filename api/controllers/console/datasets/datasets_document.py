@@ -868,9 +868,31 @@ class DocumentApi(DocumentResource):
         DatasetService.check_dataset_model_setting(dataset)
 
         document = self.get_document(dataset_id, document_id)
+        document_name = document.name if document else "unknown"
 
         try:
             DocumentService.delete_document(document)
+
+            # 记录审计日志 - 文档删除
+            try:
+                from services.audit_service import log_operation
+
+                log_operation(
+                    action="document_delete",
+                    content={
+                        "dataset_id": dataset_id,
+                        "document_id": document_id,
+                        "document_name": document_name,
+                    },
+                    resource_type="dataset",
+                    resource_id=dataset_id,
+                    operation_type="desensitize",
+                )
+            except Exception as e:
+                import logging
+
+                logging.getLogger(__name__).warning(f"Failed to record document delete audit log: {e}")
+
         except services.errors.document.DocumentIndexingError:
             raise DocumentIndexingError("Cannot delete document during indexing.")
 
@@ -891,6 +913,27 @@ class DocumentDownloadApi(DocumentResource):
     def get(self, dataset_id: str, document_id: str) -> dict[str, Any]:
         # Reuse the shared permission/tenant checks implemented in DocumentResource.
         document = self.get_document(str(dataset_id), str(document_id))
+
+        # 记录审计日志 - 文档下载
+        try:
+            from services.audit_service import log_operation
+
+            log_operation(
+                action="document_download",
+                content={
+                    "dataset_id": str(dataset_id),
+                    "document_id": str(document_id),
+                    "document_name": document.name if document else "unknown",
+                },
+                resource_type="dataset",
+                resource_id=str(dataset_id),
+                operation_type="desensitize",
+            )
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning(f"Failed to record document download audit log: {e}")
+
         return {"url": DocumentService.get_document_download_url(document)}
 
 
