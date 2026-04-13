@@ -1,3 +1,4 @@
+import logging
 from typing import Literal
 
 from flask import request
@@ -25,9 +26,12 @@ from extensions.ext_database import db
 from fields.file_fields import FileResponse, UploadConfig
 from libs.desktop_auth import has_any_workspace_capability
 from libs.login import current_account_with_tenant, login_required
+from services.audit_service import log_operation
 from services.file_service import FileService
 
 from . import console_ns
+
+logger = logging.getLogger(__name__)
 
 register_schema_models(console_ns, UploadConfig, FileResponse)
 
@@ -74,7 +78,9 @@ class FileApi(Resource):
 
         if not file.filename:
             raise FilenameNotExistsError
-        if source == "datasets" and not has_any_workspace_capability(current_user, ["desktop_knowledge_edit"], tenant_id):
+        if source == "datasets" and not has_any_workspace_capability(
+            current_user, ["desktop_knowledge_edit"], tenant_id
+        ):
             raise Forbidden()
         if source == "datasets" and not current_user.is_dataset_editor:
             raise Forbidden()
@@ -96,6 +102,23 @@ class FileApi(Resource):
             raise UnsupportedFileTypeError()
         except services.errors.file.BlockedFileExtensionError as blocked_extension_error:
             raise BlockedFileExtensionError(blocked_extension_error.description)
+
+        # 记录文件上传审计日志
+        try:
+            log_operation(
+                action="file_upload",
+                operation_type="desensitize",
+                content={
+                    "file_name": file.filename,
+                    "file_id": str(upload_file.id),
+                    "size": len(upload_file.size),
+                    "mimetype": file.mimetype,
+                },
+                resource_type="file",
+                resource_id=str(upload_file.id),
+            )
+        except Exception as e:
+            logger.warning("Failed to record file upload audit log: %s", e)
 
         response = FileResponse.model_validate(upload_file, from_attributes=True)
         return response.model_dump(mode="json"), 201

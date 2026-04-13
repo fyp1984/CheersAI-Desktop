@@ -1,3 +1,4 @@
+import logging
 from urllib import parse
 
 from flask import abort, request
@@ -31,8 +32,11 @@ from libs.helper import extract_remote_ip
 from libs.login import current_account_with_tenant, login_required
 from models.account import Account, TenantAccountRole
 from services.account_service import AccountService, RegisterService, TenantService
+from services.audit_service import log_operation
 from services.errors.account import AccountAlreadyInTenantError
 from services.feature_service import FeatureService
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_REF_TEMPLATE_SWAGGER_2_0 = "#/definitions/{model}"
 
@@ -156,6 +160,21 @@ class MemberInviteEmailApi(Resource):
             except Exception as e:
                 invitation_results.append({"status": "failed", "email": normalized_invitee_email, "message": str(e)})
 
+        # 记录邀请成员审计日志
+        try:
+            log_operation(
+                action="member_invite",
+                operation_type="admin",
+                content={
+                    "invited_emails": invitee_emails,
+                    "role": str(invitee_role),
+                    "inviter_email": inviter.email,
+                },
+                resource_type="member",
+            )
+        except Exception as e:
+            logger.warning("Failed to record member invite audit log: %s", e)
+
         return {
             "result": "success",
             "invitation_results": invitation_results,
@@ -180,6 +199,22 @@ class MemberCancelInviteApi(Resource):
             abort(404)
         else:
             try:
+                # 记录删除成员审计日志
+                try:
+                    log_operation(
+                        action="member_remove",
+                        operation_type="admin",
+                        content={
+                            "member_email": member.email,
+                            "member_name": member.name,
+                            "role": str(member.role),
+                        },
+                        resource_type="member",
+                        resource_id=str(member_id),
+                    )
+                except Exception as e:
+                    logger.warning("Failed to record member remove audit log: %s", e)
+
                 TenantService.remove_member_from_tenant(current_user.current_tenant, member, current_user)
             except services.errors.account.CannotOperateSelfError as e:
                 return {"code": "cannot-operate-self", "message": str(e)}, 400

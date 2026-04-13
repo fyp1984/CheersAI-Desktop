@@ -127,6 +127,8 @@ class AvatarUrlField(fields.Raw):
 
 class TimestampField(fields.Raw):
     def format(self, value) -> int:
+        if isinstance(value, int):
+            return value
         return int(value.timestamp())
 
 

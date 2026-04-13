@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 import flask_login
@@ -43,10 +44,13 @@ from libs.token import (
     set_refresh_token_to_cookie,
 )
 from services.account_service import AccountService, RegisterService, TenantService
+from services.audit_service import log_operation
 from services.billing_service import BillingService
 from services.errors.account import AccountRegisterError
 from services.errors.workspace import WorkSpaceNotAllowedCreateError, WorkspacesLimitExceededError
 from services.feature_service import FeatureService
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_REF_TEMPLATE_SWAGGER_2_0 = "#/definitions/{model}"
 
@@ -145,6 +149,29 @@ class LoginApi(Resource):
         set_refresh_token_to_cookie(request, response, token_pair.refresh_token)
         set_csrf_token_to_cookie(request, response, token_pair.csrf_token)
 
+        # 记录登录审计日志
+        try:
+            from extensions.ext_database import db
+            from models.account import TenantAccountJoin
+
+            # Get tenant from TenantAccountJoin
+            join = db.session.query(TenantAccountJoin).filter(TenantAccountJoin.account_id == str(account.id)).first()
+
+            if join:
+                from services.audit_service import write_log
+
+                write_log(
+                    tenant_id=join.tenant_id,
+                    account_id=str(account.id),
+                    account_name=account.name,
+                    action="login",
+                    operation_type="chat",
+                    content={"login_method": "password"},
+                    created_ip=extract_remote_ip(request),
+                )
+        except Exception as e:
+            logger.warning("Failed to record login audit log: %s", e)
+
         return response
 
 
@@ -157,6 +184,16 @@ class LogoutApi(Resource):
         if isinstance(account, flask_login.AnonymousUserMixin):
             response = make_response({"result": "success"})
         else:
+            # 记录登出审计日志
+            try:
+                log_operation(
+                    action="logout",
+                    operation_type="chat",
+                    content={"email": account.email},
+                )
+            except Exception as e:
+                logger.warning("Failed to record logout audit log: %s", e)
+
             AccountService.logout(account=account)
             flask_login.logout_user()
             response = make_response({"result": "success"})
@@ -306,6 +343,7 @@ class RefreshTokenApi(Resource):
 
         # Debug logging
         import logging
+
         logger = logging.getLogger(__name__)
         logger.info(f"Refresh token request - cookies: {list(request.cookies.keys())}")
         logger.info(f"Refresh token extracted: {refresh_token is not None}")

@@ -82,12 +82,31 @@ def log_operation(
             request_content = desensitize_content(request_content)
 
         log_id = str(uuid4())
-        tenant_id = getattr(current_user, "tenant_id", None) or getattr(current_user, "current_tenant_id", None)
-        account_id = str(current_user.id) if current_user and hasattr(current_user, "id") else "unknown"
-        account_name = current_user.name if current_user and hasattr(current_user, "name") else "unknown"
+
+        # Try to get tenant_id and account info - may fail during login before session is established
+        try:
+            tenant_id = getattr(current_user, "tenant_id", None) or getattr(current_user, "current_tenant_id", None)
+            if not tenant_id and hasattr(current_user, "current_tenant") and current_user.current_tenant:
+                tenant_id = str(current_user.current_tenant.id)
+
+            account_id = (
+                str(current_user.id) if current_user and hasattr(current_user, "id") and current_user.id else None
+            )
+            account_name = (
+                current_user.name if current_user and hasattr(current_user, "name") and current_user.name else "unknown"
+            )
+        except Exception:
+            # During login, current_user might not have full attributes
+            tenant_id = None
+            account_id = None
+            account_name = "unknown"
+
+        # Skip logging if required fields are missing
+        if not tenant_id or not account_id:
+            logger.warning("[AUDIT] Skipping - missing tenant_id or account_id")
+            return None
 
         log_entry = OperationLog(
-            id=log_id,
             tenant_id=tenant_id,
             account_id=account_id,
             account_name=account_name,
@@ -101,8 +120,12 @@ def log_operation(
             device_info=device_info,
             duration=duration,
             sync_status="pending",
+            sync_time=None,
+            is_expired=False,
+            nexus_sync_id=None,
             error_message=error_message,
         )
+        log_entry.id = log_id
 
         with Session(db.engine, expire_on_commit=False) as session:
             session.add(log_entry)
@@ -157,7 +180,6 @@ def write_log(
         log_id = str(uuid4())
 
         log_entry = OperationLog(
-            id=log_id,
             tenant_id=tenant_id,
             account_id=account_id,
             account_name=account_name,
@@ -171,8 +193,12 @@ def write_log(
             device_info=device_info,
             duration=duration,
             sync_status="pending",
+            sync_time=None,
+            is_expired=False,
+            nexus_sync_id=None,
             error_message=error_message,
         )
+        log_entry.id = log_id
 
         with Session(db.engine, expire_on_commit=False) as session:
             session.add(log_entry)
