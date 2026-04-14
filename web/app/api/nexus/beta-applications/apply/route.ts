@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 const NEXUS_BETA_APPLY_PATH = '/nexus/api/beta-applications/apply'
 
 const buildNexusTargetUrl = () => {
-  const configuredBase = process.env.NEXUS_API_BASE_URL || process.env.NEXT_PUBLIC_NEXUS_API_PREFIX || 'http://localhost:5173'
+  const configuredBase = (process.env.NEXUS_API_BASE_URL || process.env.NEXT_PUBLIC_NEXUS_API_PREFIX || '').trim()
   if (!configuredBase)
     return null
   return `${configuredBase.replace(/\/+$/, '')}${NEXUS_BETA_APPLY_PATH}`
