@@ -12,8 +12,7 @@ import useDocumentTitle from '@/hooks/use-document-title'
 const ToolsList: FC = () => {
   const router = useRouter()
   const { canViewApps, isLoadingCurrentWorkspace } = useAppContext()
-  const { t } = useTranslation()
-  useDocumentTitle(t('menus.tools', { ns: 'common' }))
+  useDocumentTitle('应用中心')
 
   useEffect(() => {
     if (!isLoadingCurrentWorkspace && !canViewApps)

@@ -16,10 +16,11 @@
 import {
   createParser,
   parseAsString,
-  useQueryState,
   useQueryStates,
+  useQueryState,
 } from 'nuqs'
 import { useCallback } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { ACCOUNT_SETTING_MODAL_ACTION } from '@/app/components/header/account-setting/constants'
 import { isServer } from '@/utils/client'
 
@@ -62,6 +63,8 @@ export function usePricingModal() {
  * setAccountModalState(null) // Removes both params
  */
 export function useAccountSettingModal<T extends string = string>() {
+  const router = useRouter()
+  const pathname = usePathname()
   const [accountState, setAccountState] = useQueryStates(
     {
       action: parseAsString,
@@ -76,6 +79,13 @@ export function useAccountSettingModal<T extends string = string>() {
     (state: { payload: T } | null) => {
       if (!state) {
         setAccountState({ action: null, tab: null }, { history: 'replace' })
+        if (!isServer) {
+          const url = new URL(window.location.href)
+          url.searchParams.delete('action')
+          url.searchParams.delete('tab')
+          const nextUrl = `${pathname}${url.search}${url.hash}`
+          router.replace(nextUrl, { scroll: false })
+        }
         return
       }
       const shouldPush = accountState.action !== ACCOUNT_SETTING_MODAL_ACTION
@@ -84,7 +94,7 @@ export function useAccountSettingModal<T extends string = string>() {
         { history: shouldPush ? 'push' : 'replace' },
       )
     },
-    [accountState.action, setAccountState],
+    [accountState.action, pathname, router, setAccountState],
   )
 
   const isOpen = accountState.action === ACCOUNT_SETTING_MODAL_ACTION

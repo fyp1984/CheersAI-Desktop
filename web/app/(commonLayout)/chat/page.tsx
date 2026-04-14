@@ -10,6 +10,7 @@ import Toast from '@/app/components/base/toast'
 import { ModelTypeEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
 import { useDefaultModel, useModelList } from '@/app/components/header/account-setting/model-provider-page/hooks'
 import { useAppContext } from '@/context/app-context'
+import useDocumentTitle from '@/hooks/use-document-title'
 import { sendSimpleChatMessage } from '@/service/chat'
 import { cn } from '@/utils/classnames'
 import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
@@ -140,6 +141,7 @@ function getInitialConversations(storageKey: string): Conversation[] {
 }
 
 const ChatPage = () => {
+  useDocumentTitle('对话')
   const STORAGE_KEY = 'cheersai_conversations'
   const SIDEBAR_STORAGE_KEY = 'cheersai_sidebar_collapsed'
   const { currentWorkspace } = useAppContext()

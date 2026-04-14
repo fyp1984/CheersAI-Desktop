@@ -2,6 +2,7 @@
 import { Menu, MenuButton, MenuItem, MenuItems, Transition } from '@headlessui/react'
 import {
   RiAccountCircleLine,
+  RiArrowDownSLine,
   RiArrowRightUpLine,
   RiBookOpenLine,
   RiGithubLine,
@@ -36,7 +37,12 @@ import Indicator from '../indicator'
 import Compliance from './compliance'
 import Support from './support'
 
-export default function AppSelector() {
+type AccountDropdownProps = {
+  placement?: 'side' | 'bottom-end'
+  showLabel?: boolean
+}
+
+export default function AppSelector({ placement = 'side', showLabel = false }: AccountDropdownProps) {
   const itemClassName = `
     flex items-center w-full h-8 pl-3 pr-2 text-text-secondary system-md-regular
     rounded-lg hover:bg-state-base-hover cursor-pointer gap-1
@@ -47,9 +53,10 @@ export default function AppSelector() {
 
   const { t } = useTranslation()
   const docLink = useDocLink()
-  const { userProfile, langGeniusVersionInfo, isCurrentWorkspaceOwner } = useAppContext()
+  const { userProfile, langGeniusVersionInfo, isCurrentWorkspaceOwner, isCurrentWorkspaceManager } = useAppContext()
   const { isEducationAccount } = useProviderContext()
   const { setShowAccountSettingModal } = useModalContext()
+  const canViewAdminOnlyLinks = isCurrentWorkspaceOwner || isCurrentWorkspaceManager
 
   const { mutateAsync: logout } = useLogout()
   const handleLogout = async () => {
@@ -73,7 +80,22 @@ export default function AppSelector() {
           ({ open, close }) => (
             <>
               <MenuButton className={cn('inline-flex items-center rounded-[20px] p-0.5 hover:bg-background-default-dodge', open && 'bg-background-default-dodge')}>
-                <Avatar avatar={userProfile.avatar_url} name={userProfile.name} size={36} />
+                <div className={cn(
+                  'inline-flex items-center gap-2 rounded-2xl px-1 py-1',
+                  showLabel && 'pr-3',
+                )}
+                >
+                  <Avatar avatar={userProfile.avatar_url} name={userProfile.name} size={36} />
+                  {showLabel && (
+                    <div className="flex min-w-0 items-center gap-2">
+                      <div className="min-w-0 text-left">
+                        <div className="truncate system-sm-medium text-text-primary">{userProfile.name}</div>
+                        <div className="truncate system-2xs-regular text-text-tertiary">{userProfile.email}</div>
+                      </div>
+                      <RiArrowDownSLine className={cn('size-4 shrink-0 text-text-tertiary transition-transform', open && 'rotate-180')} />
+                    </div>
+                  )}
+                </div>
               </MenuButton>
               <Transition
                 as={Fragment}
@@ -85,11 +107,12 @@ export default function AppSelector() {
                 leaveTo="transform opacity-0 scale-95"
               >
                 <MenuItems
-                  className="
-                    absolute left-full bottom-0 ml-2 w-60 max-w-80
-                    origin-bottom-left divide-y divide-divider-subtle rounded-xl bg-components-panel-bg-blur shadow-lg
-                    backdrop-blur-sm focus:outline-none z-50
-                  "
+                  className={cn(
+                    'absolute z-50 w-60 max-w-80 divide-y divide-divider-subtle rounded-xl bg-components-panel-bg-blur shadow-lg backdrop-blur-sm focus:outline-none',
+                    placement === 'side'
+                      ? 'bottom-0 left-full ml-2 origin-bottom-left'
+                      : 'right-0 top-[calc(100%+8px)] origin-top-right',
+                  )}
                 >
                   <div className="px-1 py-1">
                     <MenuItem disabled>
@@ -131,7 +154,7 @@ export default function AppSelector() {
                       </div>
                     </MenuItem>
                   </div>
-                  {!systemFeatures.branding.enabled && (
+                  {!systemFeatures.branding.enabled && canViewAdminOnlyLinks && (
                     <>
                       <div className="p-1">
                         <MenuItem>

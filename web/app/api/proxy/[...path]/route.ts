@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const API_BASE_URL = process.env.INTERNAL_API_BASE_URL || 'http://127.0.0.1:8080'
 
+function shouldRelaxCookieAttributes(request: NextRequest) {
+  const hostname = request.nextUrl.hostname.toLowerCase()
+  return hostname === 'localhost' || hostname === '127.0.0.1'
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
@@ -40,6 +45,22 @@ export async function PATCH(
 ) {
   const { path } = await params
   return proxyRequest(request, path, 'PATCH')
+}
+
+export async function HEAD(
+  request: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> }
+) {
+  const { path } = await params
+  return proxyRequest(request, path, 'HEAD')
+}
+
+export async function OPTIONS(
+  request: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> }
+) {
+  const { path } = await params
+  return proxyRequest(request, path, 'OPTIONS')
 }
 
 async function proxyRequest(
@@ -103,16 +124,18 @@ async function proxyRequest(
       }
     })
 
-    // 处理 Set-Cookie 头：移除 domain 和 secure 属性，确保 cookie 在 localhost:3000 上工作
+    // 仅在 localhost 调试时放宽 cookie 属性，避免破坏 HTTPS / __Host-* cookie。
     const setCookieHeaders = response.headers.getSetCookie?.() || []
     if (setCookieHeaders.length > 0) {
       console.log(`[Proxy ${method} ${path}] Received ${setCookieHeaders.length} Set-Cookie headers`)
     }
+    const relaxCookieAttributes = shouldRelaxCookieAttributes(request)
     setCookieHeaders.forEach((cookie) => {
-      // 移除 Domain 和 Secure 属性，保留其他属性
-      let modifiedCookie = cookie
-        .replace(/;\s*Domain=[^;]*/gi, '') // 移除 Domain
-        .replace(/;\s*Secure\s*/gi, '')    // 移除 Secure (localhost 不是 HTTPS)
+      const modifiedCookie = relaxCookieAttributes
+        ? cookie
+            .replace(/;\s*Domain=[^;]*/gi, '')
+            .replace(/;\s*Secure\s*/gi, '')
+        : cookie
       
       console.log(`[Proxy ${method} ${path}] Set-Cookie:`, modifiedCookie.split(';')[0])
       responseHeaders.append('Set-Cookie', modifiedCookie)
