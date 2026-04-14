@@ -46,7 +46,7 @@ class GiteaConfigApi(Resource):
         Returns:
             Current Gitea configuration (token is masked)
         """
-        gitea_url = os.getenv('GITEA_URL', 'http://localhost:3000')
+        gitea_url = os.getenv('FILEBAY_BASE_URL') or os.getenv('GITEA_URL', '')
         gitea_token = os.getenv('GITEA_TOKEN', '')
         gitea_owner = os.getenv('GITEA_OWNER', 'cheersai')
         gitea_repo = os.getenv('GITEA_REPO', 'file-storage')
@@ -80,6 +80,7 @@ class GiteaConfigApi(Resource):
         # Update environment variables
         if 'gitea_url' in data:
             os.environ['GITEA_URL'] = data['gitea_url']
+            os.environ['FILEBAY_BASE_URL'] = data['gitea_url']
         if 'gitea_owner' in data:
             os.environ['GITEA_OWNER'] = data['gitea_owner']
         if 'gitea_repo' in data:
@@ -122,6 +123,7 @@ class GiteaConfigApi(Resource):
         # Update or add Gitea configuration
         gitea_keys = {
             'GITEA_URL': data.get('gitea_url'),
+            'FILEBAY_BASE_URL': data.get('gitea_url'),
             'GITEA_OWNER': data.get('gitea_owner'),
             'GITEA_REPO': data.get('gitea_repo'),
             'GITEA_PATH': data.get('gitea_path'),
@@ -183,7 +185,7 @@ class GiteaConfigTestApi(Resource):
         data = request.get_json() or {}
         
         # Use provided config or current env vars
-        gitea_url = data.get('gitea_url') or os.getenv('GITEA_URL', 'http://localhost:3000')
+        gitea_url = data.get('gitea_url') or os.getenv('FILEBAY_BASE_URL') or os.getenv('GITEA_URL', '')
         gitea_token = data.get('gitea_token') or os.getenv('GITEA_TOKEN', '')
         gitea_owner = data.get('gitea_owner') or os.getenv('GITEA_OWNER', 'cheersai')
         gitea_repo = data.get('gitea_repo') or os.getenv('GITEA_REPO', 'file-storage')

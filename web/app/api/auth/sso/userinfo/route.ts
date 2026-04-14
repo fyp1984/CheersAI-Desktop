@@ -18,8 +18,8 @@ type RawSSOUserInfo = {
 }
 
 const getSSOConfig = () => {
-  const ssoBaseUrl = process.env.NEXT_PUBLIC_DESKTOP_SSO_LOGIN_URL || 'http://localhost:8000'
-  const clientId = process.env.NEXT_PUBLIC_DESKTOP_SSO_CLIENT_ID || '35f82ac3f099085a6fd0'
+  const ssoBaseUrl = process.env.NEXT_PUBLIC_DESKTOP_SSO_LOGIN_URL?.trim() || ''
+  const clientId = process.env.NEXT_PUBLIC_DESKTOP_SSO_CLIENT_ID?.trim() || ''
   const clientSecret = process.env.DESKTOP_SSO_CLIENT_SECRET || ''
 
   return {
@@ -136,6 +136,14 @@ const refreshAccessToken = async (sessionId: string, refreshToken: string) => {
 
 export async function POST() {
   try {
+    const config = getSSOConfig()
+    if (!config.ssoBaseUrl || !config.clientId) {
+      return NextResponse.json(
+        { error: 'SSO configuration is incomplete: NEXT_PUBLIC_DESKTOP_SSO_LOGIN_URL / NEXT_PUBLIC_DESKTOP_SSO_CLIENT_ID' },
+        { status: 500 },
+      )
+    }
+
     const cookieStore = await cookies()
     const sessionId = cookieStore.get('sso_session_id')?.value
 
@@ -154,7 +162,7 @@ export async function POST() {
       )
     }
 
-    const { ssoBaseUrl } = getSSOConfig()
+    const { ssoBaseUrl } = config
     const userinfoUrl = new URL('/api/userinfo', ssoBaseUrl)
     let accessToken = session.accessToken
 
