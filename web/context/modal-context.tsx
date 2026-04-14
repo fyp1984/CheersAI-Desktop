@@ -24,7 +24,7 @@ import type {
 import type { ModerationConfig, PromptVariable } from '@/models/debug'
 import { noop } from 'es-toolkit/function'
 import dynamic from 'next/dynamic'
-import { useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createContext, useContext, useContextSelector } from 'use-context-selector'
 import {
@@ -162,11 +162,14 @@ export const ModalContextProvider = ({
   const [showPricingModal, setPricingModalOpen] = usePricingModal()
   const [urlAccountModalState, setUrlAccountModalState] = useAccountSettingModal<AccountSettingTab>()
   const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
+  const [forceCloseAccountSetting, setForceCloseAccountSetting] = useState(false)
 
   const accountSettingCallbacksRef = useRef<Omit<ModalState<AccountSettingTab>, 'payload'> | null>(null)
   const searchAction = searchParams.get('action')
   const searchTab = searchParams.get('tab')
-  const isAccountSettingOpen = urlAccountModalState.isOpen || searchAction === ACCOUNT_SETTING_MODAL_ACTION
+  const isAccountSettingOpen = !forceCloseAccountSetting && (urlAccountModalState.isOpen || searchAction === ACCOUNT_SETTING_MODAL_ACTION)
   const accountSettingTab = isAccountSettingOpen
     ? (isValidAccountSettingTab(urlAccountModalState.payload)
         ? urlAccountModalState.payload
@@ -196,7 +199,11 @@ export const ModalContextProvider = ({
 
     accountSettingCallbacksRef.current?.onCancelCallback?.()
     accountSettingCallbacksRef.current = null
+    setForceCloseAccountSetting(true)
     setUrlAccountModalState(null)
+    if (typeof window !== 'undefined')
+      window.history.replaceState(window.history.state, '', pathname)
+    router.replace(pathname, { scroll: false })
   }
 
   const handleAccountSettingTabChange = useCallback((tab: AccountSettingTab) => {
@@ -230,6 +237,11 @@ export const ModalContextProvider = ({
     if (!urlAccountModalState.isOpen)
       accountSettingCallbacksRef.current = null
   }, [urlAccountModalState.isOpen])
+
+  useEffect(() => {
+    if (forceCloseAccountSetting && searchAction !== ACCOUNT_SETTING_MODAL_ACTION && !urlAccountModalState.isOpen)
+      setForceCloseAccountSetting(false)
+  }, [forceCloseAccountSetting, searchAction, urlAccountModalState.isOpen])
 
   const { plan, isFetchedPlan } = useProviderContext()
   const {

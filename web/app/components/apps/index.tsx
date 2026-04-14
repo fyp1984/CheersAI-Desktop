@@ -15,9 +15,7 @@ import TryApp from '../explore/try-app'
 import List from './list'
 
 const Apps = () => {
-  const { t } = useTranslation()
-
-  useDocumentTitle(t('menus.apps', { ns: 'common' }))
+  useDocumentTitle('我的 Agent')
   useEducationInit()
 
   const [currentTryAppParams, setCurrentTryAppParams] = useState<CurrentTryAppParams | undefined>(undefined)

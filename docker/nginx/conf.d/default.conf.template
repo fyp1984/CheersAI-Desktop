@@ -11,7 +11,7 @@ server {
     }
 
     location /api/auth/sso {
-      proxy_pass http://web:3000;
+      proxy_pass http://${NGINX_WEB_UPSTREAM};
       include proxy.conf;
       proxy_set_header Host ${NGINX_WEB_HOST_HEADER};
     }
@@ -32,7 +32,7 @@ server {
     }
 
     location /explore {
-      proxy_pass http://web:3000;
+      proxy_pass http://${NGINX_WEB_UPSTREAM};
       include proxy.conf;
       proxy_set_header Host ${NGINX_WEB_HOST_HEADER};
     }
@@ -49,7 +49,7 @@ server {
     }
 
     location / {
-      proxy_pass http://web:3000;
+      proxy_pass http://${NGINX_WEB_UPSTREAM};
       include proxy.conf;
       proxy_set_header Host ${NGINX_WEB_HOST_HEADER};
     }

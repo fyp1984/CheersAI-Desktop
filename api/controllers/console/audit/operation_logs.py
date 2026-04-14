@@ -91,19 +91,23 @@ class OperationLogListApi(Resource):
         limit = min(100, max(1, args["limit"]))
         offset = (page - 1) * limit
 
-        # Get tenant_id from user's tenant joins if current_tenant_id is None
-        tenant_id = current_user.current_tenant_id
-        if not tenant_id:
-            from models.account import TenantAccountJoin
-
-            join = session.query(TenantAccountJoin).filter(TenantAccountJoin.account_id == str(current_user.id)).first()
-            if join:
-                tenant_id = join.tenant_id
-
-        if not tenant_id:
-            return {"data": [], "total": 0, "page": page, "limit": limit, "has_more": False}
-
         with Session(db.engine) as session:
+            # Fallback to tenant join lookup for locally initialized accounts whose current_tenant_id is still empty.
+            tenant_id = current_user.current_tenant_id
+            if not tenant_id:
+                from models.account import TenantAccountJoin
+
+                join = (
+                    session.query(TenantAccountJoin)
+                    .filter(TenantAccountJoin.account_id == str(current_user.id))
+                    .first()
+                )
+                if join:
+                    tenant_id = join.tenant_id
+
+            if not tenant_id:
+                return {"data": [], "total": 0, "page": page, "limit": limit, "has_more": False}
+
             query = (
                 session.query(OperationLog, Account)
                 .join(Account, OperationLog.account_id == Account.id)
