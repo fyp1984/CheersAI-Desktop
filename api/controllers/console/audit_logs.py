@@ -10,6 +10,24 @@ import httpx
 from flask import Blueprint, request
 from werkzeug.exceptions import Forbidden
 
+# 操作类型中英文映射
+ACTION_DESCRIPTIONS = {
+    "login": "用户登录",
+    "logout": "用户登出",
+    "file_upload": "文件上传",
+    "file_mask": "文件脱敏",
+    "file_delete": "文件删除",
+    "file_download": "文件下载",
+    "file_restore": "文件恢复",
+    "create_dataset": "创建知识库",
+    "knowledge_sync": "知识库同步",
+    "knowledge_delete": "删除知识库",
+    "member_invite": "成员邀请",
+    "member_remove": "成员移除",
+    "workflow": "工作流操作",
+    "chat": "聊天完成",
+    "search": "全局搜索",
+}
 from configs import dify_config
 from controllers.console.wraps import account_initialization_required
 from libs.desktop_auth import has_any_workspace_capability
@@ -31,11 +49,9 @@ def _fetch_from_nexus(params: dict) -> dict:
     if not dify_config.NEXUS_AUDIT_API_URL:
         logger.info("NEXUS_AUDIT_API_URL 未配置")
         return {"list": [], "total": 0}
-
     headers = {"Content-Type": "application/json"}
     if dify_config.NEXUS_AUDIT_API_KEY:
         headers["X-API-Key"] = dify_config.NEXUS_AUDIT_API_KEY
-
     try:
         timeout = httpx.Timeout(30.0, connect=10.0)
         with httpx.Client(timeout=timeout) as client:
@@ -69,12 +85,10 @@ def get_audit_logs():
     try:
         page = int(request.args.get("page", 1))
         page_size = int(request.args.get("pageSize", 10))
-
         params = {
             "page": page,
             "pageSize": page_size,
         }
-
         if request.args.get("logType"):
             params["logType"] = request.args.get("logType")
         if request.args.get("action"):
@@ -85,12 +99,9 @@ def get_audit_logs():
             params["ipAddress"] = request.args.get("ipAddress")
         if request.args.get("result"):
             params["result"] = request.args.get("result")
-
         result = _fetch_from_nexus(params)
-
         logs = result.get("list", [])
         total = result.get("total", 0)
-
         formatted = []
         for log in logs:
             formatted.append(
@@ -113,14 +124,12 @@ def get_audit_logs():
                     "createdAt": log.get("createdAt", ""),
                 }
             )
-
         return {
             "data": formatted,
             "total": total,
             "page": page,
             "pageSize": page_size,
         }
-
     except Exception as e:
         logger.exception("获取审计日志失败")
         return {"error": str(e)}, 500
@@ -134,17 +143,14 @@ def get_audit_stats():
     _require_audit_view()
     try:
         total = 0
-
         for log_type in ["user_action", "admin_action", "security_event"]:
             params = {"logType": log_type, "pageSize": 1}
             result = _fetch_from_nexus(params)
             total += result.get("total", 0)
-
         return {
             "total": total,
             "today": 0,
         }
-
     except Exception as e:
         logger.exception("获取审计统计失败")
         return {"error": str(e)}, 500
@@ -160,23 +166,20 @@ def get_audit_actions():
         known_actions = [
             "login",
             "logout",
-            "register",
-            "create_plan",
-            "update_plan",
-            "delete_plan",
-            "audit_plan",
-            "create_subscription",
-            "update_subscription",
-            "adjust_subscription",
-            "cancel_subscription",
-            "file_desensitize",
+            "file_upload",
+            "file_mask",
+            "file_delete",
+            "file_download",
             "file_restore",
+            "create_dataset",
             "knowledge_sync",
+            "knowledge_delete",
+            "member_invite",
+            "member_remove",
+            "workflow",
             "chat",
             "search",
-            "workflow",
         ]
         return {"actions": known_actions}
-
     except Exception as e:
         return {"error": str(e)}, 500

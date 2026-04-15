@@ -16,6 +16,7 @@ export const ContentType = {
   download: 'application/octet-stream', // for download
   downloadZip: 'application/zip', // for download
   upload: 'multipart/form-data', // for upload
+  excel: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 }
 
 export type FetchOptionType = Omit<RequestInit, 'body'> & {
@@ -232,7 +233,7 @@ async function base<T>(url: string, options: FetchOptionType = {}, otherOptions:
   const contentType = res.headers.get('content-type')
   if (
     contentType
-    && [ContentType.download, ContentType.audio, ContentType.downloadZip].includes(contentType)
+    && [ContentType.download, ContentType.audio, ContentType.downloadZip, ContentType.excel].includes(contentType)
   ) {
     return await res.blob() as T
   }

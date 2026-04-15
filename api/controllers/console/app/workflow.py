@@ -306,6 +306,21 @@ class DraftWorkflowApi(Resource):
         except WorkflowHashNotEqualError:
             raise DraftWorkflowNotSync()
 
+        # 记录审计日志 - 工作流草稿同步
+        try:
+            log_operation(
+                action="workflow",
+                operation_type="workflow",
+                content={
+                    "app_id": str(app_model.id),
+                    "app_name": app_model.name,
+                    "mode": "draft_sync",
+                    "hash": workflow.unique_hash,
+                },
+            )
+        except Exception as e:
+            logger.warning("Failed to record workflow sync audit log: %s", e)
+
         return {
             "result": "success",
             "hash": workflow.unique_hash,
@@ -713,6 +728,22 @@ class PublishedWorkflowApi(Resource):
 
             session.commit()
 
+            # 记录审计日志 - 工作流发布
+            try:
+                log_operation(
+                    action="workflow",
+                    operation_type="workflow",
+                    content={
+                        "app_id": str(app_model.id),
+                        "app_name": app_model.name,
+                        "mode": "publish",
+                        "workflow_id": str(workflow.id),
+                        "marked_name": args.marked_name or "",
+                    },
+                )
+            except Exception as e:
+                logger.warning("Failed to record workflow publish audit log: %s", e)
+
         return {
             "result": "success",
             "created_at": workflow_created_at,
@@ -907,6 +938,21 @@ class WorkflowByIdApi(Resource):
             # Commit the transaction in the controller
             session.commit()
 
+            # 记录审计日志 - 工作流更新
+            try:
+                log_operation(
+                    action="workflow",
+                    operation_type="workflow",
+                    content={
+                        "app_id": str(app_model.id),
+                        "app_name": app_model.name,
+                        "mode": "update",
+                        "workflow_id": str(workflow.id) if workflow else str(workflow_id),
+                    },
+                )
+            except Exception as e:
+                logger.warning("Failed to record workflow update audit log: %s", e)
+
         return workflow
 
     @setup_required
@@ -935,6 +981,21 @@ class WorkflowByIdApi(Resource):
                 abort(400, description=str(e))
             except ValueError as e:
                 raise NotFound(str(e))
+
+        # 记录审计日志 - 工作流删除
+        try:
+            log_operation(
+                action="workflow",
+                operation_type="workflow",
+                content={
+                    "app_id": str(app_model.id),
+                    "app_name": app_model.name,
+                    "mode": "delete",
+                    "workflow_id": str(workflow_id),
+                },
+            )
+        except Exception as e:
+            logger.warning("Failed to record workflow delete audit log: %s", e)
 
         return None, 204
 

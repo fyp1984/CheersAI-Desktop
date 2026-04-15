@@ -1,7 +1,8 @@
 """Sandbox file management API for data masking module.
 
-These endpoints are unauthenticated by design — they serve a local-only
-developer tool that reads/writes files on the machine running the API server.
+NOTE:
+- These endpoints read/write files on the machine running the API server.
+- To make audit logs reliable (tenant/account required), we require console login cookies.
 """
 
 import os
@@ -11,6 +12,8 @@ from pathlib import Path
 
 from flask import Blueprint, request
 
+from controllers.console.wraps import account_initialization_required, setup_required
+from libs.login import current_account_with_tenant, login_required
 from services.audit_service import log_operation
 
 sandbox_bp = Blueprint("sandbox_files", __name__, url_prefix="/console/api/data-masking/sandbox")
@@ -27,7 +30,11 @@ def _safe_filename(name: str) -> str:
 
 
 @sandbox_bp.route("/files", methods=["POST"])
+@setup_required
+@login_required
+@account_initialization_required
 def save_file():
+    current_user, _ = current_account_with_tenant()
     data = request.get_json(silent=True)
     if not data:
         return {"error": "Request body required"}, 400
@@ -57,6 +64,7 @@ def save_file():
                 "size": len(content.encode("utf-8")),
             },
             resource_type="file",
+            resource_id=str(getattr(current_user, "id", "")) or None,
         )
         
         return {
@@ -72,6 +80,9 @@ def save_file():
 
 
 @sandbox_bp.route("/files/list", methods=["GET"])
+@setup_required
+@login_required
+@account_initialization_required
 def list_files():
     sandbox_path: str = request.args.get("sandbox_path", "") or SANDBOX_BASE
     if not sandbox_path:
@@ -97,6 +108,9 @@ def list_files():
 
 
 @sandbox_bp.route("/files/read", methods=["GET"])
+@setup_required
+@login_required
+@account_initialization_required
 def read_file():
     sandbox_path: str = request.args.get("sandbox_path", "") or SANDBOX_BASE
     file_name: str = request.args.get("file_name", "")
@@ -120,7 +134,11 @@ def read_file():
 
 
 @sandbox_bp.route("/files/delete", methods=["DELETE"])
+@setup_required
+@login_required
+@account_initialization_required
 def delete_file():
+    current_user, _ = current_account_with_tenant()
     data = request.get_json(silent=True)
     if not data:
         return {"error": "Request body required"}, 400
@@ -143,6 +161,7 @@ def delete_file():
                 "sandbox_path": sandbox_path,
             },
             resource_type="file",
+            resource_id=str(getattr(current_user, "id", "")) or None,
         )
         
         return {"result": "success"}

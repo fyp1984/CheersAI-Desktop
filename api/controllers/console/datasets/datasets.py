@@ -384,6 +384,24 @@ class DatasetListApi(Resource):
         except services.errors.dataset.DatasetNameDuplicateError:
             raise DatasetNameDuplicateError()
 
+        # 记录审计日志 - 知识库创建
+        try:
+            from services.audit_service import log_operation
+
+            log_operation(
+                action="create_dataset",
+                content={
+                    "dataset_id": str(dataset.id),
+                    "dataset_name": dataset.name,
+                },
+                resource_type="dataset",
+                resource_id=str(dataset.id),
+            )
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning("Failed to record create dataset audit log: %s", e)
+
         return marshal(dataset, dataset_detail_fields), 201
 
 

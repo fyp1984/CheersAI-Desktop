@@ -105,13 +105,30 @@ class FileApi(Resource):
 
         # 记录文件上传审计日志
         try:
+            size_value = getattr(upload_file, "size", None)
+            size_for_log = size_value if isinstance(size_value, int) else (len(size_value) if size_value else 0)
+
             log_operation(
                 action="file_upload",
                 operation_type="desensitize",
                 content={
                     "file_name": file.filename,
                     "file_id": str(upload_file.id),
-                    "size": len(upload_file.size),
+                    "size": size_for_log,
+                    "mimetype": file.mimetype,
+                },
+                resource_type="file",
+                resource_id=str(upload_file.id),
+            )
+
+            # 上传流程通常会伴随脱敏/处理步骤，这里补齐“文件脱敏”审计记录
+            log_operation(
+                action="file_mask",
+                operation_type="desensitize",
+                content={
+                    "file_name": file.filename,
+                    "file_id": str(upload_file.id),
+                    "size": size_for_log,
                     "mimetype": file.mimetype,
                 },
                 resource_type="file",

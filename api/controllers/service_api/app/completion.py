@@ -36,6 +36,7 @@ from services.app_generate_service import AppGenerateService
 from services.app_task_service import AppTaskService
 from services.errors.app import IsDraftWorkflowError, WorkflowIdFormatError, WorkflowNotFoundError
 from services.errors.llm import InvokeRateLimitError
+from services.audit_service import log_operation
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,9 @@ class CompletionApi(Resource):
 
         args["auto_generate_name"] = False
 
+        status = "success"
+        error_message = None
+
         try:
             response = AppGenerateService.generate(
                 app_model=app_model,
@@ -122,25 +126,59 @@ class CompletionApi(Resource):
 
             return helper.compact_generate_response(response)
         except services.errors.conversation.ConversationNotExistsError:
+            status = "failed"
+            error_message = "Conversation Not Exists"
             raise NotFound("Conversation Not Exists.")
         except services.errors.conversation.ConversationCompletedError:
+            status = "failed"
+            error_message = "Conversation Completed"
             raise ConversationCompletedError()
         except services.errors.app_model_config.AppModelConfigBrokenError:
+            status = "failed"
+            error_message = "App model config broken"
             logger.exception("App model config broken.")
             raise AppUnavailableError()
         except ProviderTokenNotInitError as ex:
+            status = "failed"
+            error_message = ex.description
             raise ProviderNotInitializeError(ex.description)
         except QuotaExceededError:
+            status = "failed"
+            error_message = "Quota exceeded"
             raise ProviderQuotaExceededError()
         except ModelCurrentlyNotSupportError:
+            status = "failed"
+            error_message = "Model not supported"
             raise ProviderModelCurrentlyNotSupportError()
         except InvokeError as e:
+            status = "failed"
+            error_message = e.description
             raise CompletionRequestError(e.description)
         except ValueError as e:
+            status = "failed"
+            error_message = str(e)
             raise e
         except Exception:
+            status = "failed"
+            error_message = "Internal server error"
             logger.exception("internal server error.")
             raise InternalServerError()
+        finally:
+            try:
+                log_operation(
+                    action="chat",
+                    operation_type="chat",
+                    content={
+                        "app_id": str(app_model.id),
+                        "app_name": app_model.name,
+                        "query_length": len(args.get("query", "")),
+                        "status": status,
+                        "error": error_message,
+                        "invoke_from": "service_api",
+                    },
+                )
+            except Exception as e:
+                logger.warning("Failed to record service_api completion audit log: %s", e)
 
 
 @service_api_ns.route("/completion-messages/<string:task_id>/stop")
@@ -206,6 +244,9 @@ class ChatApi(Resource):
 
         streaming = payload.response_mode == "streaming"
 
+        status = "success"
+        error_message = None
+
         try:
             response = AppGenerateService.generate(
                 app_model=app_model, user=end_user, args=args, invoke_from=InvokeFrom.SERVICE_API, streaming=streaming
@@ -213,33 +254,76 @@ class ChatApi(Resource):
 
             return helper.compact_generate_response(response)
         except WorkflowNotFoundError as ex:
+            status = "failed"
+            error_message = str(ex)
             raise NotFound(str(ex))
         except IsDraftWorkflowError as ex:
+            status = "failed"
+            error_message = str(ex)
             raise BadRequest(str(ex))
         except WorkflowIdFormatError as ex:
+            status = "failed"
+            error_message = str(ex)
             raise BadRequest(str(ex))
         except services.errors.conversation.ConversationNotExistsError:
+            status = "failed"
+            error_message = "Conversation Not Exists"
             raise NotFound("Conversation Not Exists.")
         except services.errors.conversation.ConversationCompletedError:
+            status = "failed"
+            error_message = "Conversation Completed"
             raise ConversationCompletedError()
         except services.errors.app_model_config.AppModelConfigBrokenError:
+            status = "failed"
+            error_message = "App model config broken"
             logger.exception("App model config broken.")
             raise AppUnavailableError()
         except ProviderTokenNotInitError as ex:
+            status = "failed"
+            error_message = ex.description
             raise ProviderNotInitializeError(ex.description)
         except QuotaExceededError:
+            status = "failed"
+            error_message = "Quota exceeded"
             raise ProviderQuotaExceededError()
         except ModelCurrentlyNotSupportError:
+            status = "failed"
+            error_message = "Model not supported"
             raise ProviderModelCurrentlyNotSupportError()
         except InvokeRateLimitError as ex:
+            status = "failed"
+            error_message = ex.description
             raise InvokeRateLimitHttpError(ex.description)
         except InvokeError as e:
+            status = "failed"
+            error_message = e.description
             raise CompletionRequestError(e.description)
         except ValueError as e:
+            status = "failed"
+            error_message = str(e)
             raise e
         except Exception:
+            status = "failed"
+            error_message = "Internal server error"
             logger.exception("internal server error.")
             raise InternalServerError()
+        finally:
+            try:
+                log_operation(
+                    action="chat",
+                    operation_type="chat",
+                    content={
+                        "app_id": str(app_model.id),
+                        "app_name": app_model.name,
+                        "query_length": len(args.get("query", "")),
+                        "conversation_id": args.get("conversation_id"),
+                        "status": status,
+                        "error": error_message,
+                        "invoke_from": "service_api",
+                    },
+                )
+            except Exception as e:
+                logger.warning("Failed to record service_api chat audit log: %s", e)
 
 
 @service_api_ns.route("/chat-messages/<string:task_id>/stop")
