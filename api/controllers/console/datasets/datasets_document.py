@@ -878,11 +878,12 @@ class DocumentApi(DocumentResource):
                 from services.audit_service import log_operation
 
                 log_operation(
-                    action="document_delete",
+                    action="file_delete",
                     content={
                         "dataset_id": dataset_id,
                         "document_id": document_id,
                         "document_name": document_name,
+                        "file_name": document_name,
                     },
                     resource_type="dataset",
                     resource_id=dataset_id,
@@ -919,11 +920,12 @@ class DocumentDownloadApi(DocumentResource):
             from services.audit_service import log_operation
 
             log_operation(
-                action="document_download",
+                action="file_download",
                 content={
                     "dataset_id": str(dataset_id),
                     "document_id": str(document_id),
                     "document_name": document.name if document else "unknown",
+                    "file_name": document.name if document else "unknown",
                 },
                 resource_type="dataset",
                 resource_id=str(dataset_id),
@@ -1189,6 +1191,27 @@ class DocumentRecoverApi(DocumentResource):
             DocumentService.recover_document(document)
         except services.errors.document.DocumentIndexingError:
             raise DocumentIndexingError("Document is not in paused status.")
+
+        # 记录审计日志 - 文件恢复
+        try:
+            from services.audit_service import log_operation
+
+            log_operation(
+                action="file_restore",
+                operation_type="restore",
+                content={
+                    "dataset_id": dataset_id,
+                    "document_id": document_id,
+                    "document_name": document.name if document else "unknown",
+                    "file_name": document.name if document else "unknown",
+                },
+                resource_type="dataset",
+                resource_id=dataset_id,
+            )
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning("Failed to record document recover audit log: %s", e)
 
         return {"result": "success"}, 204
 

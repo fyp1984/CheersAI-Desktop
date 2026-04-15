@@ -30,6 +30,7 @@ from libs.token import (
 from services.account_service import AccountService
 from services.app_service import AppService
 from services.webapp_auth_service import WebAppAuthService
+from services.audit_service import write_log
 
 
 class LoginPayload(BaseModel):
@@ -77,6 +78,10 @@ class LoginApi(Resource):
     @decrypt_password_field
     def post(self):
         """Authenticate user and login."""
+        import logging
+
+        logger = logging.getLogger(__name__)
+
         payload = LoginPayload.model_validate(web_ns.payload or {})
 
         try:
@@ -89,6 +94,27 @@ class LoginApi(Resource):
             raise AuthenticationFailedError()
 
         token = WebAppAuthService.login(account=account)
+
+        # 记录 web app 登录审计日志
+        try:
+            from extensions.ext_database import db
+            from models.account import TenantAccountJoin
+
+            join = db.session.query(TenantAccountJoin).filter(TenantAccountJoin.account_id == str(account.id)).first()
+
+            if join:
+                write_log(
+                    tenant_id=str(join.tenant_id),
+                    account_id=str(account.id),
+                    account_name=account.name or account.email,
+                    action="login",
+                    operation_type="chat",
+                    content={"login_method": "web_app", "email": payload.email},
+                    created_ip=extract_remote_ip(request),
+                )
+        except Exception as e:
+            logger.warning("Failed to record web login audit log: %s", e)
+
         response = make_response({"result": "success", "data": {"access_token": token}})
         # set_access_token_to_cookie(request, response, token, samesite="None", httponly=False)
         return response
@@ -154,6 +180,38 @@ class LogoutApi(Resource):
         }
     )
     def post(self):
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        # 记录 web app 登出审计日志
+        try:
+            from flask_login import current_user
+            from extensions.ext_database import db
+            from models.account import TenantAccountJoin
+
+            if current_user and hasattr(current_user, "id") and current_user.id:
+                join = (
+                    db.session.query(TenantAccountJoin)
+                    .filter(TenantAccountJoin.account_id == str(current_user.id))
+                    .first()
+                )
+
+                account_name = getattr(current_user, "name", None) or getattr(current_user, "email", None) or "unknown"
+
+                if join:
+                    write_log(
+                        tenant_id=str(join.tenant_id),
+                        account_id=str(current_user.id),
+                        account_name=account_name,
+                        action="logout",
+                        operation_type="chat",
+                        content={"login_method": "web_app"},
+                        created_ip=extract_remote_ip(request),
+                    )
+        except Exception as e:
+            logger.warning("Failed to record web logout audit log: %s", e)
+
         response = make_response({"result": "success"})
         # enterprise SSO sets same site to None in https deployment
         # so we need to logout by calling api

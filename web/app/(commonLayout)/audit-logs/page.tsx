@@ -48,12 +48,52 @@ const AuditLogsPage = () => {
     'file_delete': '文件删除',
     'file_restore': '文件恢复',
     'file_upload': '文件上传',
+    'file_download': '文件下载',
     'knowledge_sync': '知识库同步',
+    'knowledge_delete': '删除知识库',
     'member_invite': '成员邀请',
     'member_remove': '成员移除',
+    'workflow': '工作流操作',
+    'chat': '聊天完成',
+    'search': '全局搜索',
     'rule_create': '规则创建',
     'rule_update': '规则更新',
     'rule_delete': '规则删除',
+    'create_app': '创建应用',
+    'update_app': '更新应用',
+    'delete_app': '删除应用',
+    'publish_workflow': '发布工作流',
+    'import_knowledge': '导入知识库',
+    'create_dataset': '创建知识库',
+    'update_dataset': '更新知识库',
+    'delete_document': '删除文档',
+    'invoke_chat': '发起聊天',
+    'export_data': '导出数据',
+    'invite_member': '邀请成员',
+    'update_role': '更新角色',
+    'upload_file': '上传文件',
+    'download_file': '下载文件',
+  }
+
+  const getActionDisplayName = (action: string, content?: any) => {
+    if (action === 'workflow' && content?.mode) {
+      const modeMap: Record<string, string> = {
+        'draft_sync': '草稿同步',
+        'publish': '发布工作流',
+        'advanced_chat': '聊天运行',
+        'workflow_run': '工作流运行',
+        'save': '保存工作流',
+        'delete': '删除工作流',
+      }
+      return modeMap[content.mode] || `工作流操作 (${content.mode})`
+    }
+    if (action === 'delete_app') {
+      return '删除应用'
+    }
+    if (action === 'create_app') {
+      return '创建应用'
+    }
+    return actionNameMap[action] || action
   }
 
   // 自动刷新定时器
@@ -110,19 +150,11 @@ const AuditLogsPage = () => {
   const handleExport = async () => {
     try {
       console.log('Starting export with filters:', filters)
-      const response = await exportAuditLogs('excel', filters)
-      console.log('Export response:', response)
-      
-      if (!response || !response.body) {
-        console.error('Invalid response:', response)
-        Toast.notify({ type: 'error', message: '导出失败：无效的响应' })
-        return
-      }
-      
-      const blob = await response.blob()
+      const blob = await exportAuditLogs('excel', filters)
       console.log('Blob:', blob, blob.type)
       
-      if (blob.size === 0) {
+      if (!blob || blob.size === 0) {
+        console.error('Invalid response:', blob)
         Toast.notify({ type: 'error', message: '导出失败：文件为空' })
         return
       }
@@ -284,10 +316,18 @@ const AuditLogsPage = () => {
                         }) : 'Invalid Date'}
                       </td>
                       <td className="px-4 py-3 text-sm text-text-primary whitespace-nowrap">
-                        {actionNameMap[log.action] || log.action}
+                        {getActionDisplayName(log.action, log.content)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-secondary max-w-xs truncate" title={log.content?.file_name}>
-                        {log.content?.file_name || '-'}
+                      <td className="px-4 py-3 text-sm text-text-secondary max-w-xs truncate" title={log.content?.file_name || log.content?.dataset_name || log.content?.app_name || JSON.stringify(log.content)}>
+                        {log.action === 'chat' && log.content?.status ? (
+                          <span className={log.content.status === 'success' ? 'text-green-600' : 'text-red-600'}>
+                            {log.content.status === 'success' ? '成功' : '失败'}
+                            {log.content.error ? ` - ${log.content.error}` : ''}
+                            {log.content.app_name ? ` - ${log.content.app_name}` : ''}
+                          </span>
+                        ) : (
+                          log.content?.file_name || log.content?.dataset_name || log.content?.app_name || (log.content?.mode ? `操作: ${log.content.mode}` : '-')
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm text-text-secondary whitespace-nowrap">
                         {log.content?.size ? `${(log.content.size / 1024).toFixed(2)} KB` : '-'}

@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime
 from typing import Any, Literal, TypeAlias
@@ -8,6 +9,8 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field, computed_field,
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from werkzeug.exceptions import BadRequest
+
+logger = logging.getLogger(__name__)
 
 from controllers.common.helpers import FileInfo
 from controllers.common.schema import register_enum_models, register_schema_models
@@ -33,6 +36,7 @@ from models import App, DatasetPermissionEnum, Workflow
 from models.model import IconType
 from services.app_dsl_service import AppDslService, ImportMode
 from services.app_service import AppService
+from services.audit_service import log_operation
 from services.enterprise.enterprise_service import EnterpriseService
 from services.entities.knowledge_entities.knowledge_entities import (
     DataSource,
@@ -548,9 +552,39 @@ class AppListApi(Resource):
         current_user, current_tenant_id = current_account_with_tenant()
         args = CreateAppPayload.model_validate(console_ns.payload)
 
+        # 调试信息
+        print(f"[DEBUG] create_app - user_id: {current_user.id}, tenant_id: {current_tenant_id}")
+        print(f"[DEBUG] create_app - user.tenant_id: {getattr(current_user, 'tenant_id', 'N/A')}")
+        print(f"[DEBUG] create_app - user.current_tenant_id: {getattr(current_user, 'current_tenant_id', 'N/A')}")
+
         app_service = AppService()
         app = app_service.create_app(current_tenant_id, args.model_dump(), current_user)
         app_detail = AppDetail.model_validate(app, from_attributes=True)
+
+        try:
+            if current_tenant_id and current_user and current_user.id:
+                logger.info(
+                    f"[AUDIT] create_app - tenant_id: {current_tenant_id}, account_id: {current_user.id}, app_name: {app.name}"
+                )
+                log_operation(
+                    action="create_app",
+                    content={
+                        "app_id": str(app.id),
+                        "app_name": app.name,
+                        "app_mode": app.mode,
+                    },
+                    resource_type="app",
+                    resource_id=str(app.id),
+                    operation_type="workflow",
+                )
+                logger.info(f"[AUDIT] create_app log recorded successfully for app: {app.name}")
+            else:
+                logger.warning(
+                    f"[AUDIT] create_app skipped - missing tenant_id: {current_tenant_id} or account_id: {current_user.id if current_user else None}"
+                )
+        except Exception as e:
+            logger.warning("Failed to record create_app audit log: %s", e)
+
         return app_detail.model_dump(mode="json"), 201
 
 
@@ -594,6 +628,11 @@ class AppApi(Resource):
     @edit_permission_required
     def put(self, app_model):
         """Update app"""
+        current_user, current_tenant_id = current_account_with_tenant()
+
+        old_name = app_model.name
+        old_description = app_model.description
+
         args = UpdateAppPayload.model_validate(console_ns.payload)
 
         app_service = AppService()
@@ -608,6 +647,28 @@ class AppApi(Resource):
             "max_active_requests": args.max_active_requests or 0,
         }
         app_model = app_service.update_app(app_model, args_dict)
+
+        try:
+            if current_tenant_id and current_user and current_user.id:
+                logger.info(
+                    f"[AUDIT] update_app - tenant_id: {current_tenant_id}, account_id: {current_user.id}, app_name: {app_model.name}"
+                )
+                log_operation(
+                    action="update_app",
+                    content={
+                        "app_id": str(app_model.id),
+                        "app_name": app_model.name,
+                        "old_name": old_name,
+                        "old_description": old_description,
+                    },
+                    resource_type="app",
+                    resource_id=str(app_model.id),
+                    operation_type="workflow",
+                )
+                logger.info(f"[AUDIT] update_app log recorded successfully for app: {app_model.name}")
+        except Exception as e:
+            logger.warning("Failed to record update_app audit log: %s", e)
+
         response_model = AppDetailWithSite.model_validate(app_model, from_attributes=True)
         return response_model.model_dump(mode="json")
 
@@ -624,8 +685,42 @@ class AppApi(Resource):
     @edit_permission_required
     def delete(self, app_model):
         """Delete app"""
+        current_user, current_tenant_id = current_account_with_tenant()
+
+        # 先保存需要的信息，因为删除后无法访问
+        app_id = str(app_model.id)
+        app_name = app_model.name
+        app_mode = app_model.mode
+
+        # 调试信息
+        print(f"[DEBUG] delete_app - app_name: {app_name}")
+
         app_service = AppService()
         app_service.delete_app(app_model)
+
+        try:
+            if current_tenant_id and current_user and current_user.id:
+                logger.info(
+                    f"[AUDIT] delete_app - tenant_id: {current_tenant_id}, account_id: {current_user.id}, app_name: {app_name}"
+                )
+                log_operation(
+                    action="delete_app",
+                    content={
+                        "app_id": app_id,
+                        "app_name": app_name,
+                        "app_mode": app_mode,
+                    },
+                    resource_type="app",
+                    resource_id=app_id,
+                    operation_type="workflow",
+                )
+                logger.info(f"[AUDIT] delete_app log recorded successfully for app: {app_name}")
+            else:
+                logger.warning(
+                    f"[AUDIT] delete_app skipped - missing tenant_id: {current_tenant_id} or account_id: {current_user.id if current_user else None}"
+                )
+        except Exception as e:
+            logger.warning("Failed to record delete_app audit log: %s", e)
 
         return {"result": "success"}, 204
 

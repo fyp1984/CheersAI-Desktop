@@ -86,8 +86,15 @@ def log_operation(
         # Try to get tenant_id and account info - may fail during login before session is established
         try:
             tenant_id = getattr(current_user, "tenant_id", None) or getattr(current_user, "current_tenant_id", None)
+            print(f"[DEBUG] log_operation - user.tenant_id: {getattr(current_user, 'tenant_id', 'N/A')}")
+            print(
+                f"[DEBUG] log_operation - user.current_tenant_id: {getattr(current_user, 'current_tenant_id', 'N/A')}"
+            )
+            print(f"[DEBUG] log_operation - user.id: {getattr(current_user, 'id', 'N/A')}")
+
             if not tenant_id and hasattr(current_user, "current_tenant") and current_user.current_tenant:
                 tenant_id = str(current_user.current_tenant.id)
+                print(f"[DEBUG] log_operation - from current_tenant: {tenant_id}")
 
             account_id = (
                 str(current_user.id) if current_user and hasattr(current_user, "id") and current_user.id else None
@@ -95,15 +102,18 @@ def log_operation(
             account_name = (
                 current_user.name if current_user and hasattr(current_user, "name") and current_user.name else "unknown"
             )
-        except Exception:
+        except Exception as e:
             # During login, current_user might not have full attributes
+            print(f"[DEBUG] log_operation - exception getting user info: {e}")
             tenant_id = None
             account_id = None
             account_name = "unknown"
 
         # Skip logging if required fields are missing
         if not tenant_id or not account_id:
-            logger.warning("[AUDIT] Skipping - missing tenant_id or account_id")
+            logger.warning(
+                f"[AUDIT] Skipping - missing tenant_id ({tenant_id}) or account_id ({account_id}), action: {action}"
+            )
             return None
 
         log_entry = OperationLog(
@@ -131,7 +141,7 @@ def log_operation(
             session.add(log_entry)
             session.commit()
 
-        logger.info("[AUDIT] ✓ 记录操作日志: %s, log_id: %s", action, log_id)
+        logger.info(f"[AUDIT] ✓ Recorded: action={action}, tenant_id={tenant_id}, account_id={account_id}")
         return log_id
 
     except Exception as e:

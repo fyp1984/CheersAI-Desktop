@@ -179,18 +179,27 @@ class LoginApi(Resource):
 class LogoutApi(Resource):
     @setup_required
     def post(self):
-        current_user, _ = current_account_with_tenant()
+        current_user, tenant_id = current_account_with_tenant()
         account = current_user
         if isinstance(account, flask_login.AnonymousUserMixin):
             response = make_response({"result": "success"})
         else:
             # 记录登出审计日志
             try:
-                log_operation(
-                    action="logout",
-                    operation_type="chat",
-                    content={"email": account.email},
-                )
+                from services.audit_service import write_log
+
+                account_name = getattr(account, "name", None) or getattr(account, "email", None) or "unknown"
+                if tenant_id and getattr(account, "id", None):
+                    write_log(
+                        tenant_id=str(tenant_id),
+                        account_id=str(account.id),
+                        account_name=account_name,
+                        action="logout",
+                        operation_type="chat",
+                        content={"email": account.email},
+                        created_ip=extract_remote_ip(request),
+                        device_info=request.headers.get("User-Agent", "")[:255],
+                    )
             except Exception as e:
                 logger.warning("Failed to record logout audit log: %s", e)
 

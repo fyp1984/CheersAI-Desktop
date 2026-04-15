@@ -291,7 +291,12 @@ class OperationLogExportApi(Resource):
     @require_workspace_capabilities("desktop_audit_view")
     def post(self):
         """Export operation logs to Excel or PDF"""
+        import logging
+
+        logger = logging.getLogger(__name__)
+
         if not has_role_capability(current_user.role, "desktop_audit_view"):
+            logger.error(f"[EXPORT] Permission denied for user role: {current_user.role}")
             return {"error": "Permission denied"}, 403
 
         parser = console_ns.parser()
@@ -362,45 +367,53 @@ class OperationLogExportApi(Resource):
 
     def _export_excel(self, results):
         """Export to Excel format"""
-        output = BytesIO()
-        workbook = xlsxwriter.Workbook(output, {"in_memory": True})
-        worksheet = workbook.add_worksheet("审计日志")
+        import logging
 
-        headers = [
-            "时间",
-            "操作类型",
-            "操作行为",
-            "账户名称",
-            "IP地址",
-            "设备信息",
-            "执行耗时(ms)",
-            "脱敏状态",
-            "同步状态",
-            "错误信息",
-        ]
-        for col, header in enumerate(headers):
-            worksheet.write(0, col, header)
+        logger = logging.getLogger(__name__)
 
-        for row, (log, account) in enumerate(results, start=1):
-            worksheet.write(row, 0, log.created_at.strftime("%Y-%m-%d %H:%M:%S") if log.created_at else "")
-            worksheet.write(row, 1, log.operation_type or "")
-            worksheet.write(row, 2, log.action or "")
-            worksheet.write(row, 3, log.account_name or account.name if account else "")
-            worksheet.write(row, 4, log.created_ip or "")
-            worksheet.write(row, 5, log.device_info or "")
-            worksheet.write(row, 6, log.duration or 0)
-            worksheet.write(row, 7, log.desensitize_status or "")
-            worksheet.write(row, 8, log.sync_status or "")
-            worksheet.write(row, 9, log.error_message or "")
+        try:
+            output = BytesIO()
+            workbook = xlsxwriter.Workbook(output, {"in_memory": True})
+            worksheet = workbook.add_worksheet("Audit Logs")
 
-        workbook.close()
-        output.seek(0)
+            headers = [
+                "Time",
+                "Operation Type",
+                "Action",
+                "Account Name",
+                "IP Address",
+                "Device Info",
+                "Duration (ms)",
+                "Desensitize Status",
+                "Sync Status",
+                "Error Message",
+            ]
+            for col, header in enumerate(headers):
+                worksheet.write(0, col, header)
 
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        filename = f"CheersAI审计日志_{timestamp}.xlsx"
+            for row, (log, account) in enumerate(results, start=1):
+                worksheet.write(row, 0, log.created_at.strftime("%Y-%m-%d %H:%M:%S") if log.created_at else "")
+                worksheet.write(row, 1, log.operation_type or "")
+                worksheet.write(row, 2, log.action or "")
+                worksheet.write(row, 3, log.account_name or account.name if account else "")
+                worksheet.write(row, 4, log.created_ip or "")
+                worksheet.write(row, 5, log.device_info or "")
+                worksheet.write(row, 6, log.duration or 0)
+                worksheet.write(row, 7, log.desensitize_status or "")
+                worksheet.write(row, 8, log.sync_status or "")
+                worksheet.write(row, 9, log.error_message or "")
 
-        return Response(
-            output.getvalue(),
-            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename={filename}"},
-        )
+            workbook.close()
+            output.seek(0)
+
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            filename = f"CheersAI_AuditLogs_{timestamp}.xlsx"
+
+            return Response(
+                output.getvalue(),
+                mimetype="application/octet-stream",
+                headers={"Content-Disposition": f"attachment; filename={filename}"},
+            )
+        except Exception as e:
+            logger.error(f"[EXPORT] Error: {e}")
+            return {"error": str(e)}, 500
