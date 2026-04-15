@@ -26,6 +26,7 @@ import NewAudioButton from '@/app/components/base/new-audio-button'
 import Textarea from '@/app/components/base/textarea'
 import Toast from '@/app/components/base/toast'
 import Tooltip from '@/app/components/base/tooltip'
+import { API_PREFIX } from '@/config'
 import { cn } from '@/utils/classnames'
 import { useChatContext } from '../context'
 
@@ -326,7 +327,7 @@ const Operation: FC<OperationProps> = ({
                 : ''
               const fileName = `reply-${id.slice(0, 8)}.md`
               if (downloadPath) {
-                fetch('http://localhost:5001/console/api/data-masking/sandbox/files', {
+                fetch(`${API_PREFIX}/data-masking/sandbox/files`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ sandbox_path: downloadPath, file_name: fileName, content }),

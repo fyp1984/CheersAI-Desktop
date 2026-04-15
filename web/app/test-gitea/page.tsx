@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { API_PREFIX } from '@/config'
 
 export default function TestGiteaPage() {
   const [result, setResult] = useState('')
@@ -14,7 +15,7 @@ export default function TestGiteaPage() {
 
     try {
       const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1] || ''
-      const url = 'http://localhost:5001/console/api/gitea/files?path='
+      const url = `${API_PREFIX}/gitea/files?path=`
 
       const res = await fetch(url, {
         credentials: 'include',

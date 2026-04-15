@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Button from '@/app/components/base/button'
 import Toast from '@/app/components/base/toast'
+import { API_PREFIX } from '@/config'
 
 type GiteaConfig = {
   gitea_url: string
@@ -42,7 +43,7 @@ export default function GiteaSettingsPage() {
   async function loadConfig() {
     setLoading(true)
     try {
-      const res = await fetch('http://localhost:5001/console/api/gitea/config', {
+      const res = await fetch(`${API_PREFIX}/gitea/config`, {
         credentials: 'include',
       })
       if (!res.ok)
@@ -64,7 +65,7 @@ export default function GiteaSettingsPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const res = await fetch('http://localhost:5001/console/api/gitea/config', {
+      const res = await fetch(`${API_PREFIX}/gitea/config`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -96,7 +97,7 @@ export default function GiteaSettingsPage() {
     setTesting(true)
     setTestResult(null)
     try {
-      const res = await fetch('http://localhost:5001/console/api/gitea/config/test', {
+      const res = await fetch(`${API_PREFIX}/gitea/config/test`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
