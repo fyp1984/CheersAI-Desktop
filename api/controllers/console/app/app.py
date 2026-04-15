@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Literal, TypeAlias
 
-from flask import request
+from flask import current_app, request
 from flask_restx import Resource
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, computed_field, field_validator
 from sqlalchemy import select
@@ -31,6 +31,7 @@ from extensions.ext_database import db
 from libs.login import current_account_with_tenant, login_required
 from models import App, DatasetPermissionEnum, Workflow
 from models.model import IconType
+from services.audit_service import log_operation
 from services.app_dsl_service import AppDslService, ImportMode
 from services.app_service import AppService
 from services.enterprise.enterprise_service import EnterpriseService
@@ -528,6 +529,21 @@ class AppListApi(Resource):
         for app in app_pagination.items:
             app.has_draft_trigger = str(app.id) in draft_trigger_app_ids
 
+        try:
+            log_operation(
+                action="access_apps",
+                operation_type="agent",
+                content={
+                    "page": args.page,
+                    "limit": args.limit,
+                    "mode": args.mode,
+                    "keyword": args.name or "",
+                    "result_count": len(app_pagination.items),
+                },
+            )
+        except Exception as e:
+            current_app.logger.warning("Failed to record app list audit log: %s", e)
+
         pagination_model = AppPagination.model_validate(app_pagination, from_attributes=True)
         return pagination_model.model_dump(mode="json"), 200
 
@@ -575,6 +591,19 @@ class AppApi(Resource):
         if FeatureService.get_system_features().webapp_auth.enabled:
             app_setting = EnterpriseService.WebAppAuth.get_app_access_mode_by_id(app_id=str(app_model.id))
             app_model.access_mode = app_setting.access_mode
+
+        try:
+            log_operation(
+                action="access_agent" if app_model.mode == "agent-chat" else "access_app",
+                operation_type="agent",
+                content={
+                    "app_id": str(app_model.id),
+                    "app_name": app_model.name,
+                    "mode": app_model.mode,
+                },
+            )
+        except Exception as e:
+            current_app.logger.warning("Failed to record app detail audit log: %s", e)
 
         response_model = AppDetailWithSite.model_validate(app_model, from_attributes=True)
         return response_model.model_dump(mode="json")
