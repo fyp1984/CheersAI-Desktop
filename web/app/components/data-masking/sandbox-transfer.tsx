@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import {
   RiDownloadLine, RiUploadLine, RiLockLine, RiCheckLine, RiLock2Line, RiDeleteBinLine,
 } from '@remixicon/react'
+import { API_PREFIX } from '@/config'
 
 interface SandboxTransferProps { sandboxPath: string }
 const PIN_STORAGE_KEY = 'sandbox_export_pin'
@@ -38,7 +39,7 @@ export function SandboxTransfer({ sandboxPath }: SandboxTransferProps) {
     if (verifyPin !== savedPin) { setExportMsg('PIN \u5bc6\u7801\u9519\u8bef'); return }
     setIsExporting(true); setExportMsg('')
     try {
-      const res = await fetch('http://localhost:5001/console/api/data-masking/sandbox/export', {
+      const res = await fetch(`${API_PREFIX}/data-masking/sandbox/export`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sandbox_path: sandboxPath, pin: verifyPin }),
       })
@@ -58,7 +59,7 @@ export function SandboxTransfer({ sandboxPath }: SandboxTransferProps) {
     try {
       const formData = new FormData()
       formData.append('file', importFile); formData.append('pin', importPin); formData.append('sandbox_path', sandboxPath)
-      const res = await fetch('http://localhost:5001/console/api/data-masking/sandbox/import', { method: 'POST', body: formData })
+      const res = await fetch(`${API_PREFIX}/data-masking/sandbox/import`, { method: 'POST', body: formData })
       const text = await res.text()
       let data: Record<string, unknown>
       try { data = JSON.parse(text) } catch { setImportMsg(`\u540e\u7aef\u8fd4\u56de\u5f02\u5e38: ${text.slice(0, 200)}`); return }

@@ -9,6 +9,7 @@ import {
 } from '@remixicon/react'
 import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { API_PREFIX } from '@/config'
 import { useSandboxSecurity } from '@/context/use-sandbox-security'
 
 type SandboxFile = {
@@ -49,7 +50,7 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
     setError('')
     try {
       const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1] || ''
-      const url = `http://localhost:5001/console/api/gitea/files?path=${encodeURIComponent(path)}`
+      const url = `${API_PREFIX}/gitea/files?path=${encodeURIComponent(path)}`
       const res = await fetch(url, {
         credentials: 'include',
         headers: {
@@ -116,7 +117,7 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
       const loadGiteaConfig = async () => {
         try {
           const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1] || ''
-          const res = await fetch('http://localhost:5001/console/api/gitea/config', {
+          const res = await fetch(`${API_PREFIX}/gitea/config`, {
             credentials: 'include',
             headers: { 'X-CSRF-Token': csrfToken },
           })
@@ -176,7 +177,7 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
       const filePath = currentPath ? `${currentPath}/${name}` : name
 
       const res = await fetch(
-        `http://localhost:5001/console/api/gitea/files/${encodeURIComponent(filePath)}`,
+        `${API_PREFIX}/gitea/files/${encodeURIComponent(filePath)}`,
         {
           credentials: 'include',
           headers: {

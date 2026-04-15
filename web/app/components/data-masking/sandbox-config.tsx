@@ -2,11 +2,11 @@
 
 import { ArrowPathIcon, CheckCircleIcon, ClipboardDocumentIcon, EyeIcon, EyeSlashIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import { useCallback, useEffect, useState } from 'react'
+import { API_PREFIX } from '@/config'
 import { useSandboxSecurity } from '@/context/use-sandbox-security'
 import { generatePassphrase } from '@/lib/data-masking/crypto-utils'
 
 type SandboxConfigProps = { onConfigured?: (path: string) => void }
-const API_PREFIX = 'http://localhost:5001/console/api'
 
 async function fetchUserConfig(): Promise<Record<string, string>> {
   try {
@@ -142,7 +142,7 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
     if (!isAbsolute) { setError('请输入完整的绝对路径'); setIsValid(false); return }
     setIsLoading(true); setError('')
     try {
-      const res = await fetch(`http://localhost:5001/console/api/data-masking/sandbox/files/list?sandbox_path=${encodeURIComponent(trimmed)}`)
+      const res = await fetch(`${API_PREFIX}/data-masking/sandbox/files/list?sandbox_path=${encodeURIComponent(trimmed)}`)
       if (res.ok) { setIsValid(true); setCurrentPath(trimmed); setContextSandboxPath(trimmed); persistSetting('sandbox_path', trimmed); onConfigured?.(trimmed) }
       else { const d = await res.json().catch(() => ({})); setIsValid(false); setError(d.error || '路径验证失败') }
     }
