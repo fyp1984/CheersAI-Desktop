@@ -223,6 +223,20 @@ class ChatMessageApi(Resource):
                 app_model=app_model, user=current_user, args=args, invoke_from=InvokeFrom.DEBUGGER, streaming=streaming
             )
 
+            try:
+                log_operation(
+                    action="chat_message",
+                    operation_type="chat",
+                    content={
+                        "app_id": str(app_model.id),
+                        "app_name": app_model.name,
+                        "mode": app_model.mode,
+                        "query_length": len(args.get("query", "")),
+                    },
+                )
+            except Exception as e:
+                logger.warning("Failed to record chat audit log: %s", e)
+
             return helper.compact_generate_response(response)
         except services.errors.conversation.ConversationNotExistsError:
             status = "failed"

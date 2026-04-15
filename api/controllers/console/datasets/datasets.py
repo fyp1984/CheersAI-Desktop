@@ -56,6 +56,7 @@ from libs.login import current_account_with_tenant, login_required
 from models import ApiToken, Dataset, Document, DocumentSegment, UploadFile
 from models.dataset import DatasetPermissionEnum
 from models.provider_ids import ModelProviderID
+from services.audit_service import log_operation
 from services.dataset_service import DatasetPermissionService, DatasetService, DocumentService
 
 # Register models for flask_restx to avoid dict type issues in Swagger
@@ -349,6 +350,21 @@ class DatasetListApi(Resource):
             "total": total,
             "page": query.page,
         }
+
+        try:
+            log_operation(
+                action="access_datasets",
+                operation_type="knowledge",
+                content={
+                    "page": query.page,
+                    "limit": query.limit,
+                    "keyword": query.keyword or "",
+                    "result_count": len(data),
+                },
+            )
+        except Exception:
+            pass
+
         return response, 200
 
     @console_ns.doc("create_dataset")
@@ -435,6 +451,19 @@ class DatasetApi(Resource):
         if data.get("permission") == "partial_members":
             part_users_list = DatasetPermissionService.get_dataset_partial_member_list(dataset_id_str)
             data.update({"partial_member_list": part_users_list})
+
+        try:
+            log_operation(
+                action="access_dataset",
+                operation_type="knowledge",
+                content={
+                    "dataset_id": dataset_id_str,
+                    "dataset_name": dataset.name,
+                    "indexing_technique": dataset.indexing_technique,
+                },
+            )
+        except Exception:
+            pass
 
         # check embedding setting
         provider_manager = ProviderManager()

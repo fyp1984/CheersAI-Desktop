@@ -44,6 +44,13 @@ const AuditLogsPage = () => {
   const actionNameMap: Record<string, string> = {
     'login': '用户登录',
     'logout': '用户登出',
+    'access_apps': '访问应用列表',
+    'access_app': '访问应用详情',
+    'access_agent': '访问智能体',
+    'access_datasets': '访问知识库列表',
+    'access_dataset': '访问知识库详情',
+    'chat_message': '调用智能体对话',
+    'chat_completion': '调用大模型补全',
     'file_mask': '文件脱敏',
     'file_delete': '文件删除',
     'file_restore': '文件恢复',
