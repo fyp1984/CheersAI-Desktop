@@ -14,7 +14,6 @@ gitea_config_model = console_ns.model('GiteaConfig', {
     'gitea_url': fields.String(description='Gitea server URL'),
     'gitea_owner': fields.String(description='Repository owner'),
     'gitea_repo': fields.String(description='Repository name'),
-    'gitea_path': fields.String(description='Default path in repository'),
     'gitea_token': fields.String(description='API token (masked)'),
 })
 
@@ -50,8 +49,7 @@ class GiteaConfigApi(Resource):
         gitea_token = os.getenv('GITEA_TOKEN', '')
         gitea_owner = os.getenv('GITEA_OWNER', 'cheersai')
         gitea_repo = os.getenv('GITEA_REPO', 'file-storage')
-        gitea_path = os.getenv('GITEA_PATH', '')
-        
+
         # Mask the token for security
         masked_token = ''
         if gitea_token:
@@ -61,7 +59,6 @@ class GiteaConfigApi(Resource):
             'gitea_url': gitea_url,
             'gitea_owner': gitea_owner,
             'gitea_repo': gitea_repo,
-            'gitea_path': gitea_path,
             'gitea_token': masked_token,
         }
 
