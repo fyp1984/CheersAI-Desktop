@@ -1,13 +1,20 @@
 """Gitea configuration API endpoints."""
 import os
+import logging
 
+import requests
 from flask import request
 from flask_restx import Resource, fields
 
+from configs import dify_config
 from controllers.console import console_ns
 from controllers.console.wraps import setup_required
-from libs.login import login_required
+from extensions.ext_database import db
+from libs.login import current_user, login_required
+from models.account import Account
 from services.gitea_storage_service import GiteaStorageService
+
+logger = logging.getLogger(__name__)
 
 # Define API models
 gitea_config_model = console_ns.model('GiteaConfig', {
@@ -40,11 +47,54 @@ class GiteaConfigApi(Resource):
     @console_ns.marshal_with(gitea_config_model)
     def get(self):
         """
-        Get current Gitea configuration.
+        Get current Gitea configuration for the logged-in user.
         
         Returns:
             Current Gitea configuration (token is masked)
         """
+        # Get current user's email
+        user_email = current_user.email
+        logger.info(f'[Gitea Config] Getting config for user: {user_email}')
+        
+        # Try to get user-specific config from enterprise API
+        try:
+            tunnel_url = dify_config.CLOUDFLARE_TUNNEL_URL or 'https://moisture-people-detail-possible.trycloudflare.com'
+            enterprise_api_url = f'{tunnel_url}/inner/api/enterprise/gitea/config'
+            
+            logger.info(f'[Gitea Config] Calling enterprise API: {enterprise_api_url}?email={user_email}')
+            
+            response = requests.get(
+                enterprise_api_url,
+                params={'email': user_email},
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                config_data = response.json()
+                logger.info(f'[Gitea Config] Got user-specific config from enterprise API')
+                
+                gitea_url = config_data.get('gitea_url', '')
+                gitea_token = config_data.get('gitea_token', '')
+                gitea_owner = config_data.get('gitea_owner', 'cheersai')
+                gitea_repo = config_data.get('gitea_repo', 'file-storage')
+                
+                # Mask the token for security
+                masked_token = ''
+                if gitea_token:
+                    masked_token = gitea_token[:4] + '*' * (len(gitea_token) - 8) + gitea_token[-4:] if len(gitea_token) > 8 else '****'
+                
+                return {
+                    'gitea_url': gitea_url,
+                    'gitea_owner': gitea_owner,
+                    'gitea_repo': gitea_repo,
+                    'gitea_token': masked_token,
+                }
+            else:
+                logger.warning(f'[Gitea Config] Enterprise API returned {response.status_code}, falling back to env vars')
+        except Exception as e:
+            logger.warning(f'[Gitea Config] Failed to get config from enterprise API: {e}, falling back to env vars')
+        
+        # Fallback to environment variables
         gitea_url = os.getenv('FILEBAY_BASE_URL') or os.getenv('GITEA_URL', '')
         gitea_token = os.getenv('GITEA_TOKEN', '')
         gitea_owner = os.getenv('GITEA_OWNER', 'cheersai')

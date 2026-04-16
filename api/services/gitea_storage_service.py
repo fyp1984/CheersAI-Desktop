@@ -1,7 +1,38 @@
 """Gitea storage service for file retrieval."""
 import os
+import ssl
+import warnings
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.poolmanager import PoolManager
+
+# Suppress SSL warnings when verification is disabled
+warnings.filterwarnings('ignore', message='Unverified HTTPS request')
+
+
+class SSLAdapter(HTTPAdapter):
+    """Custom HTTPAdapter that uses legacy SSL settings for compatibility."""
+    
+    def init_poolmanager(self, *args, **kwargs):
+        """Initialize pool manager with custom SSL context."""
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        # Allow legacy SSL/TLS versions and weak ciphers for compatibility
+        try:
+            context.minimum_version = ssl.TLSVersion.TLSv1
+        except AttributeError:
+            # Python < 3.7
+            pass
+        try:
+            context.set_ciphers('DEFAULT@SECLEVEL=0')
+        except ssl.SSLError:
+            context.set_ciphers('DEFAULT')
+        # Disable certificate validation completely
+        context.options |= ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3
+        kwargs['ssl_context'] = context
+        return super().init_poolmanager(*args, **kwargs)
 
 
 class GiteaStorageService:
@@ -18,6 +49,13 @@ class GiteaStorageService:
 
         # Token is optional for public repositories
         self.use_auth = bool(self.gitea_token)
+        
+        # SSL verification setting (set to False for self-signed certificates)
+        self.verify_ssl = os.getenv("GITEA_VERIFY_SSL", "true").lower() == "true"
+        
+        # Create session - pyOpenSSL should already be injected by core.ssl_config
+        # No need for custom SSLAdapter when using pyOpenSSL
+        self.session = requests.Session()
 
     def get_file(self, file_path: str) -> bytes:
         """
@@ -36,7 +74,7 @@ class GiteaStorageService:
         if self.use_auth:
             headers["Authorization"] = f"token {self.gitea_token}"
         
-        response = requests.get(raw_url, headers=headers, timeout=30)
+        response = self.session.get(raw_url, headers=headers, timeout=30, verify=self.verify_ssl)
         
         if response.status_code == 200:
             return response.content
@@ -61,7 +99,7 @@ class GiteaStorageService:
         if self.use_auth:
             headers["Authorization"] = f"token {self.gitea_token}"
         
-        response = requests.get(api_url, headers=headers, timeout=10)
+        response = self.session.get(api_url, headers=headers, timeout=10, verify=self.verify_ssl)
         
         if response.status_code == 200:
             data = response.json()
@@ -94,7 +132,7 @@ class GiteaStorageService:
         if self.use_auth:
             headers["Authorization"] = f"token {self.gitea_token}"
         
-        response = requests.get(api_url, headers=headers, timeout=10)
+        response = self.session.get(api_url, headers=headers, timeout=10, verify=self.verify_ssl)
         
         if response.status_code == 200:
             data = response.json()

@@ -106,6 +106,7 @@ class Account(UserMixin, TypeBase):
     )
     status: Mapped[str] = mapped_column(String(16), server_default=sa.text("'active'"), default="active")
     initialized_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
+    custom_config: Mapped[str | None] = mapped_column(LongText, default=None)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.current_timestamp(), nullable=False, init=False
     )
@@ -232,6 +233,14 @@ class Account(UserMixin, TypeBase):
     @property
     def is_dataset_operator(self):
         return self.role == TenantAccountRole.DATASET_OPERATOR
+
+    @property
+    def custom_config_dict(self) -> dict[str, Any]:
+        return json.loads(self.custom_config) if self.custom_config else {}
+
+    @custom_config_dict.setter
+    def custom_config_dict(self, value: dict[str, Any]) -> None:
+        self.custom_config = json.dumps(value)
 
 
 class TenantStatus(enum.StrEnum):

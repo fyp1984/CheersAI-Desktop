@@ -273,7 +273,7 @@ export const useModelProviders = (enabled = true) => {
     refetchOnWindowFocus: true,
     refetchOnMount: 'always',
     refetchInterval: 5000,
-    enabled,
+    enabled: enabled && !!workspace?.id && !!userProfile?.profile?.id,
   })
 }
 
@@ -283,7 +283,7 @@ export const useModelListByType = (type: ModelTypeEnum, enabled = true) => {
   return useQuery<{ data: Model[] }>({
     queryKey: commonQueryKeys.modelList(type, workspace?.id, userProfile?.profile?.id),
     queryFn: () => get<{ data: Model[] }>(`/workspaces/current/models/model-types/${type}`),
-    enabled,
+    enabled: enabled && !!workspace?.id && !!userProfile?.profile?.id,
     refetchOnWindowFocus: true,
     refetchOnMount: 'always',
     refetchInterval: 5000,

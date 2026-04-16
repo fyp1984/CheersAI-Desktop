@@ -346,6 +346,34 @@ const ChatPage = () => {
     scrollToBottom()
   }, [messages])
 
+  const currentConversation = useMemo(
+    () => conversations.find(conversation => conversation.id === currentConversationId) || null,
+    [conversations, currentConversationId],
+  )
+
+  const filteredConversations = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase()
+    const sortedConversations = [...conversations].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+
+    if (!normalizedQuery)
+      return sortedConversations
+
+    return sortedConversations.filter((conversation) => {
+      const searchableText = [
+        conversation.title,
+        conversation.lastMessage,
+        ...conversation.messages.map(message => message.content),
+      ]
+        .join('\n')
+        .toLowerCase()
+
+      return searchableText.includes(normalizedQuery)
+    })
+  }, [conversations, searchQuery])
+
+  if (isLoadingCurrentWorkspace || !canUseChat)
+    return <Loading type="app" />
+
   const handleNewConversation = () => {
     const newConversation: Conversation = {
       id: Date.now().toString(),
@@ -385,31 +413,6 @@ const ChatPage = () => {
     setSelectedModel({ provider, model, label })
     setShowModelSelector(false)
   }
-
-  const currentConversation = useMemo(
-    () => conversations.find(conversation => conversation.id === currentConversationId) || null,
-    [conversations, currentConversationId],
-  )
-
-  const filteredConversations = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase()
-    const sortedConversations = [...conversations].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-
-    if (!normalizedQuery)
-      return sortedConversations
-
-    return sortedConversations.filter((conversation) => {
-      const searchableText = [
-        conversation.title,
-        conversation.lastMessage,
-        ...conversation.messages.map(message => message.content),
-      ]
-        .join('\n')
-        .toLowerCase()
-
-      return searchableText.includes(normalizedQuery)
-    })
-  }, [conversations, searchQuery])
 
   const handleRemoveFile = (fileId: string) => {
     setUploadedFiles(prev => prev.filter(f => f.id !== fileId))

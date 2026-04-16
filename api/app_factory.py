@@ -61,6 +61,11 @@ def create_flask_app_with_configs() -> DifyApp:
 
 
 def create_app() -> DifyApp:
+    # Configure SSL backend before any network operations
+    from core.ssl_config import configure_ssl_backend
+    ssl_result = configure_ssl_backend()
+    print(f"[SSL CONFIG] pyOpenSSL configured: {ssl_result}", flush=True)
+    
     start_time = time.perf_counter()
     app = create_flask_app_with_configs()
     initialize_extensions(app)

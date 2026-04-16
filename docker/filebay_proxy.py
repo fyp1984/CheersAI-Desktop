@@ -1,7 +1,21 @@
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.error import HTTPError
-from urllib.request import Request, urlopen
+
+# Force use of OpenSSL instead of schannel on Windows
+try:
+    import urllib3.contrib.pyopenssl
+    urllib3.contrib.pyopenssl.inject_into_urllib3()
+    print("✓ Using OpenSSL backend for SSL connections")
+except ImportError:
+    print("⚠ pyOpenSSL not available, using system SSL (may fail on some servers)")
+except Exception as e:
+    print(f"⚠ Failed to inject pyOpenSSL: {e}")
+
+import requests
+import urllib3
+
+# Disable SSL warnings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 UPSTREAM = os.environ.get("FILEBAY_UPSTREAM", "https://uat-filebay.cheersai.cloud").rstrip("/")
@@ -27,6 +41,15 @@ class FileBayProxyHandler(BaseHTTPRequestHandler):
 
     def do_HEAD(self):
         self._proxy(head_only=True)
+    
+    def do_POST(self):
+        self._proxy()
+    
+    def do_PUT(self):
+        self._proxy()
+    
+    def do_DELETE(self):
+        self._proxy()
 
     def log_message(self, format, *args):
         print(f"{self.client_address[0]} - {format % args}", flush=True)
@@ -39,20 +62,36 @@ class FileBayProxyHandler(BaseHTTPRequestHandler):
             if key.lower() not in HOP_BY_HOP_HEADERS and key.lower() != "host"
         }
 
+        # Read request body for POST/PUT
+        content_length = int(self.headers.get('Content-Length', 0))
+        body = self.rfile.read(content_length) if content_length > 0 else None
+
         try:
-            upstream_request = Request(target_url, headers=request_headers, method=self.command)
-            with urlopen(upstream_request, timeout=30) as response:
-                body = b"" if head_only else response.read()
-                self._write_response(response.status, response.headers.items(), body)
-        except HTTPError as exc:
-            body = b"" if head_only else exc.read()
-            self._write_response(exc.code, exc.headers.items(), body)
-        except Exception as exc:
-            body = str(exc).encode("utf-8", "ignore")
+            response = requests.request(
+                method=self.command,
+                url=target_url,
+                headers=request_headers,
+                data=body,
+                timeout=30,
+                verify=False,
+                allow_redirects=False
+            )
+            
+            response_body = b"" if head_only else response.content
+            self._write_response(response.status_code, response.headers.items(), response_body)
+        except requests.RequestException as exc:
+            error_body = str(exc).encode("utf-8", "ignore")
             self._write_response(
                 502,
                 [("Content-Type", "text/plain; charset=utf-8")],
-                body,
+                error_body,
+            )
+        except Exception as exc:
+            error_body = str(exc).encode("utf-8", "ignore")
+            self._write_response(
+                502,
+                [("Content-Type", "text/plain; charset=utf-8")],
+                error_body,
             )
 
     def _write_response(self, status: int, headers, body: bytes):
