@@ -214,7 +214,22 @@ def collect_sso_identifiers(payload: Mapping[str, Any] | None) -> list[str]:
 
 
 def has_desktop_access(payload: Mapping[str, Any] | None) -> bool:
-    return DESKTOP_ACCESS_CAPABILITY in collect_sso_identifiers(payload)
+    # Allow access if user has desktop_access capability
+    if DESKTOP_ACCESS_CAPABILITY in collect_sso_identifiers(payload):
+        return True
+    
+    # Auto-grant desktop_access to users with valid SSO roles
+    identifiers = collect_sso_identifiers(payload)
+    for identifier in identifiers:
+        if identifier in SSO_IDENTIFIER_TO_WORKSPACE_ROLE:
+            return True
+    
+    # Auto-grant desktop_access to all valid SSO users (with email and sub)
+    # This allows users without explicit roles to access the system
+    if payload and payload.get('sub') and payload.get('email'):
+        return True
+    
+    return False
 
 
 def resolve_workspace_role(payload: Mapping[str, Any] | None) -> tuple[str | None, str]:

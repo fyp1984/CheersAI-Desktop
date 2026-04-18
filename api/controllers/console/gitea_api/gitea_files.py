@@ -88,8 +88,8 @@ class GiteaFileApi(Resource):
             if not is_enterprise:
                 logger.info('[Gitea File Download] Falling back to user database config')
                 account = db.session.query(Account).filter_by(id=current_user.id).first()
-                if account and account.custom_config:
-                    user_config = account.custom_config_dict or {}
+                if account:
+                    user_config = account.custom_config_dict
             
             # Temporarily set env vars for GiteaStorageService
             original_env = {}
@@ -204,8 +204,8 @@ class GiteaFileMetadataApi(Resource):
             # Fall back to user's database config if no enterprise config
             if not is_enterprise:
                 account = db.session.query(Account).filter_by(id=current_user.id).first()
-                if account and account.custom_config:
-                    user_config = account.custom_config_dict or {}
+                if account:
+                    user_config = account.custom_config_dict
             
             # Temporarily set env vars for GiteaStorageService
             original_env = {}
@@ -318,8 +318,8 @@ class GiteaFileListApi(Resource):
             if not is_enterprise:
                 logger.info('[Gitea Files] Falling back to user database config')
                 account = db.session.query(Account).filter_by(id=current_user.id).first()
-                if account and account.custom_config:
-                    user_config = account.custom_config_dict or {}
+                if account:
+                    user_config = account.custom_config_dict
                     logger.info(f'[Gitea Files] User config: {user_config}')
             
             # Temporarily set env vars for GiteaStorageService
@@ -424,8 +424,8 @@ class GiteaFileUrlApi(Resource):
             # Fall back to user's database config if no enterprise config
             if not is_enterprise:
                 account = db.session.query(Account).filter_by(id=current_user.id).first()
-                if account and account.custom_config:
-                    user_config = account.custom_config_dict or {}
+                if account:
+                    user_config = account.custom_config_dict
             
             # Temporarily set env vars for GiteaStorageService
             original_env = {}

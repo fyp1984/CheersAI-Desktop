@@ -1,15 +1,14 @@
 """Inner API for Gitea configuration."""
 import json
 import logging
-import os
 
-from flask import request
+from flask import Response, request
 from flask_restx import Resource, fields
 
 from controllers.console.wraps import setup_required
 from controllers.inner_api import inner_api_ns
-from extensions.ext_database import db
-from models.account import Account
+from libs.login import current_user
+from services.filebay_config_service import resolve_filebay_config
 
 logger = logging.getLogger(__name__)
 
@@ -27,66 +26,46 @@ class EnterpriseGiteaConfigApi(Resource):
 
     method_decorators = [setup_required]
 
-    @inner_api_ns.marshal_with(gitea_config_model)
-    def get(self):
-        """
-        Get Gitea configuration for a specific user by email.
-        
-        Query Parameters:
-            email: User email address
-            
-        Returns:
-            User-specific Gitea configuration or default from env vars
-        """
-        user_email = request.args.get('email')
-        
-        if user_email:
-            logger.info(f'[Enterprise Gitea Config] Getting config for user: {user_email}')
-            
-            try:
-                # Query user from database
-                account = db.session.query(Account).filter_by(email=user_email).first()
-                
-                if account and account.custom_config:
-                    try:
-                        custom_config = json.loads(account.custom_config)
-                        filebay_config = custom_config.get('filebay', {})
-                        
-                        if filebay_config:
-                            logger.info(f'[Enterprise Gitea Config] Found FileBay config in custom_config for {user_email}')
-                            
-                            gitea_url = filebay_config.get('gitea_url', '')
-                            gitea_token = filebay_config.get('gitea_token', '')
-                            gitea_owner = filebay_config.get('gitea_owner', 'cheersai')
-                            gitea_repo = filebay_config.get('gitea_repo', 'file-storage')
-                            
-                            # Return unmasked token for backend-to-backend communication
-                            return {
-                                'gitea_url': gitea_url,
-                                'gitea_owner': gitea_owner,
-                                'gitea_repo': gitea_repo,
-                                'gitea_token': gitea_token,
-                            }
-                        else:
-                            logger.info(f'[Enterprise Gitea Config] No FileBay config found in custom_config for {user_email}')
-                    except json.JSONDecodeError as e:
-                        logger.warning(f'[Enterprise Gitea Config] Failed to parse custom_config for {user_email}: {e}')
-                else:
-                    logger.info(f'[Enterprise Gitea Config] No account or custom_config found for {user_email}')
-            except Exception as e:
-                logger.error(f'[Enterprise Gitea Config] Error querying user config: {e}')
-        
-        # Fallback to environment variables
-        logger.info('[Enterprise Gitea Config] Using default config from environment variables')
-        gitea_url = os.getenv('FILEBAY_BASE_URL') or os.getenv('GITEA_URL', '')
-        gitea_token = os.getenv('GITEA_TOKEN', '')
-        gitea_owner = os.getenv('GITEA_OWNER', 'cheersai')
-        gitea_repo = os.getenv('GITEA_REPO', 'file-storage')
+    def _resolve_identifier(self):
+        """解析用户标识符（email, username, user_id）"""
+        payload = request.get_json(silent=True) or {}
+        for key in ("email", "username", "user_id", "identifier"):
+            value = payload.get(key)
+            if value is None or value == "":
+                value = request.args.get(key, "").strip()
+            else:
+                value = str(value).strip()
+            if value:
+                return value
 
-        # Return unmasked token for backend-to-backend communication
-        return {
-            'gitea_url': gitea_url,
-            'gitea_owner': gitea_owner,
-            'gitea_repo': gitea_repo,
-            'gitea_token': gitea_token,
-        }
+        # 如果没有提供标识符，尝试使用当前登录用户
+        if getattr(current_user, "is_authenticated", False):
+            current_email = getattr(current_user, "email", "") or ""
+            if current_email:
+                return current_email.strip()
+        return ""
+
+    def _handle_request(self):
+        """处理请求"""
+        identifier = self._resolve_identifier()
+        if not identifier:
+            return {"message": "email, username, user_id or identifier is required."}, 400
+
+        try:
+            config = resolve_filebay_config(identifier, allow_global_fallback=False, mask_token=False)
+        except LookupError as exc:
+            logger.warning(f"[Enterprise Gitea Config] Lookup failed for {identifier}: {exc}")
+            return {"message": str(exc)}, 404
+        except Exception as exc:
+            logger.error(f"[Enterprise Gitea Config] Error for {identifier}: {exc}", exc_info=True)
+            return {"message": f"Failed to resolve FileBay config: {str(exc)}"}, 500
+
+        return Response(json.dumps(config.__dict__, ensure_ascii=False), mimetype="application/json")
+
+    def get(self):
+        """GET 请求"""
+        return self._handle_request()
+
+    def post(self):
+        """POST 请求"""
+        return self._handle_request()

@@ -392,7 +392,7 @@ html[data-theme="dark"] {
   --color-text-inverted: #ffffff;
   --color-text-inverted-dimmed: rgb(255 255 255 / 0.8);
 
-  --color-background-body: #1d1d20;
+  --color-background-body: #2a2d35;
   --color-background-default-subtle: #222225;
   --color-background-neutral-subtle: #1d1d20;
   --color-background-sidenav-bg: rgb(39 39 42 / 0.92);

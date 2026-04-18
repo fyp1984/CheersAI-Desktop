@@ -952,18 +952,18 @@ const ChatPage = () => {
   return (
     <div className="flex h-full bg-[#f9fafb] font-sans text-[#111827]">
       <div className={cn(
-        'flex flex-col border-r border-white/10 bg-[linear-gradient(180deg,#111827_0%,#1f2937_100%)] text-white transition-all duration-300 ease-in-out',
+        'flex flex-col border-r border-gray-200 bg-[linear-gradient(180deg,#e5e7eb_0%,#d1d5db_100%)] text-gray-800 transition-all duration-300 ease-in-out',
         sidebarCollapsed ? 'w-0 overflow-hidden border-r-0' : 'w-64',
       )}
       >
-        <div className="flex min-h-16 items-center justify-between border-b border-white/10 px-4 py-4">
+        <div className="flex min-h-16 items-center justify-between border-b border-gray-300 px-4 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#3b82f6_0%,#2563eb_100%)] shadow-md">
               <span className="text-sm font-semibold text-white">AI</span>
             </div>
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-white">CheersAI</div>
-              <div className="truncate text-xs text-gray-400">安全对话</div>
+              <div className="truncate text-sm font-semibold text-gray-900">CheersAI</div>
+              <div className="truncate text-xs text-gray-600">安全对话</div>
             </div>
           </div>
           <button
@@ -975,7 +975,7 @@ const ChatPage = () => {
           </button>
         </div>
 
-        <div className="border-b border-white/10 px-4 py-3">
+        <div className="border-b border-gray-300 px-4 py-3">
           <div className="relative">
             <RiSearchLine className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
             <input
@@ -983,7 +983,7 @@ const ChatPage = () => {
               placeholder="搜索对话..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/95 py-2 pl-10 pr-10 text-sm text-[#111827] placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#3b82f6]"
+              className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-10 text-sm text-[#111827] placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#3b82f6]"
             />
             {searchQuery && (
               <button
@@ -995,13 +995,13 @@ const ChatPage = () => {
               </button>
             )}
           </div>
-          <p className="mt-2 text-xs text-gray-400">{searchResultText}</p>
+          <p className="mt-2 text-xs text-gray-600">{searchResultText}</p>
         </div>
 
         <div className="flex-1 overflow-y-auto py-2">
           {filteredConversations.length === 0
             ? (
-                <div className="px-4 py-10 text-center text-sm text-gray-400">
+                <div className="px-4 py-10 text-center text-sm text-gray-600">
                   {searchQuery ? '未找到匹配的对话' : '暂无对话记录'}
                 </div>
               )
@@ -1019,10 +1019,10 @@ const ChatPage = () => {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 overflow-hidden">
-                        <h3 className="mb-1 truncate text-sm font-medium text-white">
+                        <h3 className="mb-1 truncate text-sm font-medium text-gray-900">
                           {conversation.title}
                         </h3>
-                        <p className="mb-1 truncate text-xs text-gray-400">
+                        <p className="mb-1 truncate text-xs text-gray-600">
                           {conversation.lastMessage || '暂无消息'}
                         </p>
                         <p className="text-xs text-gray-500">
@@ -1034,7 +1034,7 @@ const ChatPage = () => {
                           e.stopPropagation()
                           handleDeleteConversation(conversation.id)
                         }}
-                        className="flex h-6 w-6 items-center justify-center rounded text-gray-500 opacity-0 transition-all hover:bg-white/10 hover:text-white group-hover:opacity-100"
+                        className="flex h-6 w-6 items-center justify-center rounded text-gray-600 opacity-0 transition-all hover:bg-gray-300 hover:text-gray-900 group-hover:opacity-100"
                         title="删除对话"
                       >
                         <RiDeleteBinLine className="h-3.5 w-3.5" />

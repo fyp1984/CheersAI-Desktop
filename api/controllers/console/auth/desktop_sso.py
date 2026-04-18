@@ -297,6 +297,41 @@ class DesktopSSOLoginApi(Resource):
                 logger.error(f"Failed to record SSO login audit log: {e}", exc_info=True)
 
             logger.info("Desktop SSO Login success for: %s with role: %s", normalized_email, system_role)
+            
+            # Auto-provision FileBay for the user if not already configured
+            try:
+                # Refresh account to avoid stale data
+                db.session.refresh(account)
+                
+                custom_config = account.custom_config_dict
+                if not custom_config.get('gitea_url'):
+                    logger.info(f"[SSO Auto Provision] Triggering FileBay auto-provision for {normalized_email}")
+                    from services.filebay_config_service import resolve_filebay_config
+                    
+                    # Use resolve_filebay_config which handles auto-provision
+                    filebay_config = resolve_filebay_config(
+                        normalized_email,
+                        auto_provision=True,
+                        mask_token=False
+                    )
+                    
+                    # Save to account
+                    config_dict = {
+                        'gitea_url': filebay_config.gitea_url,
+                        'gitea_owner': filebay_config.gitea_owner,
+                        'gitea_repo': filebay_config.gitea_repo,
+                        'gitea_token': filebay_config.gitea_token,
+                    }
+                    account.custom_config_dict = config_dict
+                    db.session.commit()
+                    
+                    logger.info(f"[SSO Auto Provision] FileBay provisioned for {normalized_email}")
+                else:
+                    logger.info(f"[SSO Auto Provision] User {normalized_email} already has FileBay config")
+            except Exception as provision_error:
+                # Don't fail login if auto-provision fails
+                logger.error(f"[SSO Auto Provision] Failed for {normalized_email}: {provision_error}", exc_info=True)
+            
             return response
         except Exception as e:
             logger.error("Desktop SSO login failed: %s", str(e), exc_info=True)

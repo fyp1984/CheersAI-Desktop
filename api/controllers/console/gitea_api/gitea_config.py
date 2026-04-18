@@ -56,17 +56,17 @@ class GiteaConfigApi(Resource):
         user_email = current_user.email
         logger.info(f'[Gitea Config] Getting config for user: {user_email}')
         
-        # Try to get user-specific config from enterprise API
+        # Try to get user-specific config from local enterprise API
         try:
-            tunnel_url = dify_config.CLOUDFLARE_TUNNEL_URL or 'https://moisture-people-detail-possible.trycloudflare.com'
-            enterprise_api_url = f'{tunnel_url}/inner/api/enterprise/gitea/config'
+            # Use local API endpoint instead of external tunnel
+            enterprise_api_url = 'http://localhost:5001/inner/api/enterprise/gitea/config'
             
-            logger.info(f'[Gitea Config] Calling enterprise API: {enterprise_api_url}?email={user_email}')
+            logger.info(f'[Gitea Config] Calling local enterprise API: {enterprise_api_url}?email={user_email}')
             
             response = requests.get(
                 enterprise_api_url,
                 params={'email': user_email},
-                timeout=10
+                timeout=5
             )
             
             if response.status_code == 200:
@@ -90,9 +90,36 @@ class GiteaConfigApi(Resource):
                     'gitea_token': masked_token,
                 }
             else:
-                logger.warning(f'[Gitea Config] Enterprise API returned {response.status_code}, falling back to env vars')
+                logger.warning(f'[Gitea Config] Enterprise API returned {response.status_code}, falling back to user config')
         except Exception as e:
-            logger.warning(f'[Gitea Config] Failed to get config from enterprise API: {e}, falling back to env vars')
+            logger.warning(f'[Gitea Config] Failed to get config from enterprise API: {e}, falling back to user config')
+        
+        # Try to get from user's custom_config in database
+        try:
+            from models.account import Account
+            account = db.session.query(Account).filter_by(email=user_email).first()
+            if account and account.custom_config_dict:
+                user_config = account.custom_config_dict
+                if user_config.get('gitea_url'):
+                    logger.info(f'[Gitea Config] Using user database config')
+                    gitea_url = user_config.get('gitea_url', '')
+                    gitea_token = user_config.get('gitea_token', '')
+                    gitea_owner = user_config.get('gitea_owner', 'cheersai')
+                    gitea_repo = user_config.get('gitea_repo', 'file-storage')
+                    
+                    # Mask the token for security
+                    masked_token = ''
+                    if gitea_token:
+                        masked_token = gitea_token[:4] + '*' * (len(gitea_token) - 8) + gitea_token[-4:] if len(gitea_token) > 8 else '****'
+                    
+                    return {
+                        'gitea_url': gitea_url,
+                        'gitea_owner': gitea_owner,
+                        'gitea_repo': gitea_repo,
+                        'gitea_token': masked_token,
+                    }
+        except Exception as e:
+            logger.warning(f'[Gitea Config] Failed to get user database config: {e}')
         
         # Fallback to environment variables
         gitea_url = os.getenv('FILEBAY_BASE_URL') or os.getenv('GITEA_URL', '')
