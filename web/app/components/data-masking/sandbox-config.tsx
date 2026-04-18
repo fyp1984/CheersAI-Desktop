@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { API_PREFIX } from '@/config'
 import { useSandboxSecurity } from '@/context/use-sandbox-security'
 import { generatePassphrase } from '@/lib/data-masking/crypto-utils'
+import { useUserProfile } from '@/service/use-common'
 
 type SandboxConfigProps = { onConfigured?: (path: string) => void }
 
@@ -35,6 +36,7 @@ async function saveUserConfig(patch: Record<string, string>): Promise<void> {
 
 export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
   const { enabled: securityEnabled, setEnabled: setSecurityEnabled, setSandboxPath: setContextSandboxPath } = useSandboxSecurity()
+  const { data: userProfileData } = useUserProfile()
   const [sandboxPath, setSandboxPath] = useState('')
   const [currentPath, setCurrentPath] = useState('')
   const [isValid, setIsValid] = useState<boolean | null>(null)
@@ -59,6 +61,7 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
   const [giteaTestResult, setGiteaTestResult] = useState<{ success: boolean, message: string } | null>(null)
   const [giteaTesting, setGiteaTesting] = useState(false)
   const [giteaSaving, setGiteaSaving] = useState(false)
+  const [isEnterpriseManaged, setIsEnterpriseManaged] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -110,24 +113,68 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
           saveUserConfig(m)
       }
 
-      // Load Gitea configuration
+      // Load Gitea configuration - try enterprise-managed config first
+      const userEmail = userProfileData?.profile?.email
+      let enterpriseConfigLoaded = false
+      
+      console.log('[FileBay Config] Current user email:', userEmail)
+      
+      // Try to get enterprise-managed config through local API
       try {
-        const giteaRes = await fetch(`${API_PREFIX}/gitea/config`, { credentials: 'include' })
+        const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1] || ''
+        const giteaRes = await fetch(`${API_PREFIX}/gitea/config/enterprise`, {
+          credentials: 'include',
+          headers: { 'X-CSRF-Token': csrfToken },
+        })
+        console.log('[FileBay Config] Enterprise config API response status:', giteaRes.status)
+        
         if (giteaRes.ok) {
           const data = await giteaRes.json()
-          setGiteaUrl(data.gitea_url || '')
-          setGiteaOwner(data.gitea_owner || '')
-          setGiteaRepo(data.gitea_repo || '')
-          setGiteaPath(data.gitea_path || '')
-          setGiteaToken(data.gitea_token || '')
+          console.log('[FileBay Config] Enterprise config data:', data)
+          if (data.is_enterprise_managed) {
+            setGiteaUrl(data.gitea_url || '')
+            setGiteaOwner(data.gitea_owner || '')
+            setGiteaRepo(data.gitea_repo || '')
+            setGiteaPath(data.gitea_path || '')
+            setGiteaToken(data.gitea_token || '')
+            setIsEnterpriseManaged(true)
+            enterpriseConfigLoaded = true
+          }
+        }
+        else {
+          const errorText = await giteaRes.text()
+          console.log('[FileBay Config] Enterprise config API error:', errorText)
         }
       }
-      catch { /* ignore */ }
+      catch (error) {
+        console.error('[FileBay Config] Enterprise config API exception:', error)
+      }
+      
+      // Fall back to regular user config if enterprise config not found
+      if (!enterpriseConfigLoaded) {
+        console.log('[FileBay Config] Loading user config')
+        try {
+          const giteaRes = await fetch(`${API_PREFIX}/gitea/config`, { credentials: 'include' })
+          if (giteaRes.ok) {
+            const data = await giteaRes.json()
+            console.log('[FileBay Config] User config data:', data)
+            setGiteaUrl(data.gitea_url || '')
+            setGiteaOwner(data.gitea_owner || '')
+            setGiteaRepo(data.gitea_repo || '')
+            setGiteaPath(data.gitea_path || '')
+            setGiteaToken(data.gitea_token || '')
+            setIsEnterpriseManaged(false)
+          }
+        }
+        catch (error) {
+          console.error('[FileBay Config] User config API exception:', error)
+        }
+      }
 
       setConfigLoaded(true)
     })()
     return () => { cancelled = true }
-  }, [onConfigured, setContextSandboxPath, setSecurityEnabled])
+  }, [onConfigured, setContextSandboxPath, setSecurityEnabled, userProfileData?.profile?.email])
 
   const persistSetting = useCallback((key: string, value: string) => {
     localStorage.setItem(key, value); saveUserConfig({ [key]: value })
@@ -446,7 +493,19 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
       </div>
 
       <div className="rounded-lg border border-divider-regular bg-components-panel-bg p-4">
-        <h3 className="mb-3 text-sm font-medium text-text-primary">FileBay 文件存储配置</h3>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-medium text-text-primary">FileBay 文件存储配置</h3>
+          {isEnterpriseManaged && (
+            <span className="rounded-md bg-state-accent-hover px-2 py-1 text-xs font-medium text-text-accent">
+              企业托管
+            </span>
+          )}
+        </div>
+        {isEnterpriseManaged && (
+          <div className="mb-4 rounded-md border border-state-accent-hover-alt bg-state-accent-hover px-3 py-2">
+            <p className="text-xs text-text-accent">✓ 此配置由企业系统自动管理，无需手动配置</p>
+          </div>
+        )}
         <div className="space-y-4">
           <div>
             <label className="mb-1 block text-xs font-medium text-text-secondary">FileBay 服务器地址</label>
@@ -455,7 +514,8 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
               value={giteaUrl}
               onChange={e => setGiteaUrl(e.target.value)}
               placeholder="http://localhost:3000"
-              className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid"
+              disabled={isEnterpriseManaged}
+              className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid disabled:cursor-not-allowed disabled:opacity-60"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -466,7 +526,8 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
                 value={giteaOwner}
                 onChange={e => setGiteaOwner(e.target.value)}
                 placeholder="cheersai"
-                className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid"
+                disabled={isEnterpriseManaged}
+                className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
             <div>
@@ -476,7 +537,8 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
                 value={giteaRepo}
                 onChange={e => setGiteaRepo(e.target.value)}
                 placeholder="file-storage"
-                className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid"
+                disabled={isEnterpriseManaged}
+                className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
           </div>
@@ -487,7 +549,8 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
               value={giteaPath}
               onChange={e => setGiteaPath(e.target.value)}
               placeholder="留空表示根目录，例如: masked 或 documents/reports"
-              className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid"
+              disabled={isEnterpriseManaged}
+              className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid disabled:cursor-not-allowed disabled:opacity-60"
             />
             <p className="mt-1 text-xs text-text-tertiary">指定从仓库的哪个子目录读取文件</p>
           </div>
@@ -499,12 +562,14 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
                 value={giteaToken}
                 onChange={e => setGiteaToken(e.target.value)}
                 placeholder="输入新的 Token 或留空保持不变"
-                className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 pr-10 font-mono text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid"
+                disabled={isEnterpriseManaged}
+                className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 pr-10 font-mono text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid disabled:cursor-not-allowed disabled:opacity-60"
               />
               <button
                 type="button"
                 onClick={() => setShowGiteaToken(!showGiteaToken)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary"
+                disabled={isEnterpriseManaged}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {showGiteaToken ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
               </button>
@@ -526,14 +591,16 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
             </div>
           )}
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleGiteaSave}
-              disabled={giteaSaving}
-              className="inline-flex items-center rounded-md bg-components-button-primary-bg px-4 py-2 text-sm font-medium text-components-button-primary-text hover:bg-components-button-primary-bg-hover disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {giteaSaving ? '保存中...' : '保存配置'}
-            </button>
+            {!isEnterpriseManaged && (
+              <button
+                type="button"
+                onClick={handleGiteaSave}
+                disabled={giteaSaving}
+                className="inline-flex items-center rounded-md bg-components-button-primary-bg px-4 py-2 text-sm font-medium text-components-button-primary-text hover:bg-components-button-primary-bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {giteaSaving ? '保存中...' : '保存配置'}
+              </button>
+            )}
             <button
               type="button"
               onClick={handleGiteaTest}

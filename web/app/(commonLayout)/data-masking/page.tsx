@@ -23,8 +23,9 @@ import { FileList } from '@/app/components/data-masking/file-list'
 import { FileRestore } from '@/app/components/data-masking/file-restore'
 import { SandboxTransfer } from '@/app/components/data-masking/sandbox-transfer'
 import { RuleForm } from '@/app/components/data-masking/rule-form'
+import { SandboxConfig } from '@/app/components/data-masking/sandbox-config'
 
-type TabType = 'mask' | 'restore' | 'rules' | 'files' | 'transfer'
+type TabType = 'mask' | 'restore' | 'rules' | 'files' | 'transfer' | 'settings'
 
 function NeedSandbox() {
   return (
@@ -138,26 +139,26 @@ function DataMaskingPage() {
   const [editingRule, setEditingRule] = useState<MaskingRule | undefined>()
   const rulesManagerRef = useRef<RulesManager | null>(null)
 
-  useEffect(() => {
-    if (!isLoadingCurrentWorkspace && !canManageDataSecurity)
-      router.replace('/apps')
-  }, [canManageDataSecurity, isLoadingCurrentWorkspace, router])
-
-  if (isLoadingCurrentWorkspace || !canManageDataSecurity)
-    return <Loading type="app" />
-
+  // Load sandbox path from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('sandbox_path')
     if (saved && !saved.startsWith('['))
       setSandboxPath(saved)
   }, [])
 
+  // Initialize rules manager
   useEffect(() => {
     const mgr = new RulesManager()
     rulesManagerRef.current = mgr
     mgr.initialize().then(() => loadRules(mgr)).catch(console.error)
     return () => mgr.close()
   }, [])
+
+  // Redirect if no permission
+  useEffect(() => {
+    if (!isLoadingCurrentWorkspace && !canManageDataSecurity)
+      router.replace('/apps')
+  }, [canManageDataSecurity, isLoadingCurrentWorkspace, router])
 
   const loadRules = useCallback(async (mgr?: RulesManager) => {
     const manager = mgr || rulesManagerRef.current
@@ -226,19 +227,49 @@ function DataMaskingPage() {
     rules: '脱敏规则',
     files: '文件管理',
     transfer: '导出导入',
+    settings: '配置设置',
   }
+
+  // Show loading state
+  if (isLoadingCurrentWorkspace || !canManageDataSecurity)
+    return <Loading type="app" />
 
   return (
     <div className="relative flex h-0 shrink-0 grow flex-col overflow-y-auto bg-background-body">
       {/* Top header bar */}
-      <div className="sticky top-0 z-10 flex items-center justify-between bg-background-body px-12 pb-4 pt-7">
-        <h2 className="text-lg font-semibold text-text-primary">{TAB_TITLES[activeTab]}</h2>
-        {sandboxPath && (
-          <div className="flex items-center gap-1.5 text-xs text-text-quaternary bg-background-section rounded-lg px-3 py-1.5 border border-divider-subtle">
-            <RiFolderLine className="w-3.5 h-3.5 text-text-quaternary" />
-            <span className="truncate max-w-[300px]" title={sandboxPath}>{sandboxPath}</span>
-          </div>
-        )}
+      <div className="sticky top-0 z-10 bg-background-body px-12 pb-4 pt-7">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-text-primary">数据安全</h2>
+          {sandboxPath && (
+            <div className="flex items-center gap-1.5 text-xs text-text-quaternary bg-background-section rounded-lg px-3 py-1.5 border border-divider-subtle">
+              <RiFolderLine className="w-3.5 h-3.5 text-text-quaternary" />
+              <span className="truncate max-w-[300px]" title={sandboxPath}>{sandboxPath}</span>
+            </div>
+          )}
+        </div>
+        
+        {/* Tab Navigation */}
+        <div className="flex items-center gap-1 border-b border-divider-subtle">
+          {(Object.keys(TAB_TITLES) as TabType[]).map((tab) => {
+            const isActive = activeTab === tab
+            return (
+              <button
+                key={tab}
+                onClick={() => router.push(`/data-masking?tab=${tab}`)}
+                className={`px-4 py-2 text-sm font-medium transition-colors relative ${
+                  isActive
+                    ? 'text-text-accent'
+                    : 'text-text-tertiary hover:text-text-secondary'
+                }`}
+              >
+                {TAB_TITLES[tab]}
+                {isActive && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-components-button-primary-bg" />
+                )}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Content area */}
@@ -277,6 +308,10 @@ function DataMaskingPage() {
           needsSandbox
             ? <NeedSandbox />
             : <SandboxTransfer sandboxPath={sandboxPath} />
+        )}
+
+        {activeTab === 'settings' && (
+          <SandboxConfig onConfigured={(path) => setSandboxPath(path)} />
         )}
       </div>
 

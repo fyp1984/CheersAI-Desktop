@@ -34,13 +34,21 @@ def _patched_add_route(self: FlaskRouter, path: str, method: str, endpoint: Call
                 kwargs = self.resolve_endpoint_params(endpoint, all_params, body)
             except Exception as e:
                 error_response = self.handle_exception(e)
-                return jsonify(error_response), getattr(e, "status_code", 422)
+                status_code = getattr(e, "status_code", 422)
+                # Ensure status_code is an integer
+                if not isinstance(status_code, int):
+                    status_code = 422
+                return jsonify(error_response), status_code
 
             try:
                 result = endpoint(**kwargs)
             except Exception as e:
                 error_response = self.handle_exception(e)
-                return jsonify(error_response), getattr(e, "code", 500)
+                status_code = getattr(e, "code", 500)
+                # Ensure status_code is an integer
+                if not isinstance(status_code, int):
+                    status_code = 500
+                return jsonify(error_response), status_code
 
             # If decorators returned a Response directly, pass it through
             if isinstance(result, Response):

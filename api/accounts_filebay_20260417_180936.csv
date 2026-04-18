@@ -1,0 +1,8 @@
+﻿ID,邮箱,姓名,状态,创建时间,最后登录,FileBay状态,FileBay_URL,FileBay_Owner,FileBay_Repo,FileBay_Token
+c21153f2-21dd-40e4-b5f6-24d69bfc21fa,mock_test@example.com,Mock Test,active,2026-04-17 09:56:25,,已配置,https://uat-filebay.cheersai.cloud,mock_test_example_com_df138f,workspace,mock_token...01vwx234yz
+f5942dfe-b907-4967-8dd2-baf61de68582,no_config@example.com,No Config,active,2026-04-17 09:56:25,,已配置,https://new.example.com,new_user,new_repo,****
+625c7018-1f8b-49d9-a5e0-8309acd741c1,existing_config@example.com,Existing Config,active,2026-04-17 09:56:25,,已配置,https://test.example.com,test_user,test_repo,****
+a938dd34-c1ce-4369-aac0-508146168678,test_api_auto@example.com,Test API Auto,active,2026-04-17 09:54:07,,未配置,,,,
+3023b1ca-f320-4c02-9a6e-c051213fd9b0,test_auto_provision@example.com,Test Auto Provision,active,2026-04-17 09:54:06,,未配置,,,,
+f3056f10-d994-4c2b-8acd-c02c49c4e5d7,103456686@qq.com,103456686_qq_com_nzvhyt,active,2026-04-16 09:06:04,2026-04-16 09:06:07.001128,未配置,,,,
+68393244-8477-4691-9f70-8a7dec8090dc,1@qq.com,admin,active,2026-04-16 07:52:29,2026-04-16 07:52:30.639998,未配置,,,,

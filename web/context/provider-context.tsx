@@ -120,7 +120,7 @@ export const ProviderContextProvider = ({
     return capabilities.includes('desktop_model_provider_manage') || capabilities.includes('desktop_model_manage')
   })
   const { data: providersData } = useModelProviders(canManageModelProviders)
-  const { data: textGenerationModelList } = useModelListByType(ModelTypeEnum.textGeneration)
+  const { data: textGenerationModelList } = useModelListByType(ModelTypeEnum.textGeneration, canManageModelProviders)
   const { data: supportRetrievalMethods } = useSupportRetrievalMethods()
 
   const [plan, setPlan] = useState(defaultPlan)

@@ -120,6 +120,11 @@ class DeploymentConfig(BaseSettings):
         default="masked",
     )
 
+    CLOUDFLARE_TUNNEL_URL: str = Field(
+        description="Cloudflare Tunnel URL for accessing inner APIs",
+        default="https://moisture-people-detail-possible.trycloudflare.com",
+    )
+
     BETA_PROVISION_HTTP_TIMEOUT: int = Field(
         description="HTTP timeout in seconds for beta provisioning calls",
         default=10,
