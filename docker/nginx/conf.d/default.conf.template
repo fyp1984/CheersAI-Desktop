@@ -16,6 +16,40 @@ server {
       proxy_set_header Host ${NGINX_WEB_HOST_HEADER};
     }
 
+    location = /api/nexus/beta-applications/apply {
+      proxy_pass https://uat-nexus.cheersai.cloud/api/v1/beta-applications/apply;
+      proxy_http_version 1.1;
+      proxy_set_header Host uat-nexus.cheersai.cloud;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+      proxy_ssl_server_name on;
+      proxy_connect_timeout 60s;
+      proxy_send_timeout 300s;
+      proxy_read_timeout 300s;
+      proxy_buffering off;
+    }
+
+    location = /api/nexus/beta-applications/apply/ {
+      proxy_pass https://uat-nexus.cheersai.cloud/api/v1/beta-applications/apply;
+      proxy_http_version 1.1;
+      proxy_set_header Host uat-nexus.cheersai.cloud;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+      proxy_ssl_server_name on;
+      proxy_connect_timeout 60s;
+      proxy_send_timeout 300s;
+      proxy_read_timeout 300s;
+      proxy_buffering off;
+    }
+
+    location /api/nexus/ {
+      proxy_pass http://${NGINX_WEB_UPSTREAM};
+      include proxy.conf;
+      proxy_set_header Host $host;
+    }
+
     location /api {
       proxy_pass http://api:5001;
       include proxy.conf;
