@@ -100,6 +100,20 @@ class TestAccountModelValidation:
         # Assert
         assert account.status == "active"
 
+    def test_account_custom_config_dict_property(self):
+        """Test account custom_config mapping and helper property."""
+        account = Account(
+            name="Test User",
+            email="test@example.com",
+            password="hashed_password",
+            interface_language="en-US",
+        )
+
+        account.custom_config_dict = {"gitea_url": "https://uat-filebay.cheersai.cloud"}
+
+        assert "custom_config" in Account.__table__.columns.keys()
+        assert account.custom_config_dict["gitea_url"] == "https://uat-filebay.cheersai.cloud"
+
     def test_account_get_status_method(self):
         """Test the get_status method returns AccountStatus enum."""
         # Arrange

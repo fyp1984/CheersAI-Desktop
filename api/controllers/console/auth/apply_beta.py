@@ -30,6 +30,67 @@ def reg(cls: type[BaseModel]):
 reg(ApplyBetaPayload)
 
 
+def submit_beta_application(*, args: ApplyBetaPayload, remote_addr: str | None, user_agent: str | None):
+    request_email = args.email
+    normalized_email = request_email.lower()
+    name = args.name
+    company = args.company
+    use_case = args.use_case
+    language = args.language or "zh-Hans"
+
+    # Validate email format
+    try:
+        validate_email(normalized_email)
+    except ValueError as e:
+        return {"result": "fail", "data": str(e)}, 400
+
+    # Duplicate check for active applications
+    try:
+        existing_application = (
+            db.session.query(BetaApplication)
+            .filter(
+                BetaApplication.email == normalized_email,
+                BetaApplication.status.in_(BLOCK_DUPLICATE_STATUSES),
+            )
+            .first()
+        )
+        if existing_application:
+            return {
+                "result": "fail",
+                "data": "This email has already submitted a beta application.",
+            }, 400
+
+        beta_app = BetaApplication(
+            id=str(uuid4()),
+            email=normalized_email,
+            name=name,
+            language=language,
+            company=company,
+            use_case=use_case,
+            status="pending",
+            ip_address=remote_addr,
+            user_agent=(user_agent or "")[:500],
+        )
+        db.session.add(beta_app)
+        db.session.commit()
+        BetaApplicationNotificationService.send_submitted_email(
+            application_id=beta_app.id,
+            to=beta_app.email,
+            name=beta_app.name,
+            language=language,
+        )
+
+        return {
+            "result": "success",
+            "data": "Application submitted successfully. Please wait for administrator review.",
+            "application_id": beta_app.id,
+            "status": beta_app.status,
+        }, 201
+    except Exception as db_error:
+        db.session.rollback()
+        return {"result": "fail", "data": f"Application failed: {str(db_error)}"}, 400
+
+
 @console_ns.route("/apply-beta")
 class ApplyBetaApi(Resource):
     """Resource for beta application."""
@@ -39,61 +100,8 @@ class ApplyBetaApi(Resource):
     def post(self):
         """Submit beta application."""
         args = ApplyBetaPayload.model_validate(console_ns.payload)
-        request_email = args.email
-        normalized_email = request_email.lower()
-        name = args.name
-        company = args.company
-        use_case = args.use_case
-        language = args.language or "zh-Hans"
-
-        # Validate email format
-        try:
-            validate_email(normalized_email)
-        except ValueError as e:
-            return {"result": "fail", "data": str(e)}, 400
-
-        # Duplicate check for active applications
-        try:
-            existing_application = (
-                db.session.query(BetaApplication)
-                .filter(
-                    BetaApplication.email == normalized_email,
-                    BetaApplication.status.in_(BLOCK_DUPLICATE_STATUSES),
-                )
-                .first()
-            )
-            if existing_application:
-                return {
-                    "result": "fail",
-                    "data": "This email has already submitted a beta application.",
-                }, 400
-
-            beta_app = BetaApplication(
-                id=str(uuid4()),
-                email=normalized_email,
-                name=name,
-                language=language,
-                company=company,
-                use_case=use_case,
-                status="pending",
-                ip_address=request.remote_addr,
-                user_agent=request.headers.get("User-Agent", "")[:500],
-            )
-            db.session.add(beta_app)
-            db.session.commit()
-            BetaApplicationNotificationService.send_submitted_email(
-                application_id=beta_app.id,
-                to=beta_app.email,
-                name=beta_app.name,
-                language=language,
-            )
-
-            return {
-                "result": "success",
-                "data": "Application submitted successfully. Please wait for administrator review.",
-                "application_id": beta_app.id,
-                "status": beta_app.status,
-            }, 201
-        except Exception as db_error:
-            db.session.rollback()
-            return {"result": "fail", "data": f"Application failed: {str(db_error)}"}, 400
+        return submit_beta_application(
+            args=args,
+            remote_addr=request.remote_addr,
+            user_agent=request.headers.get("User-Agent"),
+        )
