@@ -32,6 +32,8 @@ Do not invoke when:
 5. Ensure release code matches the remote Git branch exactly.
 6. Separate server deployment from local Docker workflows.
 7. Keep monitoring and rollback paths explicit.
+8. Support a local-authoritative release mode when the user explicitly chooses to deploy the current local workspace.
+9. For tool gateways, prefer one domain plus path prefixes over multiple throwaway subdomains.
 
 ## Recommended Directory Layout
 
@@ -52,6 +54,24 @@ scripts/
     README.md
   infra/
     init-server.sh
+```
+
+For multi-tool gateways, extend the product directory with:
+
+```text
+scripts/
+  tools-uat/
+    env.sh
+    check-env.sh
+    00-deploy-all.sh
+    01-build.sh
+    02-push.sh
+    03-release.sh
+    04-monitor.sh
+    bootstrap-<deploy-user>.sh
+    prepare-<dependency>.sh
+    deploy-tools.sh
+    README.md
 ```
 
 ## Stage Responsibilities
@@ -94,6 +114,7 @@ Rules:
 - If release artifacts are built locally, build before push.
 - If code is synced first and built on the server, push before build.
 - Use explicit stage numbering to reflect the real order for that product.
+- If the user says the current local version is authoritative, allow a controlled bypass such as `RELEASE_SOURCE_MODE=local` and document the risk.
 
 ### 03 Release Stage
 
@@ -121,6 +142,10 @@ Before build or push:
 5. Fast-forward pull if local branch is behind origin.
 6. Print the commit SHA being released.
 
+Exception:
+
+- If the user explicitly requests deployment from the local working tree, keep the Git validation visible, but allow a deliberate override instead of forcing fast-forward sync.
+
 Reference logic:
 
 ```bash
@@ -145,6 +170,9 @@ Check at least:
 - Required commands exist
 - SSH connectivity works
 - Remote staging directory available
+- Runtime dependencies exist, such as MongoDB, Redis, PostgreSQL, or Java
+- Domain DNS and SSL readiness are checked
+- Reverse-proxy read permissions are checked for static roots under `/home/<user>`
 
 ## Cloud vs Local Docker Separation
 
@@ -165,6 +193,23 @@ Typical local Docker scripts:
 Rule:
 
 - Never mix local Docker helper scripts with cloud UAT release scripts in the same product directory unless they are proxied intentionally.
+
+## Gateway Pattern
+
+Use a gateway pattern when several lightweight tools share one host:
+
+- One public domain, many path prefixes, for example `/ts/`, `/survey/`, `/rm/`
+- Static tools served directly by Nginx
+- Dynamic tools proxied to loopback ports
+- One operator-facing README and one monitoring entrypoint
+- One deploy user and one application root such as `/home/cheersai/apps/tools`
+
+When adopting this pattern, validate:
+
+- Path-base compatibility in frontend builds
+- Route fallback behavior for SPA assets
+- Nginx worker permission to traverse parent directories
+- Cloud-layer or ICP restrictions if Host-header testing differs from on-box testing
 
 ## Naming Conventions
 

@@ -400,17 +400,12 @@ export const applyForBeta = async (body: { email: string, name: string, language
     payload = await response.json() as Record<string, any>
   }
   catch {
-    if (!response.ok) {
+    if (!response.ok)
       throw new Error('申请失败，请稍后重试')
-    }
   }
 
-  if (payload?.result === 'success') {
+  if (payload?.result === 'success' || payload?.code === 200)
     return { result: 'success' }
-  }
-  if (payload?.code === 200) {
-    return { result: 'success' }
-  }
 
   const errorMessage = payload?.message || payload?.data || '申请失败，请稍后重试'
   throw new Error(String(errorMessage))
