@@ -124,7 +124,9 @@ const defaultAppData = {
 
 vi.mock('@/service/use-apps', () => ({
   useInfiniteAppList: () => ({
-    data: defaultAppData,
+    data: mockServiceState.error
+      ? { pages: [] }
+      : defaultAppData,
     isLoading: mockServiceState.isLoading,
     isFetchingNextPage: mockServiceState.isFetchingNextPage,
     fetchNextPage: mockFetchNextPage,
@@ -682,13 +684,22 @@ describe('List', () => {
   })
 
   describe('Error State', () => {
-    it('should handle error state in useEffect', () => {
+    it('should render reload state instead of empty state when app query fails', () => {
       mockServiceState.error = new Error('Test error')
-      const { container } = render(<List />)
+      render(<List />)
 
-      // Component should still render
-      expect(container).toBeInTheDocument()
-      // Disconnect should be called when there's an error (cleanup)
+      expect(screen.getByText('app.newApp.loadAppsFailed')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'common.operation.reload' })).toBeInTheDocument()
+      expect(screen.queryByTestId('empty-state')).not.toBeInTheDocument()
+    })
+
+    it('should refetch when reload button is clicked', () => {
+      mockServiceState.error = new Error('Test error')
+      render(<List />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'common.operation.reload' }))
+
+      expect(mockRefetch).toHaveBeenCalled()
     })
   })
 })

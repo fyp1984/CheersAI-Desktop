@@ -12,13 +12,13 @@ import type {
 } from '@/models/app'
 import type { App } from '@/types/app'
 import {
-  keepPreviousData,
   useInfiniteQuery,
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
 import { AppModeEnum } from '@/types/app'
 import { get, post } from './base'
+import { useCurrentWorkspace, useUserProfile } from './use-common'
 import { useInvalid } from './use-base'
 
 const NAME_SPACE = 'apps'
@@ -69,9 +69,20 @@ const normalizeAppListParams = (params: AppListParams) => {
   }
 }
 
-const appListKey = (params: AppListParams) => [NAME_SPACE, 'list', params]
+const appListKey = (params: AppListParams, workspaceId?: string, userId?: string) => [
+  NAME_SPACE,
+  'list',
+  workspaceId ?? '',
+  userId ?? '',
+  params,
+]
 
-const useAppFullListKey = [NAME_SPACE, 'full-list']
+const appFullListKey = (workspaceId?: string, userId?: string) => [
+  NAME_SPACE,
+  'full-list',
+  workspaceId ?? '',
+  userId ?? '',
+]
 
 export const useGenerateRuleTemplate = (type: GeneratorType, disabled?: boolean) => {
   return useQuery({
@@ -96,33 +107,45 @@ export const useAppDetail = (appID: string) => {
 
 export const useAppList = (params: AppListParams, options?: { enabled?: boolean }) => {
   const normalizedParams = normalizeAppListParams(params)
+  const { data: currentWorkspace } = useCurrentWorkspace()
+  const { data: userProfile } = useUserProfile()
+  const workspaceId = currentWorkspace?.id
+  const userId = userProfile?.profile?.id
   return useQuery<AppListResponse>({
-    queryKey: appListKey(normalizedParams),
+    queryKey: appListKey(normalizedParams, workspaceId, userId),
     queryFn: () => get<AppListResponse>('/apps', { params: normalizedParams }),
-    ...options,
+    enabled: (options?.enabled ?? true) && !!workspaceId && !!userId,
   })
 }
 
 export const useAppFullList = () => {
+  const { data: currentWorkspace } = useCurrentWorkspace()
+  const { data: userProfile } = useUserProfile()
+  const workspaceId = currentWorkspace?.id
+  const userId = userProfile?.profile?.id
   return useQuery<AppListResponse>({
-    queryKey: useAppFullListKey,
+    queryKey: appFullListKey(workspaceId, userId),
     queryFn: () => get<AppListResponse>('/apps', { params: { page: 1, limit: 100, name: '' } }),
+    enabled: !!workspaceId && !!userId,
   })
 }
 
 export const useInvalidateAppFullList = () => {
-  return useInvalid(useAppFullListKey)
+  return useInvalid([NAME_SPACE, 'full-list'])
 }
 
 export const useInfiniteAppList = (params: AppListParams, options?: { enabled?: boolean }) => {
   const normalizedParams = normalizeAppListParams(params)
+  const { data: currentWorkspace } = useCurrentWorkspace()
+  const { data: userProfile } = useUserProfile()
+  const workspaceId = currentWorkspace?.id
+  const userId = userProfile?.profile?.id
   return useInfiniteQuery<AppListResponse>({
-    queryKey: appListKey(normalizedParams),
+    queryKey: appListKey(normalizedParams, workspaceId, userId),
     queryFn: ({ pageParam = normalizedParams.page }) => get<AppListResponse>('/apps', { params: { ...normalizedParams, page: pageParam } }),
     getNextPageParam: lastPage => lastPage.has_more ? lastPage.page + 1 : undefined,
     initialPageParam: normalizedParams.page,
-    placeholderData: keepPreviousData,
-    ...options,
+    enabled: (options?.enabled ?? true) && !!workspaceId && !!userId,
   })
 }
 

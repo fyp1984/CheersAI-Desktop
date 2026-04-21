@@ -166,6 +166,7 @@
   "newApp.hideTemplates": "返回应用类型选择",
   "newApp.import": "导入",
   "newApp.learnMore": "了解更多",
+  "newApp.loadAppsFailed": "应用列表加载失败，请刷新重试",
   "newApp.nameNotEmpty": "名称不能为空",
   "newApp.noAppsFound": "未找到应用",
   "newApp.noIdeaTip": "没有想法？试试我们的模板",
