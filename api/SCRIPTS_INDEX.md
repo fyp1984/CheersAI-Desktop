@@ -67,6 +67,8 @@ python check_gitea_env.py              # Gitea环境变量
 python create_admin.py                 # 创建管理员
 python fix_admin_role.py               # 修复管理员角色
 python restore_admin.py                # 恢复管理员
+python fix_user_current_workspace.py   # 修复用户当前工作区
+python remove_user_from_workspace.py   # 从工作区移除用户
 ```
 
 ---
@@ -80,8 +82,8 @@ python restore_admin.py                # 恢复管理员
 | 修复脚本 | 7个 | fix_*.py, reset_*.py, reindex_*.py, retry_*.py |
 | 测试脚本 | 2个 | test_*.py |
 | 配置脚本 | 1个 | save_*.py |
-| 管理脚本 | 3个 | create_*.py, restore_*.py |
-| **总计** | **38个** | |
+| 管理脚本 | 5个 | create_*.py, restore_*.py, remove_*.py |
+| **总计** | **40个** | |
 
 ---
 
@@ -133,10 +135,12 @@ python restore_admin.py                # 恢复管理员
 ### 配置管理（1个）
 - save_gitea_config.py
 
-### 用户管理（3个）
+### 用户管理（5个）
 - create_admin.py
 - fix_admin_role.py
 - restore_admin.py
+- fix_user_current_workspace.py
+- remove_user_from_workspace.py
 
 ---
 

@@ -58,8 +58,8 @@ class GiteaFileApi(Resource):
             # Try enterprise API first
             if user_email:
                 try:
-                    tunnel_url = dify_config.CLOUDFLARE_TUNNEL_URL or 'https://moisture-people-detail-possible.trycloudflare.com'
-                    enterprise_api_url = f'{tunnel_url}/inner/api/enterprise/gitea/config'
+                    # Use local API endpoint instead of external tunnel
+                    enterprise_api_url = 'http://localhost:5001/inner/api/enterprise/gitea/config'
                     
                     logger.info(f'[Gitea File Download] Calling enterprise API for {user_email}')
                     
@@ -178,8 +178,8 @@ class GiteaFileMetadataApi(Resource):
             # Try enterprise API first
             if user_email:
                 try:
-                    tunnel_url = dify_config.CLOUDFLARE_TUNNEL_URL or 'https://moisture-people-detail-possible.trycloudflare.com'
-                    enterprise_api_url = f'{tunnel_url}/inner/api/enterprise/gitea/config'
+                    # Use local API endpoint instead of external tunnel
+                    enterprise_api_url = 'http://localhost:5001/inner/api/enterprise/gitea/config'
                     
                     response = requests.get(
                         enterprise_api_url,
@@ -281,8 +281,8 @@ class GiteaFileListApi(Resource):
             # Try enterprise API first
             if user_email:
                 try:
-                    tunnel_url = dify_config.CLOUDFLARE_TUNNEL_URL or 'https://moisture-people-detail-possible.trycloudflare.com'
-                    enterprise_api_url = f'{tunnel_url}/inner/api/enterprise/gitea/config'
+                    # Use local API endpoint instead of external tunnel
+                    enterprise_api_url = 'http://localhost:5001/inner/api/enterprise/gitea/config'
                     
                     logger.info(f'[Gitea Files] Calling enterprise API: {enterprise_api_url}?email={user_email}')
                     
@@ -398,8 +398,8 @@ class GiteaFileUrlApi(Resource):
             # Try enterprise API first
             if user_email:
                 try:
-                    tunnel_url = dify_config.CLOUDFLARE_TUNNEL_URL or 'https://moisture-people-detail-possible.trycloudflare.com'
-                    enterprise_api_url = f'{tunnel_url}/inner/api/enterprise/gitea/config'
+                    # Use local API endpoint instead of external tunnel
+                    enterprise_api_url = 'http://localhost:5001/inner/api/enterprise/gitea/config'
                     
                     response = requests.get(
                         enterprise_api_url,
@@ -469,3 +469,4 @@ class GiteaFileUrlApi(Resource):
         except Exception as e:
             logger.error(f'[Gitea URL] Failed: {str(e)}', exc_info=True)
             return {'error': f'Failed to get file URL: {str(e)}'}, 500
+

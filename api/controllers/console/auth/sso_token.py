@@ -61,7 +61,9 @@ class SSOTokenExchangeApi(Resource):
             }
             
             logger.info("Calling SSO token endpoint: %s", token_url)
-            token_response = requests.post(token_url, data=token_data, timeout=10)
+            # Skip SSL verification for development/UAT environments
+            ssl_verify = dify_config.BETA_PROVISION_SSL_VERIFY
+            token_response = requests.post(token_url, data=token_data, timeout=10, verify=ssl_verify)
             
             if token_response.status_code != 200:
                 logger.error(f"SSO token exchange failed: {token_response.status_code} - {token_response.text}")
@@ -79,7 +81,8 @@ class SSOTokenExchangeApi(Resource):
             headers = {'Authorization': f'Bearer {access_token}'}
             
             logger.info("Fetching user info from: %s", userinfo_url)
-            userinfo_response = requests.get(userinfo_url, headers=headers, timeout=10)
+            ssl_verify = dify_config.BETA_PROVISION_SSL_VERIFY
+            userinfo_response = requests.get(userinfo_url, headers=headers, timeout=10, verify=ssl_verify)
             
             if userinfo_response.status_code != 200:
                 logger.error(f"Failed to get user info: {userinfo_response.status_code}")
