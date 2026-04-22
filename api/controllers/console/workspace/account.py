@@ -5,7 +5,7 @@ from typing import Literal
 
 import pytz
 from flask import request
-from flask_restx import Resource, fields, marshal_with
+from flask_restx import Resource, abort, fields, marshal_with
 from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -45,7 +45,9 @@ from libs.login import current_account_with_tenant, login_required
 from models import AccountIntegrate, InvitationCode
 from services.account_service import AccountService
 from services.billing_service import BillingService
+from services.errors.account import AccountPasswordError as ServiceAccountPasswordError
 from services.errors.account import CurrentPasswordIncorrectError as ServiceCurrentPasswordIncorrectError
+from services.sso_account_service import SSOAccountService
 
 DEFAULT_REF_TEMPLATE_SWAGGER_2_0 = "#/definitions/{model}"
 
@@ -345,11 +347,17 @@ class AccountPasswordApi(Resource):
         current_user, _ = current_account_with_tenant()
         payload = console_ns.payload or {}
         args = AccountPasswordPayload.model_validate(payload)
+        sso_account_service = SSOAccountService()
 
         try:
-            AccountService.update_account_password(current_user, args.password, args.new_password)
+            if sso_account_service.is_sso_account(current_user):
+                sso_account_service.update_password(current_user, args.password, args.new_password)
+            else:
+                AccountService.update_account_password(current_user, args.password, args.new_password)
         except ServiceCurrentPasswordIncorrectError:
             raise CurrentPasswordIncorrectError()
+        except ServiceAccountPasswordError as e:
+            abort(400, description=e.description or str(e))
 
         return _serialize_account(current_user)
 

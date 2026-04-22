@@ -18,7 +18,7 @@ def get_signed_file_url(
     use_proxy_path: bool = False,
 ) -> str:
     if use_proxy_path:
-        url = f"/oauth-api/files/{upload_file_id}/file-preview"
+        url = f"/oauth-api/files/{upload_file_id}/file-preview/"
     else:
         base_url = dify_config.FILES_URL if for_external else (dify_config.INTERNAL_FILES_URL or dify_config.FILES_URL)
         url = f"{base_url}/files/{upload_file_id}/file-preview"

@@ -121,7 +121,7 @@ class AvatarUrlField(fields.Raw):
         if isinstance(obj, Account) and obj.avatar is not None:
             if obj.avatar.startswith(("http://", "https://")):
                 return obj.avatar
-            return file_helpers.get_signed_file_url(obj.avatar)
+            return file_helpers.get_signed_file_url(obj.avatar, use_proxy_path=True)
         return None
 
 

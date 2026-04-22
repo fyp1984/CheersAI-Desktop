@@ -4,6 +4,22 @@ import { useEffect, useRef } from 'react'
 import Toast from '@/app/components/base/toast'
 import { exchangeSSOToken } from '@/service/sso'
 
+const getCookieValue = (name: string) => {
+  const prefix = `${name}=`
+  return document.cookie
+    .split(';')
+    .map(item => item.trim())
+    .find(item => item.startsWith(prefix))
+    ?.slice(prefix.length) || ''
+}
+
+const clearDesktopSSOCache = () => {
+  sessionStorage.removeItem('desktop-sso-state')
+  sessionStorage.removeItem('desktop-sso-code-verifier')
+  document.cookie = 'desktop-sso-state=; Path=/; Max-Age=0; SameSite=Lax'
+  document.cookie = 'desktop-sso-code-verifier=; Path=/; Max-Age=0; SameSite=Lax'
+}
+
 export default function OAuthCallbackPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -27,8 +43,8 @@ export default function OAuthCallbackPage() {
       return
     }
 
-    const storedState = sessionStorage.getItem('desktop-sso-state')
-    const codeVerifier = sessionStorage.getItem('desktop-sso-code-verifier')
+    const storedState = sessionStorage.getItem('desktop-sso-state') || decodeURIComponent(getCookieValue('desktop-sso-state'))
+    const codeVerifier = sessionStorage.getItem('desktop-sso-code-verifier') || decodeURIComponent(getCookieValue('desktop-sso-code-verifier'))
     if (state !== storedState) {
       console.error('[SSO] State mismatch - stored:', storedState, 'received:', state)
       Toast.notify({ type: 'error', message: 'SSO login failed: state mismatch' })
@@ -47,8 +63,7 @@ export default function OAuthCallbackPage() {
 
     exchangeSSOToken({ code, state, redirectUri, codeVerifier })
       .then(async () => {
-        sessionStorage.removeItem('desktop-sso-state')
-        sessionStorage.removeItem('desktop-sso-code-verifier')
+        clearDesktopSSOCache()
         await new Promise<void>((resolve) => {
           const redirectTimer = window.setTimeout(() => {
             window.clearTimeout(redirectTimer)
@@ -59,8 +74,7 @@ export default function OAuthCallbackPage() {
       })
       .catch((error) => {
         console.error('[SSO] Token exchange failed:', error)
-        sessionStorage.removeItem('desktop-sso-state')
-        sessionStorage.removeItem('desktop-sso-code-verifier')
+        clearDesktopSSOCache()
         Toast.notify({ type: 'error', message: 'SSO login failed' })
         router.replace('/signin')
       })
