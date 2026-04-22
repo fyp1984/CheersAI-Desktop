@@ -1,4 +1,5 @@
 import { get, post } from './base'
+import { getDesktopSSOLoginBaseUrl } from './sso-desktop-config'
 
 export const getUserSAMLSSOUrl = (invite_token?: string) => {
   const url = invite_token ? `/enterprise/sso/saml/login?invite_token=${invite_token}` : '/enterprise/sso/saml/login'
@@ -26,7 +27,7 @@ export type DesktopSSOLoginUrlParams = {
 
 export const getDesktopSSOLoginUrl = (params: DesktopSSOLoginUrlParams) => {
   const { clientId, redirectUri, state, protocol = 'oauth', codeChallenge, codeChallengeMethod = 'S256' } = params
-  const ssoBaseUrl = process.env.NEXT_PUBLIC_DESKTOP_SSO_LOGIN_URL?.trim()
+  const ssoBaseUrl = getDesktopSSOLoginBaseUrl()
   if (!ssoBaseUrl)
     throw new Error('NEXT_PUBLIC_DESKTOP_SSO_LOGIN_URL is not configured')
   const normalizedProtocol = protocol === 'oauth2' ? 'oauth' : protocol

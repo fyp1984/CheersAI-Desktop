@@ -4,6 +4,7 @@ import logging
 from flask import request
 from flask_restx import Resource, fields
 
+from configs import dify_config
 from controllers.console import console_ns
 from extensions.ext_database import db
 from extensions.ext_redis import redis_client
@@ -155,6 +156,11 @@ class DesktopSSOLoginApi(Resource):
 
             normalized_email = email.lower()
             resolved_sso_role, system_role = resolve_workspace_role(data)
+            subject_parts = subject_id.split("/", 1)
+            sso_owner = subject_parts[0] if len(subject_parts) == 2 and subject_parts[0] else (
+                dify_config.SSO_PROVISION_OWNER or "CheersAI"
+            )
+            sso_username = (data.get("preferred_username") or (subject_parts[1] if len(subject_parts) == 2 else "") or name).strip()
             logger.info(
                 "Resolved Desktop SSO subject %s with identifier '%s' to workspace role '%s'",
                 subject_id,
@@ -261,6 +267,18 @@ class DesktopSSOLoginApi(Resource):
                 )
                 save_desktop_sso_projection(account.id, tenant_join.tenant_id, projection)
 
+            custom_config = account.custom_config_dict
+            custom_config.update({
+                "desktop_sso_subject": subject_id,
+                "desktop_sso_owner": sso_owner,
+                "desktop_sso_username": sso_username,
+                "desktop_sso_preferred_username": (data.get("preferred_username") or "").strip(),
+                "desktop_sso_email": normalized_email,
+                "desktop_sso_password_set": bool(custom_config.get("desktop_sso_password_set")),
+            })
+            account.custom_config_dict = custom_config
+            db.session.commit()
+
             logger.info("Generating tokens for: %s", normalized_email)
             token_pair = AccountService.login(
                 account=account,
@@ -290,11 +308,11 @@ class DesktopSSOLoginApi(Resource):
                     created_ip=extract_remote_ip(request),
                 )
                 if log_id:
-                    logger.info(f"SSO login audit logged, log_id: {log_id}")
+                    logger.info("SSO login audit logged, log_id: %s", log_id)
                 else:
                     logger.error("SSO login write_log returned None!")
             except Exception as e:
-                logger.error(f"Failed to record SSO login audit log: {e}", exc_info=True)
+                logger.error("Failed to record SSO login audit log: %s", e, exc_info=True)
 
             logger.info("Desktop SSO Login success for: %s with role: %s", normalized_email, system_role)
             
@@ -305,7 +323,7 @@ class DesktopSSOLoginApi(Resource):
                 
                 custom_config = account.custom_config_dict
                 if not custom_config.get('gitea_url'):
-                    logger.info(f"[SSO Auto Provision] Triggering FileBay auto-provision for {normalized_email}")
+                    logger.info("[SSO Auto Provision] Triggering FileBay auto-provision for %s", normalized_email)
                     from services.filebay_config_service import resolve_filebay_config
                     
                     # Use resolve_filebay_config which handles auto-provision
@@ -315,22 +333,22 @@ class DesktopSSOLoginApi(Resource):
                         mask_token=False
                     )
                     
-                    # Save to account
-                    config_dict = {
+                    # Preserve existing Desktop SSO metadata when enriching FileBay settings.
+                    custom_config.update({
                         'gitea_url': filebay_config.gitea_url,
                         'gitea_owner': filebay_config.gitea_owner,
                         'gitea_repo': filebay_config.gitea_repo,
                         'gitea_token': filebay_config.gitea_token,
-                    }
-                    account.custom_config_dict = config_dict
+                    })
+                    account.custom_config_dict = custom_config
                     db.session.commit()
                     
-                    logger.info(f"[SSO Auto Provision] FileBay provisioned for {normalized_email}")
+                    logger.info("[SSO Auto Provision] FileBay provisioned for %s", normalized_email)
                 else:
-                    logger.info(f"[SSO Auto Provision] User {normalized_email} already has FileBay config")
+                    logger.info("[SSO Auto Provision] User %s already has FileBay config", normalized_email)
             except Exception as provision_error:
                 # Don't fail login if auto-provision fails
-                logger.error(f"[SSO Auto Provision] Failed for {normalized_email}: {provision_error}", exc_info=True)
+                logger.error("[SSO Auto Provision] Failed for %s: %s", normalized_email, provision_error, exc_info=True)
             
             return response
         except Exception as e:

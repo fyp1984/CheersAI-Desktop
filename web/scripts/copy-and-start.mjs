@@ -79,7 +79,8 @@ const main = async () => {
 
   // Start server
   const port = process.env.npm_config_port || process.env.PORT || '3000'
-  const host = process.env.npm_config_host || process.env.HOSTNAME || '0.0.0.0'
+  // Docker injects HOSTNAME as the container id, which is not a bindable listen host.
+  const host = process.env.npm_config_host || process.env.HOST || '0.0.0.0'
 
   console.info(`Starting server on ${host}:${port}`)
   console.debug(`Server script path: ${SERVER_SCRIPT_PATH}`)

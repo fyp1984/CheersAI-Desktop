@@ -18,7 +18,7 @@ import { IS_CE_EDITION, validPassword } from '@/config'
 import { useAppContext } from '@/context/app-context'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 import { useProviderContext } from '@/context/provider-context'
-import { updateUserProfile } from '@/service/common'
+import { updateSSOPassword, updateUserProfile } from '@/service/common'
 import { useAppList } from '@/service/use-apps'
 import DeleteAccount from '../delete-account'
 
@@ -104,13 +104,10 @@ export default function AccountPage() {
       return
     try {
       setEditing(true)
-      await updateUserProfile({
-        url: 'account/password',
-        body: {
-          password: currentPassword,
-          new_password: password,
-          repeat_new_password: confirmPassword,
-        },
+      await updateSSOPassword({
+        password: currentPassword,
+        new_password: password,
+        repeat_new_password: confirmPassword,
       })
       notify({ type: 'success', message: t('actionMsg.modifiedSuccessfully', { ns: 'common' }) })
       mutateUserProfile()
@@ -120,7 +117,6 @@ export default function AccountPage() {
     }
     catch (e) {
       notify({ type: 'error', message: (e as Error).message })
-      setEditPasswordModalVisible(false)
       setEditing(false)
     }
   }

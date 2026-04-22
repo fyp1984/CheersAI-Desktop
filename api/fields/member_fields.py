@@ -25,7 +25,7 @@ def _build_avatar_url(avatar: str | None) -> str | None:
         return None
     if avatar.startswith(("http://", "https://")):
         return avatar
-    return file_helpers.get_signed_file_url(avatar)
+    return file_helpers.get_signed_file_url(avatar, use_proxy_path=True)
 
 
 class ResponseModel(BaseModel):

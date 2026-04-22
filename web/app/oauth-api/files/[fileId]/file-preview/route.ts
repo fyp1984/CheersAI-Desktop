@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
-const FILES_BASE_URL = process.env.INTERNAL_API_BASE_URL || 'http://127.0.0.1:8080'
+const FILES_BASE_URL = process.env.INTERNAL_FILES_URL || process.env.INTERNAL_API_BASE_URL || 'http://api:5001'
 
 export async function GET(
   request: NextRequest,

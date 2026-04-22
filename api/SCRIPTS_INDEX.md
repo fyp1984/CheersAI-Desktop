@@ -1,27 +1,31 @@
-# API 脚本和文档总索引
+# API 脚本索引
 
-欢迎使用 Dify API 工具脚本集合！本文档是所有脚本和文档的入口。
+本索引只保留当前仍有维护价值的辅助脚本。历史性的批量检查、一次性调试和过程性排障脚本已在清理中移除。
 
-## 📚 文档导航
+## 保留脚本
 
-### 快速开始
-- **[快速参考手册](./QUICK_REFERENCE.md)** ⭐ - 最常用命令速查
-- **[最佳实践指南](./scripts/BEST_PRACTICES.md)** - 使用建议和注意事项
+### 文档处理
+- `queue_document.py` - 将文档加入处理队列
+- `trigger_index.py` - 触发索引流程
+- `trigger_indexing.py` - 触发索引任务
+- `trigger_one_doc.py` - 触发单个文档索引
+- `trigger_simple.py` - 简化触发入口
+- `retry_failed_docs.py` - 重试失败文档
+- `reset_all_errors.py` - 重置文档错误状态
 
-### 详细文档
-- **[脚本详细目录](./scripts/SCRIPTS_CATALOG.md)** - 所有38个脚本的完整说明
-- **[脚本整理方案](./SCRIPTS_ORGANIZATION.md)** - 目录结构和迁移计划
-- **[文档目录](./docs/README.md)** - 知识库和插件相关文档
+### 管理与配置
+- `create_admin.py` - 创建管理员账号
+- `fix_admin_role.py` - 修复管理员角色
+- `restore_admin.py` - 恢复管理员账号状态
+- `save_filebay_token.py` - 保存 FileBay 令牌配置
 
-### 专题文档
-- [知识库调试工具使用指南](./docs/知识库调试工具使用指南.md)
-- [知识库调试快速参考](./docs/知识库调试快速参考.md)
-- [自动修复任务说明](./docs/自动修复任务说明.md)
-- [dify_extractor插件配置说明](./docs/dify_extractor插件配置说明.md)
+## 相关文档
 
----
+- `docs/README.md` - API 文档入口
+- `START_SERVICES.md` - API 启动说明
+- `QUICK_REFERENCE.md` - 常用命令速查
 
-## 🎯 按使用场景查找
+## 维护规则
 
 ### 我想检查文档状态
 ```bash

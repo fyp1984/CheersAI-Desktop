@@ -1,21 +1,18 @@
 # API 文档目录
 
-本目录包含 Dify API 相关的文档和工具说明。
+本目录仅保留仍有长期维护价值的 API 说明文档。一次性测试报告、修复总结和临时调试沉淀已从仓库中清理。
 
-> 💡 **快速导航**: 
-> - 查找工具脚本？请看 [脚本总索引](../SCRIPTS_INDEX.md)
-> - 需要快速参考？请看 [快速参考手册](../QUICK_REFERENCE.md)
-> - 想了解最佳实践？请看 [最佳实践指南](../scripts/BEST_PRACTICES.md)
+## 保留文档
 
-## 📚 文档列表
+### FileBay 与 SSO 流程
+- [FileBay用户配置流程](./FileBay用户配置流程.md)
+- [FileBay自动配置完整实现](./FileBay自动配置完整实现.md)
+- [SSO到FileBay完整自动化流程](./SSO到FileBay完整自动化流程.md)
 
-### 知识库相关
-- [知识库调试工具使用指南](./知识库调试工具使用指南.md) - 详细的知识库调试工具使用说明
-- [知识库调试快速参考](./知识库调试快速参考.md) - 快速参考手册
-- [自动修复任务说明](./自动修复任务说明.md) - 自动修复任务的配置和使用
+### 插件与实现
+- [dify_extractor插件配置说明](./dify_extractor插件配置说明.md)
 
-### 插件配置
-- [dify_extractor插件配置说明](./dify_extractor插件配置说明.md) - Dify Extractor 插件的配置指南
+## 使用建议
 
 ### 工作区和用户管理
 - [工作区配置同步问题完整解决方案](./工作区配置同步问题完整解决方案.md) - 工作区配置同步问题的完整分析和解决方案
@@ -25,8 +22,11 @@
 - [删除用户工作区关联操作记录](./删除用户工作区关联操作记录.md) - 删除用户工作区关联的操作记录
 
 ## 🛠️ 工具脚本
+- 服务启动与运行入口以 [START_SERVICES.md](../START_SERVICES.md) 为准
+- API 辅助脚本优先查看 [SCRIPTS_INDEX.md](../SCRIPTS_INDEX.md)
+- 需要快速操作概览时查看 [QUICK_REFERENCE.md](../QUICK_REFERENCE.md)
 
-### 知识库检查工具（位于 api/ 根目录）
+## 维护规则
 
 #### 文档状态检查
 - `check_all_docs_status.py` - 检查所有文档的状态

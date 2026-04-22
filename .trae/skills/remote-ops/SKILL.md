@@ -13,8 +13,12 @@ This skill manages remote server operations safely and efficiently by utilizing 
 2.  **Service Build (`build`)**: Triggers a safe build process on the server (backend dependencies, database migrations, frontend build).
 3.  **Service Management (`manage`)**: Restarts or checks the status of services.
 4.  **Full Deployment (`deploy`)**: Combines sync, build, and restart in one flow.
+5.  **Bootstrap (`bootstrap`)**: Initializes deploy users, runtime directories, and one-time dependencies.
+6.  **Gateway Rollout (`gateway`)**: Publishes multiple tools under one shared domain and path-prefix layout.
 
 ## Usage
+
+This skill should prefer standardized scripts under `CheersAI - docs/技术/scripts/<product>-uat` instead of ad-hoc SSH command sequences.
 
 ### 1. Sync Code (Local -> Remote)
 
@@ -63,6 +67,45 @@ ssh -t sso@121.41.195.46 "sudo /home/desktop/CheersAI-Desktop/scripts/server_man
 ssh -t sso@121.41.195.46 "sudo /home/desktop/CheersAI-Desktop/scripts/server_manage.sh status"
 ```
 
+### 4. Multi-Tool Gateway Deployment
+
+Use this when several lightweight products share one gateway domain.
+
+Reference layout:
+
+```text
+/home/cheersai/apps/tools/current
+  gateway/
+  ts/
+  survey/
+  rm/
+```
+
+Reference workflow:
+
+```bash
+bash "/Users/FYP/Documents/WorkSpace/CheersAI/CheersAI - docs/技术/scripts/tools-uat/check-env.sh"
+ALLOW_DIRTY_BUILD=1 RELEASE_SOURCE_MODE=local bash "/Users/FYP/Documents/WorkSpace/CheersAI/CheersAI - docs/技术/scripts/tools-uat/00-deploy-all.sh"
+```
+
+Reference bootstrap:
+
+```bash
+scp "/Users/FYP/Documents/WorkSpace/CheersAI/CheersAI - docs/技术/scripts/tools-uat/bootstrap-cheersai-user.sh" sso@121.41.195.46:/tmp/
+ssh -t sso@121.41.195.46 "sudo bash /tmp/bootstrap-cheersai-user.sh"
+
+scp "/Users/FYP/Documents/WorkSpace/CheersAI/CheersAI - docs/技术/scripts/tools-uat/prepare-survey-mongo.sh" sso@121.41.195.46:/tmp/
+ssh -t sso@121.41.195.46 "sudo bash /tmp/prepare-survey-mongo.sh"
+```
+
+Rules:
+
+- Dynamic services stay on loopback ports, for example `127.0.0.1:18188`
+- Static services are served by Nginx aliases
+- Prefer `cheersai` as the deploy user for shared tools
+- Keep sensitive runtime config in `/home/cheersai/apps/tools/config`
+- Validate both app status and Nginx permission to read the static release tree
+
 ## Recommended Workflow for Fixes
 
 When applying a fix (e.g., frontend code change):
@@ -74,6 +117,14 @@ When applying a fix (e.g., frontend code change):
 5.  **Verify**: Check the website.
 6.  **Commit**: Commit changes to Git (optional but recommended).
 
+For gateway deployments, extend verification with:
+
+1. `curl -I -H 'Host: <domain>' http://127.0.0.1/<path>/`
+2. `systemctl is-active <service>`
+3. `nginx -t`
+4. HTML keyword checks for branding and page entrypoints
+5. Static asset checks such as logo or favicon URLs
+
 ## Configuration
 
 - **Server IP**: `121.41.195.46`
@@ -83,3 +134,16 @@ When applying a fix (e.g., frontend code change):
 - **Log Directory**: `/home/desktop/logs`
 - **API / Web / Plugin Ports**: `8080 / 3100 / 5002-5003`
 - **Weaviate Ports**: `8081 / 50051`
+
+## Tools Gateway Example
+
+- **Server IP**: `121.41.195.46`
+- **Deploy User**: `cheersai`
+- **Bootstrap User**: `sso`
+- **App Directory**: `/home/cheersai/apps/tools`
+- **Config Directory**: `/home/cheersai/apps/tools/config`
+- **Release Roots**: `/home/cheersai/release/staging/tools`, `/home/cheersai/release/releases/tools`
+- **Gateway Domain**: `tools.cheersai.cloud`
+- **Path Prefixes**: `/ts/`, `/survey/`, `/rm/`
+- **Survey Port**: `18188`
+- **Survey Dependency**: MongoDB on `127.0.0.1:27017`

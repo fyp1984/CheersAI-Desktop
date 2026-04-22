@@ -190,6 +190,7 @@ const List: FC<Props> = ({
   const hasAnyApp = (pages[0]?.total ?? 0) > 0
   // Show skeleton during initial load or when refetching with no previous data
   const showSkeleton = isLoading || (isFetching && pages.length === 0)
+  const showLoadError = !!error && pages.length === 0
 
   return (
     <>
@@ -235,6 +236,23 @@ const List: FC<Props> = ({
           {(() => {
             if (showSkeleton)
               return <AppCardSkeleton count={6} />
+
+            if (showLoadError) {
+              return (
+                <div className="col-span-full flex min-h-[320px] flex-col items-center justify-center gap-4 text-center">
+                  <div className="system-md-medium text-text-secondary">
+                    {t('newApp.loadAppsFailed', { ns: 'app' })}
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-divider-deep px-4 py-2 system-sm-medium text-text-secondary hover:bg-state-base-hover"
+                    onClick={() => refetch()}
+                  >
+                    {t('operation.reload', { ns: 'common' })}
+                  </button>
+                </div>
+              )
+            }
 
             if (hasAnyApp) {
               return pages.flatMap(({ data: apps }) => apps).map(app => (

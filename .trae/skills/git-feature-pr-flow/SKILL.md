@@ -32,6 +32,54 @@ Do not invoke when:
 5. Push the feature branch first, then merge through Pull Request.
 6. Complete optimization, testing, and validation before requesting merge.
 
+## Git Hygiene Guardrails
+
+Treat Git as the source of durable product code, configuration templates, stable documentation, and reusable tests. Do not use Git as a dump area for local debugging residue or process-time artifacts.
+
+### Default Exclusions
+
+The following file classes should be excluded from version control unless the user explicitly approves them as durable repository assets:
+
+- One-off debug scripts such as `debug_*.py`, `check_*.py`, `tmp_*.ts`, `test_manual_*`, `verify_*`
+- Process documentation such as `修复总结.md`, `测试记录.md`, `立即操作.md`, `当前状态.md`, `交接说明.md`
+- Local validation outputs such as screenshots, exports, archives, masked samples, `.bak`, `.tmp`, `.log`
+- Local sandbox and upload artifacts such as `sandbox/uploads/*`, scratch data, copied fixtures, temporary archives
+- Temporary test pages or debug routes such as `test-*.tsx`, `debug-*.tsx`, throwaway admin pages, manual inspection UIs
+- Secrets or secret-like helper files such as hardcoded token scripts, local credential notes, copied `.env` variants, plaintext passwords
+
+### What To Keep
+
+Keep files in Git only when they are part of the maintained product surface:
+
+- Production code and stable infrastructure code
+- Reusable automated tests that protect real behavior
+- Template configs such as `.env.example`
+- Stable architecture, deployment, or product docs
+- Long-term operational scripts that are safe, reviewed, and reusable
+
+### Ignore Strategy
+
+When a file is not meant for durable collaboration, keep it out of Git using the smallest safe scope:
+
+- Use repository `.gitignore` for universal junk and generated artifacts
+- Use `.git/info/exclude` for developer-local debug files that should not become team policy
+- Move personal notes, experiments, and scratch outputs into ignored local directories
+- Prefer deleting one-off files after use instead of creating more ignore debt
+
+### Pre-Stage Review Rules
+
+Before any `git add`, explicitly inspect whether changed files belong to the product or only to the process that produced the product.
+
+Must-review questions:
+
+- Does this file implement or protect a real user-facing or system-facing capability?
+- Will another teammate need this file in six weeks?
+- Does it contain secrets, temporary results, screenshots, copied data, or local-only paths?
+- Is it a real automated test, or only a one-time verification script?
+- Is it a stable document, or only a process log that should be summarized elsewhere?
+
+If the answer points to temporary value only, do not stage it.
+
 ## Branch Naming Convention
 
 Use one of the following branch prefixes:
@@ -155,6 +203,14 @@ Verify:
 
 - Only intended files are modified
 - No secrets, temporary files, or unrelated edits are included
+- Test, debug, and process files are explicitly filtered out unless approved as durable assets
+
+Then perform a classification pass:
+
+- `product` - stage normally
+- `reusable-test` - stage only if it protects real behavior
+- `process` - summarize into stable docs if needed, otherwise exclude
+- `temporary` - delete or ignore locally, never stage
 
 ### 5) Stage Intended Files
 
@@ -182,6 +238,7 @@ Success criteria:
 
 - Intended files are in `Changes to be committed`
 - Nothing unexpected is staged
+- No temporary debug files, process docs, local outputs, or secret-bearing helpers are staged
 
 ### 6) Complete Optimization and Validation Before Commit
 
@@ -206,6 +263,29 @@ If any check fails:
 
 - Fix issues on the same feature branch
 - Re-run checks before committing
+
+### 6.1) Cleanup Sweep Before Commit
+
+Before committing, do a lightweight cleanup sweep:
+
+```bash
+git status --short
+git diff --stat
+git ls-files --others --exclude-standard
+```
+
+Review and act on:
+
+- stray debug or validation files
+- process notes that should not live in Git
+- generated outputs or copied data files
+- files with names that suggest temporary intent such as `test-`, `debug-`, `output`, `backup`, `final`, `v2`, `done`
+
+Preferred actions:
+
+- delete the file if it is temporary
+- move it into an ignored local path if it is still useful personally
+- convert it into a stable test or stable doc if it has long-term value
 
 ### 7) Commit to the Feature Branch
 
@@ -452,6 +532,32 @@ git push -u origin feature/<scope>-<topic>
 - Pushing unverified code
 - Opening a PR before optimization and validation complete
 - Including secrets, logs, or generated local files in the commit
+- Keeping one-off debug scripts and process documents under version control
+- Letting temporary files accumulate until they look "normal" and get staged by habit
+
+## Periodic Cleanup Mechanism
+
+Use the following maintenance rhythm to keep the repository clean over time:
+
+### Before Every Commit
+
+- review `git status --short`
+- review unstaged and staged diffs
+- remove or ignore temporary debug, test, and process files
+
+### Weekly Or Before Release
+
+- scan for new `.bak`, `.tmp`, `output*`, `test-*`, `debug-*`, and upload artifacts
+- review docs directories for process summaries that should be collapsed or removed
+- review helper scripts for hardcoded credentials, local hosts, and one-time repair logic
+- update `.gitignore` or `.git/info/exclude` when the same local residue pattern repeats
+
+### Monthly Hygiene Review
+
+- prune obsolete utility scripts that are no longer part of the maintained workflow
+- remove process-time documents after their stable conclusions are merged into durable docs
+- check whether temporary tests can be replaced by real automated tests or deleted
+- confirm that Git history still reflects product evolution rather than troubleshooting residue
 
 ## Output Template
 
