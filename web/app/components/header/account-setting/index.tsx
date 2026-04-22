@@ -19,6 +19,8 @@ import {
   RiPuzzle2Fill,
   RiPuzzle2Line,
   RiTranslate2,
+  RiGitRepositoryLine,
+  RiGitRepositoryFill,
 } from '@remixicon/react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -38,6 +40,7 @@ import { hasPluginManageWorkspaceCapability, hasWorkspaceCapability, WORKSPACE_C
 import Button from '../../base/button'
 import ApiBasedExtensionPage from './api-based-extension-page'
 import DataSourcePage from './data-source-page-new'
+import GiteaSettingsPage from './gitea-settings-page'
 import LanguagePage from './language-page'
 import MembersPage from './members-page'
 import ModelProviderPage from './model-provider-page'
@@ -134,6 +137,14 @@ export default function AccountSetting({
         activeIcon: <RiPuzzle2Fill className={iconClassName} />,
       })
     }
+
+    // FileBay 设置 - 始终显示
+    items.push({
+      key: ACCOUNT_SETTING_TAB.GITEA_SETTINGS,
+      name: 'FileBay 设置',
+      icon: <RiGitRepositoryLine className={iconClassName} />,
+      activeIcon: <RiGitRepositoryFill className={iconClassName} />,
+    })
 
     if ((enableReplaceWebAppLogo || enableBilling) && canManageWorkspaceSettings) {
       items.push({
@@ -274,6 +285,7 @@ export default function AccountSetting({
               {effectiveActiveMenu === 'token-billing' && <TokenBillingPage />}
               {effectiveActiveMenu === 'data-source' && <DataSourcePage />}
               {effectiveActiveMenu === 'api-based-extension' && <ApiBasedExtensionPage />}
+              {effectiveActiveMenu === 'gitea-settings' && <GiteaSettingsPage />}
               {effectiveActiveMenu === 'custom' && <CustomPage />}
               {effectiveActiveMenu === 'language' && <LanguagePage />}
             </div>
