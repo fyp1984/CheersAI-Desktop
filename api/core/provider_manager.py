@@ -1,5 +1,6 @@
 import contextlib
 import json
+import logging
 from collections import defaultdict
 from collections.abc import Sequence
 from json import JSONDecodeError
@@ -39,6 +40,7 @@ from core.model_runtime.model_providers.model_provider_factory import ModelProvi
 from extensions import ext_hosting_provider
 from extensions.ext_database import db
 from extensions.ext_redis import redis_client
+from libs.rsa import PrivkeyNotFoundError
 from models.provider import (
     LoadBalancingModelConfig,
     Provider,
@@ -53,6 +55,8 @@ from models.provider import (
 from models.provider_ids import ModelProviderID
 from services.feature_service import FeatureService
 
+logger = logging.getLogger(__name__)
+
 
 class ProviderManager:
     """
@@ -62,6 +66,23 @@ class ProviderManager:
     def __init__(self):
         self.decoding_rsa_key = None
         self.decoding_cipher_rsa = None
+
+    def _ensure_decrypt_context(self, tenant_id: str) -> bool:
+        if self.decoding_rsa_key is not None and self.decoding_cipher_rsa is not None:
+            return True
+
+        try:
+            self.decoding_rsa_key, self.decoding_cipher_rsa = encrypter.get_decrypt_decoding(tenant_id)
+            return True
+        except PrivkeyNotFoundError:
+            logger.warning("workspace private key is missing, skip decrypting provider credentials", extra={
+                "tenant_id": tenant_id,
+            })
+            return False
+
+    @staticmethod
+    def _has_secret_variables(secret_variables: list[str]) -> bool:
+        return len(secret_variables) > 0
 
     def get_configurations(self, tenant_id: str) -> ProviderConfigurations:
         """
@@ -867,9 +888,13 @@ class ProviderManager:
         except JSONDecodeError:
             return {}
 
+        if not self._has_secret_variables(secret_variables):
+            credentials_cache.set(credentials=credentials)
+            return credentials
+
         # Decrypt secret variables
-        if self.decoding_rsa_key is None or self.decoding_cipher_rsa is None:
-            self.decoding_rsa_key, self.decoding_cipher_rsa = encrypter.get_decrypt_decoding(tenant_id)
+        if not self._ensure_decrypt_context(tenant_id):
+            return {}
 
         for variable in secret_variables:
             if variable in credentials:
@@ -1001,7 +1026,7 @@ class ProviderManager:
                 # error occurs
                 cached_provider_credentials = provider_credentials_cache.get()
 
-                if not cached_provider_credentials:
+                if cached_provider_credentials is None:
                     provider_credentials: dict[str, Any] = {}
                     if provider_records and provider_records[0].encrypted_config:
                         provider_credentials = json.loads(provider_records[0].encrypted_config)
@@ -1014,19 +1039,27 @@ class ProviderManager:
                     )
 
                     # Get decoding rsa key and cipher for decrypting credentials
-                    if self.decoding_rsa_key is None or self.decoding_cipher_rsa is None:
-                        self.decoding_rsa_key, self.decoding_cipher_rsa = encrypter.get_decrypt_decoding(tenant_id)
+                    if self._has_secret_variables(provider_credential_secret_variables):
+                        if not self._ensure_decrypt_context(tenant_id):
+                            current_using_credentials = {}
+                            provider_credentials_cache.set(credentials=current_using_credentials)
+                            return SystemConfiguration(
+                                enabled=True,
+                                current_quota_type=current_quota_type,
+                                quota_configurations=quota_configurations,
+                                credentials=current_using_credentials,
+                            )
 
-                    for variable in provider_credential_secret_variables:
-                        if variable in provider_credentials:
-                            try:
-                                provider_credentials[variable] = encrypter.decrypt_token_with_decoding(
-                                    provider_credentials.get(variable, ""),
-                                    self.decoding_rsa_key,
-                                    self.decoding_cipher_rsa,
-                                )
-                            except ValueError:
-                                pass
+                        for variable in provider_credential_secret_variables:
+                            if variable in provider_credentials:
+                                try:
+                                    provider_credentials[variable] = encrypter.decrypt_token_with_decoding(
+                                        provider_credentials.get(variable, ""),
+                                        self.decoding_rsa_key,
+                                        self.decoding_cipher_rsa,
+                                    )
+                                except ValueError:
+                                    pass
 
                     current_using_credentials = provider_credentials or {}
 
@@ -1149,28 +1182,38 @@ class ProviderManager:
                         # Get cached provider model credentials
                         cached_provider_model_credentials = provider_model_credentials_cache.get()
 
-                        if not cached_provider_model_credentials:
+                        if cached_provider_model_credentials is None:
                             try:
                                 provider_model_credentials = json.loads(load_balancing_model_config.encrypted_config)
                             except JSONDecodeError:
                                 continue
 
-                            # Get decoding rsa key and cipher for decrypting credentials
-                            if self.decoding_rsa_key is None or self.decoding_cipher_rsa is None:
-                                self.decoding_rsa_key, self.decoding_cipher_rsa = encrypter.get_decrypt_decoding(
-                                    load_balancing_model_config.tenant_id
-                                )
-
-                            for variable in model_credential_secret_variables:
-                                if variable in provider_model_credentials:
-                                    try:
-                                        provider_model_credentials[variable] = encrypter.decrypt_token_with_decoding(
-                                            provider_model_credentials.get(variable),
-                                            self.decoding_rsa_key,
-                                            self.decoding_cipher_rsa,
+                            if self._has_secret_variables(model_credential_secret_variables):
+                                # Get decoding rsa key and cipher for decrypting credentials
+                                if not self._ensure_decrypt_context(load_balancing_model_config.tenant_id):
+                                    provider_model_credentials = {}
+                                    provider_model_credentials_cache.set(credentials=provider_model_credentials)
+                                    load_balancing_configs.append(
+                                        ModelLoadBalancingConfiguration(
+                                            id=load_balancing_model_config.id,
+                                            name=load_balancing_model_config.name,
+                                            credentials=provider_model_credentials,
+                                            credential_source_type=load_balancing_model_config.credential_source_type,
+                                            credential_id=load_balancing_model_config.credential_id,
                                         )
-                                    except ValueError:
-                                        pass
+                                    )
+                                    continue
+
+                                for variable in model_credential_secret_variables:
+                                    if variable in provider_model_credentials:
+                                        try:
+                                            provider_model_credentials[variable] = encrypter.decrypt_token_with_decoding(
+                                                provider_model_credentials.get(variable),
+                                                self.decoding_rsa_key,
+                                                self.decoding_cipher_rsa,
+                                            )
+                                        except ValueError:
+                                            pass
 
                             # cache provider model credentials
                             provider_model_credentials_cache.set(credentials=provider_model_credentials)
