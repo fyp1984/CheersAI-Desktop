@@ -1,4 +1,5 @@
 import { getDesktopSSOLoginUrl } from './sso'
+import { getDesktopSSOClientId, getDesktopSSOProtocol, isDesktopSSOEnabledRuntime } from './sso-desktop-config'
 
 export const isTauriRuntime = () => {
   if (typeof window === 'undefined')
@@ -48,10 +49,10 @@ export const getDesktopCallbackUrl = () => {
 }
 
 export const startDesktopSSOLogin = () => {
-  const clientId = process.env.NEXT_PUBLIC_DESKTOP_SSO_CLIENT_ID?.trim()
+  const clientId = getDesktopSSOClientId()
   if (!clientId)
     throw new Error('NEXT_PUBLIC_DESKTOP_SSO_CLIENT_ID is not configured')
-  const protocol = (process.env.NEXT_PUBLIC_DESKTOP_SSO_PROTOCOL || 'oauth').replace('oauth2', 'oauth')
+  const protocol = getDesktopSSOProtocol()
   const redirectUri = getDesktopCallbackUrl()
   const state = generateRandomState()
 
@@ -106,6 +107,5 @@ export const getDesktopSSOCallbackParams = () => {
 }
 
 export const isDesktopSSOEnabled = () => {
-  const enabled = process.env.NEXT_PUBLIC_DESKTOP_SSO_ENABLED
-  return enabled === 'true' || enabled === '1'
+  return isDesktopSSOEnabledRuntime()
 }

@@ -9,6 +9,22 @@ import useDocumentTitle from '@/hooks/use-document-title'
 import { fetchOperationLogs, fetchOperationLogStats, fetchOperationLogActions, exportAuditLogs } from '@/service/audit'
 import type { OperationLog, OperationLogStats } from '@/service/audit'
 
+const stringifyAuditContent = (value: unknown) => {
+  if (typeof value === 'string')
+    return value
+  if (typeof value === 'number' || typeof value === 'boolean')
+    return String(value)
+  if (value == null)
+    return ''
+
+  try {
+    return JSON.stringify(value)
+  }
+  catch {
+    return ''
+  }
+}
+
 const AuditLogsPage = () => {
   const router = useRouter()
   const { canViewAudit, isLoadingCurrentWorkspace } = useAppContext()
@@ -101,6 +117,31 @@ const AuditLogsPage = () => {
       return '创建应用'
     }
     return actionNameMap[action] || action
+  }
+
+  const getLogContentTitle = (log: OperationLog) => {
+    return log.content?.file_name
+      || log.content?.dataset_name
+      || log.content?.app_name
+      || stringifyAuditContent(log.content)
+      || '-'
+  }
+
+  const getLogContentDisplay = (log: OperationLog) => {
+    if (log.action === 'chat' && log.content?.status) {
+      return (
+        <span className={log.content.status === 'success' ? 'text-green-600' : 'text-red-600'}>
+          {log.content.status === 'success' ? '成功' : '失败'}
+          {log.content.error ? ` - ${log.content.error}` : ''}
+          {log.content.app_name ? ` - ${log.content.app_name}` : ''}
+        </span>
+      )
+    }
+
+    return log.content?.file_name
+      || log.content?.dataset_name
+      || log.content?.app_name
+      || (log.content?.mode ? `操作: ${log.content.mode}` : '-')
   }
 
   // 自动刷新定时器
@@ -325,16 +366,8 @@ const AuditLogsPage = () => {
                       <td className="px-4 py-3 text-sm text-text-primary whitespace-nowrap">
                         {getActionDisplayName(log.action, log.content)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-secondary max-w-xs truncate" title={log.content?.file_name || log.content?.dataset_name || log.content?.app_name || JSON.stringify(log.content)}>
-                        {log.action === 'chat' && log.content?.status ? (
-                          <span className={log.content.status === 'success' ? 'text-green-600' : 'text-red-600'}>
-                            {log.content.status === 'success' ? '成功' : '失败'}
-                            {log.content.error ? ` - ${log.content.error}` : ''}
-                            {log.content.app_name ? ` - ${log.content.app_name}` : ''}
-                          </span>
-                        ) : (
-                          log.content?.file_name || log.content?.dataset_name || log.content?.app_name || (log.content?.mode ? `操作: ${log.content.mode}` : '-')
-                        )}
+                      <td className="px-4 py-3 text-sm text-text-secondary max-w-xs truncate" title={getLogContentTitle(log)}>
+                        {getLogContentDisplay(log)}
                       </td>
                       <td className="px-4 py-3 text-sm text-text-secondary whitespace-nowrap">
                         {log.content?.size ? `${(log.content.size / 1024).toFixed(2)} KB` : '-'}
