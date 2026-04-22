@@ -11,7 +11,6 @@ import {
   RiSave3Line,
 } from '@remixicon/react'
 import { useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import Button from '@/app/components/base/button'
 import Toast from '@/app/components/base/toast'
 import { API_PREFIX } from '@/config'
@@ -34,7 +33,6 @@ type FileBayConfig = {
 }
 
 export default function GiteaSettingsPage() {
-  useTranslation()
   const [config, setConfig] = useState<GiteaConfig>({
     gitea_url: '',
     gitea_owner: '',
@@ -247,14 +245,7 @@ export default function GiteaSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Gitea 配置</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          配置 Gitea 服务器连接信息，用于文件存储和管理
-        </p>
-      </div>
-
+    <div className="w-full">
       <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
         <div className="space-y-6">
           {/* Gitea URL */}

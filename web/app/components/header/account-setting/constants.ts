@@ -9,6 +9,7 @@ export const ACCOUNT_SETTING_TAB = {
   API_BASED_EXTENSION: 'api-based-extension',
   CUSTOM: 'custom',
   DATA_SECURITY: 'data-security',
+  GITEA_SETTINGS: 'gitea-settings',
   LANGUAGE: 'language',
 } as const
 
