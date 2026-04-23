@@ -25,6 +25,18 @@ Do not invoke for pure feature implementation without an existing defect signal.
 3. Keep changes minimal and localized.
 4. Verify with automated checks before release.
 5. Preserve security and never expose secrets in logs.
+6. Keep the repair strictly inside the reported defect boundary unless the user explicitly expands scope.
+
+## Historical Failure Modes To Strictly Forbid
+
+The following recurring failure modes are now prohibited in future bug-fixing tasks:
+
+- **Over-cleaning**: do not mix repo-wide formatting, import sorting, logging style changes, or broad cleanup into a targeted bug fix unless the user explicitly asked for cleanup.
+- **Debug-stage residue**: do not leave behind temporary probes, test scripts, throwaway routes, process notes, screenshots, or helper outputs after diagnosis.
+- **Requirement-boundary drift**: do not convert a bug fix into opportunistic refactoring, architecture reshaping, or adjacent feature work without user approval.
+- **Automation-induced churn**: do not accept formatter, linter, or code-action rewrites as part of the fix unless they are directly necessary for the touched bug path or required validation.
+
+If a potentially useful experiment or exploratory patch appears promising but is not needed for the current fix, keep it out of the production diff and record it as a separate follow-up rather than shipping it implicitly.
 
 ## Standard Workflow
 
@@ -48,6 +60,8 @@ Do not invoke for pure feature implementation without an existing defect signal.
 
 ### 4) Implement Fix
 
+Before editing, prune any change that only serves cleanup aesthetics or tool output. The bug-fix diff should stay explainable in terms of the reported failure and its direct validation path.
+
 - Prefer type-safe fixes over broad casting.
 - Follow existing project conventions for naming, imports, and architecture.
 - Avoid introducing new dependencies unless already used in repo.
@@ -58,6 +72,7 @@ Do not invoke for pure feature implementation without an existing defect signal.
 - Run targeted checks for changed files.
 - Run required global checks (type-check, lint, tests, build) when relevant.
 - Confirm no new diagnostics introduced.
+- If a tool reports unrelated historical or generated noise, record it separately instead of expanding the bug-fix scope to clean the whole repository.
 
 ### 6) Deploy Readiness
 

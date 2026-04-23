@@ -34,6 +34,18 @@ Do not invoke when:
 7. Keep monitoring and rollback paths explicit.
 8. Support a local-authoritative release mode when the user explicitly chooses to deploy the current local workspace.
 9. For tool gateways, prefer one domain plus path prefixes over multiple throwaway subdomains.
+10. Keep release changes scope-bounded; do not mix cleanup, experiments, or debug leftovers into deployment work.
+
+## Historical Failure Modes To Strictly Forbid
+
+The following recurring failure modes are now prohibited in future ops and release tasks:
+
+- **Over-cleaning during release**: do not bundle repo-wide style cleanup, import sorting, log-message rewrites, or unrelated refactors into a deployment task.
+- **Debug-stage residue**: do not sync or publish temporary scripts, one-off repair helpers, screenshots, exported logs, or process notes unless they are explicitly approved as durable operator assets.
+- **Requirement-boundary drift**: do not widen a release task into ad-hoc product refactoring, silent config redesign, or unrelated code hygiene work.
+- **Automation-induced churn**: do not let formatter, linter, or code-action output redefine the release scope; keep only changes needed for the requested rollout, build health, or rollback safety.
+
+If such changes are discovered, revert them before release, keep the deploy diff focused, and document any deferred ideas separately instead of shipping them opportunistically.
 
 ## Recommended Directory Layout
 
@@ -160,6 +172,11 @@ git -C "${repo}" rev-parse --short HEAD
 ```
 
 ## Preflight Checklist Template
+
+Add one more preflight gate before release:
+
+- confirm the deployment diff does not include broad cleanup, debug residue, or unrelated file churn
+- confirm every changed file contributes directly to rollout, runtime health, monitoring, or rollback
 
 Check at least:
 
