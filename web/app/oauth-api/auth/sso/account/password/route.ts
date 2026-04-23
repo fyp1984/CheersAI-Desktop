@@ -10,6 +10,7 @@ type RawSSOUserInfo = {
   preferred_username?: string
   preferredUsername?: string
   name?: string
+  displayName?: string
 }
 
 const getSSOConfig = () => {
@@ -41,6 +42,23 @@ const isSuccessPayload = (payload: JsonObject) => {
   const status = String(payload?.status || '').toLowerCase()
   return !status || status === 'ok'
 }
+
+const decodeJwtPayload = (token: string) => {
+  const [, payload] = token.split('.')
+  if (!payload)
+    return null
+
+  try {
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const paddedPayload = normalizedPayload.padEnd(Math.ceil(normalizedPayload.length / 4) * 4, '=')
+    return JSON.parse(Buffer.from(paddedPayload, 'base64').toString('utf-8')) as RawSSOUserInfo
+  }
+  catch {
+    return null
+  }
+}
+
+const canFallbackToTokenClaims = (status: number) => [400, 414, 431].includes(status)
 
 const getIdentityFromUserInfo = (userInfo: RawSSOUserInfo) => {
   const subject = (userInfo.sub || '').trim()
@@ -148,11 +166,17 @@ export async function POST(request: Request) {
       },
       cache: 'no-store',
     })
+    let userInfo: RawSSOUserInfo | null = null
+    if (userinfoResponse.ok) {
+      userInfo = await userinfoResponse.json() as RawSSOUserInfo
+    }
+    else if (canFallbackToTokenClaims(userinfoResponse.status)) {
+      userInfo = decodeJwtPayload(accessToken)
+    }
 
-    if (!userinfoResponse.ok)
+    if (!userInfo)
       return NextResponse.json({ message: 'Failed to fetch SSO user info.' }, { status: userinfoResponse.status })
 
-    const userInfo = await userinfoResponse.json() as RawSSOUserInfo
     const { owner, username } = getIdentityFromUserInfo(userInfo)
     if (!owner || !username)
       return NextResponse.json({ message: 'Unable to resolve linked SSO user identity.' }, { status: 400 })
@@ -196,8 +220,9 @@ export async function POST(request: Request) {
     const getUserPayload = await getResponsePayload(getUserResponse)
     const ssoUser = getUserPayload.data
     if (getUserResponse.ok && isSuccessPayload(getUserPayload) && ssoUser && typeof ssoUser === 'object') {
-      ssoUser.signinWrongTimes = 0
-      ssoUser.lastSigninWrongTime = ''
+      const mutableSSOUser = ssoUser as JsonObject
+      mutableSSOUser.signinWrongTimes = 0
+      mutableSSOUser.lastSigninWrongTime = ''
 
       const unlockUserUrl = new URL('/api/update-user', ssoBaseUrl)
       unlockUserUrl.searchParams.set('id', `${owner}/${username}`)
@@ -209,7 +234,7 @@ export async function POST(request: Request) {
           'Accept': 'application/json',
           'Authorization': authHeader,
         },
-        body: JSON.stringify(ssoUser),
+        body: JSON.stringify(mutableSSOUser),
       })
     }
 
