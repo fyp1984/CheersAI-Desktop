@@ -57,6 +57,32 @@ const AccessControl = dynamic(() => import('@/app/components/app/app-access-cont
   ssr: false,
 })
 
+const getAppPublishStatus = (app: App) => {
+  if (app.has_draft_trigger)
+    return {
+      label: '待发布',
+      description: '当前存在未发布改动',
+      className: 'border border-[#fcd34d] bg-[#fef3c7] text-[#92400e]',
+      dotClassName: 'bg-amber-400',
+    }
+
+  if (app.enable_site || app.enable_api) {
+    return {
+      label: '已发布',
+      description: '当前版本已可对外使用',
+      className: 'border border-[#a7f3d0] bg-[#d1fae5] text-[#065f46]',
+      dotClassName: 'bg-[#10b981]',
+    }
+  }
+
+  return {
+    label: '未发布',
+    description: '当前仍为草稿状态',
+    className: 'border border-slate-200 bg-slate-50 text-slate-600',
+    dotClassName: 'bg-slate-400',
+  }
+}
+
 export type AppCardProps = {
   app: App
   onRefresh?: () => void
@@ -396,6 +422,8 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
     return `${t('segment.editedAt', { ns: 'datasetDocuments' })} ${timeText}`
   }, [app.updated_at, app.created_at, t])
 
+  const publishStatus = useMemo(() => getAppPublishStatus(app), [app])
+
   return (
     <>
       <div
@@ -405,7 +433,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
         }}
         className="group relative col-span-1 inline-flex h-[160px] cursor-pointer flex-col rounded-xl border-[1px] border-solid border-components-card-border bg-components-card-bg shadow-sm transition-all duration-200 ease-in-out hover:shadow-lg"
       >
-        <div className="flex h-[66px] shrink-0 grow-0 items-center gap-3 px-[14px] pb-3 pt-[14px]">
+        <div className="flex min-h-[82px] shrink-0 grow-0 items-start gap-3 px-[14px] pb-3 pt-[14px]">
           <div className="relative shrink-0">
             <AppIcon
               size="large"
@@ -425,8 +453,23 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
               <div>·</div>
               <div className="truncate" title={EditTimeText}>{EditTimeText}</div>
             </div>
+            <div className="mt-2 flex items-center gap-2">
+              <div
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold shadow-sm',
+                  publishStatus.className,
+                )}
+                title={publishStatus.description}
+              >
+                <span className={cn('h-1.5 w-1.5 rounded-full', publishStatus.dotClassName)} />
+                <span>{publishStatus.label}</span>
+              </div>
+              <span className="truncate text-[10px] leading-[16px] text-text-quaternary">
+                {publishStatus.description}
+              </span>
+            </div>
           </div>
-          <div className="flex h-5 w-5 shrink-0 items-center justify-center">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center pt-1">
             {app.access_mode === AccessMode.PUBLIC && (
               <Tooltip asChild={false} popupContent={t('accessItemsDescription.anyone', { ns: 'app' })}>
                 <RiGlobalLine className="h-4 w-4 text-text-quaternary" />

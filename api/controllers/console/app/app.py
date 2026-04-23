@@ -339,6 +339,8 @@ class AppPartial(ResponseModel):
     icon_type: str | None = None
     icon: str | None = None
     icon_background: str | None = None
+    enable_site: bool | None = None
+    enable_api: bool | None = None
     model_config_: ModelConfigPartial | None = Field(
         default=None,
         validation_alias=AliasChoices("app_model_config", "model_config"),

@@ -262,6 +262,8 @@ describe('List', () => {
     mockServiceState.hasNextPage = false
     mockServiceState.isLoading = false
     mockServiceState.isFetchingNextPage = false
+    defaultAppData.pages[0].data[0].tags = []
+    defaultAppData.pages[0].data[1].tags = []
     mockQueryState.tagIDs = []
     mockQueryState.keywords = ''
     mockQueryState.isCreatedByMe = false
@@ -297,6 +299,15 @@ describe('List', () => {
 
       expect(screen.getByTestId('app-card-app-1')).toBeInTheDocument()
       expect(screen.getByTestId('app-card-app-2')).toBeInTheDocument()
+    })
+
+    it('should group apps by tag and keep untagged apps in a separate section', () => {
+      defaultAppData.pages[0].data[0].tags = [{ id: 'tag-1', name: 'Test Tag', type: 'app' }]
+
+      render(<List />)
+
+      expect(screen.getByText('Test Tag')).toBeInTheDocument()
+      expect(screen.getByText('未分组')).toBeInTheDocument()
     })
 
     it('should render new app card for editors', () => {

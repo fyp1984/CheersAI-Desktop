@@ -24,11 +24,14 @@ import {
 } from '@/app/components/base/file-uploader/store'
 import { useToastContext } from '@/app/components/base/toast'
 import VoiceInput from '@/app/components/base/voice-input'
+import Checkbox from '@/app/components/base/checkbox'
 import { TransferMethod } from '@/types/app'
 import { cn } from '@/utils/classnames'
 import { useCheckInputsForms } from '../check-input-forms-hooks'
 import { useTextAreaHeight } from './hooks'
 import Operation from './operation'
+
+const SENSITIVE_SEND_WARNING_KEY = 'sensitive_send_warning'
 
 type ChatInputAreaProps = {
   readonly?: boolean
@@ -88,6 +91,7 @@ const ChatInputArea = ({
   const [currentIndex, setCurrentIndex] = useState(-1)
   const isComposingRef = useRef(false)
   const [showSensitiveConfirm, setShowSensitiveConfirm] = useState(false)
+  const [skipSensitiveConfirm, setSkipSensitiveConfirm] = useState(false)
   const pendingSendRef = useRef(false)
 
   const handleQueryChange = useCallback(
@@ -125,7 +129,7 @@ const ChatInputArea = ({
 
     // Check if sensitive data warning is enabled
     const sensitiveWarningEnabled = typeof window !== 'undefined'
-      && localStorage.getItem('sensitive_send_warning') !== 'false'
+      && localStorage.getItem(SENSITIVE_SEND_WARNING_KEY) !== 'false'
 
     if (sensitiveWarningEnabled && !pendingSendRef.current) {
       // Validate first before showing dialog
@@ -139,6 +143,7 @@ const ChatInputArea = ({
         notify({ type: 'info', message: t('errorMessage.queryRequired', { ns: 'appAnnotation' }) })
         return
       }
+      setSkipSensitiveConfirm(false)
       setShowSensitiveConfirm(true)
       return
     }
@@ -280,31 +285,68 @@ const ChatInputArea = ({
         />
       )}
       {showSensitiveConfirm && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
-          <div className="w-[420px] rounded-2xl bg-white p-6 shadow-2xl">
-            <div className="mb-3 flex items-center gap-2">
-              <svg className="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h3 className="text-base font-semibold text-gray-900">敏感信息确认</h3>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[rgba(17,24,39,0.45)] px-4">
+          <div className="w-full max-w-md rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#eff6ff] text-[#2563eb] shadow-sm">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-[#111827]">敏感信息确认</h3>
+                <p className="mt-1 text-xs text-[#4b5563]">发送前再确认一次，确保内容安全可控。</p>
+              </div>
             </div>
-            <p className="mb-5 text-sm text-gray-600">
-              当前内容即将发送至互联网，请务必确认内容中无敏感信息（如个人隐私、密码、密钥等）。
-            </p>
-            <div className="flex justify-end gap-2">
+            <div className="rounded-xl border border-[#bfdbfe] bg-[#eff6ff] p-4">
+              <p className="text-sm leading-6 text-[#4b5563]">
+                当前内容即将发送至互联网，请务必确认内容中无敏感信息，例如个人隐私、密码、密钥或内部凭据。
+              </p>
+            </div>
+            <label
+              className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl border border-[#e5e7eb] bg-[#f9fafb] px-4 py-3 transition-colors duration-200 ease-in-out hover:bg-white"
+              onClick={(e) => {
+                e.preventDefault()
+                setSkipSensitiveConfirm(value => !value)
+              }}
+            >
+              <Checkbox
+                id="skip-sensitive-confirm"
+                checked={skipSensitiveConfirm}
+                onCheck={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setSkipSensitiveConfirm(value => !value)
+                }}
+                  className="rounded"
+              />
+              <div>
+                <div className="text-sm font-medium text-[#111827]">下次不用再提醒</div>
+                <div className="text-xs text-[#4b5563]">勾选后，将默认跳过该确认弹窗。</div>
+              </div>
+            </label>
+            <div className="mt-6 flex justify-end gap-3">
               <button
-                onClick={() => setShowSensitiveConfirm(false)}
-                className="rounded-lg px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+                type="button"
+                onClick={() => {
+                  setSkipSensitiveConfirm(false)
+                  setShowSensitiveConfirm(false)
+                }}
+                className="rounded-lg border border-[#d1d5db] px-6 py-2.5 text-sm font-medium text-[#4b5563] transition-colors duration-200 ease-in-out hover:bg-[#f3f4f6]"
               >
                 取消发送
               </button>
               <button
+                type="button"
                 onClick={() => {
+                  if (typeof window !== 'undefined')
+                    localStorage.setItem(SENSITIVE_SEND_WARNING_KEY, skipSensitiveConfirm ? 'false' : 'true')
+
                   setShowSensitiveConfirm(false)
                   pendingSendRef.current = true
                   handleSend()
                 }}
-                className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                className="rounded-lg bg-[#3b82f6] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-colors duration-200 ease-in-out hover:bg-[#2563eb]"
               >
                 确认发送
               </button>

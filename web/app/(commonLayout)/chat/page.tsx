@@ -3,6 +3,7 @@
 import { RiAddLine, RiArrowDownSLine, RiArrowLeftSLine, RiArrowRightSLine, RiAttachmentLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiDownloadLine, RiFileCopyLine, RiMicFill, RiMicLine, RiMoreLine, RiRefreshLine, RiSearchLine } from '@remixicon/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Checkbox from '@/app/components/base/checkbox'
 import Loading from '@/app/components/base/loading'
 import { Markdown } from '@/app/components/base/markdown'
 import { SandboxFilePicker } from '@/app/components/base/sandbox-file-picker'
@@ -14,6 +15,8 @@ import useDocumentTitle from '@/hooks/use-document-title'
 import { sendSimpleChatMessage } from '@/service/chat'
 import { cn } from '@/utils/classnames'
 import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
+
+const SENSITIVE_SEND_WARNING_KEY = 'sensitive_send_warning'
 
 type Message = {
   id: string
@@ -187,6 +190,8 @@ const ChatPage = () => {
   const [renameDraft, setRenameDraft] = useState('')
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const inputValueRef = useRef('')
+  const [showSensitiveConfirm, setShowSensitiveConfirm] = useState(false)
+  const [skipSensitiveConfirm, setSkipSensitiveConfirm] = useState(false)
 
   useEffect(() => {
     if (!isLoadingCurrentWorkspace && !canUseChat)
@@ -733,7 +738,7 @@ const ChatPage = () => {
     }
   }
 
-  const handleSend = async () => {
+  const performSend = async () => {
     if (!inputValue.trim() || isLoading)
       return
 
@@ -890,6 +895,19 @@ const ChatPage = () => {
       setIsLoading(false)
       setStreamingMessageId(null)
     }
+  }
+
+  const handleSend = async () => {
+    const sensitiveWarningEnabled = typeof window !== 'undefined'
+      && localStorage.getItem(SENSITIVE_SEND_WARNING_KEY) !== 'false'
+
+    if (sensitiveWarningEnabled) {
+      setSkipSensitiveConfirm(false)
+      setShowSensitiveConfirm(true)
+      return
+    }
+
+    await performSend()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -1274,20 +1292,6 @@ const ChatPage = () => {
                           </button>
                         ))}
                       </div>
-                      <div className="grid gap-3 text-left md:grid-cols-3">
-                        <div className="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
-                          <div className="mb-1 text-sm font-semibold text-[#111827]">对话更聚焦</div>
-                          <div className="text-xs leading-5 text-[#4b5563]">搜索历史会话、重命名、导出 Markdown，并支持重新生成回复。</div>
-                        </div>
-                        <div className="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
-                          <div className="mb-1 text-sm font-semibold text-[#111827]">输入更自然</div>
-                          <div className="text-xs leading-5 text-[#4b5563]">支持语音输入、附件上传与多行编辑，适合持续协作场景。</div>
-                        </div>
-                        <div className="rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-4">
-                          <div className="mb-1 text-sm font-semibold text-[#111827]">安全更清晰</div>
-                          <div className="text-xs leading-5 text-[#4b5563]">仅允许选择沙箱脱敏文件，并在当前页持续展示安全状态提示。</div>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 )
@@ -1604,6 +1608,74 @@ const ChatPage = () => {
                   )}
                 >
                   保存
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showSensitiveConfirm && (
+          <div className="absolute inset-0 z-[70] flex items-center justify-center bg-[rgba(17,24,39,0.45)] px-4">
+            <div className="w-full max-w-md rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-xl">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#eff6ff] text-[#2563eb] shadow-sm">
+                  <RiCheckLine className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-[#111827]">敏感信息确认</h3>
+                  <p className="mt-1 text-xs text-[#4b5563]">发送前再确认一次，确保内容安全可控。</p>
+                </div>
+              </div>
+              <div className="rounded-xl border border-[#bfdbfe] bg-[#eff6ff] p-4">
+                <p className="text-sm leading-6 text-[#4b5563]">
+                  当前内容即将发送至互联网，请务必确认内容中无敏感信息，例如个人隐私、密码、密钥或内部凭据。
+                </p>
+              </div>
+              <label
+                className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl border border-[#e5e7eb] bg-[#f9fafb] px-4 py-3 transition-colors duration-200 ease-in-out hover:bg-white"
+                onClick={(e) => {
+                  e.preventDefault()
+                  setSkipSensitiveConfirm(value => !value)
+                }}
+              >
+                <Checkbox
+                  id="skip-simple-chat-sensitive-confirm"
+                  checked={skipSensitiveConfirm}
+                  onCheck={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    setSkipSensitiveConfirm(value => !value)
+                  }}
+                  className="rounded"
+                />
+                <div>
+                  <div className="text-sm font-medium text-[#111827]">下次不用再提醒</div>
+                  <div className="text-xs text-[#4b5563]">勾选后，将默认跳过该确认弹窗。</div>
+                </div>
+              </label>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSensitiveConfirm(false)
+                    setSkipSensitiveConfirm(false)
+                  }}
+                  className="rounded-lg border border-[#d1d5db] px-6 py-2.5 text-sm font-medium text-[#4b5563] transition-colors duration-200 ease-in-out hover:bg-[#f3f4f6]"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (typeof window !== 'undefined')
+                      localStorage.setItem(SENSITIVE_SEND_WARNING_KEY, skipSensitiveConfirm ? 'false' : 'true')
+
+                    setShowSensitiveConfirm(false)
+                    await performSend()
+                  }}
+                  className="rounded-lg bg-[#3b82f6] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-colors duration-200 ease-in-out hover:bg-[#2563eb]"
+                >
+                  确认发送
                 </button>
               </div>
             </div>

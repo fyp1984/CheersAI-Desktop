@@ -19,6 +19,7 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppContext } from '@/context/app-context'
+import { isTauriRuntime } from '@/service/sso-desktop-auth'
 import { cn } from '@/utils/classnames'
 import { hasPluginManageWorkspaceCapability, hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import AccountDropdown from './account-dropdown'
@@ -42,6 +43,7 @@ const DesktopPrimaryTabs = () => {
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
   const [showBrand, setShowBrand] = useState(true)
+  const [isVaultRuntime, setIsVaultRuntime] = useState(false)
 
   const canUseAgent = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.agentUse), [currentWorkspace])
   const canUseChat = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.chatUse), [currentWorkspace])
@@ -163,6 +165,10 @@ const DesktopPrimaryTabs = () => {
   }, [])
 
   useEffect(() => {
+    setIsVaultRuntime(isTauriRuntime())
+  }, [])
+
+  useEffect(() => {
     const source = searchParams.get('source')
     if (source === 'vault-shell' || source === 'vault')
       sessionStorage.setItem('cheersai_desktop_embedded', '1')
@@ -225,7 +231,7 @@ const DesktopPrimaryTabs = () => {
   return (
     <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-divider-subtle bg-components-panel-bg px-5">
       <div className="flex min-w-0 flex-1 items-center gap-4 overflow-hidden">
-        {showBrand && (
+        {showBrand && !isVaultRuntime && (
           <Link href="/apps" className="flex shrink-0 items-center gap-2">
             <div className="h-11 w-11 overflow-hidden rounded-2xl border border-blue-200/40 bg-[#0F172A] shadow-[0_10px_26px_rgba(37,99,235,0.18)]">
               <img

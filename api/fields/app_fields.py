@@ -105,6 +105,8 @@ app_partial_fields = {
     "icon": fields.String,
     "icon_background": fields.String,
     "icon_url": AppIconUrlField,
+    "enable_site": fields.Boolean,
+    "enable_api": fields.Boolean,
     "model_config": fields.Nested(model_config_partial_fields, attribute="app_model_config", allow_null=True),
     "workflow": fields.Nested(workflow_partial_fields, allow_null=True),
     "use_icon_as_answer_icon": fields.Boolean,

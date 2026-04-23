@@ -302,6 +302,24 @@ describe('AppCard', () => {
       render(<AppCard app={mockApp} />)
       expect(screen.getByText(/edited/i)).toBeInTheDocument()
     })
+
+    it('should show published status when app is already available externally', () => {
+      render(<AppCard app={{ ...mockApp, has_draft_trigger: false, enable_site: true, enable_api: false }} />)
+      expect(screen.getByText('已发布')).toBeInTheDocument()
+      expect(screen.getByText('当前版本已可对外使用')).toBeInTheDocument()
+    })
+
+    it('should show pending publish status when app has unpublished changes', () => {
+      render(<AppCard app={{ ...mockApp, has_draft_trigger: true }} />)
+      expect(screen.getByText('待发布')).toBeInTheDocument()
+      expect(screen.getByText('当前存在未发布改动')).toBeInTheDocument()
+    })
+
+    it('should show unpublished status when app is still draft only', () => {
+      render(<AppCard app={{ ...mockApp, has_draft_trigger: false, enable_site: false, enable_api: false }} />)
+      expect(screen.getByText('未发布')).toBeInTheDocument()
+      expect(screen.getByText('当前仍为草稿状态')).toBeInTheDocument()
+    })
   })
 
   describe('Props', () => {

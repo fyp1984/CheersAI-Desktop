@@ -1,6 +1,7 @@
 'use client'
 
 import type { FC } from 'react'
+import type { App } from '@/types/app'
 import {
   RiDragDropLine,
 } from '@remixicon/react'
@@ -10,7 +11,7 @@ import {
   useRouter,
 } from 'next/navigation'
 import { parseAsString, useQueryState } from 'nuqs'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Input from '@/app/components/base/input'
 import TagFilter from '@/app/components/base/tag-management/filter'
@@ -48,6 +49,58 @@ const CreateFromDSLModal = dynamic(() => import('@/app/components/app/create-fro
   ssr: false,
 })
 
+const UNTAGGED_GROUP_KEY = '__untagged__'
+const APP_GRID_CLASS_NAME = 'grid grid-cols-1 gap-4 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5 2k:grid-cols-6'
+
+type GroupedApps = {
+  key: string
+  label: string
+  apps: App[]
+  count: number
+  isUntagged: boolean
+  order: number
+}
+
+const groupAppsByPrimaryTag = (apps: App[], orderedTagIds: string[]) => {
+  const tagOrderMap = new Map(orderedTagIds.map((id, index) => [id, index]))
+  const groups = new Map<string, GroupedApps>()
+
+  apps.forEach((app) => {
+    const sortedTags = [...(app.tags || [])].sort((left, right) => {
+      const leftOrder = tagOrderMap.get(left.id) ?? Number.MAX_SAFE_INTEGER
+      const rightOrder = tagOrderMap.get(right.id) ?? Number.MAX_SAFE_INTEGER
+      return leftOrder - rightOrder
+    })
+    const primaryTag = sortedTags[0]
+    const key = primaryTag?.id || UNTAGGED_GROUP_KEY
+
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        label: primaryTag?.name || '未分组',
+        apps: [],
+        count: 0,
+        isUntagged: !primaryTag,
+        order: primaryTag ? (tagOrderMap.get(primaryTag.id) ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER,
+      })
+    }
+
+    const group = groups.get(key)!
+    group.apps.push(app)
+    group.count += 1
+  })
+
+  return Array.from(groups.values()).sort((left, right) => {
+    if (left.isUntagged !== right.isUntagged)
+      return left.isUntagged ? 1 : -1
+
+    if (left.order !== right.order)
+      return left.order - right.order
+
+    return left.label.localeCompare(right.label, 'zh-Hans-CN')
+  })
+}
+
 type Props = {
   controlRefreshList?: number
 }
@@ -57,9 +110,10 @@ const List: FC<Props> = ({
   const { t } = useTranslation()
 
   const router = useRouter()
-  const { isCurrentWorkspaceEditor, isLoadingCurrentWorkspace, canViewWorkflow, canEditWorkflow, canViewApps, canEditApps } = useAppContext()
+  const { isLoadingCurrentWorkspace, canViewWorkflow, canEditWorkflow, canViewApps, canEditApps } = useAppContext()
   const showTagManagementModal = useTagStore(s => s.showTagManagementModal)
-  const [activeTab, setActiveTab] = useQueryState(
+  const tagList = useTagStore(s => s.tagList)
+  const [activeTab] = useQueryState(
     'category',
     parseAsString.withDefault('all').withOptions({ history: 'push' }),
   )
@@ -187,7 +241,9 @@ const List: FC<Props> = ({
   }, [isCreatedByMe, setQuery])
 
   const pages = data?.pages ?? []
-  const hasAnyApp = (pages[0]?.total ?? 0) > 0
+  const flatApps = useMemo(() => pages.flatMap(({ data: apps }) => apps), [pages])
+  const groupedApps = useMemo(() => groupAppsByPrimaryTag(flatApps, tagList.map(tag => tag.id)), [flatApps, tagList])
+  const hasAnyApp = flatApps.length > 0
   // Show skeleton during initial load or when refetching with no previous data
   const showSkeleton = isLoading || (isFetching && pages.length === 0)
   const showLoadError = !!error && pages.length === 0
@@ -219,23 +275,25 @@ const List: FC<Props> = ({
             />
           </div>
         </div>
-        <div className={cn(
-          'relative grid grow grid-cols-1 content-start gap-4 px-12 pt-2 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5 2k:grid-cols-6',
-          !hasAnyApp && 'overflow-hidden',
-        )}
-        >
+        <div className={cn('relative flex grow flex-col gap-6 px-12 pb-6 pt-2', !hasAnyApp && 'overflow-hidden')}>
           {(canEditCurrentCategory || isLoadingCurrentWorkspace) && (
-            <NewAppCard
-              ref={newAppCardRef}
-              isLoading={isLoadingCurrentWorkspace}
-              onSuccess={refetch}
-              selectedAppType={activeTab}
-              className={cn(!hasAnyApp && 'z-10')}
-            />
+            <div className={APP_GRID_CLASS_NAME}>
+              <NewAppCard
+                ref={newAppCardRef}
+                isLoading={isLoadingCurrentWorkspace}
+                onSuccess={refetch}
+                selectedAppType={activeTab}
+                className={cn(!hasAnyApp && 'z-10')}
+              />
+            </div>
           )}
           {(() => {
             if (showSkeleton)
-              return <AppCardSkeleton count={6} />
+              return (
+                <div className={APP_GRID_CLASS_NAME}>
+                  <AppCardSkeleton count={6} />
+                </div>
+              )
 
             if (showLoadError) {
               return (
@@ -255,16 +313,54 @@ const List: FC<Props> = ({
             }
 
             if (hasAnyApp) {
-              return pages.flatMap(({ data: apps }) => apps).map(app => (
-                <AppCard key={app.id} app={app} onRefresh={refetch} />
-              ))
+              return (
+                <>
+                  <div className="flex flex-col gap-6">
+                    {groupedApps.map(group => (
+                      <section
+                        key={group.key}
+                        className="rounded-xl border border-[#e5e7eb] bg-white p-5 shadow-sm transition-all duration-200 ease-in-out hover:shadow-md"
+                      >
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              'inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold shadow-sm',
+                              group.isUntagged
+                                ? 'border border-[#d1d5db] bg-[#f9fafb] text-[#4b5563]'
+                                : 'bg-[#3b82f6] text-white',
+                            )}
+                            >
+                              {group.label}
+                            </div>
+                            <div className="text-xs text-[#4b5563]">
+                              同标签 Agent 已聚合展示
+                            </div>
+                          </div>
+                          <div className="rounded-full bg-[#dbeafe] px-3 py-1 text-xs font-medium text-[#1e40af]">
+                            {group.count}
+                            {' '}
+                            个 Agent
+                          </div>
+                        </div>
+                        <div className={APP_GRID_CLASS_NAME}>
+                          {group.apps.map(app => (
+                            <AppCard key={app.id} app={app} onRefresh={refetch} />
+                          ))}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+                </>
+              )
             }
 
             // No apps - show empty state
             return <Empty />
           })()}
           {isFetchingNextPage && (
-            <AppCardSkeleton count={3} />
+            <div className={APP_GRID_CLASS_NAME}>
+              <AppCardSkeleton count={3} />
+            </div>
           )}
         </div>
 
