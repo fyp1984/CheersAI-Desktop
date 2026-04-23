@@ -125,7 +125,10 @@ class Account(UserMixin, TypeBase):
 
     @property
     def is_password_set(self):
-        return self.password is not None
+        config = self.custom_config_dict
+        return self.password is not None or bool(
+            config.get("desktop_sso_password_set") or config.get("desktop_sso_subject")
+        )
 
     @property
     def current_tenant(self):

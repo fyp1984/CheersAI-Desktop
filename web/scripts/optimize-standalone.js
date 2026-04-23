@@ -15,6 +15,9 @@ console.log('🔧 Optimizing standalone output...')
 const nextDir = path.join(__dirname, '..', '.next')
 const standaloneDir = path.join(__dirname, '..', '.next', 'standalone')
 const standaloneWebDir = path.join(standaloneDir, 'web')
+const runtimeRoot = fs.existsSync(path.join(standaloneDir, 'server.js'))
+  ? standaloneDir
+  : standaloneWebDir
 
 // Check if standalone directory exists
 if (!fs.existsSync(standaloneDir)) {
@@ -119,8 +122,12 @@ function syncPath(sourcePath, targetPath) {
 }
 
 console.log('📦 Syncing runtime assets...')
-syncPath(path.join(nextDir, 'static'), path.join(standaloneWebDir, '.next', 'static'))
-syncPath(path.join(__dirname, '..', 'public'), path.join(standaloneWebDir, 'public'))
+console.log(`📍 Runtime root: ${path.relative(path.join(__dirname, '..'), runtimeRoot)}`)
+syncPath(path.join(nextDir, 'static'), path.join(runtimeRoot, '.next', 'static'))
+syncPath(path.join(__dirname, '..', 'public'), path.join(runtimeRoot, 'public'))
+// Server-side i18n uses dynamic JSON imports at runtime, so keep the locale files adjacent
+// to the standalone server entry.
+syncPath(path.join(__dirname, '..', 'i18n'), path.join(runtimeRoot, 'i18n'))
 
 // Calculate size reduction
 console.log('\n📊 Optimization complete!')

@@ -16,6 +16,7 @@ Invoke this skill when:
 - The user wants step-by-step Git commands for add / commit / push / PR.
 - The user asks for a merge workflow that requires review and verification before updating `master`.
 - The user wants a reusable release-ready branching convention for optimized or verified code.
+- The user provides a repository path or name and expects you to complete the full local feature-branch to PR workflow with minimal back-and-forth.
 
 Do not invoke when:
 
@@ -31,6 +32,66 @@ Do not invoke when:
 4. Commit with clear, structured messages.
 5. Push the feature branch first, then merge through Pull Request.
 6. Complete optimization, testing, and validation before requesting merge.
+7. If the user already gave the repository path and target base branch, default to executing the full flow instead of only explaining it.
+
+## Git Hygiene Guardrails
+
+Treat Git as the source of durable product code, configuration templates, stable documentation, and reusable tests. Do not use Git as a dump area for local debugging residue or process-time artifacts.
+
+## Historical Failure Modes To Strictly Forbid
+
+The following recurring failure modes are now prohibited in future Git delivery tasks:
+
+- **Over-cleaning**: do not mix repo-wide formatting, import sorting, logging style rewrites, or broad cleanup into a targeted task unless the user explicitly asked for cleanup as the primary goal.
+- **Debug-stage residue**: do not stage one-off probes, helper scripts, process notes, temporary screenshots, or troubleshooting outputs that were only useful during diagnosis.
+- **Requirement-boundary drift**: do not append unrelated refactors, opportunistic tidy-ups, or side-path fixes outside the user-requested scope.
+- **Automation-induced churn**: do not accept formatter, linter, or code-action rewrites as valuable by default; keep only the subset required to support the intended functional change or required validation.
+
+If any of these patterns appear during review, classify them as `temporary`, `process`, or `mechanical-noise`, revert them before commit, and mention the reason in the delivery summary.
+
+### Default Exclusions
+
+The following file classes should be excluded from version control unless the user explicitly approves them as durable repository assets:
+
+- One-off debug scripts such as `debug_*.py`, `check_*.py`, `tmp_*.ts`, `test_manual_*`, `verify_*`
+- Process documentation such as `修复总结.md`, `测试记录.md`, `立即操作.md`, `当前状态.md`, `交接说明.md`
+- Local validation outputs such as screenshots, exports, archives, masked samples, `.bak`, `.tmp`, `.log`
+- Local sandbox and upload artifacts such as `sandbox/uploads/*`, scratch data, copied fixtures, temporary archives
+- Temporary test pages or debug routes such as `test-*.tsx`, `debug-*.tsx`, throwaway admin pages, manual inspection UIs
+- Secrets or secret-like helper files such as hardcoded token scripts, local credential notes, copied `.env` variants, plaintext passwords
+
+### What To Keep
+
+Keep files in Git only when they are part of the maintained product surface:
+
+- Production code and stable infrastructure code
+- Reusable automated tests that protect real behavior
+- Template configs such as `.env.example`
+- Stable architecture, deployment, or product docs
+- Long-term operational scripts that are safe, reviewed, and reusable
+
+### Ignore Strategy
+
+When a file is not meant for durable collaboration, keep it out of Git using the smallest safe scope:
+
+- Use repository `.gitignore` for universal junk and generated artifacts
+- Use `.git/info/exclude` for developer-local debug files that should not become team policy
+- Move personal notes, experiments, and scratch outputs into ignored local directories
+- Prefer deleting one-off files after use instead of creating more ignore debt
+
+### Pre-Stage Review Rules
+
+Before any `git add`, explicitly inspect whether changed files belong to the product or only to the process that produced the product.
+
+Must-review questions:
+
+- Does this file implement or protect a real user-facing or system-facing capability?
+- Will another teammate need this file in six weeks?
+- Does it contain secrets, temporary results, screenshots, copied data, or local-only paths?
+- Is it a real automated test, or only a one-time verification script?
+- Is it a stable document, or only a process log that should be summarized elsewhere?
+
+If the answer points to temporary value only, do not stage it.
 
 ## Branch Naming Convention
 
@@ -93,6 +154,7 @@ Verify:
 - Working directory is the expected repository.
 - Remote points to the correct GitHub repository.
 - You understand which files are modified before staging.
+- If the user already specified the repository path, do not ask again unless the directory is not a Git repository.
 
 ### 2) Update Local Master
 
@@ -115,6 +177,13 @@ Success criteria:
 - Current branch is `master`
 - Pull succeeds without conflict
 - Latest commits match remote expectations
+
+If there are uncommitted changes on `master` that belong to the requested delivery:
+
+- create the feature branch immediately from the current `master` HEAD
+- do not force a checkout/reset that would disturb the local worktree
+- use `git fetch origin master` plus ahead/behind comparison to confirm whether local `master` is already aligned
+- if local and remote `master` differ and the worktree is dirty, branch first and reconcile on the feature branch
 
 ### 3) Create a New Feature Branch
 
@@ -143,6 +212,8 @@ Success criteria:
 
 ### 4) Review Changes Before Staging
 
+During review, explicitly separate requested product changes from accidental cleanup noise. If a diff is dominated by style churn, debug leftovers, or tool-driven rewrites with no direct business value, revert that portion before staging.
+
 Run:
 
 ```bash
@@ -155,6 +226,15 @@ Verify:
 
 - Only intended files are modified
 - No secrets, temporary files, or unrelated edits are included
+- Test, debug, and process files are explicitly filtered out unless approved as durable assets
+
+Then perform a classification pass:
+
+- `product` - stage normally
+- `reusable-test` - stage only if it protects real behavior
+- `process` - summarize into stable docs if needed, otherwise exclude
+- `temporary` - delete or ignore locally, never stage
+- `mechanical-noise` - revert unless it is strictly required by the requested change or to pass a directly relevant check
 
 ### 5) Stage Intended Files
 
@@ -182,6 +262,7 @@ Success criteria:
 
 - Intended files are in `Changes to be committed`
 - Nothing unexpected is staged
+- No temporary debug files, process docs, local outputs, or secret-bearing helpers are staged
 
 ### 6) Complete Optimization and Validation Before Commit
 
@@ -206,6 +287,35 @@ If any check fails:
 
 - Fix issues on the same feature branch
 - Re-run checks before committing
+
+When validation output contains generated-cache or stale-build noise, classify it carefully:
+
+- if the error points to files you changed, fix it before commit
+- if the error points only to generated directories such as `.next/types`, `dist`, or cached manifests unrelated to the staged diff, record it as a pre-existing or generated residue issue
+- do not block a focused feature PR on unrelated generated-noise failures, but mention them clearly in the PR description
+
+### 6.1) Cleanup Sweep Before Commit
+
+Before committing, do a lightweight cleanup sweep:
+
+```bash
+git status --short
+git diff --stat
+git ls-files --others --exclude-standard
+```
+
+Review and act on:
+
+- stray debug or validation files
+- process notes that should not live in Git
+- generated outputs or copied data files
+- files with names that suggest temporary intent such as `test-`, `debug-`, `output`, `backup`, `final`, `v2`, `done`
+
+Preferred actions:
+
+- delete the file if it is temporary
+- move it into an ignored local path if it is still useful personally
+- convert it into a stable test or stable doc if it has long-term value
 
 ### 7) Commit to the Feature Branch
 
@@ -431,6 +541,28 @@ git commit -m "<type>(<scope>): <summary>"
 git push -u origin feature/<scope>-<topic>
 ```
 
+## Direct-Execution Default
+
+When the user says things like:
+
+- "提交本地某仓库修改到 feature 并发起 PR"
+- "仓库路径是 ...，合并到 master"
+- "按 git skill 直接做完"
+
+the default behavior should be:
+
+1. inspect the repository status and diff
+2. classify changed files against the hygiene guardrails
+3. choose a conventional branch name and commit message
+4. create the feature branch
+5. stage only intended files
+6. run targeted validation
+7. commit and push
+8. open the PR to the requested base branch
+9. report branch name, commit, validation results, PR link, and residual risks
+
+Do not stop after giving commands unless the user explicitly asked for instructions only.
+
 ## Step Verification Checklist
 
 - [ ] Current branch is not `master` during development
@@ -452,6 +584,32 @@ git push -u origin feature/<scope>-<topic>
 - Pushing unverified code
 - Opening a PR before optimization and validation complete
 - Including secrets, logs, or generated local files in the commit
+- Keeping one-off debug scripts and process documents under version control
+- Letting temporary files accumulate until they look "normal" and get staged by habit
+
+## Periodic Cleanup Mechanism
+
+Use the following maintenance rhythm to keep the repository clean over time:
+
+### Before Every Commit
+
+- review `git status --short`
+- review unstaged and staged diffs
+- remove or ignore temporary debug, test, and process files
+
+### Weekly Or Before Release
+
+- scan for new `.bak`, `.tmp`, `output*`, `test-*`, `debug-*`, and upload artifacts
+- review docs directories for process summaries that should be collapsed or removed
+- review helper scripts for hardcoded credentials, local hosts, and one-time repair logic
+- update `.gitignore` or `.git/info/exclude` when the same local residue pattern repeats
+
+### Monthly Hygiene Review
+
+- prune obsolete utility scripts that are no longer part of the maintained workflow
+- remove process-time documents after their stable conclusions are merged into durable docs
+- check whether temporary tests can be replaced by real automated tests or deleted
+- confirm that Git history still reflects product evolution rather than troubleshooting residue
 
 ## Output Template
 

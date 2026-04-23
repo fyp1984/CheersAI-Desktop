@@ -3,13 +3,14 @@
 import {
   RiCheckLine,
   RiCloseLine,
+  RiDownloadLine,
   RiEyeLine,
   RiEyeOffLine,
   RiLoader4Line,
   RiRefreshLine,
   RiSave3Line,
 } from '@remixicon/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Button from '@/app/components/base/button'
 import Toast from '@/app/components/base/toast'
@@ -20,6 +21,16 @@ type GiteaConfig = {
   gitea_owner: string
   gitea_repo: string
   gitea_token: string
+}
+
+type FileBayConfig = {
+  url: string
+  username: string
+  repoName: string
+  email: string
+  token: string
+  downloadedAt: string
+  version: string
 }
 
 export default function GiteaSettingsPage() {
@@ -35,10 +46,20 @@ export default function GiteaSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [showToken, setShowToken] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean, message: string } | null>(null)
+  const [autoDownloading, setAutoDownloading] = useState(false)
+  const hasAutoDownloaded = useRef(false)
 
   useEffect(() => {
     loadConfig()
   }, [])
+
+  // 自动下载配置文件(仅执行一次)
+  useEffect(() => {
+    if (!loading && !hasAutoDownloaded.current && config.gitea_url) {
+      hasAutoDownloaded.current = true
+      autoDownloadConfig()
+    }
+  }, [loading, config.gitea_url])
 
   async function loadConfig() {
     setLoading(true)
@@ -59,6 +80,94 @@ export default function GiteaSettingsPage() {
     }
     finally {
       setLoading(false)
+    }
+  }
+
+  const autoDownloadConfig = async () => {
+    setAutoDownloading(true)
+    try {
+      await downloadConfig(true)
+    }
+    finally {
+      setAutoDownloading(false)
+    }
+  }
+
+  const downloadConfig = async (isAuto = false) => {
+    try {
+      // 获取完整配置(包含未 masked 的 token)
+      const configResponse = await fetch(`${API_PREFIX}/gitea/config/download`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      let downloadConfig: any = {}
+      if (configResponse.ok) {
+        downloadConfig = await configResponse.json()
+      }
+      else {
+        throw new Error('Failed to fetch config')
+      }
+
+      // 获取用户邮箱
+      let userEmail = ''
+      try {
+        const userResponse = await fetch(`${API_PREFIX}/account/profile`, {
+          method: 'GET',
+          credentials: 'include',
+        })
+        if (userResponse.ok) {
+          const userData = await userResponse.json()
+          userEmail = userData.email || ''
+        }
+      }
+      catch (e) {
+        console.warn('Failed to get user email:', e)
+      }
+
+      // 构建配置对象
+      const fileBayConfig: FileBayConfig = {
+        url: downloadConfig.gitea_url || '',
+        username: downloadConfig.gitea_owner || '',
+        repoName: downloadConfig.gitea_repo || '',
+        email: userEmail,
+        token: downloadConfig.gitea_token || '',
+        downloadedAt: new Date().toISOString(),
+        version: '1.0.0',
+      }
+
+      // 创建下载文件
+      const configJson = JSON.stringify(fileBayConfig, null, 2)
+      const blob = new Blob([configJson], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+
+      // 触发下载
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'filebay-config.json'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      if (!isAuto) {
+        Toast.notify({
+          type: 'success',
+          message: 'FileBay 配置文件已下载成功',
+        })
+      }
+    }
+    catch (error) {
+      console.error('Download failed:', error)
+      if (!isAuto) {
+        Toast.notify({
+          type: 'error',
+          message: `下载失败: ${error}`,
+        })
+      }
     }
   }
 
@@ -302,6 +411,21 @@ export default function GiteaSettingsPage() {
             </Button>
 
             <Button
+              onClick={() => downloadConfig(false)}
+              disabled={autoDownloading}
+              className="flex items-center gap-2"
+            >
+              {autoDownloading
+                ? (
+                    <RiLoader4Line className="h-4 w-4 animate-spin" />
+                  )
+                : (
+                    <RiDownloadLine className="h-4 w-4" />
+                  )}
+              下载配置文件
+            </Button>
+
+            <Button
               onClick={loadConfig}
               disabled={loading}
               className="ml-auto"
@@ -313,17 +437,33 @@ export default function GiteaSettingsPage() {
       </div>
 
       {/* Help Section */}
-      <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
-        <h3 className="mb-2 text-sm font-medium text-blue-900">
-          📝 配置说明
-        </h3>
-        <ul className="space-y-1 text-sm text-blue-700">
-          <li>• 在 FileBay 中创建一个用于文件存储的仓库</li>
-          <li>• 在 FileBay 设置 → 应用 → 生成新令牌，选择 repo 权限</li>
-          <li>• 填写上述配置信息并点击“测试连接”验证</li>
-          <li>• 配置成功后，文件选择器将从 FileBay 仓库获取文件</li>
-          <li>• 注意：当前配置为临时配置，重启后失效。永久配置请修改 api/.env 文件</li>
-        </ul>
+      <div className="mt-6 space-y-4">
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <h3 className="mb-2 text-sm font-medium text-blue-900">
+            📝 配置说明
+          </h3>
+          <ul className="space-y-1 text-sm text-blue-700">
+            <li>• 在 FileBay 中创建一个用于文件存储的仓库</li>
+            <li>• 在 FileBay 设置 → 应用 → 生成新令牌，选择 repo 权限</li>
+            <li>• 填写上述配置信息并点击"测试连接"验证</li>
+            <li>• 配置成功后，文件选择器将从 FileBay 仓库获取文件</li>
+            <li>• 注意：当前配置为临时配置，重启后失效。永久配置请修改 api/.env 文件</li>
+          </ul>
+        </div>
+
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+          <h3 className="mb-2 text-sm font-medium text-green-900">
+            💻 Desktop App 集成
+          </h3>
+          <ul className="space-y-1 text-sm text-green-700">
+            <li>• 登录后系统会自动下载 FileBay 配置文件到本地</li>
+            <li>• 也可以点击"下载配置文件"按钮手动下载</li>
+            <li>• 打开 Desktop App，进入"沙箱管理"页面</li>
+            <li>• 在 FileBay 配置管理区域，点击"导入配置"按钮</li>
+            <li>• 选择下载的 filebay-config.json 文件导入</li>
+            <li>• 导入成功后，Desktop App 即可使用 FileBay 进行文件脱敏</li>
+          </ul>
+        </div>
       </div>
     </div>
   )

@@ -78,6 +78,36 @@ export const updateUserProfile = ({ url, body }: { url: string, body: Record<str
   return post<CommonResponse>(url, { body })
 }
 
+export const updateSSOPassword = async (body: {
+  password?: string
+  new_password: string
+  repeat_new_password: string
+}): Promise<CommonResponse> => {
+  const response = await globalThis.fetch('/oauth-api/auth/sso/account/password/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(body),
+  })
+
+  let payload: Record<string, any> = {}
+  try {
+    payload = await response.json() as Record<string, any>
+  }
+  catch {
+    if (!response.ok)
+      throw new Error('Failed to update SSO password')
+  }
+
+  if (response.ok && payload?.result !== 'fail')
+    return { result: 'success' }
+
+  throw new Error(String(payload?.message || payload?.msg || 'Failed to update SSO password'))
+}
+
 export const fetchLangGeniusVersion = ({ url, params }: { url: string, params: Record<string, any> }): Promise<LangGeniusVersionResponse> => {
   return get<LangGeniusVersionResponse>(url, { params })
 }
@@ -400,17 +430,12 @@ export const applyForBeta = async (body: { email: string, name: string, language
     payload = await response.json() as Record<string, any>
   }
   catch {
-    if (!response.ok) {
+    if (!response.ok)
       throw new Error('申请失败，请稍后重试')
-    }
   }
 
-  if (payload?.result === 'success') {
+  if (payload?.result === 'success' || payload?.code === 200)
     return { result: 'success' }
-  }
-  if (payload?.code === 200) {
-    return { result: 'success' }
-  }
 
   const errorMessage = payload?.message || payload?.data || '申请失败，请稍后重试'
   throw new Error(String(errorMessage))

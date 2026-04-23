@@ -65,6 +65,16 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  async rewrites() {
+    return [
+      {
+        source: '/console/api/:path*',
+        destination: 'http://localhost:5001/console/api/:path*',
+      },
+    ]
+  },
+  // Keep standalone tracing inside `web` so local Docker builds do not scan the repo root.
+  outputFileTracingRoot: process.cwd(),
   output: 'standalone',
   compiler: {
     removeConsole: isDev ? false : { exclude: ['warn', 'error'] },

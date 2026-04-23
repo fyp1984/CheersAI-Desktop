@@ -133,6 +133,7 @@ class AccountService:
         if account.status == AccountStatus.BANNED:
             raise Unauthorized("Account is banned.")
 
+        now = naive_utc_now()
         current_tenant = db.session.query(TenantAccountJoin).filter_by(account_id=account.id, current=True).first()
         if current_tenant:
             account.set_tenant_id(current_tenant.tenant_id)
@@ -147,16 +148,35 @@ class AccountService:
                 return None
 
             account.set_tenant_id(available_ta.tenant_id)
-            logging.getLogger(__name__).warning(
-                "Skipping current tenant persistence for account %s because duplicate account rows were detected",
-                account.id,
-            )
+            try:
+                with Session(db.engine, expire_on_commit=False) as session:
+                    join_to_update = session.query(TenantAccountJoin).filter_by(id=available_ta.id).first()
+                    if join_to_update:
+                        join_to_update.current = True
+                        session.add(join_to_update)
+                        session.commit()
+            except StaleDataError:
+                logger.warning(
+                    "Skipping current tenant persistence for account %s because tenant membership changed concurrently",
+                    account.id,
+                    exc_info=True,
+                )
 
-        if naive_utc_now() - account.last_active_at > timedelta(minutes=10):
-            logging.getLogger(__name__).warning(
-                "Skipping last_active update for account %s because duplicate account rows were detected",
-                account.id,
-            )
+        if now - account.last_active_at > timedelta(minutes=10):
+            try:
+                with Session(db.engine, expire_on_commit=False) as session:
+                    account_to_update = session.query(Account).filter_by(id=account.id).first()
+                    if account_to_update:
+                        account_to_update.last_active_at = now
+                        session.add(account_to_update)
+                        session.commit()
+                account.last_active_at = now
+            except StaleDataError:
+                logger.warning(
+                    "Skipping last_active update for account %s because account row changed concurrently",
+                    account.id,
+                    exc_info=True,
+                )
         # NOTE: make sure account is accessible outside of a db session
         # This ensures that it will work correctly after upgrading to Flask version 3.1.2
         db.session.close()
@@ -406,8 +426,8 @@ class AccountService:
             except StaleDataError:
                 # Some local/dev databases have a duplicated physical account row; keep login working.
                 db.session.rollback()
-                logging.getLogger(__name__).warning(
-                    "Skipping login info update for account %s because duplicate account rows were detected",
+                logger.warning(
+                    "Skipping login info update for account %s because account row changed concurrently",
                     account.id,
                     exc_info=True,
                 )

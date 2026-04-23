@@ -166,6 +166,7 @@
   "newApp.hideTemplates": "Go back to mode selection",
   "newApp.import": "Import",
   "newApp.learnMore": "Learn more",
+  "newApp.loadAppsFailed": "Failed to load apps. Reload and try again.",
   "newApp.nameNotEmpty": "Name cannot be empty",
   "newApp.noAppsFound": "No apps found",
   "newApp.noIdeaTip": "No ideas? Check out our templates",

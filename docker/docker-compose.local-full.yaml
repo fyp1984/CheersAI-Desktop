@@ -1,0 +1,19 @@
+services:
+  web:
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+      target: dev
+    command:
+      - pnpm
+      - exec
+      - next
+      - dev
+      - --webpack
+      - -H
+      - 0.0.0.0
+      - -p
+      - "3000"
+    environment:
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: 1

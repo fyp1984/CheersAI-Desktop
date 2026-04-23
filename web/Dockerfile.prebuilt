@@ -27,13 +27,11 @@ RUN addgroup -S -g ${dify_uid} dify && \
     mkdir /.pm2 && \
     chown -R dify:dify /app /.pm2
 
-WORKDIR /app
-
-COPY --chown=dify:dify public ./web/public
-COPY --chown=dify:dify .next/standalone ./
-COPY --chown=dify:dify .next/static ./web/.next/static
-
 WORKDIR /app/web
+
+COPY --chown=dify:dify public ./public
+COPY --chown=dify:dify .next/standalone ./
+COPY --chown=dify:dify .next/static ./.next/static
 COPY --chown=dify:dify --chmod=755 docker/entrypoint.sh ./entrypoint.sh
 
 ARG COMMIT_SHA

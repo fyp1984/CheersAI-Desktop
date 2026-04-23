@@ -1,18 +1,24 @@
 import { get, post } from './base'
 
-
-
 export type OperationLogContent = {
 
   file_name?: string
+
+  dataset_name?: string
+
+  app_name?: string
+
+  status?: string
+
+  error?: string
+
+  mode?: string
 
   size?: number
 
   [key: string]: unknown
 
 }
-
-
 
 export type OperationLog = {
 
@@ -56,8 +62,6 @@ export type OperationLog = {
 
 }
 
-
-
 export type OperationLogListResponse = {
 
   data: OperationLog[]
@@ -72,8 +76,6 @@ export type OperationLogListResponse = {
 
 }
 
-
-
 export type OperationLogStats = {
 
   today_count?: number
@@ -85,8 +87,6 @@ export type OperationLogStats = {
   failed_count?: number
 
 }
-
-
 
 export type OperationLogFilters = {
 
@@ -112,14 +112,9 @@ export type OperationLogFilters = {
 
 }
 
-
-
 export type ExportFormat = 'excel' | 'pdf'
 
-
-
 export const fetchOperationLogs = (filters: OperationLogFilters): Promise<OperationLogListResponse> => {
-
   const params = new URLSearchParams()
 
   if (filters.page)
@@ -162,29 +157,16 @@ export const fetchOperationLogs = (filters: OperationLogFilters): Promise<Operat
 
     params.append('sync_status', filters.sync_status)
 
-
-
   return get<OperationLogListResponse>(`/operation-logs?${params.toString()}`)
-
 }
-
-
 
 export const fetchOperationLogStats = () => {
-
   return get<OperationLogStats>('/operation-logs/stats')
-
 }
-
-
 
 export const fetchOperationLogActions = () => {
-
   return get<{ actions: string[] }>('/operation-logs/actions')
-
 }
-
-
 
 export const exportAuditLogs = (
 
@@ -192,15 +174,12 @@ export const exportAuditLogs = (
 
   filters: Omit<OperationLogFilters, 'page' | 'limit'>,
 
-): Promise<Response> => {
-
+): Promise<Blob> => {
   return post(`/operation-logs/export`, {
 
     format,
 
     ...filters,
 
-  }) as Promise<Response>
-
+  }) as Promise<Blob>
 }
-

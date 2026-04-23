@@ -13,9 +13,9 @@ const globalForSessions = globalThis as unknown as {
 
 const sessions = globalForSessions.ssoSessions ?? new Map<string, SSOSession>()
 
-if (process.env.NODE_ENV !== 'production') {
-  globalForSessions.ssoSessions = sessions
-}
+// Always keep a single process-wide session map so token exchange and userinfo
+// routes resolve the same in-memory session during production standalone runs.
+globalForSessions.ssoSessions = sessions
 
 const cleanupInterval = setInterval(() => {
   const now = Date.now()
