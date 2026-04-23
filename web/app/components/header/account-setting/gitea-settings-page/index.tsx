@@ -248,10 +248,10 @@ export default function GiteaSettingsPage() {
     <div className="w-full">
       <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
         <div className="space-y-6">
-          {/* Gitea URL */}
+          {/* FileBay URL */}
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-700">
-              Gitea 服务器地址
+              FileBay 服务器地址
             </label>
             <input
               type="text"
@@ -261,7 +261,7 @@ export default function GiteaSettingsPage() {
               className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
             />
             <p className="mt-1 text-xs text-gray-500">
-              Gitea 服务器的完整 URL（包括端口）
+              FileBay 服务器的完整 URL（包括端口）
             </p>
           </div>
 
@@ -278,7 +278,7 @@ export default function GiteaSettingsPage() {
               className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
             />
             <p className="mt-1 text-xs text-gray-500">
-              Gitea 用户名或组织名
+              FileBay 用户名或组织名
             </p>
           </div>
 
@@ -327,7 +327,7 @@ export default function GiteaSettingsPage() {
               </button>
             </div>
             <p className="mt-1 text-xs text-gray-500">
-              在 Gitea 设置中生成的 API Token（需要 repo 权限）
+              在 FileBay 设置中生成的 API Token（需要 repo 权限）
             </p>
           </div>
 
@@ -361,7 +361,7 @@ export default function GiteaSettingsPage() {
                       testResult.success ? 'text-green-700' : 'text-red-700'
                     }`}
                   >
-                    {testResult.message}
+                    {testResult.message.replace(/Gitea/g, 'FileBay')}
                   </p>
                 </div>
               </div>

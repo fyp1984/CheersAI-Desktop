@@ -155,6 +155,14 @@ export default function AccountSetting({
       })
     }
 
+    // FileBay 设置 - 始终显示
+    items.push({
+      key: ACCOUNT_SETTING_TAB.GITEA_SETTINGS,
+      name: 'FileBay 设置',
+      icon: <RiGitRepositoryLine className={iconClassName} />,
+      activeIcon: <RiGitRepositoryFill className={iconClassName} />,
+    })
+
     return items
   })()
 
