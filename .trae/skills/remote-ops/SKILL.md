@@ -20,6 +20,17 @@ This skill manages remote server operations safely and efficiently by utilizing 
 
 This skill should prefer standardized scripts under `CheersAI - docs/技术/scripts/<product>-uat` instead of ad-hoc SSH command sequences.
 
+## Historical Failure Modes To Strictly Forbid
+
+The following recurring failure modes are now prohibited in future remote-ops execution:
+
+- **Over-cleaning during ops**: do not piggyback formatting, import-order cleanup, logging rewrites, or unrelated refactors onto a deployment or restart task.
+- **Debug-stage residue**: do not push temporary debug scripts, one-time fix tools, local notes, copied outputs, or ad-hoc helper files to remote environments unless they are explicitly approved as durable ops assets.
+- **Requirement-boundary drift**: do not expand a remote fix into unrelated code cleanup, config redesign, or side-feature work while handling an operational request.
+- **Automation-induced churn**: do not treat linter, formatter, or code-action rewrites as a reason to enlarge the sync set; only ship files required for the requested operational outcome.
+
+When these patterns appear, stop widening the scope, restore focus to the requested fix or release, and leave optional follow-up work in a separate branch or documented backlog.
+
 ### 1. Sync Code (Local -> Remote)
 
 Use this when you have made local code changes and need to update the server.
@@ -107,6 +118,8 @@ Rules:
 - Validate both app status and Nginx permission to read the static release tree
 
 ## Recommended Workflow for Fixes
+
+Before `sync`, review the outgoing file list and remove anything that exists only because of formatting tools, temporary diagnosis, or unrelated cleanup. The remote environment should receive the smallest change set that can achieve the requested operational goal.
 
 When applying a fix (e.g., frontend code change):
 

@@ -16,6 +16,7 @@ Invoke this skill when:
 - The user wants step-by-step Git commands for add / commit / push / PR.
 - The user asks for a merge workflow that requires review and verification before updating `master`.
 - The user wants a reusable release-ready branching convention for optimized or verified code.
+- The user provides a repository path or name and expects you to complete the full local feature-branch to PR workflow with minimal back-and-forth.
 
 Do not invoke when:
 
@@ -31,10 +32,22 @@ Do not invoke when:
 4. Commit with clear, structured messages.
 5. Push the feature branch first, then merge through Pull Request.
 6. Complete optimization, testing, and validation before requesting merge.
+7. If the user already gave the repository path and target base branch, default to executing the full flow instead of only explaining it.
 
 ## Git Hygiene Guardrails
 
 Treat Git as the source of durable product code, configuration templates, stable documentation, and reusable tests. Do not use Git as a dump area for local debugging residue or process-time artifacts.
+
+## Historical Failure Modes To Strictly Forbid
+
+The following recurring failure modes are now prohibited in future Git delivery tasks:
+
+- **Over-cleaning**: do not mix repo-wide formatting, import sorting, logging style rewrites, or broad cleanup into a targeted task unless the user explicitly asked for cleanup as the primary goal.
+- **Debug-stage residue**: do not stage one-off probes, helper scripts, process notes, temporary screenshots, or troubleshooting outputs that were only useful during diagnosis.
+- **Requirement-boundary drift**: do not append unrelated refactors, opportunistic tidy-ups, or side-path fixes outside the user-requested scope.
+- **Automation-induced churn**: do not accept formatter, linter, or code-action rewrites as valuable by default; keep only the subset required to support the intended functional change or required validation.
+
+If any of these patterns appear during review, classify them as `temporary`, `process`, or `mechanical-noise`, revert them before commit, and mention the reason in the delivery summary.
 
 ### Default Exclusions
 
@@ -141,6 +154,7 @@ Verify:
 - Working directory is the expected repository.
 - Remote points to the correct GitHub repository.
 - You understand which files are modified before staging.
+- If the user already specified the repository path, do not ask again unless the directory is not a Git repository.
 
 ### 2) Update Local Master
 
@@ -163,6 +177,13 @@ Success criteria:
 - Current branch is `master`
 - Pull succeeds without conflict
 - Latest commits match remote expectations
+
+If there are uncommitted changes on `master` that belong to the requested delivery:
+
+- create the feature branch immediately from the current `master` HEAD
+- do not force a checkout/reset that would disturb the local worktree
+- use `git fetch origin master` plus ahead/behind comparison to confirm whether local `master` is already aligned
+- if local and remote `master` differ and the worktree is dirty, branch first and reconcile on the feature branch
 
 ### 3) Create a New Feature Branch
 
@@ -191,6 +212,8 @@ Success criteria:
 
 ### 4) Review Changes Before Staging
 
+During review, explicitly separate requested product changes from accidental cleanup noise. If a diff is dominated by style churn, debug leftovers, or tool-driven rewrites with no direct business value, revert that portion before staging.
+
 Run:
 
 ```bash
@@ -211,6 +234,7 @@ Then perform a classification pass:
 - `reusable-test` - stage only if it protects real behavior
 - `process` - summarize into stable docs if needed, otherwise exclude
 - `temporary` - delete or ignore locally, never stage
+- `mechanical-noise` - revert unless it is strictly required by the requested change or to pass a directly relevant check
 
 ### 5) Stage Intended Files
 
@@ -263,6 +287,12 @@ If any check fails:
 
 - Fix issues on the same feature branch
 - Re-run checks before committing
+
+When validation output contains generated-cache or stale-build noise, classify it carefully:
+
+- if the error points to files you changed, fix it before commit
+- if the error points only to generated directories such as `.next/types`, `dist`, or cached manifests unrelated to the staged diff, record it as a pre-existing or generated residue issue
+- do not block a focused feature PR on unrelated generated-noise failures, but mention them clearly in the PR description
 
 ### 6.1) Cleanup Sweep Before Commit
 
@@ -510,6 +540,28 @@ git diff --cached --stat
 git commit -m "<type>(<scope>): <summary>"
 git push -u origin feature/<scope>-<topic>
 ```
+
+## Direct-Execution Default
+
+When the user says things like:
+
+- "提交本地某仓库修改到 feature 并发起 PR"
+- "仓库路径是 ...，合并到 master"
+- "按 git skill 直接做完"
+
+the default behavior should be:
+
+1. inspect the repository status and diff
+2. classify changed files against the hygiene guardrails
+3. choose a conventional branch name and commit message
+4. create the feature branch
+5. stage only intended files
+6. run targeted validation
+7. commit and push
+8. open the PR to the requested base branch
+9. report branch name, commit, validation results, PR link, and residual risks
+
+Do not stop after giving commands unless the user explicitly asked for instructions only.
 
 ## Step Verification Checklist
 
