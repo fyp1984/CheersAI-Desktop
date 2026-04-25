@@ -1,7 +1,7 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Loading from '@/app/components/base/loading'
 import Toast from '@/app/components/base/toast'
 import { useAppContext } from '@/context/app-context'
@@ -26,7 +26,6 @@ const stringifyAuditContent = (value: unknown) => {
 }
 
 const AuditLogsPage = () => {
-  const router = useRouter()
   const { canViewAudit, isLoadingCurrentWorkspace } = useAppContext()
   useDocumentTitle('审计日志')
   const [logs, setLogs] = useState<OperationLog[]>([])
@@ -156,18 +155,34 @@ const AuditLogsPage = () => {
   }, [canViewAudit, filters])
 
   useEffect(() => {
-    if (!isLoadingCurrentWorkspace && !canViewAudit)
-      router.replace('/apps')
-  }, [canViewAudit, isLoadingCurrentWorkspace, router])
-
-  useEffect(() => {
     if (!canViewAudit)
       return
     loadData()
   }, [canViewAudit, page, filters])
 
-  if (isLoadingCurrentWorkspace || !canViewAudit)
+  if (isLoadingCurrentWorkspace)
     return <Loading type="app" />
+
+  if (!canViewAudit) {
+    return (
+      <div className="relative flex h-0 shrink-0 grow flex-col items-center justify-center overflow-y-auto bg-background-body px-6">
+        <div className="max-w-md rounded-2xl border border-divider-regular bg-components-panel-bg p-8 text-center shadow-sm">
+          <div className="text-lg font-semibold text-text-primary">无权访问审计日志</div>
+          <div className="mt-3 text-sm leading-6 text-text-tertiary">
+            当前账号未开通 `desktop_audit_view` 权限，请联系管理员为该工作区分配审计查看能力。
+          </div>
+          <div className="mt-6">
+            <Link
+              href="/apps"
+              className="inline-flex items-center rounded-lg bg-components-button-primary-bg px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-components-button-primary-hover-bg"
+            >
+              返回我的 Agent
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const loadData = async (isAutoRefresh = false) => {
     try {
