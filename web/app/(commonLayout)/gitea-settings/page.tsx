@@ -1,16 +1,13 @@
 'use client'
 
 import {
-  RiCheckLine,
-  RiCloseLine,
   RiDownloadLine,
   RiEyeLine,
   RiEyeOffLine,
   RiLoader4Line,
-  RiRefreshLine,
   RiSave3Line,
 } from '@remixicon/react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Button from '@/app/components/base/button'
 import Toast from '@/app/components/base/toast'
@@ -42,24 +39,13 @@ export default function GiteaSettingsPage() {
     gitea_token: '',
   })
   const [loading, setLoading] = useState(false)
-  const [testing, setTesting] = useState(false)
   const [saving, setSaving] = useState(false)
   const [showToken, setShowToken] = useState(false)
-  const [testResult, setTestResult] = useState<{ success: boolean, message: string } | null>(null)
-  const [autoDownloading, setAutoDownloading] = useState(false)
-  const hasAutoDownloaded = useRef(false)
+  const [downloading, setDownloading] = useState(false)
 
   useEffect(() => {
     loadConfig()
   }, [])
-
-  // 自动下载配置文件(仅执行一次)
-  useEffect(() => {
-    if (!loading && !hasAutoDownloaded.current && config.gitea_url) {
-      hasAutoDownloaded.current = true
-      autoDownloadConfig()
-    }
-  }, [loading, config.gitea_url])
 
   async function loadConfig() {
     setLoading(true)
@@ -83,17 +69,8 @@ export default function GiteaSettingsPage() {
     }
   }
 
-  const autoDownloadConfig = async () => {
-    setAutoDownloading(true)
-    try {
-      await downloadConfig(true)
-    }
-    finally {
-      setAutoDownloading(false)
-    }
-  }
-
-  const downloadConfig = async (isAuto = false) => {
+  const downloadConfig = async () => {
+    setDownloading(true)
     try {
       // 获取完整配置(包含未 masked 的 token)
       const configResponse = await fetch(`${API_PREFIX}/gitea/config/download`, {
@@ -153,21 +130,20 @@ export default function GiteaSettingsPage() {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
 
-      if (!isAuto) {
-        Toast.notify({
-          type: 'success',
-          message: 'FileBay 配置文件已下载成功',
-        })
-      }
+      Toast.notify({
+        type: 'success',
+        message: 'FileBay 配置文件已下载成功',
+      })
     }
     catch (error) {
       console.error('Download failed:', error)
-      if (!isAuto) {
-        Toast.notify({
-          type: 'error',
-          message: `下载失败: ${error}`,
-        })
-      }
+      Toast.notify({
+        type: 'error',
+        message: `下载失败: ${error}`,
+      })
+    }
+    finally {
+      setDownloading(false)
     }
   }
 
@@ -199,42 +175,6 @@ export default function GiteaSettingsPage() {
     }
     finally {
       setSaving(false)
-    }
-  }
-
-  const handleTest = async () => {
-    setTesting(true)
-    setTestResult(null)
-    try {
-      const res = await fetch(`${API_PREFIX}/gitea/config/test`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(config),
-      })
-      if (!res.ok)
-        throw new Error('Failed to test connection')
-      const data = await res.json()
-      setTestResult(data)
-      Toast.notify({
-        type: data.success ? 'success' : 'error',
-        message: data.message,
-      })
-    }
-    catch {
-      setTestResult({
-        success: false,
-        message: '测试连接失败',
-      })
-      Toast.notify({
-        type: 'error',
-        message: '测试连接失败',
-      })
-    }
-    finally {
-      setTesting(false)
     }
   }
 
@@ -340,43 +280,6 @@ export default function GiteaSettingsPage() {
             </p>
           </div>
 
-          {/* Test Result */}
-          {testResult && (
-            <div
-              className={`rounded-lg border p-4 ${
-                testResult.success
-                  ? 'border-green-200 bg-green-50'
-                  : 'border-red-200 bg-red-50'
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                {testResult.success
-                  ? (
-                      <RiCheckLine className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
-                    )
-                  : (
-                      <RiCloseLine className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
-                    )}
-                <div className="flex-1">
-                  <p
-                    className={`text-sm font-medium ${
-                      testResult.success ? 'text-green-900' : 'text-red-900'
-                    }`}
-                  >
-                    {testResult.success ? '连接成功' : '连接失败'}
-                  </p>
-                  <p
-                    className={`mt-1 text-sm ${
-                      testResult.success ? 'text-green-700' : 'text-red-700'
-                    }`}
-                  >
-                    {testResult.message}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Action Buttons */}
           <div className="flex items-center gap-3 border-t border-gray-200 pt-4">
             <Button
@@ -396,26 +299,11 @@ export default function GiteaSettingsPage() {
             </Button>
 
             <Button
-              onClick={handleTest}
-              disabled={testing}
+              onClick={downloadConfig}
+              disabled={downloading}
               className="flex items-center gap-2"
             >
-              {testing
-                ? (
-                    <RiLoader4Line className="h-4 w-4 animate-spin" />
-                  )
-                : (
-                    <RiRefreshLine className="h-4 w-4" />
-                  )}
-              测试连接
-            </Button>
-
-            <Button
-              onClick={() => downloadConfig(false)}
-              disabled={autoDownloading}
-              className="flex items-center gap-2"
-            >
-              {autoDownloading
+              {downloading
                 ? (
                     <RiLoader4Line className="h-4 w-4 animate-spin" />
                   )
@@ -445,7 +333,7 @@ export default function GiteaSettingsPage() {
           <ul className="space-y-1 text-sm text-blue-700">
             <li>• 在 FileBay 中创建一个用于文件存储的仓库</li>
             <li>• 在 FileBay 设置 → 应用 → 生成新令牌，选择 repo 权限</li>
-            <li>• 填写上述配置信息并点击"测试连接"验证</li>
+            <li>• 填写上述配置信息并保存</li>
             <li>• 配置成功后，文件选择器将从 FileBay 仓库获取文件</li>
             <li>• 注意：当前配置为临时配置，重启后失效。永久配置请修改 api/.env 文件</li>
           </ul>
@@ -456,8 +344,7 @@ export default function GiteaSettingsPage() {
             💻 Desktop App 集成
           </h3>
           <ul className="space-y-1 text-sm text-green-700">
-            <li>• 登录后系统会自动下载 FileBay 配置文件到本地</li>
-            <li>• 也可以点击"下载配置文件"按钮手动下载</li>
+            <li>• 点击"下载配置文件"按钮下载 FileBay 配置</li>
             <li>• 打开 Desktop App，进入"沙箱管理"页面</li>
             <li>• 在 FileBay 配置管理区域，点击"导入配置"按钮</li>
             <li>• 选择下载的 filebay-config.json 文件导入</li>

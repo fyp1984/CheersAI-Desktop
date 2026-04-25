@@ -242,77 +242,6 @@ class GiteaConfigApi(Resource):
             f.writelines(new_lines)
 
 
-@console_ns.route('/gitea/config/download')
-class GiteaConfigDownloadApi(Resource):
-    """Gitea configuration download API (returns unmasked token)."""
-
-    @setup_required
-    @login_required
-    def get(self):
-        """
-        Get current Gitea configuration with unmasked token for download.
-        
-        Returns:
-            Current Gitea configuration (token is NOT masked)
-        """
-        # Get current user's email
-        user_email = current_user.email
-        logger.info(f'[Gitea Config Download] Getting config for user: {user_email}')
-        
-        # Try to get user-specific config from local enterprise API
-        try:
-            # Use local API endpoint instead of external tunnel
-            enterprise_api_url = 'http://localhost:5001/inner/api/enterprise/gitea/config'
-            
-            logger.info(f'[Gitea Config Download] Calling local enterprise API: {enterprise_api_url}?email={user_email}')
-            
-            response = requests.get(
-                enterprise_api_url,
-                params={'email': user_email},
-                timeout=5
-            )
-            
-            if response.status_code == 200:
-                config_data = response.json()
-                logger.info(f'[Gitea Config Download] Got user-specific config from enterprise API')
-                
-                return {
-                    'gitea_url': config_data.get('gitea_url', ''),
-                    'gitea_owner': config_data.get('gitea_owner', 'cheersai'),
-                    'gitea_repo': config_data.get('gitea_repo', 'file-storage'),
-                    'gitea_token': config_data.get('gitea_token', ''),
-                }
-            else:
-                logger.warning(f'[Gitea Config Download] Enterprise API returned {response.status_code}, falling back to user config')
-        except Exception as e:
-            logger.warning(f'[Gitea Config Download] Failed to get config from enterprise API: {e}, falling back to user config')
-        
-        # Try to get from user's custom_config in database
-        try:
-            from models.account import Account
-            account = db.session.query(Account).filter_by(email=user_email).first()
-            if account and account.custom_config_dict:
-                user_config = account.custom_config_dict
-                if user_config.get('gitea_url'):
-                    logger.info(f'[Gitea Config Download] Using user database config')
-                    return {
-                        'gitea_url': user_config.get('gitea_url', ''),
-                        'gitea_owner': user_config.get('gitea_owner', 'cheersai'),
-                        'gitea_repo': user_config.get('gitea_repo', 'file-storage'),
-                        'gitea_token': user_config.get('gitea_token', ''),
-                    }
-        except Exception as e:
-            logger.warning(f'[Gitea Config Download] Failed to get user database config: {e}')
-        
-        # Fallback to environment variables
-        return {
-            'gitea_url': os.getenv('FILEBAY_BASE_URL') or os.getenv('GITEA_URL', ''),
-            'gitea_owner': os.getenv('GITEA_OWNER', 'cheersai'),
-            'gitea_repo': os.getenv('GITEA_REPO', 'file-storage'),
-            'gitea_token': os.getenv('GITEA_TOKEN', ''),
-        }
-
-
 @console_ns.route('/gitea/config/test')
 class GiteaConfigTestApi(Resource):
     """Gitea configuration test API."""
@@ -334,6 +263,7 @@ class GiteaConfigTestApi(Resource):
         gitea_token = data.get('gitea_token') or os.getenv('GITEA_TOKEN', '')
         gitea_owner = data.get('gitea_owner') or os.getenv('GITEA_OWNER', 'cheersai')
         gitea_repo = data.get('gitea_repo') or os.getenv('GITEA_REPO', 'file-storage')
+        gitea_path = data.get('gitea_path', '').strip()
         
         # Temporarily set env vars for testing
         original_env = {}
@@ -351,22 +281,24 @@ class GiteaConfigTestApi(Resource):
             # Test connection
             gitea_service = GiteaStorageService()
             
-            # Try to list files in root directory
-            files = gitea_service.list_files('')
+            # Try to list files in the configured directory (or root if not specified)
+            files = gitea_service.list_files(gitea_path)
             
+            path_info = f" in '{gitea_path}'" if gitea_path else " in root directory"
             return {
                 'success': True,
-                'message': f'Successfully connected to Gitea! Found {len(files)} items in repository.'
+                'message': f'Successfully connected to FileBay! Found {len(files)} items{path_info}.'
             }
         except FileNotFoundError:
+            path_info = f" '{gitea_path}'" if gitea_path else " root directory"
             return {
                 'success': True,
-                'message': 'Successfully connected to Gitea! Repository is empty or directory not found.'
+                'message': f'Successfully connected to FileBay! Directory{path_info} is empty or not found (will be created on first upload).'
             }
         except Exception as e:
             return {
                 'success': False,
-                'message': f'Failed to connect to Gitea: {str(e)}'
+                'message': f'Failed to connect to FileBay: {str(e)}'
             }
         finally:
             # Restore original env vars
@@ -381,6 +313,10 @@ class GiteaConfigTestApi(Resource):
 @console_ns.route('/gitea/config/download')
 class GiteaConfigDownloadApi(Resource):
     """Gitea configuration download API for Desktop App."""
+
+    def options(self):
+        """Handle CORS preflight request."""
+        return {}, 200
 
     @setup_required
     @login_required
