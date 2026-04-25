@@ -151,7 +151,7 @@ const DesktopPrimaryTabs = () => {
       return normalizedPathname === '/apps' && searchParams.get('category') !== 'workflow'
 
     return normalizedPathname === item.href || normalizedPathname.startsWith(`${item.href}/`)
-  }) ?? navItems[0]
+  })
 
   const updateScrollState = useCallback(() => {
     const viewport = tabsViewportRef.current
@@ -215,7 +215,7 @@ const DesktopPrimaryTabs = () => {
       window.removeEventListener('resize', updateScrollState)
       viewport.removeEventListener('scroll', updateScrollState)
     }
-  }, [activeItem.id, updateScrollState])
+  }, [activeItem?.id, updateScrollState])
 
   const scrollTabs = (direction: 'left' | 'right') => {
     const viewport = tabsViewportRef.current

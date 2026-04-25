@@ -176,8 +176,21 @@ reg(CheckEmailUniquePayload)
 register_schema_models(console_ns, AccountResponse)
 
 
+def _resolve_desktop_sso_display_name(account) -> str:
+    config = account.custom_config_dict if getattr(account, "custom_config", None) else {}
+
+    for key in ("desktop_sso_preferred_username", "desktop_sso_username"):
+        value = config.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    return account.name
+
+
 def _serialize_account(account) -> dict:
-    return AccountResponse.model_validate(account, from_attributes=True).model_dump(mode="json")
+    payload = AccountResponse.model_validate(account, from_attributes=True).model_dump(mode="json")
+    payload["name"] = _resolve_desktop_sso_display_name(account)
+    return payload
 
 
 integrate_fields = {
