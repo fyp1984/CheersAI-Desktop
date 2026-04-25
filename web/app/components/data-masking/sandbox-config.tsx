@@ -601,14 +601,6 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
                 {giteaSaving ? '保存中...' : '保存配置'}
               </button>
             )}
-            <button
-              type="button"
-              onClick={handleGiteaTest}
-              disabled={giteaTesting || !giteaUrl || !giteaOwner || !giteaRepo || !giteaToken}
-              className="inline-flex items-center rounded-md bg-components-button-secondary-bg px-4 py-2 text-sm font-medium text-components-button-secondary-text hover:bg-components-button-secondary-bg-hover disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {giteaTesting ? '测试中...' : '测试连接'}
-            </button>
           </div>
         </div>
       </div>
