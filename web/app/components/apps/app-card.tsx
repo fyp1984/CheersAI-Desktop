@@ -58,6 +58,45 @@ const AccessControl = dynamic(() => import('@/app/components/app/app-access-cont
 })
 
 const getAppPublishStatus = (app: App) => {
+  if (app.publish_status) {
+    if (app.publish_status === 'pending') {
+      return {
+        label: '待发布',
+        description: app.publish_status_description || '当前存在未发布改动',
+        className: 'border border-[#fcd34d] bg-[#fef3c7] text-[#92400e]',
+        dotClassName: 'bg-amber-400',
+      }
+    }
+
+    if (app.publish_status === 'published') {
+      return {
+        label: '已发布',
+        description: app.publish_status_description || '当前版本已可对外使用',
+        className: 'border border-[#a7f3d0] bg-[#d1fae5] text-[#065f46]',
+        dotClassName: 'bg-[#10b981]',
+      }
+    }
+
+    return {
+      label: '未发布',
+      description: app.publish_status_description || '当前已配置，但尚未对外发布',
+      className: 'border border-slate-200 bg-slate-50 text-slate-600',
+      dotClassName: 'bg-slate-400',
+    }
+  }
+
+  const isWorkflowBackedApp = app.mode === AppModeEnum.WORKFLOW || app.mode === AppModeEnum.ADVANCED_CHAT
+  const isConfigurationReady = isWorkflowBackedApp ? Boolean(app.workflow?.id) : Boolean(app.model_config || app.app_model_config)
+
+  if (!isConfigurationReady) {
+    return {
+      label: '未发布',
+      description: '当前配置不完整，应用暂不可用',
+      className: 'border border-slate-200 bg-slate-50 text-slate-600',
+      dotClassName: 'bg-slate-400',
+    }
+  }
+
   if (app.has_draft_trigger)
     return {
       label: '待发布',
@@ -77,7 +116,7 @@ const getAppPublishStatus = (app: App) => {
 
   return {
     label: '未发布',
-    description: '当前仍为草稿状态',
+    description: '当前已配置，但尚未对外发布',
     className: 'border border-slate-200 bg-slate-50 text-slate-600',
     dotClassName: 'bg-slate-400',
   }

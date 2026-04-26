@@ -11,7 +11,6 @@ export const ACCOUNT_SETTING_TAB = {
   DATA_SECURITY: 'data-security',
   GITEA_SETTINGS: 'gitea-settings',
   LANGUAGE: 'language',
-  GITEA_SETTINGS: 'gitea-settings',
 } as const
 
 export type AccountSettingTab = typeof ACCOUNT_SETTING_TAB[keyof typeof ACCOUNT_SETTING_TAB]
