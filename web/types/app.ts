@@ -382,6 +382,9 @@ export type App = {
   max_active_requests?: number | null
   /** whether workflow trigger has un-published draft */
   has_draft_trigger?: boolean
+  is_configuration_ready?: boolean
+  publish_status?: 'published' | 'pending' | 'unpublished'
+  publish_status_description?: string
 }
 
 export type AppSSO = {

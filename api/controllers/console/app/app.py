@@ -358,6 +358,36 @@ class AppPartial(ResponseModel):
     author_name: str | None = None
     has_draft_trigger: bool | None = None
 
+    @computed_field(return_type=bool)  # type: ignore
+    @property
+    def is_configuration_ready(self) -> bool:
+        is_workflow_backed_app = self.mode in {"workflow", "advanced-chat"}
+        if is_workflow_backed_app:
+            return bool(self.workflow and self.workflow.id)
+        return self.model_config_ is not None
+
+    @computed_field(return_type=str)  # type: ignore
+    @property
+    def publish_status(self) -> str:
+        if not self.is_configuration_ready:
+            return "unpublished"
+        if self.has_draft_trigger:
+            return "pending"
+        if self.enable_site or self.enable_api:
+            return "published"
+        return "unpublished"
+
+    @computed_field(return_type=str)  # type: ignore
+    @property
+    def publish_status_description(self) -> str:
+        if not self.is_configuration_ready:
+            return "当前配置不完整，应用暂不可用"
+        if self.has_draft_trigger:
+            return "当前存在未发布改动"
+        if self.enable_site or self.enable_api:
+            return "当前版本已可对外使用"
+        return "当前已配置，但尚未对外发布"
+
     @computed_field(return_type=str | None)  # type: ignore
     @property
     def icon_url(self) -> str | None:
@@ -534,6 +564,11 @@ class AppListApi(Resource):
 
         for app in app_pagination.items:
             app.has_draft_trigger = str(app.id) in draft_trigger_app_ids
+            is_workflow_backed_app = app.mode in {"workflow", "advanced-chat"}
+            is_configuration_ready = bool(app.workflow) if is_workflow_backed_app else bool(app.app_model_config)
+            if not is_configuration_ready:
+                app.enable_site = False
+                app.enable_api = False
 
         try:
             log_operation(

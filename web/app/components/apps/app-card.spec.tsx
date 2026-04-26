@@ -318,8 +318,20 @@ describe('AppCard', () => {
     it('should show unpublished status when app is still draft only', () => {
       render(<AppCard app={{ ...mockApp, has_draft_trigger: false, enable_site: false, enable_api: false }} />)
       expect(screen.getByText('未发布')).toBeInTheDocument()
-      expect(screen.getByText('当前仍为草稿状态')).toBeInTheDocument()
+    expect(screen.getByText('当前已配置，但尚未对外发布')).toBeInTheDocument()
     })
+
+  it('should show unpublished status when advanced chat app is missing workflow configuration', () => {
+    render(<AppCard app={{ ...mockApp, mode: AppModeEnum.ADVANCED_CHAT, workflow: undefined, model_config: undefined as any, app_model_config: undefined as any }} />)
+    expect(screen.getByText('未发布')).toBeInTheDocument()
+    expect(screen.getByText('当前配置不完整，应用暂不可用')).toBeInTheDocument()
+  })
+
+  it('should show unpublished status when chat app is missing model configuration', () => {
+    render(<AppCard app={{ ...mockApp, mode: AppModeEnum.CHAT, workflow: undefined, model_config: undefined as any, app_model_config: undefined as any }} />)
+    expect(screen.getByText('未发布')).toBeInTheDocument()
+    expect(screen.getByText('当前配置不完整，应用暂不可用')).toBeInTheDocument()
+  })
   })
 
   describe('Props', () => {

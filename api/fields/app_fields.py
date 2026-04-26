@@ -119,6 +119,9 @@ app_partial_fields = {
     "create_user_name": fields.String,
     "author_name": fields.String,
     "has_draft_trigger": fields.Boolean,
+    "is_configuration_ready": fields.Boolean,
+    "publish_status": fields.String,
+    "publish_status_description": fields.String,
 }
 
 
