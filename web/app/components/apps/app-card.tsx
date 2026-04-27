@@ -58,7 +58,19 @@ const AccessControl = dynamic(() => import('@/app/components/app/app-access-cont
 })
 
 const getAppPublishStatus = (app: App) => {
+  const isWorkflowBackedApp = app.mode === AppModeEnum.WORKFLOW || app.mode === AppModeEnum.ADVANCED_CHAT
+  const isConfigurationReady = app.is_configuration_ready ?? (isWorkflowBackedApp ? Boolean(app.workflow?.id) : Boolean(app.model_config || app.app_model_config))
+
   if (app.publish_status) {
+    if (app.publish_status === 'published' && !isConfigurationReady) {
+      return {
+        label: '未发布',
+        description: '当前配置不完整，应用暂不可用',
+        className: 'border border-slate-200 bg-slate-50 text-slate-600',
+        dotClassName: 'bg-slate-400',
+      }
+    }
+
     if (app.publish_status === 'pending') {
       return {
         label: '待发布',
@@ -77,6 +89,15 @@ const getAppPublishStatus = (app: App) => {
       }
     }
 
+    if (app.publish_status === 'recalled') {
+      return {
+        label: '已回收',
+        description: app.publish_status_description || '当前已被回收，暂不可用',
+        className: 'border border-red-200 bg-red-50 text-red-600',
+        dotClassName: 'bg-red-500',
+      }
+    }
+
     return {
       label: '未发布',
       description: app.publish_status_description || '当前已配置，但尚未对外发布',
@@ -84,9 +105,6 @@ const getAppPublishStatus = (app: App) => {
       dotClassName: 'bg-slate-400',
     }
   }
-
-  const isWorkflowBackedApp = app.mode === AppModeEnum.WORKFLOW || app.mode === AppModeEnum.ADVANCED_CHAT
-  const isConfigurationReady = isWorkflowBackedApp ? Boolean(app.workflow?.id) : Boolean(app.model_config || app.app_model_config)
 
   if (!isConfigurationReady) {
     return {
@@ -122,6 +140,11 @@ const getAppPublishStatus = (app: App) => {
   }
 }
 
+const isAppUnavailableForExplore = (app: App) => {
+  const publishStatus = getAppPublishStatus(app).label
+  return publishStatus === '未发布' || publishStatus === '已回收' || publishStatus === '待发布'
+}
+
 export type AppCardProps = {
   app: App
   onRefresh?: () => void
@@ -142,6 +165,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
   const [showSwitchModal, setShowSwitchModal] = useState<boolean>(false)
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   const [showAccessControl, setShowAccessControl] = useState(false)
+  const [showUnavailableConfirm, setShowUnavailableConfirm] = useState(false)
   const [secretEnvList, setSecretEnvList] = useState<EnvironmentVariable[]>([])
 
   const onConfirmDelete = useCallback(async () => {
@@ -276,6 +300,11 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
   }, [app.id])
 
   const openApp = useCallback(async () => {
+    if (isAppUnavailableForExplore(app)) {
+      setShowUnavailableConfirm(true)
+      return
+    }
+
     if (!app.has_draft_trigger) {
       try {
         const installedPath = await getExploreInstalledPath()
@@ -293,7 +322,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
       canViewWorkflow,
       canEditWorkflow,
     }, app, push)
-  }, [app, canEditApps, canEditWorkflow, canViewWorkflow, getExploreInstalledPath, push])
+  }, [app, canEditApps, canEditWorkflow, canViewWorkflow, getExploreInstalledPath, notify, push])
 
   const canOpenEditPage = isCurrentWorkspaceManager || isCurrentWorkspaceDatasetOperator
 
@@ -404,7 +433,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
           </>
         )}
         {
-          !app.has_draft_trigger && (
+          !app.has_draft_trigger && !isAppUnavailableForExplore(app) && (
             (!systemFeatures.webapp_auth.enabled)
               ? (
                   <>
@@ -635,6 +664,18 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
           isShow={showConfirmDelete}
           onConfirm={onConfirmDelete}
           onCancel={() => setShowConfirmDelete(false)}
+        />
+      )}
+      {showUnavailableConfirm && (
+        <Confirm
+          isShow={showUnavailableConfirm}
+          type="info"
+          title="智能体暂未发布"
+          content="该智能体暂未发布，如有需要，请联系管理员。"
+          confirmText="我知道了"
+          showCancel={false}
+          onConfirm={() => setShowUnavailableConfirm(false)}
+          onCancel={() => setShowUnavailableConfirm(false)}
         />
       )}
       {secretEnvList.length > 0 && (

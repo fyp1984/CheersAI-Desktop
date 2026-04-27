@@ -41,12 +41,15 @@ import { useAsyncWindowOpen } from '@/hooks/use-async-window-open'
 import { useFormatTimeFromNow } from '@/hooks/use-format-time-from-now'
 import { AccessMode } from '@/models/access-control'
 import { useAppWhiteListSubjects, useGetUserCanAccessApp } from '@/service/access-control'
-import { fetchAppDetailDirect } from '@/service/apps'
+import { fetchAppDetailDirect, fetchAppLifecycle, publishAppLifecycle, recallAppLifecycle, stashAppLifecycle } from '@/service/apps'
 import { fetchInstalledAppList } from '@/service/explore'
+import { useRequest } from 'ahooks'
 import { AppModeEnum } from '@/types/app'
 import { basePath } from '@/utils/var'
 import Divider from '../../base/divider'
 import Loading from '../../base/loading'
+import Modal from '../../base/modal'
+import Textarea from '../../base/textarea'
 import Toast from '../../base/toast'
 import Tooltip from '../../base/tooltip'
 import ShortcutsName from '../../workflow/shortcuts-name'
@@ -54,6 +57,8 @@ import { getKeyboardKeyCodeBySystem } from '../../workflow/utils'
 import AccessControl from '../app-access-control'
 import PublishWithMultipleModel from './publish-with-multiple-model'
 import SuggestedAction from './suggested-action'
+import { NEED_REFRESH_APP_LIST_KEY } from '@/config'
+import { useInvalidateAppList } from '@/service/use-apps'
 
 type AccessModeLabel = I18nKeysByPrefix<'app', 'accessControlDialog.accessItems.'>
 
@@ -104,6 +109,7 @@ export type AppPublisherProps = {
   multipleModelConfigs?: ModelAndParameter[]
   /** modelAndParameter is passed when debugWithMultipleModel is true */
   onPublish?: (params?: any) => Promise<any> | any
+  onStash?: () => Promise<any> | any
   onRestore?: () => Promise<any> | any
   onToggle?: (state: boolean) => void
   crossAxisOffset?: number
@@ -127,6 +133,7 @@ const AppPublisher = ({
   debugWithMultipleModel = false,
   multipleModelConfigs = [],
   onPublish,
+  onStash,
   onRestore,
   onToggle,
   crossAxisOffset = 0,
@@ -146,12 +153,16 @@ const AppPublisher = ({
   const [showAppAccessControl, setShowAppAccessControl] = useState(false)
   const [isAppAccessSet, setIsAppAccessSet] = useState(true)
   const [embeddingModalOpen, setEmbeddingModalOpen] = useState(false)
+  const [recallModalOpen, setRecallModalOpen] = useState(false)
+  const [recallReason, setRecallReason] = useState('')
+  const [recallSubmitting, setRecallSubmitting] = useState(false)
 
   const appDetail = useAppStore(state => state.appDetail)
   const setAppDetail = useAppStore(s => s.setAppDetail)
   const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
   const { formatTimeFromNow } = useFormatTimeFromNow()
   const { app_base_url: appBaseURL = '', access_token: accessToken = '' } = appDetail?.site ?? {}
+  const invalidateAppList = useInvalidateAppList()
 
   const appMode = (appDetail?.mode !== AppModeEnum.COMPLETION && appDetail?.mode !== AppModeEnum.WORKFLOW) ? AppModeEnum.CHAT : appDetail.mode
   const appURL = `${appBaseURL}${basePath}/${appMode}/${accessToken}`
@@ -161,6 +172,58 @@ const AppPublisher = ({
   const { data: userCanAccessApp, isLoading: isGettingUserCanAccessApp, refetch } = useGetUserCanAccessApp({ appId: appDetail?.id, enabled: false })
   const { data: appAccessSubjects, isLoading: isGettingAppWhiteListSubjects } = useAppWhiteListSubjects(appDetail?.id, open && systemFeatures.webapp_auth.enabled && appDetail?.access_mode === AccessMode.SPECIFIC_GROUPS_MEMBERS)
   const openAsyncWindow = useAsyncWindowOpen()
+
+  const { data: appLifecycle, mutate: mutateAppLifecycle } = useRequest(
+    async () => {
+      if (appDetail?.id)
+        return fetchAppLifecycle(appDetail.id)
+      return undefined
+    },
+    { refreshDeps: [appDetail?.id] }
+  )
+
+  const handleLifecycleChanged = useCallback((nextLifecycle?: any) => {
+    if (nextLifecycle)
+      mutateAppLifecycle(nextLifecycle)
+    localStorage.setItem(NEED_REFRESH_APP_LIST_KEY, '1')
+    invalidateAppList()
+    onRefreshData?.()
+  }, [invalidateAppList, mutateAppLifecycle, onRefreshData])
+
+  const handleStash = useCallback(async () => {
+    if (!appDetail?.id || !appLifecycle) return
+    try {
+      await onStash?.()
+      const nextLifecycle = await stashAppLifecycle(appDetail.id, appLifecycle.row_version)
+      handleLifecycleChanged(nextLifecycle)
+      Toast.notify({ type: 'success', message: '暂存成功' })
+    } catch (e: any) {
+      Toast.notify({ type: 'error', message: e.message || '暂存失败' })
+    }
+  }, [appDetail?.id, appLifecycle, handleLifecycleChanged, onStash])
+
+  const handleRecall = useCallback(async (reason: string) => {
+    if (!appDetail?.id || !appLifecycle) return
+    const trimmedReason = reason.trim()
+    if (!trimmedReason) {
+      Toast.notify({ type: 'error', message: '请输入回收原因' })
+      return
+    }
+    try {
+      setRecallSubmitting(true)
+      const nextLifecycle = await recallAppLifecycle(appDetail.id, appLifecycle.row_version, trimmedReason)
+      handleLifecycleChanged(nextLifecycle)
+      setRecallModalOpen(false)
+      setRecallReason('')
+      setPublished(false)
+      Toast.notify({ type: 'success', message: '回收成功' })
+    } catch (e: any) {
+      Toast.notify({ type: 'error', message: e.message || '回收失败' })
+    }
+    finally {
+      setRecallSubmitting(false)
+    }
+  }, [appDetail?.id, appLifecycle, handleLifecycleChanged])
 
   const noAccessPermission = useMemo(() => systemFeatures.webapp_auth.enabled && appDetail && appDetail.access_mode !== AccessMode.EXTERNAL_MEMBERS && !userCanAccessApp?.result, [systemFeatures, appDetail, userCanAccessApp])
   const disabledFunctionButton = useMemo(() => (!publishedAt || missingStartNode || noAccessPermission), [publishedAt, missingStartNode, noAccessPermission])
@@ -194,13 +257,19 @@ const AppPublisher = ({
   const handlePublish = useCallback(async (params?: ModelAndParameter | PublishWorkflowParams) => {
     try {
       await onPublish?.(params)
+      if (appDetail?.id && appLifecycle) {
+        const nextLifecycle = await publishAppLifecycle(appDetail.id, appLifecycle.row_version)
+        handleLifecycleChanged(nextLifecycle)
+        Toast.notify({ type: 'success', message: '发布成功' })
+      }
       setPublished(true)
       trackEvent('app_published_time', { action_mode: 'app', app_id: appDetail?.id, app_name: appDetail?.name })
     }
-    catch {
+    catch (e: any) {
       setPublished(false)
+      Toast.notify({ type: 'error', message: e?.message || '发布失败' })
     }
-  }, [appDetail, onPublish])
+  }, [appDetail, onPublish, appLifecycle, handleLifecycleChanged])
 
   const handleRestore = useCallback(async () => {
     try {
@@ -350,23 +419,43 @@ const AppPublisher = ({
                   )
                 : (
                     <>
-                      <Button
-                        variant="primary"
-                        className="mt-3 w-full"
-                        onClick={() => handlePublish()}
-                        disabled={publishDisabled || published}
-                      >
-                        {
-                          published
-                            ? t('common.published', { ns: 'workflow' })
-                            : (
-                                <div className="flex gap-1">
-                                  <span>{t('common.publishUpdate', { ns: 'workflow' })}</span>
-                                  <ShortcutsName keys={PUBLISH_SHORTCUT} bgColor="white" />
-                                </div>
-                              )
-                        }
-                      </Button>
+                      <div className="flex gap-2 mt-3 w-full">
+                        <Button
+                          className="flex-1"
+                          onClick={() => handleStash()}
+                          disabled={!appLifecycle?.can_stash}
+                        >
+                          暂存
+                        </Button>
+                        <Button
+                          variant="primary"
+                          className="flex-1"
+                          onClick={() => handlePublish()}
+                          disabled={appLifecycle ? !appLifecycle.can_publish : (publishDisabled || published)}
+                        >
+                          {
+                            published
+                              ? t('common.published', { ns: 'workflow' })
+                              : (
+                                  <div className="flex gap-1 items-center">
+                                    <span>{t('common.publishUpdate', { ns: 'workflow' })}</span>
+                                    <ShortcutsName keys={PUBLISH_SHORTCUT} bgColor="white" />
+                                  </div>
+                                )
+                          }
+                        </Button>
+                        <Button
+                          variant="secondary-accent"
+                          className="flex-1 text-red-500"
+                          onClick={() => {
+                            setRecallReason('')
+                            setRecallModalOpen(true)
+                          }}
+                          disabled={!appLifecycle?.can_recall}
+                        >
+                          回收
+                        </Button>
+                      </div>
                       {showStartNodeLimitHint && (
                         <div className="mt-3 flex flex-col items-stretch">
                           <p
@@ -514,6 +603,43 @@ const AppPublisher = ({
           accessToken={accessToken}
         />
         {showAppAccessControl && <AccessControl app={appDetail!} onConfirm={handleAccessControlUpdate} onClose={() => { setShowAppAccessControl(false) }} />}
+        <Modal
+          isShow={recallModalOpen}
+          onClose={() => {
+            if (recallSubmitting)
+              return
+            setRecallModalOpen(false)
+          }}
+          title="回收 Agent"
+          description="请输入回收原因。回收后，Agent 将从对外可用状态撤回。"
+          closable
+        >
+          <div className="mt-4">
+            <Textarea
+              value={recallReason}
+              onChange={e => setRecallReason(e.target.value)}
+              placeholder="请输入回收原因"
+              className="min-h-[120px]"
+            />
+          </div>
+          <div className="mt-6 flex justify-end gap-2">
+            <Button
+              onClick={() => setRecallModalOpen(false)}
+              disabled={recallSubmitting}
+            >
+              取消
+            </Button>
+            <Button
+              variant="primary"
+              destructive
+              loading={recallSubmitting}
+              disabled={!recallReason.trim()}
+              onClick={() => handleRecall(recallReason)}
+            >
+              确认回收
+            </Button>
+          </div>
+        </Modal>
       </PortalToFollowElem>
     </>
   )

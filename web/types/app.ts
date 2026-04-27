@@ -383,7 +383,7 @@ export type App = {
   /** whether workflow trigger has un-published draft */
   has_draft_trigger?: boolean
   is_configuration_ready?: boolean
-  publish_status?: 'published' | 'pending' | 'unpublished'
+  publish_status?: 'published' | 'pending' | 'unpublished' | 'recalled'
   publish_status_description?: string
 }
 

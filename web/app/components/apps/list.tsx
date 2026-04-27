@@ -61,6 +61,32 @@ type GroupedApps = {
   order: number
 }
 
+const getAppDisplayStatus = (app: App) => {
+  if (app.publish_status === 'recalled')
+    return 'recalled'
+  if (app.publish_status === 'pending')
+    return 'pending'
+  if (app.publish_status === 'published')
+    return 'published'
+  return 'unpublished'
+}
+
+const sortAppsWithinGroup = (apps: App[]) => {
+  const statusRank: Record<string, number> = {
+    published: 0,
+    pending: 1,
+    unpublished: 2,
+    recalled: 3,
+  }
+
+  return [...apps].sort((left, right) => {
+    const statusDiff = statusRank[getAppDisplayStatus(left)] - statusRank[getAppDisplayStatus(right)]
+    if (statusDiff !== 0)
+      return statusDiff
+    return (right.updated_at || 0) - (left.updated_at || 0)
+  })
+}
+
 const groupAppsByPrimaryTag = (apps: App[], orderedTagIds: string[]) => {
   const tagOrderMap = new Map(orderedTagIds.map((id, index) => [id, index]))
   const groups = new Map<string, GroupedApps>()
@@ -90,7 +116,10 @@ const groupAppsByPrimaryTag = (apps: App[], orderedTagIds: string[]) => {
     group.count += 1
   })
 
-  return Array.from(groups.values()).sort((left, right) => {
+  return Array.from(groups.values()).map(group => ({
+    ...group,
+    apps: sortAppsWithinGroup(group.apps),
+  })).sort((left, right) => {
     if (left.isUntagged !== right.isUntagged)
       return left.isUntagged ? 1 : -1
 
@@ -242,7 +271,16 @@ const List: FC<Props> = ({
 
   const pages = data?.pages ?? []
   const flatApps = useMemo(() => pages.flatMap(({ data: apps }) => apps), [pages])
-  const groupedApps = useMemo(() => groupAppsByPrimaryTag(flatApps, tagList.map(tag => tag.id)), [flatApps, tagList])
+  const publishedAndPendingApps = useMemo(
+    () => flatApps.filter(app => !['unpublished', 'recalled'].includes(getAppDisplayStatus(app))),
+    [flatApps],
+  )
+  const archivedApps = useMemo(
+    () => flatApps.filter(app => ['unpublished', 'recalled'].includes(getAppDisplayStatus(app))),
+    [flatApps],
+  )
+  const groupedApps = useMemo(() => groupAppsByPrimaryTag(publishedAndPendingApps, tagList.map(tag => tag.id)), [publishedAndPendingApps, tagList])
+  const groupedArchivedApps = useMemo(() => groupAppsByPrimaryTag(archivedApps, tagList.map(tag => tag.id)), [archivedApps, tagList])
   const hasAnyApp = flatApps.length > 0
   // Show skeleton during initial load or when refetching with no previous data
   const showSkeleton = isLoading || (isFetching && pages.length === 0)
@@ -349,6 +387,60 @@ const List: FC<Props> = ({
                         </div>
                       </section>
                     ))}
+                    {groupedArchivedApps.length > 0 && (
+                      <section className="rounded-xl border border-[#e5e7eb] bg-[#f8fafc] p-5 shadow-sm">
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="inline-flex items-center rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-sm font-semibold text-[#4b5563] shadow-sm">
+                              未发布 / 已回收
+                            </div>
+                            <div className="text-xs text-[#6b7280]">
+                              当前不可在探索页直接使用，已统一置于列表底部
+                            </div>
+                          </div>
+                          <div className="rounded-full bg-white px-3 py-1 text-xs font-medium text-[#475569]">
+                            {archivedApps.length}
+                            {' '}
+                            个 Agent
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-6">
+                          {groupedArchivedApps.map(group => (
+                            <section
+                              key={`archived-${group.key}`}
+                              className="rounded-xl border border-[#e5e7eb] bg-white p-5 shadow-sm"
+                            >
+                              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                  <div className={cn(
+                                    'inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold shadow-sm',
+                                    group.isUntagged
+                                      ? 'border border-[#d1d5db] bg-[#f9fafb] text-[#4b5563]'
+                                      : 'bg-[#94a3b8] text-white',
+                                  )}
+                                  >
+                                    {group.label}
+                                  </div>
+                                  <div className="text-xs text-[#4b5563]">
+                                    已按标签分类展示
+                                  </div>
+                                </div>
+                                <div className="rounded-full bg-[#f1f5f9] px-3 py-1 text-xs font-medium text-[#475569]">
+                                  {group.count}
+                                  {' '}
+                                  个 Agent
+                                </div>
+                              </div>
+                              <div className={APP_GRID_CLASS_NAME}>
+                                {group.apps.map(app => (
+                                  <AppCard key={app.id} app={app} onRefresh={refetch} />
+                                ))}
+                              </div>
+                            </section>
+                          ))}
+                        </div>
+                      </section>
+                    )}
                   </div>
                 </>
               )

@@ -106,6 +106,17 @@ class App(Base):
         sa.DateTime, nullable=False, server_default=func.current_timestamp(), onupdate=func.current_timestamp()
     )
     use_icon_as_answer_icon: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, server_default=sa.text("false"))
+    
+    # lifecycle management fields
+    lifecycle_status: Mapped[str] = mapped_column(String(32), server_default=sa.text("'unpublished'"))
+    lifecycle_status_changed_at = mapped_column(sa.DateTime, nullable=True)
+    lifecycle_status_changed_by = mapped_column(StringUUID, nullable=True)
+    lifecycle_status_reason = mapped_column(LongText, nullable=True)
+    last_published_at = mapped_column(sa.DateTime, nullable=True)
+    last_published_by = mapped_column(StringUUID, nullable=True)
+    last_recalled_at = mapped_column(sa.DateTime, nullable=True)
+    last_recalled_by = mapped_column(StringUUID, nullable=True)
+    row_version: Mapped[int] = mapped_column(sa.Integer, server_default=sa.text("0"))
 
     @property
     def desc_or_prompt(self) -> str:
@@ -2202,3 +2213,25 @@ class TenantCreditPool(TypeBase):
 
     def has_sufficient_credits(self, required_credits: int) -> bool:
         return self.remaining_credits >= required_credits
+
+class AppLifecycleEvent(Base):
+    __tablename__ = "app_lifecycle_events"
+    __table_args__ = (
+        sa.PrimaryKeyConstraint("id", name="app_lifecycle_event_pkey"),
+        sa.Index("app_lifecycle_event_app_id_idx", "app_id"),
+        sa.Index("app_lifecycle_event_tenant_id_idx", "tenant_id"),
+    )
+
+    id: Mapped[str] = mapped_column(StringUUID, default=lambda: str(uuid4()))
+    tenant_id: Mapped[str] = mapped_column(StringUUID, nullable=False)
+    app_id: Mapped[str] = mapped_column(StringUUID, nullable=False)
+    from_status: Mapped[str] = mapped_column(String(32), nullable=True)
+    to_status: Mapped[str] = mapped_column(String(32), nullable=True)
+    action: Mapped[str] = mapped_column(String(32), nullable=False)
+    reason = mapped_column(LongText, nullable=True)
+    validation_result = mapped_column(sa.Text, nullable=True) # json
+    draft_version: Mapped[str] = mapped_column(String(64), nullable=True)
+    published_version: Mapped[str] = mapped_column(String(64), nullable=True)
+    operator_id = mapped_column(StringUUID, nullable=True)
+    operator_name: Mapped[str] = mapped_column(String(255), nullable=True)
+    created_at = mapped_column(sa.DateTime, nullable=False, server_default=func.current_timestamp())

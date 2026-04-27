@@ -12,8 +12,9 @@ import { FILE_EXTS } from '@/app/components/base/prompt-editor/constants'
 import { SupportUploadFileTypes } from '@/app/components/workflow/types'
 import { Resolution } from '@/types/app'
 
-type Props = Omit<AppPublisherProps, 'onPublish'> & {
+type Props = Omit<AppPublisherProps, 'onPublish' | 'onStash'> & {
   onPublish?: (modelAndParameter?: ModelAndParameter, features?: any) => Promise<any> | any
+  onStash?: (modelAndParameter?: ModelAndParameter, features?: any) => Promise<any> | any
   publishedConfig?: any
   resetAppConfig?: () => void
 }
@@ -66,11 +67,16 @@ const FeaturesWrappedAppPublisher = (props: Props) => {
     return props.onPublish?.(modelAndParameter, features)
   }, [features, props])
 
+  const handleStash = useCallback((modelAndParameter?: ModelAndParameter) => {
+    return props.onStash?.(modelAndParameter, features)
+  }, [features, props])
+
   return (
     <>
       <AppPublisher {...{
         ...props,
         onPublish: handlePublish,
+        onStash: handleStash,
         onRestore: () => setRestoreConfirmOpen(true),
       }}
       />

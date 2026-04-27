@@ -28,6 +28,13 @@ const locImageURLs = !hasSetWebPrefix ? [new URL(`http://localhost:${port}/**`),
 const remoteImageURLs = ([hasSetWebPrefix ? new URL(`${process.env.NEXT_PUBLIC_WEB_PREFIX}/**`) : '', ...locImageURLs].filter(item => !!item)) as URL[]
 
 const nextConfig: NextConfig = {
+  experimental: {
+    cpus: 1,
+    workerThreads: false,
+    memoryBasedWorkersCount: true,
+    turbopackFileSystemCacheForDev: false,
+  },
+  typescript: { ignoreBuildErrors: true },
   basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
   // 关键配置：强制使用末尾斜杠，避免与 Nginx 子路径部署的重定向死循环
   trailingSlash: true,
@@ -50,10 +57,6 @@ const nextConfig: NextConfig = {
       pathname: remoteImageURL.pathname,
       search: '',
     })),
-  },
-  typescript: {
-    // https://nextjs.org/docs/api-reference/next.config.js/ignoring-typescript-errors
-    ignoreBuildErrors: true,
   },
   reactStrictMode: true,
   async redirects() {
@@ -80,9 +83,6 @@ const nextConfig: NextConfig = {
     removeConsole: isDev ? false : { exclude: ['warn', 'error'] },
   },
   devIndicators: false,
-  experimental: {
-    turbopackFileSystemCacheForDev: false,
-  },
   allowedDevOrigins: [
     '192.168.0.3',
     'http://192.168.0.3',
