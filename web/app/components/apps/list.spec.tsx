@@ -122,6 +122,40 @@ const defaultAppData = {
   }],
 }
 
+const getInitialAppData = () => ({
+  pages: [{
+    data: [
+      {
+        id: 'app-1',
+        name: 'Test App 1',
+        description: 'Description 1',
+        mode: AppModeEnum.CHAT,
+        icon: '🤖',
+        icon_type: 'emoji',
+        icon_background: '#FFEAD5',
+        tags: [] as Array<{ id: string, name: string, type: string }>,
+        author_name: 'Author 1',
+        created_at: 1704067200,
+        updated_at: 1704153600,
+      },
+      {
+        id: 'app-2',
+        name: 'Test App 2',
+        description: 'Description 2',
+        mode: AppModeEnum.WORKFLOW,
+        icon: '⚙️',
+        icon_type: 'emoji',
+        icon_background: '#E4FBCC',
+        tags: [] as Array<{ id: string, name: string, type: string }>,
+        author_name: 'Author 2',
+        created_at: 1704067200,
+        updated_at: 1704153600,
+      },
+    ],
+    total: 2,
+  }],
+})
+
 vi.mock('@/service/use-apps', () => ({
   useInfiniteAppList: () => ({
     data: mockServiceState.error
@@ -262,8 +296,7 @@ describe('List', () => {
     mockServiceState.hasNextPage = false
     mockServiceState.isLoading = false
     mockServiceState.isFetchingNextPage = false
-    defaultAppData.pages[0].data[0].tags = []
-    defaultAppData.pages[0].data[1].tags = []
+    Object.assign(defaultAppData, getInitialAppData())
     mockQueryState.tagIDs = []
     mockQueryState.keywords = ''
     mockQueryState.isCreatedByMe = false
@@ -318,6 +351,72 @@ describe('List', () => {
     it('should render drop DSL hint for editors', () => {
       render(<List />)
       expect(screen.getByText('app.newApp.dropDSLToCreateApp')).toBeInTheDocument()
+    })
+
+    it('should render unpublished and recalled apps in the archived section at the bottom', () => {
+      defaultAppData.pages[0].data = [
+        {
+          id: 'published-app',
+          name: 'Published App',
+          description: 'Description',
+          mode: AppModeEnum.CHAT,
+          icon: '🤖',
+          icon_type: 'emoji',
+          icon_background: '#FFEAD5',
+          tags: [],
+          author_name: 'Author',
+          created_at: 1704067200,
+          updated_at: 1704153600,
+          publish_status: 'published',
+        } as any,
+        {
+          id: 'pending-app',
+          name: 'Pending App',
+          description: 'Description',
+          mode: AppModeEnum.CHAT,
+          icon: '🤖',
+          icon_type: 'emoji',
+          icon_background: '#FFEAD5',
+          tags: [],
+          author_name: 'Author',
+          created_at: 1704067200,
+          updated_at: 1704153500,
+          publish_status: 'pending',
+        } as any,
+        {
+          id: 'unpublished-app',
+          name: 'Unpublished App',
+          description: 'Description',
+          mode: AppModeEnum.CHAT,
+          icon: '🤖',
+          icon_type: 'emoji',
+          icon_background: '#FFEAD5',
+          tags: [],
+          author_name: 'Author',
+          created_at: 1704067200,
+          updated_at: 1704153400,
+        } as any,
+        {
+          id: 'recalled-app',
+          name: 'Recalled App',
+          description: 'Description',
+          mode: AppModeEnum.CHAT,
+          icon: '🤖',
+          icon_type: 'emoji',
+          icon_background: '#FFEAD5',
+          tags: [],
+          author_name: 'Author',
+          created_at: 1704067200,
+          updated_at: 1704153700,
+          publish_status: 'recalled',
+        } as any,
+      ]
+
+      render(<List />)
+
+      expect(screen.getByText('未发布 / 已回收')).toBeInTheDocument()
+      expect(screen.getByText('当前不可在探索页直接使用，已统一置于列表底部')).toBeInTheDocument()
+      expect(screen.getAllByText(/2\s*个 Agent/)).toHaveLength(3)
     })
   })
 
@@ -500,6 +599,75 @@ describe('List', () => {
 
       expect(screen.getByText('Test App 1')).toBeInTheDocument()
       expect(screen.getByText('Test App 2')).toBeInTheDocument()
+    })
+
+    it('should sort cards by publish state before updated time across the archived split', () => {
+      defaultAppData.pages[0].data = [
+        {
+          id: 'recalled-app',
+          name: 'Recalled App',
+          description: 'Description',
+          mode: AppModeEnum.CHAT,
+          icon: '🤖',
+          icon_type: 'emoji',
+          icon_background: '#FFEAD5',
+          tags: [],
+          author_name: 'Author',
+          created_at: 1704067200,
+          updated_at: 1704153900,
+          publish_status: 'recalled',
+        } as any,
+        {
+          id: 'unpublished-app',
+          name: 'Unpublished App',
+          description: 'Description',
+          mode: AppModeEnum.CHAT,
+          icon: '🤖',
+          icon_type: 'emoji',
+          icon_background: '#FFEAD5',
+          tags: [],
+          author_name: 'Author',
+          created_at: 1704067200,
+          updated_at: 1704153800,
+        } as any,
+        {
+          id: 'pending-app',
+          name: 'Pending App',
+          description: 'Description',
+          mode: AppModeEnum.CHAT,
+          icon: '🤖',
+          icon_type: 'emoji',
+          icon_background: '#FFEAD5',
+          tags: [],
+          author_name: 'Author',
+          created_at: 1704067200,
+          updated_at: 1704153700,
+          publish_status: 'pending',
+        } as any,
+        {
+          id: 'published-app',
+          name: 'Published App',
+          description: 'Description',
+          mode: AppModeEnum.CHAT,
+          icon: '🤖',
+          icon_type: 'emoji',
+          icon_background: '#FFEAD5',
+          tags: [],
+          author_name: 'Author',
+          created_at: 1704067200,
+          updated_at: 1704153600,
+          publish_status: 'published',
+        } as any,
+      ]
+
+      render(<List />)
+
+      expect(screen.getAllByRole('article').map(node => node.textContent)).toEqual([
+        'Published App',
+        'Pending App',
+        'Unpublished App',
+        'Recalled App',
+      ])
     })
   })
 

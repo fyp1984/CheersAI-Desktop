@@ -357,6 +357,7 @@ class AppPartial(ResponseModel):
     create_user_name: str | None = None
     author_name: str | None = None
     has_draft_trigger: bool | None = None
+    lifecycle_status: str | None = None
 
     @computed_field(return_type=bool)  # type: ignore
     @property
@@ -369,22 +370,24 @@ class AppPartial(ResponseModel):
     @computed_field(return_type=str)  # type: ignore
     @property
     def publish_status(self) -> str:
-        if not self.is_configuration_ready:
-            return "unpublished"
-        if self.has_draft_trigger:
-            return "pending"
-        if self.enable_site or self.enable_api:
+        if self.lifecycle_status == "recalled":
+            return "recalled"
+        if self.lifecycle_status == "published":
+            if self.has_draft_trigger:
+                return "pending"
             return "published"
         return "unpublished"
 
     @computed_field(return_type=str)  # type: ignore
     @property
     def publish_status_description(self) -> str:
+        if self.lifecycle_status == "recalled":
+            return "当前已被回收，暂不可用"
         if not self.is_configuration_ready:
             return "当前配置不完整，应用暂不可用"
-        if self.has_draft_trigger:
-            return "当前存在未发布改动"
-        if self.enable_site or self.enable_api:
+        if self.lifecycle_status == "published":
+            if self.has_draft_trigger:
+                return "当前存在未发布改动"
             return "当前版本已可对外使用"
         return "当前已配置，但尚未对外发布"
 
@@ -533,37 +536,10 @@ class AppListApi(Resource):
                 if str(app.id) in res:
                     app.access_mode = res[str(app.id)].access_mode
 
-        workflow_capable_app_ids = [
-            str(app.id) for app in app_pagination.items if app.mode in {"workflow", "advanced-chat"}
-        ]
-        draft_trigger_app_ids: set[str] = set()
-        if workflow_capable_app_ids:
-            draft_workflows = (
-                db.session.execute(
-                    select(Workflow).where(
-                        Workflow.version == Workflow.VERSION_DRAFT,
-                        Workflow.app_id.in_(workflow_capable_app_ids),
-                    )
-                )
-                .scalars()
-                .all()
-            )
-            trigger_node_types = {
-                NodeType.TRIGGER_WEBHOOK,
-                NodeType.TRIGGER_SCHEDULE,
-                NodeType.TRIGGER_PLUGIN,
-            }
-            for workflow in draft_workflows:
-                try:
-                    for _, node_data in workflow.walk_nodes():
-                        if node_data.get("type") in trigger_node_types:
-                            draft_trigger_app_ids.add(str(workflow.app_id))
-                            break
-                except Exception:
-                    continue
+        from services.app_lifecycle_service import AppLifecycleService
 
         for app in app_pagination.items:
-            app.has_draft_trigger = str(app.id) in draft_trigger_app_ids
+            app.has_draft_trigger = AppLifecycleService._has_draft_difference(app)
             is_workflow_backed_app = app.mode in {"workflow", "advanced-chat"}
             is_configuration_ready = bool(app.workflow) if is_workflow_backed_app else bool(app.app_model_config)
             if not is_configuration_ready:
@@ -996,3 +972,113 @@ class AppTraceApi(Resource):
         )
 
         return {"result": "success"}
+
+
+from werkzeug.exceptions import Conflict, Forbidden, NotFound
+from models import AppLifecycleEvent
+from services.app_lifecycle_service import AppLifecycleService, AppLifecycleValidationException
+
+# --- Lifecycle Endpoints ---
+
+@console_ns.route("/apps/<uuid:app_id>/lifecycle")
+class AppLifecycleStatusApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self, app_id):
+        current_user, _ = current_account_with_tenant()
+        app_model = db.session.query(App).filter(App.id == app_id, App.tenant_id == current_user.current_tenant_id).first()
+        if not app_model:
+            raise NotFound("App not found")
+        return AppLifecycleService.get_lifecycle_status(app_model, current_user)
+
+@console_ns.route("/apps/<uuid:app_id>/stash")
+class AppLifecycleStashApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    @edit_permission_required
+    def post(self, app_id):
+        current_user, _ = current_account_with_tenant()
+        app_model = db.session.query(App).filter(App.id == app_id, App.tenant_id == current_user.current_tenant_id).first()
+        if not app_model:
+            raise NotFound("App not found")
+            
+        args = request.get_json() or {}
+        expected_row_version = args.get('expected_row_version', app_model.row_version)
+        
+        try:
+            return AppLifecycleService.stash_app(app_model, expected_row_version)
+        except Conflict as e:
+            raise Conflict(str(e))
+
+@console_ns.route("/apps/<uuid:app_id>/publish")
+class AppLifecyclePublishApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    @edit_permission_required
+    def post(self, app_id):
+        current_user, _ = current_account_with_tenant()
+        app_model = db.session.query(App).filter(App.id == app_id, App.tenant_id == current_user.current_tenant_id).first()
+        if not app_model:
+            raise NotFound("App not found")
+            
+        args = request.get_json() or {}
+        expected_row_version = args.get('expected_row_version', app_model.row_version)
+        reason = args.get('reason')
+        
+        try:
+            return AppLifecycleService.publish_app(app_model, expected_row_version, reason)
+        except AppLifecycleValidationException as e:
+            return {"code": "app_lifecycle_validation_failed", "message": e.message, "details": e.details}, 400
+        except Conflict as e:
+            raise Conflict(str(e))
+
+@console_ns.route("/apps/<uuid:app_id>/recall")
+class AppLifecycleRecallApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    @is_admin_or_owner_required
+    def post(self, app_id):
+        current_user, _ = current_account_with_tenant()
+        app_model = db.session.query(App).filter(App.id == app_id, App.tenant_id == current_user.current_tenant_id).first()
+        if not app_model:
+            raise NotFound("App not found")
+            
+        args = request.get_json() or {}
+        expected_row_version = args.get('expected_row_version', app_model.row_version)
+        reason = args.get('reason')
+        
+        if not reason:
+            raise BadRequest("必须填写回收原因")
+            
+        try:
+            return AppLifecycleService.recall_app(app_model, expected_row_version, reason)
+        except Conflict as e:
+            raise Conflict(str(e))
+
+@console_ns.route("/apps/<uuid:app_id>/lifecycle-events")
+class AppLifecycleEventsApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self, app_id):
+        current_user, _ = current_account_with_tenant()
+        app_model = db.session.query(App).filter(App.id == app_id, App.tenant_id == current_user.current_tenant_id).first()
+        if not app_model:
+            raise NotFound("App not found")
+            
+        events = db.session.query(AppLifecycleEvent).filter(AppLifecycleEvent.app_id == app_id).order_by(AppLifecycleEvent.created_at.desc()).limit(100).all()
+        return {
+            "data": [{
+                "id": str(e.id),
+                "from_status": e.from_status,
+                "to_status": e.to_status,
+                "action": e.action,
+                "reason": e.reason,
+                "operator_name": e.operator_name,
+                "created_at": int(e.created_at.timestamp() * 1000) if e.created_at else None
+            } for e in events]
+        }

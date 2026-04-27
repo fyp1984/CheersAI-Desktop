@@ -1,6 +1,6 @@
 ---
 name: "remote-ops"
-description: "Handles remote server operations including code sync, service build, and management using optimized scripts to prevent server overload. Invoke when user wants to deploy changes, restart services, or fix server issues."
+description: "Handles remote server operations including code sync, service build, restart, and UAT rollout. Invoke when user asks to deploy changes, restart services, fix server issues, or says '应用发布UAT'."
 ---
 
 # Remote Operations Skill
@@ -19,6 +19,50 @@ This skill manages remote server operations safely and efficiently by utilizing 
 ## Usage
 
 This skill should prefer standardized scripts under `CheersAI - docs/技术/scripts/<product>-uat` instead of ad-hoc SSH command sequences.
+
+## CheersAI Desktop UAT Canonical Flow
+
+When the user says `应用发布UAT`, default to this exact Desktop release flow unless the user explicitly requests a different source branch or a local-authoritative release:
+
+1. Use repo: `/Users/FYP/Documents/WorkSpace/CheersAI/subproducts/CheersAI-Desktop/CheersAI-Desktop-Uat`
+2. Confirm the repo is clean before changing branches; if it is dirty, stop and ask instead of forcing reset or overwrite
+3. Run:
+
+```bash
+git checkout master
+git pull --ff-only origin master
+git rev-parse --short HEAD
+```
+
+4. Release with the standard one-click script:
+
+```bash
+PLUGIN_DAEMON_UPLOAD=no bash "/Users/FYP/Documents/WorkSpace/CheersAI/CheersAI - docs/技术/scripts/desktop-uat/00-deploy-all.sh"
+```
+
+5. Verify runtime after deployment:
+
+```bash
+ssh desktop@121.41.195.46 "systemctl show cheersai-api -p ExecMainStartTimestamp -p ActiveState -p SubState; systemctl show cheersai-web -p ExecMainStartTimestamp -p ActiveState -p SubState"
+ssh desktop@121.41.195.46 "curl -I -s https://uat-desktop.cheersai.cloud/signin/ | head -n 5"
+ssh desktop@121.41.195.46 "curl -I -s https://uat-desktop.cheersai.cloud/apps/ | head -n 5"
+```
+
+6. Run browser regression after release. At minimum verify:
+- sign-in page loads
+- SSO login works for `user_01 / 2026@CheersAI`
+- SSO login works for `C_Admin / 2026@CheersAI1`
+- `/apps` loads
+- `/account` loads
+- `FileBay 设置` opens from settings
+- `/audit-logs` behavior matches role permissions
+
+7. Final response must state:
+- released Git commit SHA
+- deploy script result
+- core service health result
+- browser regression pass/fail items
+- any remaining production-impacting issues
 
 ## Historical Failure Modes To Strictly Forbid
 

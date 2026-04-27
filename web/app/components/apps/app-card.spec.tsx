@@ -421,6 +421,43 @@ describe('AppCard', () => {
         }, mockApp, mockPush)
       })
     })
+
+    it('should block explore access for pending apps and show warning', async () => {
+      render(<AppCard app={{ ...mockApp, publish_status: 'pending' } as any} />)
+      const card = screen.getByTitle('Test App').closest('[class*="cursor-pointer"]')!
+      fireEvent.click(card)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+      })
+      expect(screen.getByText('Confirm')).toBeInTheDocument()
+      expect(exploreService.fetchInstalledAppList).not.toHaveBeenCalled()
+      expect(mockPush).not.toHaveBeenCalled()
+    })
+
+    it('should block explore access for recalled apps and show warning', async () => {
+      render(<AppCard app={{ ...mockApp, publish_status: 'recalled' } as any} />)
+      const card = screen.getByTitle('Test App').closest('[class*="cursor-pointer"]')!
+      fireEvent.click(card)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+      })
+      expect(exploreService.fetchInstalledAppList).not.toHaveBeenCalled()
+      expect(mockPush).not.toHaveBeenCalled()
+    })
+
+    it('should block explore access for published apps with incomplete configuration', async () => {
+      render(<AppCard app={{ ...mockApp, publish_status: 'published', model_config: undefined as any, app_model_config: undefined as any } as any} />)
+      const card = screen.getByTitle('Test App').closest('[class*="cursor-pointer"]')!
+      fireEvent.click(card)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+      })
+      expect(exploreService.fetchInstalledAppList).not.toHaveBeenCalled()
+      expect(mockPush).not.toHaveBeenCalled()
+    })
   })
 
   describe('Operations Menu', () => {

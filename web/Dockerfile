@@ -34,7 +34,7 @@ WORKDIR /app/web
 COPY --from=packages /app/web/ .
 COPY . .
 
-ARG NEXT_BUILD_NODE_OPTIONS="--max-old-space-size=3072"
+ARG NEXT_BUILD_NODE_OPTIONS="--max-old-space-size=4096"
 ENV NODE_OPTIONS="${NEXT_BUILD_NODE_OPTIONS}"
 RUN pnpm build:docker
 

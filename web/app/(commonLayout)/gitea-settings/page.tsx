@@ -12,12 +12,30 @@ import { useTranslation } from 'react-i18next'
 import Button from '@/app/components/base/button'
 import Toast from '@/app/components/base/toast'
 import { API_PREFIX } from '@/config'
+import { post } from '@/service/base'
 
 type GiteaConfig = {
   gitea_url: string
   gitea_owner: string
   gitea_repo: string
   gitea_token: string
+}
+
+type SaveFeedback = {
+  type: 'success' | 'error'
+  message: string
+}
+
+const validateConfig = (config: GiteaConfig) => {
+  if (!config.gitea_url.trim())
+    return 'FileBay 服务器地址不能为空'
+  if (!/^https?:\/\/.+/i.test(config.gitea_url.trim()))
+    return 'FileBay 服务器地址格式不正确'
+  if (!config.gitea_owner.trim())
+    return '仓库所有者不能为空'
+  if (!config.gitea_repo.trim())
+    return '仓库名称不能为空'
+  return ''
 }
 
 type FileBayConfig = {
@@ -42,6 +60,7 @@ export default function GiteaSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [showToken, setShowToken] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  const [saveFeedback, setSaveFeedback] = useState<SaveFeedback | null>(null)
 
   useEffect(() => {
     loadConfig()
@@ -148,29 +167,40 @@ export default function GiteaSettingsPage() {
   }
 
   const handleSave = async () => {
+    const validationMessage = validateConfig(config)
+    if (validationMessage) {
+      setSaveFeedback({
+        type: 'error',
+        message: validationMessage,
+      })
+      Toast.notify({
+        type: 'error',
+        message: validationMessage,
+      })
+      return
+    }
+
     setSaving(true)
     try {
-      const res = await fetch(`${API_PREFIX}/gitea/config`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(config),
+      const data = await post<{ message?: string }>('/gitea/config', { body: config })
+      setSaveFeedback({
+        type: 'success',
+        message: data.message || '配置保存成功',
       })
-      if (!res.ok)
-        throw new Error('Failed to save config')
-      const data = await res.json()
       Toast.notify({
         type: 'success',
         message: data.message || '配置保存成功',
       })
       loadConfig()
     }
-    catch {
+    catch (error) {
+      setSaveFeedback({
+        type: 'error',
+        message: error instanceof Error ? error.message : '保存配置失败',
+      })
       Toast.notify({
         type: 'error',
-        message: '保存配置失败',
+        message: error instanceof Error ? error.message : '保存配置失败',
       })
     }
     finally {
@@ -197,6 +227,18 @@ export default function GiteaSettingsPage() {
 
       <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
         <div className="space-y-6">
+          {saveFeedback && (
+            <div
+              role="alert"
+              className={
+                saveFeedback.type === 'success'
+                  ? 'rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700'
+                  : 'rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'
+              }
+            >
+              {saveFeedback.message}
+            </div>
+          )}
           {/* Gitea URL */}
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -205,7 +247,10 @@ export default function GiteaSettingsPage() {
             <input
               type="text"
               value={config.gitea_url}
-              onChange={e => setConfig({ ...config, gitea_url: e.target.value })}
+              onChange={(e) => {
+                setSaveFeedback(null)
+                setConfig({ ...config, gitea_url: e.target.value })
+              }}
               placeholder="http://localhost:3000"
               className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
             />
@@ -222,7 +267,10 @@ export default function GiteaSettingsPage() {
             <input
               type="text"
               value={config.gitea_owner}
-              onChange={e => setConfig({ ...config, gitea_owner: e.target.value })}
+              onChange={(e) => {
+                setSaveFeedback(null)
+                setConfig({ ...config, gitea_owner: e.target.value })
+              }}
               placeholder="cheersai"
               className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
             />
@@ -239,7 +287,10 @@ export default function GiteaSettingsPage() {
             <input
               type="text"
               value={config.gitea_repo}
-              onChange={e => setConfig({ ...config, gitea_repo: e.target.value })}
+              onChange={(e) => {
+                setSaveFeedback(null)
+                setConfig({ ...config, gitea_repo: e.target.value })
+              }}
               placeholder="file-storage"
               className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
             />
@@ -257,7 +308,10 @@ export default function GiteaSettingsPage() {
               <input
                 type={showToken ? 'text' : 'password'}
                 value={config.gitea_token}
-                onChange={e => setConfig({ ...config, gitea_token: e.target.value })}
+                onChange={(e) => {
+                  setSaveFeedback(null)
+                  setConfig({ ...config, gitea_token: e.target.value })
+                }}
                 placeholder="输入新的 Token 或留空保持不变"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 focus:border-transparent focus:ring-2 focus:ring-blue-500"
               />

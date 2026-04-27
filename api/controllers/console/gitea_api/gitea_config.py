@@ -150,6 +150,35 @@ class GiteaConfigApi(Resource):
             Success message
         """
         data = request.get_json()
+        if not isinstance(data, dict):
+            return {
+                'success': False,
+                'message': '请求参数格式错误',
+            }, 400
+
+        gitea_url = (data.get('gitea_url') or '').strip()
+        gitea_owner = (data.get('gitea_owner') or '').strip()
+        gitea_repo = (data.get('gitea_repo') or '').strip()
+        gitea_token = (data.get('gitea_token') or '').strip()
+
+        if not gitea_url:
+            return {'success': False, 'message': 'FileBay 服务器地址不能为空'}, 400
+        if not gitea_owner:
+            return {'success': False, 'message': '仓库所有者不能为空'}, 400
+        if not gitea_repo:
+            return {'success': False, 'message': '仓库名称不能为空'}, 400
+
+        try:
+            parsed = requests.utils.urlparse(gitea_url)
+            if parsed.scheme not in {'http', 'https'} or not parsed.netloc:
+                raise ValueError()
+        except Exception:
+            return {'success': False, 'message': 'FileBay 服务器地址格式不正确'}, 400
+
+        data['gitea_url'] = gitea_url
+        data['gitea_owner'] = gitea_owner
+        data['gitea_repo'] = gitea_repo
+        data['gitea_token'] = gitea_token
         
         # Update environment variables
         if 'gitea_url' in data:

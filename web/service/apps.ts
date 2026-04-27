@@ -13,7 +13,38 @@ export const fetchAppDetail = ({ url, id }: { url: string, id: string }): Promis
 }
 
 export const fetchAppDetailDirect = async ({ url, id }: { url: string, id: string }): Promise<AppDetailResponse> => {
-  return get<AppDetailResponse>(`${url}/${id}`)
+  return await get(`${url}/${id}`)
+}
+
+export type AppLifecycleResponse = {
+  app_id: string
+  lifecycle_status: 'unpublished' | 'published' | 'recalled'
+  display_status: 'unpublished' | 'published' | 'pending' | 'recalled'
+  display_status_description: string
+  is_configuration_ready: boolean
+  validation_errors: any[]
+  can_publish: boolean
+  can_recall: boolean
+  can_stash: boolean
+  last_published_at: number | null
+  last_recalled_at: number | null
+  row_version: number
+}
+
+export const fetchAppLifecycle = (appId: string): Promise<AppLifecycleResponse> => {
+  return get(`/apps/${appId}/lifecycle`)
+}
+
+export const stashAppLifecycle = (appId: string, expectedRowVersion: number): Promise<AppLifecycleResponse> => {
+  return post(`/apps/${appId}/stash`, { body: { expected_row_version: expectedRowVersion } })
+}
+
+export const publishAppLifecycle = (appId: string, expectedRowVersion: number, reason?: string): Promise<AppLifecycleResponse> => {
+  return post(`/apps/${appId}/publish`, { body: { expected_row_version: expectedRowVersion, reason } })
+}
+
+export const recallAppLifecycle = (appId: string, expectedRowVersion: number, reason: string): Promise<AppLifecycleResponse> => {
+  return post(`/apps/${appId}/recall`, { body: { expected_row_version: expectedRowVersion, reason } })
 }
 
 export const fetchAppTemplates = ({ url }: { url: string }): Promise<AppTemplatesResponse> => {

@@ -549,6 +549,44 @@ const Configuration: FC = () => {
     setModelConfig(newModelConfig)
   }, [modelConfig])
 
+  const buildFallbackBackendModelConfig = useCallback((appMode: AppModeEnum): BackendModelConfig => ({
+    opening_statement: '',
+    suggested_questions: [],
+    pre_prompt: '',
+    prompt_type: PromptMode.simple,
+    chat_prompt_config: clone(DEFAULT_CHAT_PROMPT_CONFIG) as any,
+    completion_prompt_config: clone(DEFAULT_COMPLETION_PROMPT_CONFIG) as any,
+    user_input_form: [],
+    dataset_query_variable: '',
+    more_like_this: { enabled: false },
+    suggested_questions_after_answer: { enabled: false },
+    speech_to_text: { enabled: false },
+    text_to_speech: { enabled: false, voice: '', language: '' },
+    retriever_resource: { enabled: false },
+    sensitive_word_avoidance: { enabled: false },
+    annotation_reply: null as any,
+    agent_mode: appMode === AppModeEnum.AGENT_CHAT ? DEFAULT_AGENT_SETTING as any : { enabled: false, tools: [] } as any,
+    external_data_tools: [],
+    model: {
+      provider: 'langgenius/openai/openai',
+      name: 'gpt-3.5-turbo',
+      mode: ModelModeType.chat,
+      completion_params: {} as any,
+    },
+    dataset_configs: {
+      retrieval_model: RETRIEVE_TYPE.multiWay,
+      datasets: { datasets: [] },
+    } as any,
+    file_upload: null as any,
+    system_parameters: {
+      audio_file_size_limit: 0,
+      file_size_limit: 0,
+      image_file_size_limit: 0,
+      video_file_size_limit: 0,
+      workflow_file_upload_limit: 0,
+    },
+  }), [])
+
   useEffect(() => {
     (async () => {
       try {
@@ -562,7 +600,7 @@ const Configuration: FC = () => {
         setCollectionList(collectionList)
         const res = await fetchAppDetailDirect({ url: '/apps', id: appId })
         setMode(res.mode as AppModeEnum)
-        const modelConfig = res.model_config as BackendModelConfig
+        const modelConfig = (res.model_config || buildFallbackBackendModelConfig(res.mode as AppModeEnum)) as BackendModelConfig
         const promptMode = modelConfig.prompt_type === PromptMode.advanced ? PromptMode.advanced : PromptMode.simple
         doSetPromptMode(promptMode)
         if (promptMode === PromptMode.advanced) {
@@ -734,7 +772,7 @@ const Configuration: FC = () => {
         console.error('Failed to fetch app detail', e)
       }
     })()
-  }, [appId])
+  }, [appId, buildFallbackBackendModelConfig])
 
   const promptEmpty = (() => {
     if (mode !== AppModeEnum.COMPLETION)
@@ -1025,6 +1063,7 @@ const Configuration: FC = () => {
                       debugWithMultipleModel,
                       multipleModelConfigs,
                       onPublish,
+                      onStash: onPublish,
                       publishedConfig: publishedConfig!,
                       resetAppConfig: () => syncToPublishedConfig(publishedConfig!),
                     }}
