@@ -100,7 +100,12 @@ export default function GiteaSettingsPage() {
         },
       })
 
-      let downloadConfig: any = {}
+      let downloadConfig: GiteaConfig = {
+        gitea_url: '',
+        gitea_owner: '',
+        gitea_repo: '',
+        gitea_token: '',
+      }
       if (configResponse.ok) {
         downloadConfig = await configResponse.json()
       }
@@ -380,19 +385,6 @@ export default function GiteaSettingsPage() {
 
       {/* Help Section */}
       <div className="mt-6 space-y-4">
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-          <h3 className="mb-2 text-sm font-medium text-blue-900">
-            📝 配置说明
-          </h3>
-          <ul className="space-y-1 text-sm text-blue-700">
-            <li>• 在 FileBay 中创建一个用于文件存储的仓库</li>
-            <li>• 在 FileBay 设置 → 应用 → 生成新令牌，选择 repo 权限</li>
-            <li>• 填写上述配置信息并保存</li>
-            <li>• 配置成功后，文件选择器将从 FileBay 仓库获取文件</li>
-            <li>• 注意：当前配置为临时配置，重启后失效。永久配置请修改 api/.env 文件</li>
-          </ul>
-        </div>
-
         <div className="rounded-lg border border-green-200 bg-green-50 p-4">
           <h3 className="mb-2 text-sm font-medium text-green-900">
             💻 Desktop App 集成
