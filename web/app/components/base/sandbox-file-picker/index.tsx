@@ -91,15 +91,28 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
       if (accept) {
         const exts = accept.split(',').map(e => e.trim().toLowerCase()).filter(e => e.startsWith('.'))
         if (exts.length > 0) {
+          // Keep directories and filter files by extension
           const filtered = fileList.filter(f =>
-            exts.some(ext => f.name.toLowerCase().endsWith(ext)),
+            f.type === 'dir' || exts.some(ext => f.name.toLowerCase().endsWith(ext)),
           )
           if (filtered.length > 0)
             fileList = filtered
         }
       }
 
-      fileList = fileList.filter(f => !f.name.endsWith('.mapping.json'))
+      // Filter out mapping files but keep directories
+      fileList = fileList.filter(f => f.type === 'dir' || !f.name.endsWith('.mapping.json'))
+
+      // Sort: directories first, then files (alphabetically within each group)
+      fileList.sort((a, b) => {
+        // Directories come first
+        if (a.type === 'dir' && b.type !== 'dir')
+          return -1
+        if (a.type !== 'dir' && b.type === 'dir')
+          return 1
+        // Within the same type, sort alphabetically
+        return a.name.localeCompare(b.name)
+      })
 
       setFiles(fileList)
     }
