@@ -20,6 +20,8 @@ export function proxy(request: NextRequest) {
       headers: requestHeaders,
     },
   })
+  if (request.cookies.has('sso_refresh_token'))
+    response.cookies.delete('sso_refresh_token')
 
   const isWhiteListEnabled = !!process.env.NEXT_PUBLIC_CSP_WHITELIST && process.env.NODE_ENV === 'production'
   if (!isWhiteListEnabled)
