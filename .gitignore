@@ -243,4 +243,12 @@ scripts/stress-test/reports/
 *.eslintcache
 .eslintcache
 dify-plugin-daemon
-api/tests/*
+
+# Local assistant artifacts
+.trae/documents/
+.trae/specs/
+.worktrees/
+
+# Local verification artifacts
+coverage.json
+web/coverage/
