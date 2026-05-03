@@ -24,6 +24,7 @@ from libs.token import (
 from models import AccountStatus
 from models.account import Account, Tenant, TenantAccountJoin, TenantStatus
 from services.account_service import AccountService, TenantService
+from services.sso_account_service import SSOAccountService
 
 logger = logging.getLogger(__name__)
 SSO_GROUP_TENANT_CACHE_PREFIX = "desktop:sso:group-tenant:"
@@ -76,6 +77,20 @@ def _get_preferred_tenant_join(account: Account) -> TenantAccountJoin | None:
     )
 
 
+def _get_current_tenant_join(account: Account) -> TenantAccountJoin | None:
+    return (
+        db.session.query(TenantAccountJoin)
+        .join(Tenant, TenantAccountJoin.tenant_id == Tenant.id)
+        .filter(
+            TenantAccountJoin.account_id == account.id,
+            TenantAccountJoin.current.is_(True),
+            Tenant.status == TenantStatus.NORMAL,
+        )
+        .order_by(TenantAccountJoin.updated_at.desc(), TenantAccountJoin.created_at.desc())
+        .first()
+    )
+
+
 def _resolve_shared_tenant(account: Account, payload: dict) -> Tenant | None:
     group_name = _get_sso_group_name(payload)
     if not group_name:
@@ -111,6 +126,7 @@ def _resolve_shared_tenant(account: Account, payload: dict) -> Tenant | None:
 
 
 def _ensure_desktop_sso_tenant_join(account: Account, system_role: str, payload: dict) -> TenantAccountJoin:
+    current_tenant_join = _get_current_tenant_join(account)
     tenant = _resolve_shared_tenant(account, payload)
     if not tenant:
         TenantService.create_owner_tenant_if_not_exist(account, is_setup=True)
@@ -120,11 +136,16 @@ def _ensure_desktop_sso_tenant_join(account: Account, system_role: str, payload:
         if tenant_join.role != system_role:
             tenant_join.role = system_role
             db.session.commit()
-        TenantService.switch_tenant(account, tenant_join.tenant_id)
+        if not current_tenant_join:
+            TenantService.switch_tenant(account, tenant_join.tenant_id)
         return tenant_join
 
     tenant_join = TenantService.create_tenant_member(tenant, account, role=system_role)
-    TenantService.switch_tenant(account, tenant.id)
+    if tenant_join.role != system_role:
+        tenant_join.role = system_role
+        db.session.commit()
+    if not current_tenant_join:
+        TenantService.switch_tenant(account, tenant.id)
     return tenant_join
 
 
@@ -259,14 +280,6 @@ class DesktopSSOLoginApi(Resource):
             tenant_join = _ensure_desktop_sso_tenant_join(account, system_role, data)
             logger.info("Using tenant %s with workspace role '%s'", tenant_join.tenant_id, tenant_join.role)
 
-            if tenant_join:
-                projection = build_desktop_sso_projection(
-                    data,
-                    workspace_role=tenant_join.role,
-                    mapped_role=resolved_sso_role,
-                )
-                save_desktop_sso_projection(account.id, tenant_join.tenant_id, projection)
-
             custom_config = account.custom_config_dict
             custom_config.update({
                 "desktop_sso_subject": subject_id,
@@ -276,8 +289,26 @@ class DesktopSSOLoginApi(Resource):
                 "desktop_sso_email": normalized_email,
                 "desktop_sso_password_set": bool(custom_config.get("desktop_sso_password_set")),
             })
+
+            sso_tags: list[str] = []
+            sso_account_service = SSOAccountService()
+            if sso_account_service.is_enabled():
+                try:
+                    sso_tags = sso_account_service.get_user_tags(account)
+                except Exception as tag_error:
+                    logger.warning("Failed to sync SSO tags for %s: %s", normalized_email, tag_error)
+            custom_config["desktop_sso_tags"] = sso_tags
             account.custom_config_dict = custom_config
             db.session.commit()
+
+            if tenant_join:
+                projection = build_desktop_sso_projection(
+                    data,
+                    workspace_role=tenant_join.role,
+                    mapped_role=resolved_sso_role,
+                    sso_tags=sso_tags,
+                )
+                save_desktop_sso_projection(account.id, tenant_join.tenant_id, projection)
 
             logger.info("Generating tokens for: %s", normalized_email)
             token_pair = AccountService.login(
@@ -322,7 +353,9 @@ class DesktopSSOLoginApi(Resource):
                 db.session.refresh(account)
                 
                 custom_config = account.custom_config_dict
-                if not custom_config.get('gitea_url'):
+                from libs.filebay_user_config import has_complete_filebay_config, sync_account_filebay_config
+
+                if not has_complete_filebay_config(custom_config):
                     logger.info("[SSO Auto Provision] Triggering FileBay auto-provision for %s", normalized_email)
                     from services.filebay_config_service import resolve_filebay_config
                     
@@ -334,14 +367,14 @@ class DesktopSSOLoginApi(Resource):
                     )
                     
                     # Preserve existing Desktop SSO metadata when enriching FileBay settings.
-                    custom_config.update({
+                    resolved_config = {
                         'gitea_url': filebay_config.gitea_url,
                         'gitea_owner': filebay_config.gitea_owner,
                         'gitea_repo': filebay_config.gitea_repo,
                         'gitea_token': filebay_config.gitea_token,
-                    })
-                    account.custom_config_dict = custom_config
-                    db.session.commit()
+                    }
+                    custom_config.update(resolved_config)
+                    sync_account_filebay_config(account, custom_config)
                     
                     logger.info("[SSO Auto Provision] FileBay provisioned for %s", normalized_email)
                 else:

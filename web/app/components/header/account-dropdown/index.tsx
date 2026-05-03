@@ -36,6 +36,7 @@ import GithubStar from '../github-star'
 import Indicator from '../indicator'
 import Compliance from './compliance'
 import Support from './support'
+import WorkplaceSelector from './workplace-selector'
 
 type AccountDropdownProps = {
   placement?: 'side' | 'bottom-end'
@@ -132,6 +133,9 @@ export default function AppSelector({ placement = 'side', showLabel = false }: A
                         <Avatar avatar={userProfile.avatar_url} name={userProfile.name} size={36} />
                       </div>
                     </MenuItem>
+                    <div className="px-1 pb-2">
+                      <WorkplaceSelector compact />
+                    </div>
                     <MenuItem>
                       <Link
                         className={cn(itemClassName, 'group', 'data-[active]:bg-state-base-hover')}

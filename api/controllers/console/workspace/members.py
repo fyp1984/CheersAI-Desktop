@@ -77,6 +77,21 @@ register_enum_models(console_ns, TenantAccountRole)
 register_schema_models(console_ns, AccountWithRole, AccountWithRoleList)
 
 
+def _serialize_member(account: Account) -> dict:
+    payload = AccountWithRole.model_validate(account, from_attributes=True).model_dump(mode="json")
+    config = account.custom_config_dict if getattr(account, "custom_config", None) else {}
+    desktop_sso_owner = (config.get("desktop_sso_owner") or dify_config.SSO_PROVISION_OWNER or "CheersAI").strip()
+    desktop_sso_username = (
+        config.get("desktop_sso_username")
+        or config.get("desktop_sso_preferred_username")
+        or account.name
+        or ""
+    ).strip()
+    payload["desktop_sso_owner"] = desktop_sso_owner or None
+    payload["desktop_sso_username"] = desktop_sso_username or None
+    return payload
+
+
 @console_ns.route("/workspaces/current/members")
 class MemberListApi(Resource):
     """List all members of current tenant."""
@@ -91,7 +106,7 @@ class MemberListApi(Resource):
         if not current_user.current_tenant:
             raise ValueError("No current tenant")
         members = TenantService.get_tenant_members(current_user.current_tenant)
-        member_models = TypeAdapter(list[AccountWithRole]).validate_python(members, from_attributes=True)
+        member_models = TypeAdapter(list[AccountWithRole]).validate_python([_serialize_member(member) for member in members])
         response = AccountWithRoleList(accounts=member_models)
         return response.model_dump(mode="json"), 200
 

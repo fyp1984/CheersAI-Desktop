@@ -17,16 +17,27 @@ const DefaultCards = React.memo(() => {
   )
 })
 
-const Empty = () => {
+type EmptyProps = {
+  hint?: string
+}
+
+const Empty = ({ hint }: EmptyProps) => {
   const { t } = useTranslation()
 
   return (
     <>
       <DefaultCards />
       <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-gradient-to-t from-background-body to-transparent">
-        <span className="system-md-medium text-text-tertiary">
-          {t('newApp.noAppsFound', { ns: 'app' })}
-        </span>
+        <div className="flex max-w-[420px] flex-col items-center gap-2 px-6 text-center">
+          <span className="system-md-medium text-text-tertiary">
+            {t('newApp.noAppsFound', { ns: 'app' })}
+          </span>
+          {hint && (
+            <span className="system-xs-regular text-text-quaternary">
+              {hint}
+            </span>
+          )}
+        </div>
       </div>
     </>
   )

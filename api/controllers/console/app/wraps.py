@@ -7,6 +7,8 @@ from extensions.ext_database import db
 from libs.login import current_account_with_tenant
 from models import App, AppMode
 
+from .visibility import get_current_user_app_tags, is_app_visible_for_user
+
 P = ParamSpec("P")
 R = TypeVar("R")
 P1 = ParamSpec("P1")
@@ -14,17 +16,24 @@ R1 = TypeVar("R1")
 
 
 def _load_app_model(app_id: str) -> App | None:
-    _, current_tenant_id = current_account_with_tenant()
+    current_user, current_tenant_id = current_account_with_tenant()
     app_model = (
         db.session.query(App)
         .where(App.id == app_id, App.tenant_id == current_tenant_id, App.status == "normal")
         .first()
     )
+    current_user_tags = get_current_user_app_tags(current_user, current_tenant_id)
+    if not is_app_visible_for_user(app_model, current_user_tags):
+        return None
     return app_model
 
 
 def _load_app_model_with_trial(app_id: str) -> App | None:
+    current_user, current_tenant_id = current_account_with_tenant()
     app_model = db.session.query(App).where(App.id == app_id, App.status == "normal").first()
+    current_user_tags = get_current_user_app_tags(current_user, current_tenant_id)
+    if not is_app_visible_for_user(app_model, current_user_tags):
+        return None
     return app_model
 
 

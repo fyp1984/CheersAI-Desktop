@@ -11,6 +11,7 @@ import { AppContextProvider } from '@/context/app-context'
 import { EventEmitterContextProvider } from '@/context/event-emitter'
 import { ModalContextProvider } from '@/context/modal-context'
 import { ProviderContextProvider } from '@/context/provider-context'
+import { WorkspaceProvider } from '@/context/workspace-context'
 import PartnerStack from '../components/billing/partner-stack'
 import Splash from '../components/splash'
 import DesktopPrimaryTabs from '../components/header/desktop-primary-tabs'
@@ -22,23 +23,25 @@ const Layout = ({ children }: { children: ReactNode }) => {
       <AmplitudeProvider />
       <AppInitializer>
         <AppContextProvider>
-          <EventEmitterContextProvider>
-            <ProviderContextProvider>
-              <ModalContextProvider>
-                <div className="flex h-screen min-w-0 flex-col bg-background-body">
-                  <DesktopPrimaryTabs />
-                  <main className="flex min-h-0 flex-1 min-w-0 flex-col overflow-hidden">
-                    {children}
-                  </main>
-                </div>
-                <PartnerStack />
-                <ReadmePanel />
-                <GotoAnything />
-                <Splash />
-                <CustomerServiceFloat />
-              </ModalContextProvider>
-            </ProviderContextProvider>
-          </EventEmitterContextProvider>
+          <WorkspaceProvider>
+            <EventEmitterContextProvider>
+              <ProviderContextProvider>
+                <ModalContextProvider>
+                  <div className="flex h-screen min-w-0 flex-col bg-background-body">
+                    <DesktopPrimaryTabs />
+                    <main className="flex min-h-0 flex-1 min-w-0 flex-col overflow-hidden">
+                      {children}
+                    </main>
+                  </div>
+                  <PartnerStack />
+                  <ReadmePanel />
+                  <GotoAnything />
+                  <Splash />
+                  <CustomerServiceFloat />
+                </ModalContextProvider>
+              </ProviderContextProvider>
+            </EventEmitterContextProvider>
+          </WorkspaceProvider>
         </AppContextProvider>
         <Zendesk />
       </AppInitializer>

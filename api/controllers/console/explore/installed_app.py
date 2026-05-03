@@ -20,6 +20,8 @@ from services.account_service import TenantService
 from services.enterprise.enterprise_service import EnterpriseService
 from services.feature_service import FeatureService
 
+from ..app.visibility import get_current_user_app_tags, is_app_visible_for_user
+
 
 class InstalledAppCreatePayload(BaseModel):
     app_id: str
@@ -84,8 +86,16 @@ def _ensure_same_tenant_installed_apps(current_tenant_id: str, app_id: str | Non
 
 
 def _filter_accessible_installed_apps(
-    installed_app_list: list[dict[str, Any]], current_tenant_id: str, user_id: str
+    installed_app_list: list[dict[str, Any]], current_tenant_id: str, user_id: str, user_tags: list[str] | None
 ) -> list[dict[str, Any]]:
+    if not installed_app_list:
+        return installed_app_list
+
+    installed_app_list = [
+        installed_app
+        for installed_app in installed_app_list
+        if is_app_visible_for_user(installed_app.get("app"), user_tags)
+    ]
     if not installed_app_list:
         return installed_app_list
 
@@ -129,6 +139,7 @@ class InstalledAppsListApi(Resource):
     def get(self):
         query = InstalledAppsListQuery.model_validate(request.args.to_dict())
         current_user, current_tenant_id = current_account_with_tenant()
+        current_user_tags = get_current_user_app_tags(current_user, current_tenant_id)
         _ensure_same_tenant_installed_apps(current_tenant_id, query.app_id)
 
         if query.app_id:
@@ -162,8 +173,16 @@ class InstalledAppsListApi(Resource):
         # filter out apps that user doesn't have access to
         if FeatureService.get_system_features().webapp_auth.enabled:
             user_id = current_user.id
-            installed_app_list = _filter_accessible_installed_apps(installed_app_list, current_tenant_id, user_id)
+            installed_app_list = _filter_accessible_installed_apps(
+                installed_app_list, current_tenant_id, user_id, current_user_tags
+            )
             logger.debug("installed_app_list: %s, user_id: %s", installed_app_list, user_id)
+        else:
+            installed_app_list = [
+                installed_app
+                for installed_app in installed_app_list
+                if is_app_visible_for_user(installed_app.get("app"), current_user_tags)
+            ]
 
         installed_app_list.sort(
             key=lambda app: (
@@ -180,11 +199,15 @@ class InstalledAppsListApi(Resource):
     @cloud_edition_billing_resource_check("apps")
     def post(self):
         payload = InstalledAppCreatePayload.model_validate(console_ns.payload or {})
-        _, current_tenant_id = current_account_with_tenant()
+        current_user, current_tenant_id = current_account_with_tenant()
 
         app = db.session.query(App).where(App.id == payload.app_id).first()
 
         if app is None:
+            raise NotFound("App entity not found")
+
+        current_user_tags = get_current_user_app_tags(current_user, current_tenant_id)
+        if not is_app_visible_for_user(app, current_user_tags):
             raise NotFound("App entity not found")
 
         recommended_app = None

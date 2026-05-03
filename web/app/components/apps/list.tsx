@@ -156,6 +156,8 @@ const List: FC<Props> = ({
   const [showCreateFromDSLModal, setShowCreateFromDSLModal] = useState(false)
   const [droppedDSLFile, setDroppedDSLFile] = useState<File | undefined>()
   const isWorkflowCategory = activeTab === AppModeEnum.WORKFLOW || activeTab === AppModeEnum.ADVANCED_CHAT
+  const currentResourceLabel = isWorkflowCategory ? '工作流' : '应用'
+  const groupedResourceLabel = isWorkflowCategory ? '工作流' : 'Agent'
   const canAccessCurrentCategory = isWorkflowCategory ? canViewWorkflow : canViewApps
   const canEditCurrentCategory = isWorkflowCategory ? canEditWorkflow : canEditApps
   const setKeywords = useCallback((keywords: string) => {
@@ -282,6 +284,15 @@ const List: FC<Props> = ({
   const groupedApps = useMemo(() => groupAppsByPrimaryTag(publishedAndPendingApps, tagList.map(tag => tag.id)), [publishedAndPendingApps, tagList])
   const groupedArchivedApps = useMemo(() => groupAppsByPrimaryTag(archivedApps, tagList.map(tag => tag.id)), [archivedApps, tagList])
   const hasAnyApp = flatApps.length > 0
+  const emptyStateHint = useMemo(() => {
+    if (tagIDs.length || searchKeywords || isCreatedByMe)
+      return undefined
+
+    return t('newApp.noVisibleAppsHint', {
+      ns: 'app',
+      defaultValue: `如果工作区内已有${currentResourceLabel}但这里为空，可能是资源标签与您的 SSO 标签暂未匹配。`,
+    })
+  }, [currentResourceLabel, isCreatedByMe, searchKeywords, t, tagIDs.length])
   // Show skeleton during initial load or when refetching with no previous data
   const showSkeleton = isLoading || (isFetching && pages.length === 0)
   const showLoadError = !!error && pages.length === 0
@@ -371,13 +382,16 @@ const List: FC<Props> = ({
                               {group.label}
                             </div>
                             <div className="text-xs text-[#4b5563]">
-                              同标签 Agent 已聚合展示
+                              同标签
+                              {groupedResourceLabel}
+                              已聚合展示
                             </div>
                           </div>
                           <div className="rounded-full bg-[#dbeafe] px-3 py-1 text-xs font-medium text-[#1e40af]">
                             {group.count}
                             {' '}
-                            个 Agent
+                            个
+                            {groupedResourceLabel}
                           </div>
                         </div>
                         <div className={APP_GRID_CLASS_NAME}>
@@ -428,7 +442,8 @@ const List: FC<Props> = ({
                                 <div className="rounded-full bg-[#f1f5f9] px-3 py-1 text-xs font-medium text-[#475569]">
                                   {group.count}
                                   {' '}
-                                  个 Agent
+                                  个
+                                  {groupedResourceLabel}
                                 </div>
                               </div>
                               <div className={APP_GRID_CLASS_NAME}>
@@ -447,7 +462,7 @@ const List: FC<Props> = ({
             }
 
             // No apps - show empty state
-            return <Empty />
+            return <Empty hint={emptyStateHint} />
           })()}
           {isFetchingNextPage && (
             <div className={APP_GRID_CLASS_NAME}>

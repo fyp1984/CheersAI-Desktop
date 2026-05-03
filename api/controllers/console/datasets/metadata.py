@@ -19,6 +19,8 @@ from services.entities.knowledge_entities.knowledge_entities import (
 )
 from services.metadata_service import MetadataService
 
+from .visibility import get_visible_dataset
+
 
 class MetadataUpdatePayload(BaseModel):
     name: str
@@ -43,9 +45,7 @@ class DatasetMetadataCreateApi(Resource):
         metadata_args = MetadataArgs.model_validate(console_ns.payload or {})
 
         dataset_id_str = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id_str)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset(dataset_id_str, current_user)
         DatasetService.check_dataset_permission(dataset, current_user)
 
         metadata = MetadataService.create_metadata(dataset_id_str, metadata_args)
@@ -57,10 +57,9 @@ class DatasetMetadataCreateApi(Resource):
     @enterprise_license_required
     @require_knowledge_view_capability
     def get(self, dataset_id):
+        current_user, _ = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id_str)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset(dataset_id_str, current_user)
         return MetadataService.get_dataset_metadatas(dataset), 200
 
 
@@ -80,9 +79,7 @@ class DatasetMetadataApi(Resource):
 
         dataset_id_str = str(dataset_id)
         metadata_id_str = str(metadata_id)
-        dataset = DatasetService.get_dataset(dataset_id_str)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset(dataset_id_str, current_user)
         DatasetService.check_dataset_permission(dataset, current_user)
 
         metadata = MetadataService.update_metadata_name(dataset_id_str, metadata_id_str, name)
@@ -97,9 +94,7 @@ class DatasetMetadataApi(Resource):
         current_user, _ = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
         metadata_id_str = str(metadata_id)
-        dataset = DatasetService.get_dataset(dataset_id_str)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset(dataset_id_str, current_user)
         DatasetService.check_dataset_permission(dataset, current_user)
 
         MetadataService.delete_metadata(dataset_id_str, metadata_id_str)
@@ -128,9 +123,7 @@ class DatasetMetadataBuiltInFieldActionApi(Resource):
     def post(self, dataset_id, action: Literal["enable", "disable"]):
         current_user, _ = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id_str)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset(dataset_id_str, current_user)
         DatasetService.check_dataset_permission(dataset, current_user)
 
         match action:
@@ -152,9 +145,7 @@ class DocumentMetadataEditApi(Resource):
     def post(self, dataset_id):
         current_user, _ = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id_str)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset(dataset_id_str, current_user)
         DatasetService.check_dataset_permission(dataset, current_user)
 
         metadata_args = MetadataOperationData.model_validate(console_ns.payload or {})

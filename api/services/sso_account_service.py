@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import socket
 from typing import Any
 from urllib.parse import urlparse, urlunparse
@@ -13,6 +14,7 @@ from models.account import Account
 from services.errors.account import AccountPasswordError, CurrentPasswordIncorrectError
 
 logger = logging.getLogger(__name__)
+SSO_TAG_SPLIT_PATTERN = re.compile(r"[，、；;|,]+")
 
 
 class SSOAccountService:
@@ -70,6 +72,42 @@ class SSOAccountService:
         })
         account.custom_config_dict = config
         db.session.commit()
+
+    def get_user_profile(self, account: Account) -> dict[str, Any] | None:
+        if not self.is_enabled():
+            return None
+
+        owner, username = self._resolve_identity(account)
+        return self._get_user(owner, username)
+
+    def get_user_tags(self, account: Account) -> list[str]:
+        profile = self.get_user_profile(account)
+        if not profile:
+            return []
+        return self.parse_user_tags(profile.get("tag"))
+
+    @staticmethod
+    def parse_user_tags(raw_value: Any) -> list[str]:
+        if isinstance(raw_value, str):
+            values = SSO_TAG_SPLIT_PATTERN.split(raw_value)
+        elif isinstance(raw_value, list):
+            values: list[str] = []
+            for item in raw_value:
+                if isinstance(item, str):
+                    values.extend(SSO_TAG_SPLIT_PATTERN.split(item))
+        else:
+            return []
+
+        normalized_tags: list[str] = []
+        seen_tags: set[str] = set()
+        for value in values:
+            tag = value.strip()
+            if not tag or tag in seen_tags:
+                continue
+            normalized_tags.append(tag)
+            seen_tags.add(tag)
+
+        return normalized_tags
 
     def _resolve_identity(self, account: Account) -> tuple[str, str]:
         config = account.custom_config_dict

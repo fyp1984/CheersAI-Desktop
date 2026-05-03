@@ -59,8 +59,24 @@ vi.mock('@/service/knowledge/use-dataset', () => ({
 }))
 
 // Mock app context - will be overridden in tests
+const mockAppContextState = {
+  currentWorkspace: {
+    id: 'workspace-1',
+    name: 'Workspace 1',
+    plan: 'basic',
+    status: 'normal',
+    created_at: 0,
+    role: 'editor' as const,
+    capabilities: [],
+    providers: [],
+    trial_credits: 0,
+    trial_credits_used: 0,
+    next_credit_reset_date: 0,
+  },
+}
+
 vi.mock('@/context/app-context', () => ({
-  useSelector: vi.fn(() => true),
+  useSelector: vi.fn((selector: (state: typeof mockAppContextState) => unknown) => selector(mockAppContextState)),
 }))
 
 // Mock useDatasetCardState hook
@@ -173,7 +189,8 @@ describe('Datasets', () => {
 
     it('should render NewDatasetCard when user is editor', async () => {
       const { useSelector } = await import('@/context/app-context')
-      vi.mocked(useSelector).mockReturnValue(true)
+      mockAppContextState.currentWorkspace.role = 'editor'
+      vi.mocked(useSelector).mockImplementation(selector => selector(mockAppContextState))
 
       render(<Datasets {...defaultProps} />)
       expect(screen.getByText(/createDataset/)).toBeInTheDocument()
@@ -181,7 +198,8 @@ describe('Datasets', () => {
 
     it('should NOT render NewDatasetCard when user is NOT editor', async () => {
       const { useSelector } = await import('@/context/app-context')
-      vi.mocked(useSelector).mockReturnValue(false)
+      mockAppContextState.currentWorkspace.role = 'normal'
+      vi.mocked(useSelector).mockImplementation(selector => selector(mockAppContextState))
 
       render(<Datasets {...defaultProps} />)
       expect(screen.queryByText(/createDataset/)).not.toBeInTheDocument()
@@ -314,6 +332,21 @@ describe('Datasets', () => {
 
       render(<Datasets {...defaultProps} />)
       expect(screen.getByRole('navigation')).toBeInTheDocument()
+    })
+
+    it('should render visibility hint when dataset list is empty without filters', async () => {
+      const { useDatasetList } = await import('@/service/knowledge/use-dataset')
+      vi.mocked(useDatasetList).mockReturnValue({
+        data: { pages: [{ data: [] }] },
+        fetchNextPage: mockFetchNextPage,
+        hasNextPage: false,
+        isFetching: false,
+        isFetchingNextPage: false,
+      } as unknown as ReturnType<typeof useDatasetList>)
+
+      render(<Datasets {...defaultProps} />)
+      expect(screen.getByTestId('datasets-empty-state')).toBeInTheDocument()
+      expect(screen.getByTestId('datasets-empty-state-hint')).toHaveTextContent('资源标签与您的 SSO 标签暂未匹配')
     })
   })
 

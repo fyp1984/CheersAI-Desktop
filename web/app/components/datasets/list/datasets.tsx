@@ -39,6 +39,14 @@ const Datasets = ({
   const invalidDatasetList = useInvalidDatasetList()
   const anchorRef = useRef<HTMLDivElement>(null)
   const observerRef = useRef<IntersectionObserver>(null)
+  const flatDatasets = datasetList?.pages.flatMap(({ data }) => data) ?? []
+  const hasAnyDataset = flatDatasets.length > 0
+  const emptyStateHint = !tags.length && !keywords && !includeAll
+    ? t('dataset.emptyVisibilityHint', {
+        ns: 'dataset',
+        defaultValue: '如果工作区内已有知识库但这里为空，可能是资源标签与您的 SSO 标签暂未匹配。',
+      })
+    : undefined
 
   useEffect(() => {
     document.title = `${t('knowledge', { ns: 'dataset' })} - CheersAI`
@@ -67,6 +75,26 @@ const Datasets = ({
         {isFetchingNextPage && <Loading />}
         <div ref={anchorRef} className="h-0" />
       </nav>
+      {!isFetching && !isFetchingNextPage && !hasAnyDataset && (
+        <div
+          data-testid="datasets-empty-state"
+          className="pointer-events-none flex flex-col items-center justify-center gap-2 px-12 pb-8 pt-4 text-center"
+        >
+          <div className="system-md-medium text-text-tertiary">
+            {t('knowledge', { ns: 'dataset' })}
+            {' '}
+            {t('common.empty', { ns: 'common', defaultValue: '为空' })}
+          </div>
+          {emptyStateHint && (
+            <div
+              data-testid="datasets-empty-state-hint"
+              className="system-xs-regular max-w-[420px] text-text-quaternary"
+            >
+              {emptyStateHint}
+            </div>
+          )}
+        </div>
+      )}
     </>
   )
 }

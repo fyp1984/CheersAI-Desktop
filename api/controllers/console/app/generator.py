@@ -24,6 +24,8 @@ from libs.login import current_account_with_tenant, login_required
 from models import App
 from services.workflow_service import WorkflowService
 
+from .visibility import get_current_user_app_tags, is_app_visible_for_user
+
 DEFAULT_REF_TEMPLATE_SWAGGER_2_0 = "#/definitions/{model}"
 
 
@@ -159,7 +161,7 @@ class InstructionGenerateApi(Resource):
     @account_initialization_required
     def post(self):
         args = InstructionGeneratePayload.model_validate(console_ns.payload)
-        _, current_tenant_id = current_account_with_tenant()
+        current_user, current_tenant_id = current_account_with_tenant()
         providers: list[type[CodeNodeProvider]] = [Python3CodeProvider, JavascriptCodeProvider]
         code_provider: type[CodeNodeProvider] | None = next(
             (p for p in providers if p.is_accept_language(args.language)), None
@@ -169,7 +171,8 @@ class InstructionGenerateApi(Resource):
             # Generate from nothing for a workflow node
             if (args.current in (code_template, "")) and args.node_id != "":
                 app = db.session.query(App).where(App.id == args.flow_id).first()
-                if not app:
+                current_user_tags = get_current_user_app_tags(current_user, current_tenant_id)
+                if not app or not is_app_visible_for_user(app, current_user_tags):
                     return {"error": f"app {args.flow_id} not found"}, 400
                 workflow = WorkflowService().get_draft_workflow(app_model=app)
                 if not workflow:

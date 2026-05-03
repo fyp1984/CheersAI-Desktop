@@ -35,6 +35,7 @@ from tasks.document_indexing_sync_task import document_indexing_sync_task
 from .. import console_ns
 from ..wraps import account_initialization_required, setup_required
 from ..workspace import require_data_source_manage_capability
+from .visibility import get_visible_dataset
 
 
 class NotionEstimatePayload(BaseModel):
@@ -217,9 +218,7 @@ class DataSourceNotionListApi(Resource):
         with Session(db.engine) as session:
             # import notion in the exist dataset
             if query.dataset_id:
-                dataset = DatasetService.get_dataset(query.dataset_id)
-                if not dataset:
-                    raise NotFound("Dataset not found.")
+                dataset = get_visible_dataset(query.dataset_id, current_user, current_tenant_id)
                 if dataset.data_source_type != "notion_import":
                     raise ValueError("Dataset is not notion type.")
 
@@ -363,10 +362,9 @@ class DataSourceNotionDatasetSyncApi(Resource):
     @login_required
     @account_initialization_required
     def get(self, dataset_id):
+        current_user, _ = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id_str)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        get_visible_dataset(dataset_id_str, current_user)
 
         documents = DocumentService.get_document_by_dataset_id(dataset_id_str)
         for document in documents:
@@ -380,11 +378,10 @@ class DataSourceNotionDocumentSyncApi(Resource):
     @login_required
     @account_initialization_required
     def get(self, dataset_id, document_id):
+        current_user, _ = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
         document_id_str = str(document_id)
-        dataset = DatasetService.get_dataset(dataset_id_str)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        get_visible_dataset(dataset_id_str, current_user)
 
         document = DocumentService.get_document(dataset_id_str, document_id_str)
         if document is None:

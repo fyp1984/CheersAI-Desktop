@@ -13,6 +13,7 @@ import Divider from '@/app/components/base/divider'
 import Input from '@/app/components/base/input'
 import { ToastContext } from '@/app/components/base/toast'
 import { bindTag, createTag, unBindTag } from '@/service/tag'
+import { cn } from '@/utils/classnames'
 import { useStore as useTagStore } from './store'
 import useCanManageTags from './use-can-manage-tags'
 
@@ -101,6 +102,8 @@ const Panel = (props: PanelProps) => {
     }
   }
   const selectTag = (tag: Tag) => {
+    if (!canManageTags)
+      return
     if (selectedTagIDs.includes(tag.id))
       setSelectedTagIDs(selectedTagIDs.filter(v => v !== tag.id))
     else
@@ -111,6 +114,8 @@ const Panel = (props: PanelProps) => {
     return value.length === selectedTagIDs.length && value.every(v => selectedTagIDs.includes(v)) && selectedTagIDs.every(v => value.includes(v))
   }, [value, selectedTagIDs])
   const handleValueChange = () => {
+    if (!canManageTags)
+      return
     const addTagIDs = selectedTagIDs.filter(v => !value.includes(v))
     const removeTagIDs = value.filter(v => !selectedTagIDs.includes(v))
     const selectedTags = tagList.filter(tag => selectedTagIDs.includes(tag.id))
@@ -174,13 +179,17 @@ const Panel = (props: PanelProps) => {
           {filteredSelectedTagList.map(tag => (
             <div
               key={tag.id}
-              className="flex cursor-pointer items-center gap-x-1 rounded-lg px-2 py-1.5 hover:bg-state-base-hover"
+              className={cn(
+                'flex items-center gap-x-1 rounded-lg px-2 py-1.5',
+                canManageTags ? 'cursor-pointer hover:bg-state-base-hover' : 'cursor-default',
+              )}
               onClick={() => selectTag(tag)}
             >
               <Checkbox
                 className="shrink-0"
                 checked={selectedTagIDs.includes(tag.id)}
                 onCheck={noop}
+                disabled={!canManageTags}
               />
               <div
                 title={tag.name}
@@ -193,13 +202,17 @@ const Panel = (props: PanelProps) => {
           {filteredTagList.map(tag => (
             <div
               key={tag.id}
-              className="flex cursor-pointer items-center gap-x-1 rounded-lg px-2 py-1.5 hover:bg-state-base-hover"
+              className={cn(
+                'flex items-center gap-x-1 rounded-lg px-2 py-1.5',
+                canManageTags ? 'cursor-pointer hover:bg-state-base-hover' : 'cursor-default',
+              )}
               onClick={() => selectTag(tag)}
             >
               <Checkbox
                 className="shrink-0"
                 checked={selectedTagIDs.includes(tag.id)}
                 onCheck={noop}
+                disabled={!canManageTags}
               />
               <div
                 title={tag.name}

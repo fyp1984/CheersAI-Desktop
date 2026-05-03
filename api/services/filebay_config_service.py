@@ -350,6 +350,46 @@ def _resolve_global_config(*, mask_token: bool = False) -> FileBayConfig:
     )
 
 
+def _has_complete_account_config(config: dict | None) -> bool:
+    """Only treat persisted FileBay config as valid when all core fields are present."""
+    if not isinstance(config, dict):
+        return False
+
+    required_keys = ("gitea_url", "gitea_owner", "gitea_repo", "gitea_token")
+    for key in required_keys:
+        value = config.get(key)
+        if not isinstance(value, str) or not value.strip():
+            return False
+
+    return "*" not in config["gitea_token"]
+
+
+def _merge_account_filebay_config(existing_config: dict | None, update: dict | None) -> dict:
+    """Merge FileBay fields into account config without overwriting unrelated SSO metadata."""
+    merged = dict(existing_config or {})
+    update = dict(update or {})
+
+    for key in ("gitea_url", "gitea_owner", "gitea_repo"):
+        value = update.get(key)
+        if isinstance(value, str):
+            merged[key] = value
+
+    if "gitea_path" in update:
+        value = update.get("gitea_path")
+        if value is None:
+            merged.pop("gitea_path", None)
+        elif isinstance(value, str):
+            merged["gitea_path"] = value
+
+    token = update.get("gitea_token")
+    if isinstance(token, str):
+        normalized_token = token.strip()
+        if normalized_token and "*" not in normalized_token:
+            merged["gitea_token"] = normalized_token
+
+    return merged
+
+
 def _get_account_config(identifier: str) -> dict | None:
     """从 Account.custom_config_dict 获取配置"""
     normalized_email = _normalize_identifier(identifier).lower()
@@ -361,7 +401,7 @@ def _get_account_config(identifier: str) -> dict | None:
         return None
 
     config = account.custom_config_dict
-    if config and config.get('gitea_url'):
+    if _has_complete_account_config(config):
         return config
     return None
 
@@ -469,6 +509,29 @@ def _pick_repo_name(repos: list[dict]) -> str:
     if repos:
         return _normalize_identifier(repos[0].get("name"))
     return ""
+
+
+def _resolve_preferred_repo_name() -> str:
+    """Resolve the preferred per-user repo name for Desktop FileBay access."""
+    return _normalize_identifier(
+        dify_config.FILEBAY_DEFAULT_REPO
+        or os.getenv("GITEA_REPO", "")
+        or "workspace"
+    )
+
+
+def _ensure_filebay_repo(username: str, repo_name: str | None = None) -> str:
+    """Ensure the user's default FileBay repo exists and return its normalized name."""
+    normalized_username = _normalize_identifier(username)
+    normalized_repo = _normalize_identifier(repo_name) or _resolve_preferred_repo_name() or "workspace"
+    if not normalized_username:
+        raise LookupError("FileBay username is required to ensure repo existence.")
+
+    existing_repo = _get_filebay_repo(normalized_username, normalized_repo)
+    if not existing_repo:
+        _create_filebay_repo(normalized_username, normalized_repo)
+
+    return normalized_repo
 
 
 def _build_config_for_filebay_user(
@@ -701,7 +764,7 @@ def _save_config_to_account(email: str, config: dict):
     """保存配置到账号"""
     account = db.session.query(Account).filter_by(email=email).first()
     if account:
-        account.custom_config_dict = config
+        account.custom_config_dict = _merge_account_filebay_config(account.custom_config_dict, config)
         db.session.commit()
 
 
@@ -711,6 +774,7 @@ def resolve_filebay_config(
     allow_global_fallback: bool = True,
     auto_provision: bool = True,
     mask_token: bool = False,
+    refresh_account_config: bool = False,
 ) -> FileBayConfig:
     """
     解析 FileBay 配置
@@ -722,17 +786,20 @@ def resolve_filebay_config(
     4. 全局配置（环境变量）
     """
     normalized_identifier = _normalize_identifier(identifier)
+    persisted_account_config: dict | None = None
     
     # 1. 尝试从 Account.custom_config_dict 获取
     if normalized_identifier and "@" in normalized_identifier:
         account_config = _get_account_config(normalized_identifier)
         if account_config:
-            return FileBayConfig(
-                gitea_url=account_config.get('gitea_url', ''),
-                gitea_owner=account_config.get('gitea_owner', ''),
-                gitea_repo=account_config.get('gitea_repo', ''),
-                gitea_token=_mask_token(account_config.get('gitea_token', '')) if mask_token else account_config.get('gitea_token', ''),
-            )
+            persisted_account_config = account_config
+            if not refresh_account_config:
+                return FileBayConfig(
+                    gitea_url=account_config.get('gitea_url', ''),
+                    gitea_owner=account_config.get('gitea_owner', ''),
+                    gitea_repo=account_config.get('gitea_repo', ''),
+                    gitea_token=_mask_token(account_config.get('gitea_token', '')) if mask_token else account_config.get('gitea_token', ''),
+                )
     
     # 2. 查找 FileBay 已有用户
     if normalized_identifier:
@@ -740,14 +807,42 @@ def resolve_filebay_config(
             filebay_user = _lookup_filebay_user(normalized_identifier)
             if filebay_user:
                 username = _normalize_identifier(filebay_user.get("login") or filebay_user.get("username"))
-                user_id = filebay_user.get("id")
+                user_id = filebay_user.get("id") or filebay_user.get("user_id")
+                if isinstance(user_id, int) and (not username or not filebay_user.get("id")):
+                    full_user = _lookup_filebay_user_by_id(user_id)
+                    if full_user:
+                        filebay_user = full_user
+                        username = _normalize_identifier(filebay_user.get("login") or filebay_user.get("username"))
+                        user_id = filebay_user.get("id") or filebay_user.get("user_id")
+
                 repo_name = ""
                 if isinstance(user_id, int):
                     repo_name = _pick_repo_name(_lookup_filebay_repos(user_id))
                 if not repo_name:
-                    repo_name = _normalize_identifier(dify_config.FILEBAY_DEFAULT_REPO or os.getenv("GITEA_REPO", ""))
+                    preferred_repo = _resolve_preferred_repo_name()
+                    if auto_provision and username:
+                        repo_name = _ensure_filebay_repo(username, preferred_repo)
+                    else:
+                        repo_name = preferred_repo
                 if not username:
                     raise LookupError("FileBay user lookup succeeded, but username was empty.")
+
+                if persisted_account_config:
+                    persisted_owner = _normalize_identifier(persisted_account_config.get("gitea_owner", ""))
+                    persisted_repo = _normalize_identifier(persisted_account_config.get("gitea_repo", ""))
+                    persisted_token = persisted_account_config.get("gitea_token", "")
+                    if (
+                        persisted_owner == username
+                        and persisted_repo == repo_name
+                        and isinstance(persisted_token, str)
+                        and persisted_token.strip()
+                    ):
+                        return FileBayConfig(
+                            gitea_url=persisted_account_config.get("gitea_url", _build_filebay_base_url()),
+                            gitea_owner=persisted_account_config.get("gitea_owner", ""),
+                            gitea_repo=persisted_account_config.get("gitea_repo", ""),
+                            gitea_token=_mask_token(persisted_token) if mask_token else persisted_token,
+                        )
 
                 # 动态生成 Token
                 token = create_filebay_user_token(

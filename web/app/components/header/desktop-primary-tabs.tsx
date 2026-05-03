@@ -39,11 +39,13 @@ const DesktopPrimaryTabs = () => {
   const searchParams = useSearchParams()
   const { currentWorkspace } = useAppContext()
   const normalizedPathname = pathname.endsWith('/') && pathname !== '/' ? pathname.slice(0, -1) : pathname
+  const pathnameSegments = normalizedPathname.split('/').filter(Boolean)
+  const primarySegment = pathnameSegments[0] || ''
   const tabsViewportRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
-  const [showBrand, setShowBrand] = useState(true)
-  const [isVaultRuntime, setIsVaultRuntime] = useState(false)
+  const [showBrand, setShowBrand] = useState(false)
+  const [isDesktopRuntime, setIsDesktopRuntime] = useState(false)
 
   const canUseAgent = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.agentUse), [currentWorkspace])
   const canUseChat = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.chatUse), [currentWorkspace])
@@ -103,11 +105,11 @@ const DesktopPrimaryTabs = () => {
   if (canViewWorkflow) {
     navItems.push({
       id: 'workflow',
-      href: '/apps?category=workflow',
+      href: '/workflows',
       icon: <RiExchange2Line className="h-4 w-4" />,
       activeIcon: <RiExchange2Line className="h-4 w-4" />,
       label: '工作流',
-      segments: [],
+      segments: ['workflows'],
     })
   }
 
@@ -146,11 +148,13 @@ const DesktopPrimaryTabs = () => {
 
   const activeItem = navItems.find((item) => {
     if (item.id === 'workflow')
-      return normalizedPathname === '/apps' && searchParams.get('category') === 'workflow'
+      return normalizedPathname === '/workflows' || (normalizedPathname === '/apps' && searchParams.get('category') === 'workflow')
     if (item.id === 'apps')
       return normalizedPathname === '/apps' && searchParams.get('category') !== 'workflow'
 
-    return normalizedPathname === item.href || normalizedPathname.startsWith(`${item.href}/`)
+    return normalizedPathname === item.href
+      || normalizedPathname.startsWith(`${item.href}/`)
+      || item.segments.includes(primarySegment)
   })
 
   const updateScrollState = useCallback(() => {
@@ -165,7 +169,7 @@ const DesktopPrimaryTabs = () => {
   }, [])
 
   useEffect(() => {
-    setIsVaultRuntime(isTauriRuntime())
+    setIsDesktopRuntime(isTauriRuntime())
   }, [])
 
   useEffect(() => {
@@ -174,8 +178,10 @@ const DesktopPrimaryTabs = () => {
       sessionStorage.setItem('cheersai_desktop_embedded', '1')
 
     const embedded = sessionStorage.getItem('cheersai_desktop_embedded') === '1'
-    setShowBrand(!embedded)
+    setShowBrand(!embedded && !isTauriRuntime())
   }, [searchParams])
+
+  const isBrowserAccess = showBrand && !isDesktopRuntime
 
   useEffect(() => {
     if (!activeItem)
@@ -200,6 +206,9 @@ const DesktopPrimaryTabs = () => {
 
     const viewport = tabsViewportRef.current
     if (!viewport)
+      return
+
+    if (!activeItem)
       return
 
     const activeTab = viewport.querySelector<HTMLElement>(`[data-tab-id="${activeItem.id}"]`)
@@ -231,7 +240,7 @@ const DesktopPrimaryTabs = () => {
   return (
     <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-divider-subtle bg-components-panel-bg px-5">
       <div className="flex min-w-0 flex-1 items-center gap-4 overflow-hidden">
-        {showBrand && !isVaultRuntime && (
+        {isBrowserAccess && (
           <Link href="/apps" className="flex shrink-0 items-center gap-2">
             <div className="h-11 w-11 overflow-hidden rounded-2xl border border-blue-200/40 bg-[#0F172A] shadow-[0_10px_26px_rgba(37,99,235,0.18)]">
               <img
@@ -277,11 +286,14 @@ const DesktopPrimaryTabs = () => {
             >
               <div className="flex min-w-max items-center gap-2 pr-2">
                 {navItems.map((item) => {
-            const isWorkflowActive = item.id === 'workflow' && normalizedPathname === '/apps' && searchParams.get('category') === 'workflow'
-            const isWorkflowPage = normalizedPathname === '/apps' && searchParams.get('category') === 'workflow'
+            const isWorkflowActive = item.id === 'workflow'
+              && (normalizedPathname === '/workflows' || (normalizedPathname === '/apps' && searchParams.get('category') === 'workflow'))
+            const isWorkflowPage = normalizedPathname === '/workflows' || (normalizedPathname === '/apps' && searchParams.get('category') === 'workflow')
             const isActive = item.id === 'apps'
               ? normalizedPathname === '/apps' && !isWorkflowPage
-              : normalizedPathname === item.href || normalizedPathname.startsWith(`${item.href}/`)
+              : normalizedPathname === item.href
+                || normalizedPathname.startsWith(`${item.href}/`)
+                || item.segments.includes(primarySegment)
             const shouldHighlight = isActive || isWorkflowActive
 
             return (

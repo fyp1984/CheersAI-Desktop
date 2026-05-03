@@ -6,11 +6,168 @@ from sqlalchemy import func, select
 from werkzeug.exceptions import NotFound
 
 from extensions.ext_database import db
+from libs.desktop_auth import has_admin_tag_override
 from models.dataset import Dataset
 from models.model import App, Tag, TagBinding
 
+COMMON_VISIBILITY_TAG_NAMES = frozenset({"Common", "通用"})
+DEFAULT_VISIBILITY_TAG_NAMES = ("Common", "通用")
+
 
 class TagService:
+    @staticmethod
+    def ensure_default_visibility_bindings(
+        tag_type: str,
+        target_id: str,
+        tenant_id: str,
+        created_by: str,
+    ) -> bool:
+        existing_bindings = (
+            db.session.query(TagBinding.id)
+            .join(Tag, Tag.id == TagBinding.tag_id)
+            .where(
+                TagBinding.target_id == target_id,
+                TagBinding.tenant_id == tenant_id,
+                Tag.tenant_id == tenant_id,
+                Tag.type == tag_type,
+            )
+            .first()
+        )
+        if existing_bindings:
+            return False
+
+        tags_by_name = {
+            tag.name: tag
+            for tag in db.session.scalars(
+                select(Tag).where(
+                    Tag.tenant_id == tenant_id,
+                    Tag.type == tag_type,
+                    Tag.name.in_(DEFAULT_VISIBILITY_TAG_NAMES),
+                )
+            ).all()
+        }
+
+        for tag_name in DEFAULT_VISIBILITY_TAG_NAMES:
+            if tag_name in tags_by_name:
+                continue
+            tag = Tag(
+                name=tag_name,
+                type=tag_type,
+                created_by=created_by,
+                tenant_id=tenant_id,
+            )
+            tag.id = str(uuid.uuid4())
+            db.session.add(tag)
+            db.session.flush()
+            tags_by_name[tag_name] = tag
+
+        for tag_name in DEFAULT_VISIBILITY_TAG_NAMES:
+            tag = tags_by_name[tag_name]
+            db.session.add(
+                TagBinding(
+                    tag_id=tag.id,
+                    target_id=target_id,
+                    tenant_id=tenant_id,
+                    created_by=created_by,
+                )
+            )
+
+        return True
+
+    @staticmethod
+    def _normalize_user_tags(user_tags: list[str] | None) -> list[str]:
+        normalized_tags: list[str] = []
+        seen_tags: set[str] = set()
+        for tag in user_tags or []:
+            if not isinstance(tag, str):
+                continue
+            normalized_tag = tag.strip()
+            if not normalized_tag or normalized_tag in seen_tags:
+                continue
+            normalized_tags.append(normalized_tag)
+            seen_tags.add(normalized_tag)
+        return normalized_tags
+
+    @staticmethod
+    def is_target_visible_by_tag_names(tag_names: list[str] | None, user_tags: list[str] | None) -> bool:
+        if has_admin_tag_override(user_tags):
+            return True
+
+        normalized_tag_names = [tag.strip() for tag in (tag_names or []) if isinstance(tag, str) and tag.strip()]
+        if not normalized_tag_names:
+            return True
+
+        if any(tag_name in COMMON_VISIBILITY_TAG_NAMES for tag_name in normalized_tag_names):
+            return True
+
+        normalized_user_tags = set(TagService._normalize_user_tags(user_tags))
+        if not normalized_user_tags:
+            return False
+
+        return any(tag_name in normalized_user_tags for tag_name in normalized_tag_names)
+
+    @staticmethod
+    def get_tags_by_target_ids(tag_type: str, current_tenant_id: str, target_ids: list[str]) -> dict[str, list[Tag]]:
+        if not target_ids:
+            return {}
+
+        rows = (
+            db.session.query(TagBinding.target_id, Tag)
+            .join(Tag, Tag.id == TagBinding.tag_id)
+            .where(
+                TagBinding.target_id.in_(target_ids),
+                TagBinding.tenant_id == current_tenant_id,
+                Tag.tenant_id == current_tenant_id,
+                Tag.type == tag_type,
+            )
+            .all()
+        )
+
+        tags_by_target_id: dict[str, list[Tag]] = {}
+        for target_id, tag in rows:
+            if not isinstance(target_id, str):
+                continue
+            tags_by_target_id.setdefault(target_id, []).append(tag)
+
+        return tags_by_target_id
+
+    @staticmethod
+    def is_target_visible(tag_type: str, current_tenant_id: str, target_id: str, user_tags: list[str] | None) -> bool:
+        tag_names = [tag.name for tag in TagService.get_tags_by_target_id(tag_type, current_tenant_id, target_id)]
+        return TagService.is_target_visible_by_tag_names(tag_names, user_tags)
+
+    @staticmethod
+    def build_visibility_filter(target_column: sa.ColumnElement, tag_type: str, current_tenant_id: str, user_tags: list[str] | None):
+        normalized_user_tags = TagService._normalize_user_tags(user_tags)
+        if has_admin_tag_override(normalized_user_tags):
+            return sa.true()
+
+        visible_tag_names = sorted(set(normalized_user_tags).union(COMMON_VISIBILITY_TAG_NAMES))
+
+        tagged_target_ids = (
+            select(TagBinding.target_id)
+            .join(Tag, Tag.id == TagBinding.tag_id)
+            .where(
+                TagBinding.tenant_id == current_tenant_id,
+                Tag.tenant_id == current_tenant_id,
+                Tag.type == tag_type,
+            )
+            .group_by(TagBinding.target_id)
+        )
+        visible_target_ids = (
+            select(TagBinding.target_id)
+            .join(Tag, Tag.id == TagBinding.tag_id)
+            .where(
+                TagBinding.tenant_id == current_tenant_id,
+                Tag.tenant_id == current_tenant_id,
+                Tag.type == tag_type,
+                Tag.name.in_(visible_tag_names),
+            )
+            .group_by(TagBinding.target_id)
+        )
+
+        return sa.or_(~target_column.in_(tagged_target_ids), target_column.in_(visible_target_ids))
+
     @staticmethod
     def get_tags(tag_type: str, current_tenant_id: str, keyword: str | None = None):
         query = (

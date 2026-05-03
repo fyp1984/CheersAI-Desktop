@@ -198,7 +198,12 @@ class Account(UserMixin, TypeBase):
     # check current_user.current_tenant.current_role in ['admin', 'owner']
     @property
     def is_admin_or_owner(self):
-        return TenantAccountRole.is_privileged_role(self.role)
+        if TenantAccountRole.is_privileged_role(self.role):
+            return True
+
+        from libs.desktop_auth import has_any_workspace_capability
+
+        return has_any_workspace_capability(self, ["desktop_team_manage"], self.current_tenant_id)
 
     @property
     def is_admin(self):

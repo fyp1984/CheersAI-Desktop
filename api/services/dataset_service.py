@@ -100,7 +100,7 @@ logger = logging.getLogger(__name__)
 
 class DatasetService:
     @staticmethod
-    def get_datasets(page, per_page, tenant_id=None, user=None, search=None, tag_ids=None, include_all=False):
+    def get_datasets(page, per_page, tenant_id=None, user=None, search=None, tag_ids=None, include_all=False, user_tags=None):
         query = select(Dataset).where(Dataset.tenant_id == tenant_id).order_by(Dataset.created_at.desc(), Dataset.id)
 
         if user:
@@ -161,6 +161,9 @@ class DatasetService:
             else:
                 return [], 0
 
+        if tenant_id is not None:
+            query = query.where(TagService.build_visibility_filter(Dataset.id, "knowledge", tenant_id, user_tags))
+
         datasets = db.paginate(select=query, page=page, per_page=per_page, max_per_page=100, error_out=False)
 
         return datasets.items, datasets.total
@@ -184,11 +187,15 @@ class DatasetService:
         return {"mode": mode, "rules": rules}
 
     @staticmethod
-    def get_datasets_by_ids(ids, tenant_id):
+    def get_datasets_by_ids(ids, tenant_id, user_tags=None):
         # Check if ids is not empty to avoid WHERE false condition
         if not ids or len(ids) == 0:
             return [], 0
-        stmt = select(Dataset).where(Dataset.id.in_(ids), Dataset.tenant_id == tenant_id)
+        stmt = select(Dataset).where(
+            Dataset.id.in_(ids),
+            Dataset.tenant_id == tenant_id,
+            TagService.build_visibility_filter(Dataset.id, "knowledge", tenant_id, user_tags),
+        )
 
         datasets = db.paginate(select=stmt, page=1, per_page=len(ids), max_per_page=len(ids), error_out=False)
 
@@ -272,6 +279,8 @@ class DatasetService:
             db.session.add(external_knowledge_binding)
 
         db.session.commit()
+        TagService.ensure_default_visibility_bindings("knowledge", str(dataset.id), tenant_id, str(account.id))
+        db.session.commit()
         return dataset
 
     @staticmethod
@@ -320,6 +329,8 @@ class DatasetService:
             pipeline_id=pipeline.id,
         )
         db.session.add(dataset)
+        db.session.commit()
+        TagService.ensure_default_visibility_bindings("knowledge", str(dataset.id), tenant_id, str(current_user.id))
         db.session.commit()
         return dataset
 

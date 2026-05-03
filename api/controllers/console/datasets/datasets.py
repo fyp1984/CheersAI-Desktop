@@ -52,12 +52,14 @@ from fields.dataset_fields import (
     weighted_score_fields,
 )
 from fields.document_fields import document_status_fields
+from libs.desktop_auth import get_account_sso_tags
 from libs.login import current_account_with_tenant, login_required
 from models import ApiToken, Dataset, Document, DocumentSegment, UploadFile
 from models.dataset import DatasetPermissionEnum
 from models.provider_ids import ModelProviderID
 from services.audit_service import log_operation
 from services.dataset_service import DatasetPermissionService, DatasetService, DocumentService
+from .visibility import ensure_dataset_visible, get_visible_dataset
 
 # Register models for flask_restx to avoid dict type issues in Swagger
 dataset_base_model = get_or_create_model("DatasetBase", dataset_fields)
@@ -292,6 +294,7 @@ class DatasetListApi(Resource):
     @require_knowledge_view_capability
     def get(self):
         current_user, current_tenant_id = current_account_with_tenant()
+        current_user_tags = get_account_sso_tags(current_user, current_tenant_id)
         # Convert query parameters to dict, handling list parameters correctly
         query_params: dict[str, str | list[str]] = dict(request.args.to_dict())
         # Handle ids and tag_ids as lists (Flask request.args.getlist returns list even for single value)
@@ -302,7 +305,7 @@ class DatasetListApi(Resource):
         query = ConsoleDatasetListQuery.model_validate(query_params)
         # provider = request.args.get("provider", default="vendor")
         if query.ids:
-            datasets, total = DatasetService.get_datasets_by_ids(query.ids, current_tenant_id)
+            datasets, total = DatasetService.get_datasets_by_ids(query.ids, current_tenant_id, current_user_tags)
         else:
             datasets, total = DatasetService.get_datasets(
                 query.page,
@@ -312,6 +315,7 @@ class DatasetListApi(Resource):
                 query.keyword,
                 query.tag_ids,
                 query.include_all,
+                current_user_tags,
             )
 
         # check embedding setting
@@ -436,9 +440,7 @@ class DatasetApi(Resource):
     def get(self, dataset_id):
         current_user, current_tenant_id = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id_str)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset(dataset_id_str, current_user, current_tenant_id)
         try:
             DatasetService.check_dataset_permission(dataset, current_user)
         except services.errors.account.NoPermissionError as e:
@@ -499,12 +501,9 @@ class DatasetApi(Resource):
     @require_knowledge_edit_capability
     def patch(self, dataset_id):
         dataset_id_str = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id_str)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
-
         payload = DatasetUpdatePayload.model_validate(console_ns.payload or {})
         current_user, current_tenant_id = current_account_with_tenant()
+        dataset = get_visible_dataset(dataset_id_str, current_user, current_tenant_id)
         # check embedding model setting
         if (
             payload.indexing_technique == "high_quality"
@@ -553,7 +552,7 @@ class DatasetApi(Resource):
             raise Forbidden()
 
         try:
-            dataset = DatasetService.get_dataset(dataset_id_str)
+            dataset = get_visible_dataset(dataset_id_str, current_user, current_tenant_id)
             dataset_name = dataset.name if dataset else "unknown"
 
             if DatasetService.delete_dataset(dataset_id_str, current_user):
@@ -596,8 +595,9 @@ class DatasetUseCheckApi(Resource):
     @account_initialization_required
     @require_knowledge_view_capability
     def get(self, dataset_id):
+        current_user, current_tenant_id = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
-
+        get_visible_dataset(dataset_id_str, current_user, current_tenant_id)
         dataset_is_using = DatasetService.dataset_use_check(dataset_id_str)
         return {"is_using": dataset_is_using}, 200
 
@@ -613,11 +613,9 @@ class DatasetQueryApi(Resource):
     @account_initialization_required
     @require_knowledge_view_capability
     def get(self, dataset_id):
-        current_user, _ = current_account_with_tenant()
+        current_user, current_tenant_id = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id_str)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset(dataset_id_str, current_user, current_tenant_id)
 
         try:
             DatasetService.check_dataset_permission(dataset, current_user)
@@ -748,11 +746,9 @@ class DatasetRelatedAppListApi(Resource):
     @marshal_with(related_app_list_model)
     @require_knowledge_view_capability
     def get(self, dataset_id):
-        current_user, _ = current_account_with_tenant()
+        current_user, current_tenant_id = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id_str)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset(dataset_id_str, current_user, current_tenant_id)
 
         try:
             DatasetService.check_dataset_permission(dataset, current_user)
@@ -781,8 +777,9 @@ class DatasetIndexingStatusApi(Resource):
     @account_initialization_required
     @require_knowledge_view_capability
     def get(self, dataset_id):
-        _, current_tenant_id = current_account_with_tenant()
+        current_user, current_tenant_id = current_account_with_tenant()
         dataset_id = str(dataset_id)
+        get_visible_dataset(dataset_id, current_user, current_tenant_id)
         documents = db.session.scalars(
             select(Document).where(Document.dataset_id == dataset_id, Document.tenant_id == current_tenant_id)
         ).all()
@@ -976,10 +973,9 @@ class DatasetErrorDocs(Resource):
     @account_initialization_required
     @require_knowledge_view_capability
     def get(self, dataset_id):
+        current_user, current_tenant_id = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id_str)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        get_visible_dataset(dataset_id_str, current_user, current_tenant_id)
         results = DocumentService.get_error_documents_by_dataset_id(dataset_id_str)
 
         return {"data": [marshal(item, document_status_fields) for item in results], "total": len(results)}, 200
@@ -998,11 +994,9 @@ class DatasetPermissionUserListApi(Resource):
     @account_initialization_required
     @require_knowledge_view_capability
     def get(self, dataset_id):
-        current_user, _ = current_account_with_tenant()
+        current_user, current_tenant_id = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id_str)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset(dataset_id_str, current_user, current_tenant_id)
         try:
             DatasetService.check_dataset_permission(dataset, current_user)
         except services.errors.account.NoPermissionError as e:
@@ -1027,8 +1021,7 @@ class DatasetAutoDisableLogApi(Resource):
     @account_initialization_required
     @require_knowledge_view_capability
     def get(self, dataset_id):
+        current_user, current_tenant_id = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id_str)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        get_visible_dataset(dataset_id_str, current_user, current_tenant_id)
         return DatasetService.get_dataset_auto_disable_logs(dataset_id_str), 200

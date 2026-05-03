@@ -75,6 +75,8 @@ class AccountWithRole(_AccountAvatar):
     id: str
     name: str
     email: str
+    desktop_sso_owner: str | None = None
+    desktop_sso_username: str | None = None
     last_login_at: int | None = None
     last_active_at: int | None = None
     created_at: int | None = None
