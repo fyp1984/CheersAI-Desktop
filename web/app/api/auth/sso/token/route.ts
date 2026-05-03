@@ -4,6 +4,8 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { generateSessionId, storeSession } from '@/lib/sso-session'
 
+const SSO_SESSION_COOKIE = 'sso_session_id'
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -85,7 +87,7 @@ export async function POST(request: NextRequest) {
     storeSession(sessionId, access_token, refresh_token, sessionExpiresIn, scope)
 
     const cookieStore = await cookies()
-    cookieStore.set('sso_session_id', sessionId, {
+    cookieStore.set(SSO_SESSION_COOKIE, sessionId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
