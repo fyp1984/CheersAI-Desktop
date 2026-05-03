@@ -154,7 +154,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
   const { t } = useTranslation()
   const { notify } = useContext(ToastContext)
   const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
-  const { canEditApps, canViewWorkflow, canEditWorkflow, isCurrentWorkspaceManager, isCurrentWorkspaceDatasetOperator } = useAppContext()
+  const { canEditApps, canViewWorkflow, canEditWorkflow, isCurrentWorkspaceManager, isCurrentWorkspaceOwner, isCurrentWorkspaceDatasetOperator } = useAppContext()
   const { onPlanInfoChanged } = useProviderContext()
   const invalidateAppList = useInvalidateAppList()
   const { push } = useRouter()
@@ -478,6 +478,8 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
   }
 
   const [tags, setTags] = useState<Tag[]>(app.tags)
+  const canManageAppTags = isCurrentWorkspaceManager || isCurrentWorkspaceOwner
+  const showTagSelector = canManageAppTags || tags.length > 0
   useEffect(() => {
     setTags(app.tags)
   }, [app.tags])
@@ -569,53 +571,59 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
           </div>
         </div>
         <div className="absolute bottom-1 left-0 right-0 flex h-[42px] shrink-0 items-center pb-[6px] pl-[14px] pr-[6px] pt-1">
-          {canEditApps && (
+          {(showTagSelector || canEditApps) && (
             <>
-              <div
-                className={cn('flex w-0 grow items-center gap-1')}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  e.preventDefault()
-                }}
-              >
-                <div className="mr-[41px] w-full grow group-hover:!mr-0">
-                  <TagSelector
-                    position="bl"
-                    type="app"
-                    targetID={app.id}
-                    value={tags.map(tag => tag.id)}
-                    selectedTags={tags}
-                    onCacheUpdate={setTags}
-                    onChange={onRefresh}
-                  />
+              {showTagSelector && (
+                <div
+                  className={cn('flex w-0 grow items-center gap-1')}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    e.preventDefault()
+                  }}
+                >
+                  <div className="mr-[41px] w-full grow group-hover:!mr-0">
+                    <TagSelector
+                      position="bl"
+                      type="app"
+                      targetID={app.id}
+                      value={tags.map(tag => tag.id)}
+                      selectedTags={tags}
+                      onCacheUpdate={setTags}
+                      onChange={onRefresh}
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="mx-1 !hidden h-[14px] w-[1px] shrink-0 bg-divider-regular group-hover:!flex" />
-              <div className="!hidden shrink-0 group-hover:!flex">
-                <CustomPopover
-                  htmlContent={<Operations />}
-                  position="br"
-                  trigger="click"
-                  btnElement={(
-                    <div
-                      className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md"
-                    >
-                      <RiMoreFill className="h-4 w-4 text-text-tertiary" />
-                    </div>
-                  )}
-                  btnClassName={open =>
-                    cn(
-                      open ? '!bg-state-base-hover !shadow-none' : '!bg-transparent',
-                      'h-8 w-8 rounded-md border-none !p-2 hover:!bg-state-base-hover',
-                    )}
-                  popupClassName={
-                    (app.mode === AppModeEnum.COMPLETION || app.mode === AppModeEnum.CHAT)
-                      ? '!w-[256px] translate-x-[-224px]'
-                      : '!w-[216px] translate-x-[-128px]'
-                  }
-                  className="!z-20 h-fit"
-                />
-              </div>
+              )}
+              {canEditApps && (
+                <>
+                  <div className="mx-1 !hidden h-[14px] w-[1px] shrink-0 bg-divider-regular group-hover:!flex" />
+                  <div className="!hidden shrink-0 group-hover:!flex">
+                    <CustomPopover
+                      htmlContent={<Operations />}
+                      position="br"
+                      trigger="click"
+                      btnElement={(
+                        <div
+                          className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md"
+                        >
+                          <RiMoreFill className="h-4 w-4 text-text-tertiary" />
+                        </div>
+                      )}
+                      btnClassName={open =>
+                        cn(
+                          open ? '!bg-state-base-hover !shadow-none' : '!bg-transparent',
+                          'h-8 w-8 rounded-md border-none !p-2 hover:!bg-state-base-hover',
+                        )}
+                      popupClassName={
+                        (app.mode === AppModeEnum.COMPLETION || app.mode === AppModeEnum.CHAT)
+                          ? '!w-[256px] translate-x-[-224px]'
+                          : '!w-[216px] translate-x-[-128px]'
+                      }
+                      className="!z-20 h-fit"
+                    />
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>

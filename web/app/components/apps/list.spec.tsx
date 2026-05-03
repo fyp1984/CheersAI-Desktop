@@ -247,8 +247,13 @@ vi.mock('./new-app-card', () => ({
 }))
 
 vi.mock('./empty', () => ({
-  default: () => {
-    return React.createElement('div', { 'data-testid': 'empty-state', 'role': 'status' }, 'No apps found')
+  default: ({ hint }: any) => {
+    return React.createElement(
+      'div',
+      { 'data-testid': 'empty-state', 'role': 'status' },
+      React.createElement('span', null, 'No apps found'),
+      hint ? React.createElement('span', { 'data-testid': 'empty-state-hint' }, hint) : null,
+    )
   },
 }))
 
@@ -308,6 +313,33 @@ describe('List', () => {
     it('should render without crashing', () => {
       render(<List />)
       expect(screen.getByRole('textbox')).toBeInTheDocument()
+    })
+
+    it('should render visibility hint in empty state when no filters are active', () => {
+      defaultAppData.pages[0].data = []
+      defaultAppData.pages[0].total = 0
+      mockQueryState.keywords = ''
+      mockQueryState.tagIDs = []
+      mockQueryState.isCreatedByMe = false
+
+      render(<List />)
+
+      expect(screen.getByTestId('empty-state')).toBeInTheDocument()
+      expect(screen.getByTestId('empty-state-hint')).toHaveTextContent('资源标签与您的 SSO 标签暂未匹配')
+    })
+
+    it('should render workflow-specific visibility hint in empty state for workflow category', () => {
+      defaultAppData.pages[0].data = []
+      defaultAppData.pages[0].total = 0
+      mockActiveTab = AppModeEnum.WORKFLOW
+      mockQueryState.keywords = ''
+      mockQueryState.tagIDs = []
+      mockQueryState.isCreatedByMe = false
+
+      render(<List />)
+
+      expect(screen.getByTestId('empty-state-hint')).toHaveTextContent('工作流')
+      expect(screen.getByTestId('empty-state-hint')).toHaveTextContent('资源标签与您的 SSO 标签暂未匹配')
     })
 
     it('should render search input', () => {
@@ -416,7 +448,7 @@ describe('List', () => {
 
       expect(screen.getByText('未发布 / 已回收')).toBeInTheDocument()
       expect(screen.getByText('当前不可在探索页直接使用，已统一置于列表底部')).toBeInTheDocument()
-      expect(screen.getAllByText(/2\s*个 Agent/)).toHaveLength(3)
+      expect(screen.getByText(/2\s*个 Agent/)).toBeInTheDocument()
     })
   })
 

@@ -3,12 +3,10 @@
 import { useAppContext } from '@/context/app-context'
 
 const useCanManageTags = (type: 'knowledge' | 'app') => {
-  const { canEditApps, canEditKnowledge } = useAppContext()
+  const { isCurrentWorkspaceManager, isCurrentWorkspaceOwner } = useAppContext()
 
-  if (type === 'knowledge')
-    return canEditKnowledge
-
-  return canEditApps
+  void type
+  return isCurrentWorkspaceManager || isCurrentWorkspaceOwner
 }
 
 export default useCanManageTags

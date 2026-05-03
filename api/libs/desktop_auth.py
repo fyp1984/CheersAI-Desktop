@@ -178,6 +178,8 @@ STANDARD_CAPABILITIES = frozenset({
     for capability in capabilities
 })
 
+ADMIN_TAG_KEYWORDS = ("admin", "管理员")
+
 
 def normalize_sso_identifier(value: Any) -> str | None:
     if not isinstance(value, str):
@@ -264,7 +266,33 @@ def get_role_capabilities(role: str | None) -> list[str]:
     return list(WORKSPACE_ROLE_CAPABILITIES.get(normalized_role, frozenset()))
 
 
-def resolve_workspace_capabilities(payload: Mapping[str, Any] | None, fallback_role: str | None = None) -> list[str]:
+def is_admin_like_tag(tag: Any) -> bool:
+    if not isinstance(tag, str):
+        return False
+
+    normalized = tag.strip().lower()
+    if not normalized:
+        return False
+
+    return any(keyword in normalized for keyword in ADMIN_TAG_KEYWORDS)
+
+
+def has_admin_tag_override(user_tags: Iterable[str] | None) -> bool:
+    return any(is_admin_like_tag(tag) for tag in user_tags or [])
+
+
+def get_admin_override_capabilities(user_tags: Iterable[str] | None) -> list[str]:
+    if not has_admin_tag_override(user_tags):
+        return []
+
+    return get_role_capabilities(TenantAccountRole.ADMIN)
+
+
+def resolve_workspace_capabilities(
+    payload: Mapping[str, Any] | None,
+    fallback_role: str | None = None,
+    sso_tags: Iterable[str] | None = None,
+) -> list[str]:
     identifiers = collect_sso_identifiers(payload)
     capabilities: set[str] = set()
 
@@ -280,6 +308,8 @@ def resolve_workspace_capabilities(payload: Mapping[str, Any] | None, fallback_r
     if fallback_role:
         capabilities.update(get_role_capabilities(fallback_role))
 
+    capabilities.update(get_admin_override_capabilities(sso_tags))
+
     if has_desktop_access(payload):
         capabilities.add(DESKTOP_ACCESS_CAPABILITY)
 
@@ -291,6 +321,7 @@ def build_desktop_sso_projection(
     *,
     workspace_role: str | None,
     mapped_role: str | None,
+    sso_tags: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     normalized_roles = [
         normalized
@@ -304,10 +335,12 @@ def build_desktop_sso_projection(
         for normalized in [normalize_sso_identifier(value)]
         if normalized
     ]
-    capabilities = resolve_workspace_capabilities(payload, workspace_role)
+    normalized_tags = [tag.strip() for tag in (sso_tags or []) if isinstance(tag, str) and tag.strip()]
+    capabilities = resolve_workspace_capabilities(payload, workspace_role, normalized_tags)
     sync_hash_source = "|".join([
         *(normalized_roles or []),
         *(normalized_permissions or []),
+        *(normalized_tags or []),
         *(capabilities or []),
         workspace_role or "",
         mapped_role or "",
@@ -318,6 +351,7 @@ def build_desktop_sso_projection(
         "mapped_role": mapped_role,
         "roles": normalized_roles,
         "permissions": normalized_permissions,
+        "sso_tags": normalized_tags,
         "capabilities": capabilities,
         "sync_hash": hashlib.sha256(sync_hash_source.encode("utf-8")).hexdigest(),
     }
@@ -382,7 +416,28 @@ def get_account_workspace_capabilities(account: Any, tenant_id: str | None = Non
                 capabilities.update(capability for capability in projection_capabilities if isinstance(capability, str))
 
     capabilities.update(get_role_capabilities(get_current_workspace_role(account)))
+    capabilities.update(get_admin_override_capabilities(get_account_sso_tags(account, resolved_tenant_id)))
     return sorted(capabilities)
+
+
+def get_account_sso_tags(account: Any, tenant_id: str | None = None) -> list[str]:
+    account_id = getattr(account, "id", None)
+    resolved_tenant_id = tenant_id or getattr(account, "current_tenant_id", None)
+
+    if isinstance(account_id, str) and resolved_tenant_id:
+        projection = load_desktop_sso_projection(account_id, str(resolved_tenant_id))
+        if projection:
+            projection_tags = projection.get("sso_tags")
+            if isinstance(projection_tags, list):
+                return [tag for tag in projection_tags if isinstance(tag, str) and tag]
+
+    custom_config = getattr(account, "custom_config_dict", None)
+    if isinstance(custom_config, dict):
+        stored_tags = custom_config.get("desktop_sso_tags")
+        if isinstance(stored_tags, list):
+            return [tag for tag in stored_tags if isinstance(tag, str) and tag]
+
+    return []
 
 
 def has_any_workspace_capability(account: Any, capabilities: Iterable[str], tenant_id: str | None = None) -> bool:

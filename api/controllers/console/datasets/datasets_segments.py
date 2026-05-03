@@ -39,6 +39,7 @@ from services.entities.knowledge_entities.knowledge_entities import ChildChunkUp
 from services.errors.chunk import ChildChunkDeleteIndexError as ChildChunkDeleteIndexServiceError
 from services.errors.chunk import ChildChunkIndexingError as ChildChunkIndexingServiceError
 from tasks.batch_create_segment_to_index_task import batch_create_segment_to_index_task
+from .visibility import get_visible_dataset_from_context
 
 
 def _get_segment_with_summary(segment, dataset_id):
@@ -116,9 +117,7 @@ class DatasetDocumentSegmentListApi(Resource):
 
         dataset_id = str(dataset_id)
         document_id = str(document_id)
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
 
         try:
             DatasetService.check_dataset_permission(dataset, current_user)
@@ -228,9 +227,7 @@ class DatasetDocumentSegmentListApi(Resource):
 
         # check dataset
         dataset_id = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
         # check user's model setting
         DatasetService.check_dataset_model_setting(dataset)
         # check document
@@ -262,9 +259,7 @@ class DatasetDocumentSegmentApi(Resource):
         current_user, current_tenant_id = current_account_with_tenant()
 
         dataset_id = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
         document_id = str(document_id)
         document = DocumentService.get_document(dataset_id, document_id)
         if not document:
@@ -322,9 +317,7 @@ class DatasetDocumentSegmentAddApi(Resource):
 
         # check dataset
         dataset_id = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
         # check document
         document_id = str(document_id)
         document = DocumentService.get_document(dataset_id, document_id)
@@ -373,9 +366,7 @@ class DatasetDocumentSegmentUpdateApi(Resource):
 
         # check dataset
         dataset_id = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
         # check user's model setting
         DatasetService.check_dataset_model_setting(dataset)
         # check document
@@ -435,9 +426,7 @@ class DatasetDocumentSegmentUpdateApi(Resource):
 
         # check dataset
         dataset_id = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
         # check user's model setting
         DatasetService.check_dataset_model_setting(dataset)
         # check document
@@ -482,9 +471,7 @@ class DatasetDocumentSegmentBatchImportApi(Resource):
 
         # check dataset
         dataset_id = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
         # check document
         document_id = str(document_id)
         document = DocumentService.get_document(dataset_id, document_id)
@@ -549,9 +536,7 @@ class ChildChunkAddApi(Resource):
 
         # check dataset
         dataset_id = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
         # check document
         document_id = str(document_id)
         document = DocumentService.get_document(dataset_id, document_id)
@@ -604,9 +589,7 @@ class ChildChunkAddApi(Resource):
 
         # check dataset
         dataset_id = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
         # check user's model setting
         DatasetService.check_dataset_model_setting(dataset)
         # check document
@@ -654,9 +637,7 @@ class ChildChunkAddApi(Resource):
 
         # check dataset
         dataset_id = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
         # check user's model setting
         DatasetService.check_dataset_model_setting(dataset)
         # check document
@@ -702,9 +683,7 @@ class ChildChunkUpdateApi(Resource):
 
         # check dataset
         dataset_id = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
         # check user's model setting
         DatasetService.check_dataset_model_setting(dataset)
         # check document
@@ -759,9 +738,7 @@ class ChildChunkUpdateApi(Resource):
 
         # check dataset
         dataset_id = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
         # check user's model setting
         DatasetService.check_dataset_model_setting(dataset)
         # check document

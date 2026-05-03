@@ -15,10 +15,12 @@ import { useProviderContext } from '@/context/provider-context'
 import { useFormatTimeFromNow } from '@/hooks/use-format-time-from-now'
 import { LanguagesSupported } from '@/i18n-config/language'
 import { useMembers } from '@/service/use-common'
+import { hasAnyWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import EditWorkspaceModal from './edit-workspace-modal'
 import InviteButton from './invite-button'
 import InviteModal from './invite-modal'
 import InvitedModal from './invited-modal'
+import MemberTagOperation from './member-tag-operation'
 import Operation from './operation'
 import TransferOwnership from './operation/transfer-ownership'
 import TransferOwnershipModal from './transfer-ownership-modal'
@@ -47,6 +49,12 @@ const MembersPage = () => {
   const isMemberFull = enableBilling && isNotUnlimitedMemberPlan && accounts.length >= plan.total.teamMembers
   const [editWorkspaceModalVisible, setEditWorkspaceModalVisible] = useState(false)
   const [showTransferOwnershipModal, setShowTransferOwnershipModal] = useState(false)
+  const canManageMemberTags = isCurrentWorkspaceManager
+    && ['owner', 'admin'].includes(currentWorkspace.role)
+    && hasAnyWorkspaceCapability(currentWorkspace, [
+      WORKSPACE_CAPABILITIES.settingsTeam,
+      WORKSPACE_CAPABILITIES.teamManage,
+    ])
 
   return (
     <>
@@ -103,7 +111,7 @@ const MembersPage = () => {
           {isMemberFull && (
             <UpgradeBtn className="mr-2" loc="member-invite" />
           )}
-          <div className="shrink-0">
+          <div className="flex shrink-0 items-center gap-2">
             <InviteButton disabled={!isCurrentWorkspaceManager || isMemberFull} onClick={() => setInviteModalVisible(true)} />
           </div>
         </div>
@@ -112,6 +120,9 @@ const MembersPage = () => {
             <div className="system-xs-medium-uppercase grow px-3 text-text-tertiary">{t('members.name', { ns: 'common' })}</div>
             <div className="system-xs-medium-uppercase w-[104px] shrink-0 text-text-tertiary">{t('members.lastActive', { ns: 'common' })}</div>
             <div className="system-xs-medium-uppercase w-[96px] shrink-0 px-3 text-text-tertiary">{t('members.role', { ns: 'common' })}</div>
+            {canManageMemberTags && (
+              <div className="system-xs-medium-uppercase w-[148px] shrink-0 px-3 text-text-tertiary">成员标签</div>
+            )}
           </div>
           <div className="relative min-w-[480px]">
             {
@@ -146,6 +157,15 @@ const MembersPage = () => {
                       <div className="system-sm-regular px-3 text-text-secondary">{RoleMap[account.role] || RoleMap.normal}</div>
                     )}
                   </div>
+                  {canManageMemberTags && (
+                    <div className="flex w-[148px] shrink-0 items-center">
+                      <MemberTagOperation
+                        member={account}
+                        orgId={currentWorkspace.id}
+                        onOperate={refetch}
+                      />
+                    </div>
+                  )}
                 </div>
               ))
             }

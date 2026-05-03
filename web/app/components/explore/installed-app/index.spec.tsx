@@ -231,6 +231,7 @@ describe('InstalledApp', () => {
 
       render(<InstalledApp id="nonexistent-app" />)
       expect(screen.getByText(/404/)).toBeInTheDocument()
+      expect(screen.getByText(/资源标签与您的 SSO 标签暂未匹配/)).toBeInTheDocument()
     })
   })
 
@@ -612,6 +613,24 @@ describe('InstalledApp', () => {
         appId: undefined,
         isInstalledApp: true,
       })
+    })
+
+    it('should guard against installed app entries without app payload', () => {
+      ;(useContext as Mock).mockReturnValue({
+        installedApps: [{ ...mockInstalledApp, app: undefined }],
+        isFetchingInstalledApps: false,
+      })
+
+      render(<InstalledApp id="installed-app-123" />)
+
+      expect(useGetInstalledAppAccessModeByAppId).toHaveBeenCalledWith('installed-app-123')
+      expect(useGetInstalledAppParams).toHaveBeenCalledWith('installed-app-123')
+      expect(useGetInstalledAppMeta).toHaveBeenCalledWith('installed-app-123')
+      expect(useGetUserCanAccessApp).toHaveBeenCalledWith({
+        appId: undefined,
+        isInstalledApp: true,
+      })
+      expect(screen.getByText(/installed app data is unavailable/i)).toBeInTheDocument()
     })
   })
 

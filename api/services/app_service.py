@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 class AppService:
-    def get_paginate_apps(self, user_id: str, tenant_id: str, args: dict) -> Pagination | None:
+    def get_paginate_apps(self, user_id: str, tenant_id: str, args: dict, user_tags: list[str] | None = None) -> Pagination | None:
         """
         Get app list with pagination
         :param user_id: user id
@@ -67,6 +67,8 @@ class AppService:
                 filters.append(App.id.in_(target_ids))
             else:
                 return None
+
+        filters.append(TagService.build_visibility_filter(App.id, "app", tenant_id, user_tags))
 
         app_models = db.paginate(
             sa.select(App).where(*filters).order_by(App.created_at.desc()),
@@ -158,6 +160,9 @@ class AppService:
 
             app.app_model_config_id = app_model_config.id
 
+        db.session.commit()
+
+        TagService.ensure_default_visibility_bindings("app", str(app.id), tenant_id, str(account.id))
         db.session.commit()
 
         app_was_created.send(app, account=account)

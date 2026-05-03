@@ -31,6 +31,7 @@ from core.ops.ops_trace_manager import OpsTraceManager
 from core.rag.retrieval.retrieval_methods import RetrievalMethod
 from core.workflow.enums import NodeType, WorkflowExecutionStatus
 from extensions.ext_database import db
+from libs.desktop_auth import get_account_sso_tags
 from libs.login import current_account_with_tenant, login_required
 from models import App, DatasetPermissionEnum, Workflow
 from models.model import IconType
@@ -55,6 +56,9 @@ from services.entities.knowledge_entities.knowledge_entities import (
     WeightVectorSetting,
 )
 from services.feature_service import FeatureService
+from services.tag_service import TagService
+
+from .visibility import get_current_user_app_tags, get_visible_app_model, is_app_visible_for_user
 
 ALLOW_CREATE_APP_MODES = ["chat", "agent-chat", "advanced-chat", "workflow", "completion"]
 
@@ -515,13 +519,14 @@ class AppListApi(Resource):
     def get(self):
         """Get app list"""
         current_user, current_tenant_id = current_account_with_tenant()
+        current_user_tags = get_current_user_app_tags(current_user, current_tenant_id)
 
         args = AppListQuery.model_validate(request.args.to_dict(flat=True))  # type: ignore
         args_dict = args.model_dump()
 
         # get app list
         app_service = AppService()
-        app_pagination = app_service.get_paginate_apps(current_user.id, current_tenant_id, args_dict)
+        app_pagination = app_service.get_paginate_apps(current_user.id, current_tenant_id, args_dict, current_user_tags)
         if not app_pagination:
             empty = AppPagination(page=args.page, limit=args.limit, total=0, has_more=False, data=[])
             return empty.model_dump(mode="json"), 200
@@ -631,6 +636,11 @@ class AppApi(Resource):
     @require_app_view_capability
     def get(self, app_model):
         """Get app detail"""
+        current_user, current_tenant_id = current_account_with_tenant()
+        current_user_tags = get_current_user_app_tags(current_user, current_tenant_id)
+        if not is_app_visible_for_user(app_model, current_user_tags):
+            raise NotFound("App not found")
+
         app_service = AppService()
 
         app_model = app_service.get_app(app_model)
@@ -986,8 +996,8 @@ class AppLifecycleStatusApi(Resource):
     @login_required
     @account_initialization_required
     def get(self, app_id):
-        current_user, _ = current_account_with_tenant()
-        app_model = db.session.query(App).filter(App.id == app_id, App.tenant_id == current_user.current_tenant_id).first()
+        current_user, current_tenant_id = current_account_with_tenant()
+        app_model = get_visible_app_model(str(app_id), current_user, current_tenant_id, same_tenant_only=True)
         if not app_model:
             raise NotFound("App not found")
         return AppLifecycleService.get_lifecycle_status(app_model, current_user)
@@ -999,8 +1009,8 @@ class AppLifecycleStashApi(Resource):
     @account_initialization_required
     @edit_permission_required
     def post(self, app_id):
-        current_user, _ = current_account_with_tenant()
-        app_model = db.session.query(App).filter(App.id == app_id, App.tenant_id == current_user.current_tenant_id).first()
+        current_user, current_tenant_id = current_account_with_tenant()
+        app_model = get_visible_app_model(str(app_id), current_user, current_tenant_id, same_tenant_only=True)
         if not app_model:
             raise NotFound("App not found")
             
@@ -1019,8 +1029,8 @@ class AppLifecyclePublishApi(Resource):
     @account_initialization_required
     @edit_permission_required
     def post(self, app_id):
-        current_user, _ = current_account_with_tenant()
-        app_model = db.session.query(App).filter(App.id == app_id, App.tenant_id == current_user.current_tenant_id).first()
+        current_user, current_tenant_id = current_account_with_tenant()
+        app_model = get_visible_app_model(str(app_id), current_user, current_tenant_id, same_tenant_only=True)
         if not app_model:
             raise NotFound("App not found")
             
@@ -1042,8 +1052,8 @@ class AppLifecycleRecallApi(Resource):
     @account_initialization_required
     @is_admin_or_owner_required
     def post(self, app_id):
-        current_user, _ = current_account_with_tenant()
-        app_model = db.session.query(App).filter(App.id == app_id, App.tenant_id == current_user.current_tenant_id).first()
+        current_user, current_tenant_id = current_account_with_tenant()
+        app_model = get_visible_app_model(str(app_id), current_user, current_tenant_id, same_tenant_only=True)
         if not app_model:
             raise NotFound("App not found")
             
@@ -1065,8 +1075,8 @@ class AppLifecycleEventsApi(Resource):
     @login_required
     @account_initialization_required
     def get(self, app_id):
-        current_user, _ = current_account_with_tenant()
-        app_model = db.session.query(App).filter(App.id == app_id, App.tenant_id == current_user.current_tenant_id).first()
+        current_user, current_tenant_id = current_account_with_tenant()
+        app_model = get_visible_app_model(str(app_id), current_user, current_tenant_id, same_tenant_only=True)
         if not app_model:
             raise NotFound("App not found")
             

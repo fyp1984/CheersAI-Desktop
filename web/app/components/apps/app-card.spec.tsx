@@ -35,6 +35,7 @@ vi.mock('use-context-selector', () => ({
 
 // Mock app context
 let mockIsCurrentWorkspaceManager = false
+let mockIsCurrentWorkspaceOwner = false
 let mockIsCurrentWorkspaceDatasetOperator = false
 vi.mock('@/context/app-context', () => ({
   useAppContext: () => ({
@@ -42,6 +43,7 @@ vi.mock('@/context/app-context', () => ({
     canViewWorkflow: true,
     canEditWorkflow: true,
     isCurrentWorkspaceManager: mockIsCurrentWorkspaceManager,
+    isCurrentWorkspaceOwner: mockIsCurrentWorkspaceOwner,
     isCurrentWorkspaceDatasetOperator: mockIsCurrentWorkspaceDatasetOperator,
   }),
 }))
@@ -260,6 +262,7 @@ describe('AppCard', () => {
     mockOpenAsyncWindow.mockReset()
     mockWebappAuthEnabled = false
     mockIsCurrentWorkspaceManager = false
+    mockIsCurrentWorkspaceOwner = false
     mockIsCurrentWorkspaceDatasetOperator = false
   })
 
@@ -1101,6 +1104,17 @@ describe('AppCard', () => {
       }
       render(<AppCard app={multiTagApp} />)
       // Verify the tag selector renders (actual tag display is handled by the real TagSelector component)
+      expect(screen.getByLabelText('tag-selector')).toBeInTheDocument()
+    })
+
+    it('should keep tag selector visible for non-admin members when tags already exist', () => {
+      const taggedApp = {
+        ...mockApp,
+        tags: [{ id: 'tag1', name: 'Tag 1', type: 'app', binding_count: 0 }],
+      }
+
+      render(<AppCard app={taggedApp} />)
+
       expect(screen.getByLabelText('tag-selector')).toBeInTheDocument()
     })
 

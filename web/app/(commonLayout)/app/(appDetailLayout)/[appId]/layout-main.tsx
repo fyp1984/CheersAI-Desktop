@@ -18,10 +18,12 @@ import { usePathname, useRouter } from 'next/navigation'
 import * as React from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useContext } from 'use-context-selector'
 import { useShallow } from 'zustand/react/shallow'
 import AppSideBar from '@/app/components/app-sidebar'
 import { useStore } from '@/app/components/app/store'
 import Loading from '@/app/components/base/loading'
+import { ToastContext } from '@/app/components/base/toast'
 import { useStore as useTagStore } from '@/app/components/base/tag-management/store'
 import { useAppContext } from '@/context/app-context'
 import useBreakpoints, { MediaType } from '@/hooks/use-breakpoints'
@@ -47,6 +49,7 @@ const AppDetailLayout: FC<IAppDetailLayoutProps> = (props) => {
   } = props
   const translation = useTranslation()
   const t = translation?.t ?? ((key: string) => key)
+  const { notify } = useContext(ToastContext)
   const router = useRouter()
   const pathname = usePathname()
   const media = useBreakpoints()
@@ -60,6 +63,16 @@ const AppDetailLayout: FC<IAppDetailLayoutProps> = (props) => {
   const showTagManagementModal = useTagStore(s => s.showTagManagementModal)
   const [isLoadingAppDetail, setIsLoadingAppDetail] = useState(false)
   const [appDetailRes, setAppDetailRes] = useState<App | null>(null)
+  const notifyVisibilityUnavailable = useCallback(() => {
+    notify({
+      type: 'warning',
+      message: t('appDetail.visibilityUnavailableHint', {
+        ns: 'app',
+        defaultValue: '当前应用不可见，可能已被删除，或其资源标签与您的 SSO 标签暂未匹配。',
+      }),
+    })
+    router.replace('/apps')
+  }, [notify, router, t])
   const [navigation, setNavigation] = useState<Array<{
     name: string
     href: string
@@ -124,12 +137,12 @@ const AppDetailLayout: FC<IAppDetailLayoutProps> = (props) => {
     fetchAppDetailDirect({ url: '/apps', id: appId }).then((res: App) => {
       setAppDetailRes(res)
     }).catch((e: any) => {
-      if (e.status === 404)
-        router.replace('/apps')
+      if ([403, 404].includes(e.status))
+        notifyVisibilityUnavailable()
     }).finally(() => {
       setIsLoadingAppDetail(false)
     })
-  }, [appId, pathname])
+  }, [appId, notifyVisibilityUnavailable, pathname])
 
   useEffect(() => {
     if (!appDetailRes || !currentWorkspace.id || isLoadingCurrentWorkspace || isLoadingAppDetail)

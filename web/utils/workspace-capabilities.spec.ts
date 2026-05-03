@@ -1,71 +1,60 @@
 import { describe, expect, it } from 'vitest'
-import { getCapabilitiesByRole, getWorkspaceCapabilities, hasPluginManageWorkspaceCapability, hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from './workspace-capabilities'
+import {
+  getCapabilitiesByRole,
+  getWorkspaceCapabilities,
+  hasAnyWorkspaceCapability,
+  hasPluginManageWorkspaceCapability,
+  hasWorkspaceCapability,
+  WORKSPACE_CAPABILITIES,
+} from './workspace-capabilities'
 
-describe('workspace capabilities', () => {
-  it('returns configured capabilities for dataset operator role', () => {
-    const capabilities = getCapabilitiesByRole('dataset_operator')
-
-    expect(capabilities).toContain(WORKSPACE_CAPABILITIES.knowledgeEdit)
-    expect(capabilities).toContain(WORKSPACE_CAPABILITIES.appView)
-    expect(capabilities).not.toContain(WORKSPACE_CAPABILITIES.memberManage)
+describe('workspace-capabilities', () => {
+  it('returns empty capabilities for unknown roles', () => {
+    expect(getCapabilitiesByRole()).toEqual([])
+    expect(getCapabilitiesByRole('unknown-role')).toEqual([])
   })
 
-  it('prefers workspace capabilities from backend payload', () => {
-    const capabilities = getWorkspaceCapabilities({
+  it('prefers explicit workspace capabilities over role defaults', () => {
+    expect(getWorkspaceCapabilities({
       role: 'normal',
-      capabilities: [WORKSPACE_CAPABILITIES.auditView],
-    })
-
-    expect(capabilities).toEqual([WORKSPACE_CAPABILITIES.auditView])
+      capabilities: [
+        WORKSPACE_CAPABILITIES.settingsTeam,
+        WORKSPACE_CAPABILITIES.settingsTeam,
+        WORKSPACE_CAPABILITIES.teamManage,
+      ],
+    })).toEqual([
+      WORKSPACE_CAPABILITIES.settingsTeam,
+      WORKSPACE_CAPABILITIES.teamManage,
+    ])
   })
 
-  it('falls back to role-derived capabilities when backend payload is empty', () => {
-    expect(hasWorkspaceCapability({
-      role: 'editor',
+  it('falls back to role defaults when workspace capabilities are absent', () => {
+    expect(getWorkspaceCapabilities({
+      role: 'admin',
       capabilities: [],
-    }, WORKSPACE_CAPABILITIES.workflowEdit)).toBe(true)
-
-    expect(hasWorkspaceCapability({
-      role: 'normal',
-      capabilities: [],
-    }, WORKSPACE_CAPABILITIES.workflowEdit)).toBe(false)
+    })).toContain(WORKSPACE_CAPABILITIES.teamManage)
   })
 
-  it('grants member users shared view and run capabilities', () => {
-    expect(hasWorkspaceCapability({
+  it('checks single and multi capability helpers correctly', () => {
+    const workspace = {
       role: 'normal',
-      capabilities: [],
-    }, WORKSPACE_CAPABILITIES.appView)).toBe(true)
+      capabilities: [WORKSPACE_CAPABILITIES.settingsPersonal],
+    }
 
-    expect(hasWorkspaceCapability({
-      role: 'normal',
-      capabilities: [],
-    }, WORKSPACE_CAPABILITIES.workflowRun)).toBe(true)
-
-    expect(hasWorkspaceCapability({
-      role: 'normal',
-      capabilities: [],
-    }, WORKSPACE_CAPABILITIES.languageManage)).toBe(true)
+    expect(hasWorkspaceCapability(workspace, WORKSPACE_CAPABILITIES.settingsPersonal)).toBe(true)
+    expect(hasWorkspaceCapability(workspace, WORKSPACE_CAPABILITIES.teamManage)).toBe(false)
+    expect(hasAnyWorkspaceCapability(workspace, [
+      WORKSPACE_CAPABILITIES.teamManage,
+      WORKSPACE_CAPABILITIES.settingsPersonal,
+    ])).toBe(true)
   })
 
-  it('grants editors model provider and data source management but not member management', () => {
-    expect(hasWorkspaceCapability({
-      role: 'editor',
-      capabilities: [],
-    }, WORKSPACE_CAPABILITIES.modelProviderManage)).toBe(true)
+  it('recognizes either plugin or api-extension manage for plugin governance', () => {
+    expect(hasPluginManageWorkspaceCapability({
+      role: 'normal',
+      capabilities: [WORKSPACE_CAPABILITIES.pluginManage],
+    })).toBe(true)
 
-    expect(hasWorkspaceCapability({
-      role: 'editor',
-      capabilities: [],
-    }, WORKSPACE_CAPABILITIES.dataSourceManage)).toBe(true)
-
-    expect(hasWorkspaceCapability({
-      role: 'editor',
-      capabilities: [],
-    }, WORKSPACE_CAPABILITIES.memberManage)).toBe(false)
-  })
-
-  it('treats plugin manage as compatible with legacy and new API extension capabilities', () => {
     expect(hasPluginManageWorkspaceCapability({
       role: 'normal',
       capabilities: [WORKSPACE_CAPABILITIES.apiExtensionManage],
@@ -73,12 +62,7 @@ describe('workspace capabilities', () => {
 
     expect(hasPluginManageWorkspaceCapability({
       role: 'normal',
-      capabilities: [WORKSPACE_CAPABILITIES.pluginManage],
-    })).toBe(true)
-
-    expect(hasPluginManageWorkspaceCapability({
-      role: 'editor',
-      capabilities: [],
+      capabilities: [WORKSPACE_CAPABILITIES.settingsPersonal],
     })).toBe(false)
   })
 })

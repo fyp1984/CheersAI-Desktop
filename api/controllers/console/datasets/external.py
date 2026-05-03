@@ -26,6 +26,8 @@ from libs.login import current_account_with_tenant, login_required
 from services.dataset_service import DatasetService
 from services.external_knowledge_service import ExternalDatasetService
 from services.hit_testing_service import HitTestingService
+
+from .visibility import get_visible_dataset
 from services.knowledge_service import ExternalDatasetTestService
 
 
@@ -283,9 +285,7 @@ class ExternalKnowledgeHitTestingApi(Resource):
     def post(self, dataset_id):
         current_user, _ = current_account_with_tenant()
         dataset_id_str = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id_str)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset(dataset_id_str, current_user)
 
         try:
             DatasetService.check_dataset_permission(dataset, current_user)

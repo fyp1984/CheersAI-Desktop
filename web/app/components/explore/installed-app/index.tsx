@@ -25,6 +25,7 @@ const InstalledApp: FC<IInstalledAppProps> = ({
   const { installedApps, isFetchingInstalledApps } = useContext(ExploreContext)
   const updateAppInfo = useWebAppStore(s => s.updateAppInfo)
   const installedApp = installedApps.find(item => item.id === id)
+  const installedAppData = installedApp?.app
   const updateWebAppAccessMode = useWebAppStore(s => s.updateWebAppAccessMode)
   const updateAppParams = useWebAppStore(s => s.updateAppParams)
   const updateWebAppMeta = useWebAppStore(s => s.updateWebAppMeta)
@@ -32,14 +33,18 @@ const InstalledApp: FC<IInstalledAppProps> = ({
   const { isFetching: isFetchingWebAppAccessMode, data: webAppAccessMode, error: webAppAccessModeError } = useGetInstalledAppAccessModeByAppId(installedApp?.id ?? null)
   const { isFetching: isFetchingAppParams, data: appParams, error: appParamsError } = useGetInstalledAppParams(installedApp?.id ?? null)
   const { isFetching: isFetchingAppMeta, data: appMeta, error: appMetaError } = useGetInstalledAppMeta(installedApp?.id ?? null)
-  const { data: userCanAccessApp, error: useCanAccessAppError } = useGetUserCanAccessApp({ appId: installedApp?.app.id, isInstalledApp: true })
+  const { data: userCanAccessApp, error: useCanAccessAppError } = useGetUserCanAccessApp({ appId: installedAppData?.id, isInstalledApp: true })
 
   useEffect(() => {
     if (!installedApp) {
       updateAppInfo(null)
     }
+    else if (!installedAppData) {
+      updateAppInfo(null)
+    }
     else {
-      const { id, app } = installedApp
+      const { id } = installedApp
+      const app = installedAppData
       updateAppInfo({
         app_id: id,
         site: {
@@ -112,19 +117,29 @@ const InstalledApp: FC<IInstalledAppProps> = ({
   if (!installedApp) {
     return (
       <div className="flex h-full items-center justify-center">
-        <AppUnavailable code={404} isUnknownReason />
+        <AppUnavailable
+          code={404}
+          unknownReason="当前应用不可见，可能已被删除，或其资源标签与您的 SSO 标签暂未匹配。"
+        />
+      </div>
+    )
+  }
+  if (!installedAppData) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <AppUnavailable unknownReason="installed app data is unavailable." />
       </div>
     )
   }
   return (
     <div className="h-full bg-background-default py-2 pl-0 pr-2 sm:p-2">
-      {installedApp?.app.mode !== AppModeEnum.COMPLETION && installedApp?.app.mode !== AppModeEnum.WORKFLOW && (
+      {installedAppData.mode !== AppModeEnum.COMPLETION && installedAppData.mode !== AppModeEnum.WORKFLOW && (
         <ChatWithHistory installedAppInfo={installedApp} className="overflow-hidden rounded-2xl shadow-md" />
       )}
-      {installedApp?.app.mode === AppModeEnum.COMPLETION && (
+      {installedAppData.mode === AppModeEnum.COMPLETION && (
         <TextGenerationApp isInstalledApp installedAppInfo={installedApp} />
       )}
-      {installedApp?.app.mode === AppModeEnum.WORKFLOW && (
+      {installedAppData.mode === AppModeEnum.WORKFLOW && (
         <TextGenerationApp isWorkflow isInstalledApp installedAppInfo={installedApp} />
       )}
     </div>

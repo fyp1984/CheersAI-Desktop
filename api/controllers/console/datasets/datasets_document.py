@@ -67,6 +67,7 @@ from ..wraps import (
     cloud_edition_billing_resource_check,
     setup_required,
 )
+from .visibility import get_visible_dataset_from_context
 
 logger = logging.getLogger(__name__)
 
@@ -139,9 +140,7 @@ register_schema_models(
 class DocumentResource(Resource):
     def get_document(self, dataset_id: str, document_id: str) -> Document:
         current_user, current_tenant_id = current_account_with_tenant()
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
 
         try:
             DatasetService.check_dataset_permission(dataset, current_user)
@@ -160,9 +159,7 @@ class DocumentResource(Resource):
 
     def get_batch_documents(self, dataset_id: str, batch: str) -> Sequence[Document]:
         current_user, _ = current_account_with_tenant()
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
 
         try:
             DatasetService.check_dataset_permission(dataset, current_user)
@@ -200,10 +197,7 @@ class GetProcessRuleApi(Resource):
             # get the latest process rule
             document = db.get_or_404(Document, document_id)
 
-            dataset = DatasetService.get_dataset(document.dataset_id)
-
-            if not dataset:
-                raise NotFound("Dataset not found.")
+            dataset = get_visible_dataset_from_context(document.dataset_id)
 
             try:
                 DatasetService.check_dataset_permission(dataset, current_user)
@@ -272,9 +266,7 @@ class DatasetDocumentListApi(Resource):
                     )
         except (ArgumentTypeError, ValueError, Exception):
             fetch = False
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
 
         try:
             DatasetService.check_dataset_permission(dataset, current_user)
@@ -370,10 +362,7 @@ class DatasetDocumentListApi(Resource):
         current_user, _ = current_account_with_tenant()
         dataset_id = str(dataset_id)
 
-        dataset = DatasetService.get_dataset(dataset_id)
-
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
 
         # The role of the current user in the ta table must be admin, owner, or editor
         if not current_user.is_dataset_editor:
@@ -394,7 +383,7 @@ class DatasetDocumentListApi(Resource):
 
         try:
             documents, batch = DocumentService.save_document_with_dataset_id(dataset, knowledge_config, current_user)
-            dataset = DatasetService.get_dataset(dataset_id)
+            dataset = get_visible_dataset_from_context(dataset_id)
 
             # 记录审计日志 - 导入文档到知识库
             try:
@@ -435,9 +424,7 @@ class DatasetDocumentListApi(Resource):
     @require_knowledge_edit_capability
     def delete(self, dataset_id):
         dataset_id = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
         # check user's model setting
         DatasetService.check_dataset_model_setting(dataset)
 
@@ -921,9 +908,7 @@ class DocumentApi(DocumentResource):
         current_user, current_tenant_id = current_account_with_tenant()
         dataset_id = str(dataset_id)
         document_id = str(document_id)
-        dataset = DatasetService.get_dataset(dataset_id)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
         # check user's model setting
         DatasetService.check_dataset_model_setting(dataset)
 
@@ -1160,9 +1145,7 @@ class DocumentStatusApi(DocumentResource):
     def patch(self, dataset_id, action: Literal["enable", "disable", "archive", "un_archive"]):
         current_user, _ = current_account_with_tenant()
         dataset_id = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id)
-        if dataset is None:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
 
         # The role of the current user in the ta table must be admin, owner, or editor
         if not current_user.is_dataset_editor:
@@ -1200,9 +1183,7 @@ class DocumentPauseApi(DocumentResource):
         dataset_id = str(dataset_id)
         document_id = str(document_id)
 
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
 
         document = DocumentService.get_document(dataset.id, document_id)
 
@@ -1234,9 +1215,7 @@ class DocumentRecoverApi(DocumentResource):
         """recover document."""
         dataset_id = str(dataset_id)
         document_id = str(document_id)
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
         document = DocumentService.get_document(dataset.id, document_id)
 
         # 404 if document not found
@@ -1288,10 +1267,8 @@ class DocumentRetryApi(DocumentResource):
         """retry document."""
         payload = DocumentRetryPayload.model_validate(console_ns.payload or {})
         dataset_id = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id)
+        dataset = get_visible_dataset_from_context(dataset_id)
         retry_documents = []
-        if not dataset:
-            raise NotFound("Dataset not found.")
         for document_id in payload.document_ids:
             try:
                 document_id = str(document_id)
@@ -1332,9 +1309,7 @@ class DocumentRenameApi(DocumentResource):
         current_user, _ = current_account_with_tenant()
         if not current_user.is_dataset_editor:
             raise Forbidden()
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
         DatasetService.check_dataset_operator_permission(current_user, dataset)
         payload = DocumentRenamePayload.model_validate(console_ns.payload or {})
 
@@ -1356,9 +1331,7 @@ class WebsiteDocumentSyncApi(DocumentResource):
         """sync website document."""
         _, current_tenant_id = current_account_with_tenant()
         dataset_id = str(dataset_id)
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
         document_id = str(document_id)
         document = DocumentService.get_document(dataset.id, document_id)
         if not document:
@@ -1386,9 +1359,7 @@ class DocumentPipelineExecutionLogApi(DocumentResource):
         dataset_id = str(dataset_id)
         document_id = str(document_id)
 
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
         document = DocumentService.get_document(dataset.id, document_id)
         if not document:
             raise NotFound("Document not found.")
@@ -1440,9 +1411,7 @@ class DocumentGenerateSummaryApi(Resource):
         dataset_id = str(dataset_id)
 
         # Get dataset
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
 
         # Check permissions
         if not current_user.is_dataset_editor:
@@ -1540,9 +1509,7 @@ class DocumentSummaryStatusApi(DocumentResource):
         document_id = str(document_id)
 
         # Get dataset
-        dataset = DatasetService.get_dataset(dataset_id)
-        if not dataset:
-            raise NotFound("Dataset not found.")
+        dataset = get_visible_dataset_from_context(dataset_id)
 
         # Check permissions
         try:

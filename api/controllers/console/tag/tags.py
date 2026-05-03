@@ -8,7 +8,6 @@ from werkzeug.exceptions import Forbidden, NotFound
 
 from controllers.console import console_ns
 from controllers.console.wraps import account_initialization_required, setup_required
-from libs.desktop_auth import has_any_workspace_capability
 from libs.login import current_account_with_tenant, login_required
 from services.tag_service import TagService
 
@@ -46,16 +45,9 @@ class TagBindingResult(BaseModel):
     result: Literal["success"] = Field(description="Operation result", examples=["success"])
 
 
-TAG_TYPE_MANAGE_CAPABILITIES: dict[str, tuple[str, ...]] = {
-    "app": ("desktop_app_edit",),
-    "knowledge": ("desktop_knowledge_edit",),
-}
-
-
 def _ensure_tag_manage_permission(tag_type: Literal["knowledge", "app"] | None) -> None:
-    current_user, current_tenant_id = current_account_with_tenant()
-    capabilities = TAG_TYPE_MANAGE_CAPABILITIES.get(tag_type or "", ("desktop_agent_manage", "desktop_knowledge_edit"))
-    if not has_any_workspace_capability(current_user, capabilities, current_tenant_id):
+    current_user, _ = current_account_with_tenant()
+    if not current_user.is_admin_or_owner:
         raise Forbidden()
 
 

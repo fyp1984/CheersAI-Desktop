@@ -9,14 +9,16 @@ import {
   RiFocus2Fill,
   RiFocus2Line,
 } from '@remixicon/react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import * as React from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useContext } from 'use-context-selector'
 import AppSideBar from '@/app/components/app-sidebar'
 import { useStore } from '@/app/components/app/store'
 import { PipelineFill, PipelineLine } from '@/app/components/base/icons/src/vender/pipeline'
 import Loading from '@/app/components/base/loading'
+import { ToastContext } from '@/app/components/base/toast'
 import ExtraInfo from '@/app/components/datasets/extra-info'
 import { useAppContext } from '@/context/app-context'
 import DatasetDetailContext from '@/context/dataset-detail'
@@ -37,6 +39,8 @@ const DatasetDetailLayout: FC<IAppDetailLayoutProps> = (props) => {
     params: { datasetId },
   } = props
   const { t } = useTranslation()
+  const { notify } = useContext(ToastContext)
+  const router = useRouter()
   const pathname = usePathname()
   const hideSideBar = pathname.endsWith('documents/create') || pathname.endsWith('documents/create-from-pipeline')
   const isPipelineCanvas = pathname.endsWith('/pipeline')
@@ -115,7 +119,25 @@ const DatasetDetailLayout: FC<IAppDetailLayoutProps> = (props) => {
     setAppSidebarExpand(isMobile ? mode : localeMode)
   }, [isMobile, setAppSidebarExpand])
 
+  const isVisibilityUnavailableError = [403, 404].includes((error as any)?.status)
+
+  useEffect(() => {
+    if (isVisibilityUnavailableError) {
+      notify({
+        type: 'warning',
+        message: t('dataset.visibilityUnavailableHint', {
+          ns: 'dataset',
+          defaultValue: '当前知识库不可见，可能已被删除，或其资源标签与您的 SSO 标签暂未匹配。',
+        }),
+      })
+      router.replace('/datasets')
+    }
+  }, [isVisibilityUnavailableError, notify, router, t])
+
   if (!datasetRes && !error)
+    return <Loading type="app" />
+
+  if (!datasetRes && isVisibilityUnavailableError)
     return <Loading type="app" />
 
   return (
