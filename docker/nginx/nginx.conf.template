@@ -26,6 +26,8 @@ http {
     #tcp_nopush     on;
 
     keepalive_timeout  ${NGINX_KEEPALIVE_TIMEOUT};
+    client_header_buffer_size ${NGINX_CLIENT_HEADER_BUFFER_SIZE};
+    large_client_header_buffers ${NGINX_LARGE_CLIENT_HEADER_BUFFERS};
 
     #gzip  on;
     client_max_body_size ${NGINX_CLIENT_MAX_BODY_SIZE};
