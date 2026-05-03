@@ -35,6 +35,16 @@ Do not invoke when:
 8. Support a local-authoritative release mode when the user explicitly chooses to deploy the current local workspace.
 9. For tool gateways, prefer one domain plus path prefixes over multiple throwaway subdomains.
 10. Keep release changes scope-bounded; do not mix cleanup, experiments, or debug leftovers into deployment work.
+11. Treat stateful local Docker volumes as data assets: preserve them by default and require an explicit user request before destructive cleanup.
+
+## Desktop Dual-Repo Constitution
+
+For all future `CheersAI-Desktop` work in this workspace, enforce the following hard rule:
+
+1. All Desktop application code changes must be implemented in `/Users/FYP/Documents/WorkSpace/CheersAI/subproducts/CheersAI-Desktop/CheersAI-Desktop`.
+2. `/Users/FYP/Documents/WorkSpace/CheersAI/subproducts/CheersAI-Desktop/CheersAI-Desktop-Uat` is a release mirror only; do not edit source files there.
+3. Before a UAT rollout, `Desktop-Uat` may only sync from GitHub `origin/master`, then run the standard deploy flow.
+4. If a bug is found in UAT, diagnose with logs and browser verification first; implement the actual fix back in the main Desktop repo, not in `Desktop-Uat`.
 
 ## Historical Failure Modes To Strictly Forbid
 
@@ -44,6 +54,7 @@ The following recurring failure modes are now prohibited in future ops and relea
 - **Debug-stage residue**: do not sync or publish temporary scripts, one-off repair helpers, screenshots, exported logs, or process notes unless they are explicitly approved as durable operator assets.
 - **Requirement-boundary drift**: do not widen a release task into ad-hoc product refactoring, silent config redesign, or unrelated code hygiene work.
 - **Automation-induced churn**: do not let formatter, linter, or code-action output redefine the release scope; keep only changes needed for the requested rollout, build health, or rollback safety.
+- **State loss during local redeploy**: do not run destructive cleanup such as `docker compose down -v`, volume deletion, or project cleanup helpers like `make dev-clean` when the user expects existing local data, initialization state, or historical app data to survive.
 
 If such changes are discovered, revert them before release, keep the deploy diff focused, and document any deferred ideas separately instead of shipping them opportunistically.
 
@@ -190,6 +201,91 @@ Check at least:
 - Runtime dependencies exist, such as MongoDB, Redis, PostgreSQL, or Java
 - Domain DNS and SSL readiness are checked
 - Reverse-proxy read permissions are checked for static roots under `/home/<user>`
+- For stateful local Docker stacks, confirm which bind-mounted or named volumes hold the active data before rebuild
+- For local redeploys, confirm whether preserving existing initialization data is mandatory
+
+## CheersAI-Desktop Local Docker Baseline
+
+Use this product-specific baseline when the repository is `CheersAI-Desktop` and the task is to rebuild or publish the local Docker application on the same machine.
+
+### Canonical entrypoints
+
+- Primary full-stack compose file: `docker/docker-compose.yaml`
+- Optional web-only override: `docker/docker-compose.local-full.yaml`
+- Environment file: `docker/.env`
+- Middleware-only developer stack: `docker/docker-compose.middleware.yaml`
+
+### Data safety rules
+
+- Treat `docker/volumes/db/data` as the primary PostgreSQL data directory unless the operator proves the stack is using a different source.
+- Treat `docker/volumes/redis/data` and `docker/volumes/app/storage` as persistent local state that should survive routine rebuilds.
+- Before any risky local redeploy, back up the active PostgreSQL directory to a timestamped sibling such as `docker/volumes/db/data.backup-<timestamp>`.
+- Do not use `make dev-clean` for local release or hot redeploy work. In this repository it deletes local database, redis, plugin, vector, and storage data.
+- Do not use `docker compose down -v` unless the user explicitly requests data reset.
+
+### Safe rebuild sequence
+
+Use this order when the user wants the latest local code rebuilt without deleting data:
+
+```bash
+git -C "${repo}" fetch --prune origin "${branch}"
+git -C "${repo}" checkout "${branch}"
+git -C "${repo}" reset --hard "origin/${branch}"
+docker compose -f docker/docker-compose.yaml up -d --build api web worker worker_beat nginx
+docker compose -f docker/docker-compose.yaml ps
+```
+
+Prefer `up -d --build` over `down && up` so bind-mounted data directories remain attached. If the `web` image build fails because Docker Desktop memory is exhausted, stop containers first with `docker compose stop`, then rebuild. Do not delete volumes as a shortcut for build recovery.
+
+### Post-deploy acceptance checks
+
+Validate all of the following after rebuild:
+
+- `docker compose -f docker/docker-compose.yaml ps` shows `api`, `web`, `worker`, `worker_beat`, `nginx`, `db_postgres`, `redis`, `sandbox`, and `plugin_daemon` healthy or running as expected
+- `http://localhost/signin` loads instead of redirecting to `/install`
+- PostgreSQL business counts are non-zero when the environment is expected to stay initialized, for example `dify_setups`, `accounts`, and `tenants`
+- If historical application data is expected, also validate `apps` and `installed_apps`
+- If Desktop SSO shared workspaces depend on Redis `desktop:sso:group-tenant:*`, confirm the group hash still points to the intended shared tenant after rebuild
+- If a user suddenly lands in an empty workspace while shared assets still exist, inspect Redis group mapping before changing code
+
+Reference check:
+
+```bash
+docker exec docker-db_postgres-1 psql -U postgres -d dify -Atqc \
+  "select count(*) from dify_setups;
+   select count(*) from accounts;
+   select count(*) from tenants;
+   select count(*) from apps;
+   select count(*) from installed_apps;"
+```
+
+### Redis group-to-tenant repair
+
+Use this when a Desktop SSO user lands in the wrong workspace after local Docker rebuild and shared resources disappear even though database records still exist.
+
+```bash
+docker exec docker-redis-1 redis-cli --scan --pattern 'desktop:sso:group-tenant:*'
+docker exec docker-redis-1 redis-cli get "<group-hash-key>"
+docker exec docker-db_postgres-1 psql -U postgres -d dify -P pager=off -c \
+  "select id,name,status from tenants where id in ('<candidate-tenant-id-1>','<candidate-tenant-id-2>');"
+docker exec docker-redis-1 redis-cli set "<group-hash-key>" "<correct-shared-tenant-id>"
+docker exec docker-db_postgres-1 psql -U postgres -d dify -c \
+  "update tenant_account_joins
+      set current = (tenant_id='<correct-shared-tenant-id>')
+    where account_id='<account-id>';"
+```
+
+Repair notes:
+
+- Prefer fixing the Redis group mapping before changing application code when the problem is isolated to a wrong shared-tenant target.
+- Re-login the affected user after repair and verify `/apps` or `/datasets` before declaring success.
+- If the latest source already contains SSO tag sync fixes, rebuild `api` and `web` as part of the same repair so runtime code and local source stay aligned.
+
+### Troubleshooting signals
+
+- If `http://localhost` or `http://localhost/signin` lands on `/install`, the local stack is attached to an empty or wrong database directory.
+- If `/apps` shows an empty state but the database contains application rows, verify that the logged-in account's current workspace matches the `tenant_id` of those apps.
+- If the database contains the expected apps but the wrong workspace is current, fix the workspace membership or current-tenant selection before changing application code.
 
 ## Cloud vs Local Docker Separation
 

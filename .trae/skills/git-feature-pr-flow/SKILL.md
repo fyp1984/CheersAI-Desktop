@@ -34,6 +34,14 @@ Do not invoke when:
 6. Complete optimization, testing, and validation before requesting merge.
 7. If the user already gave the repository path and target base branch, default to executing the full flow instead of only explaining it.
 
+## Desktop Dual-Repo Constitution
+
+When the repository family is `CheersAI-Desktop`, apply this additional rule set:
+
+1. All Desktop application code edits, refactors, and bug fixes must happen in `/Users/FYP/Documents/WorkSpace/CheersAI/subproducts/CheersAI-Desktop/CheersAI-Desktop`.
+2. Do not create feature branches, commits, or direct source edits inside `/Users/FYP/Documents/WorkSpace/CheersAI/subproducts/CheersAI-Desktop/CheersAI-Desktop-Uat`.
+3. If the user later wants UAT deployment, merge or push the main repo first, then let `Desktop-Uat` pull GitHub `origin/master` and release.
+
 ## Git Hygiene Guardrails
 
 Treat Git as the source of durable product code, configuration templates, stable documentation, and reusable tests. Do not use Git as a dump area for local debugging residue or process-time artifacts.

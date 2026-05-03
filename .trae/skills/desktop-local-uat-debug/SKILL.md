@@ -34,6 +34,11 @@ Local Desktop debugging is valid only if this real chain is preserved:
 
 Never replace this with a local-only mock, local database shortcut, or local fallback write path.
 
+Additional repository rule:
+
+1. Local Desktop code fixes must be implemented in `/Users/FYP/Documents/WorkSpace/CheersAI/subproducts/CheersAI-Desktop/CheersAI-Desktop`.
+2. Do not patch `/Users/FYP/Documents/WorkSpace/CheersAI/subproducts/CheersAI-Desktop/CheersAI-Desktop-Uat` during debugging; use it only for GitHub `origin/master` sync and UAT release verification.
+
 ## Required Local Configuration
 
 Validate these before testing:
@@ -53,6 +58,17 @@ For local full-Docker acceptance:
 - `web` must not depend on host `3001`
 - If local production build is too heavy, use a verified local cached production image for `web`
 - After recreate, verify `/signin`, `/signup`, and `/apps` all return `200`
+- Rebuild with `docker compose -f docker/docker-compose.yaml up -d --build api web worker worker_beat nginx`
+- Preserve existing local data by default; do not use `docker compose down -v` or `make dev-clean` unless the user explicitly asks to reset the environment
+
+## Local Data Preservation
+
+When the local Docker stack has already been initialized or contains historical app data:
+
+- Back up `docker/volumes/db/data` before any risky data switch or recovery action
+- Keep `docker/volumes/redis/data` and `docker/volumes/app/storage` intact during normal rebuilds
+- Treat `/install` after redeploy as evidence that the stack is attached to an empty or wrong database source, not as proof that code deploy succeeded
+- Treat `/apps` empty state with non-zero `apps` rows as a workspace-context issue before assuming a frontend bug
 
 ## Standard Validation Flow
 
@@ -62,6 +78,8 @@ For local full-Docker acceptance:
 - Check running containers with `docker compose ps`
 - Confirm `localhost` pages return `200`
 - Confirm nginx routes `/api/nexus/beta-applications/apply` correctly
+- If the environment is expected to remain initialized, verify `dify_setups`, `accounts`, and `tenants` in PostgreSQL before rebuild
+- If historical apps are expected, verify `apps` and `installed_apps` counts before and after rebuild
 
 ### 2. Submission Validation
 
@@ -111,6 +129,10 @@ When testing member users:
   check OAuth redirect, client ID/secret, and localhost callback chain
 - `/signin` or `/apps` return `502`:
   check local `web` container health and nginx upstream target
+- `/signin` redirects to `/install` after rebuild:
+  current Docker stack is attached to an empty database or the wrong restored data directory
+- `/apps` shows no app cards but PostgreSQL contains app rows:
+  check the logged-in account's current workspace against the app `tenant_id`
 
 ## Deliverables
 

@@ -46,6 +46,14 @@ description: "Splits local repo changes by feature, creates feature branches, co
 - `branch_prefix_policy`: 是否偏向 `feature/fix/refactor/chore`
 - `validation_scope`: 是否跑 lint/test/build 或仅跑目标校验
 
+## Desktop 双仓宪法
+
+当仓库是 `CheersAI-Desktop` 系列时，强制执行以下规则：
+
+1. Desktop 应用代码改动统一在 `/Users/FYP/Documents/WorkSpace/CheersAI/subproducts/CheersAI-Desktop/CheersAI-Desktop` 主仓完成。
+2. `/Users/FYP/Documents/WorkSpace/CheersAI/subproducts/CheersAI-Desktop/CheersAI-Desktop-Uat` 不参与功能开发、修 bug、补测试或直接提交代码。
+3. 若目标是发布 UAT，则应先让主仓代码进入 GitHub `master`，再由 `Desktop-Uat` 执行 `origin/master` 同步和发布。
+
 ## Standard Flow
 
 ### 1. Inspect Repository

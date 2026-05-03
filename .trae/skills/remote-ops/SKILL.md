@@ -24,6 +24,12 @@ This skill should prefer standardized scripts under `CheersAI - docs/技术/scri
 
 When the user says `应用发布UAT`, default to this exact Desktop release flow unless the user explicitly requests a different source branch or a local-authoritative release:
 
+Desktop repository constitution:
+
+1. All code fixes must be made in `/Users/FYP/Documents/WorkSpace/CheersAI/subproducts/CheersAI-Desktop/CheersAI-Desktop`.
+2. `/Users/FYP/Documents/WorkSpace/CheersAI/subproducts/CheersAI-Desktop/CheersAI-Desktop-Uat` must not receive direct source edits.
+3. `Desktop-Uat` is only allowed to fast-forward from GitHub `origin/master` before deployment.
+
 1. Use repo: `/Users/FYP/Documents/WorkSpace/CheersAI/subproducts/CheersAI-Desktop/CheersAI-Desktop-Uat`
 2. Confirm the repo is clean before changing branches; if it is dirty, stop and ask instead of forcing reset or overwrite
 3. Run:
