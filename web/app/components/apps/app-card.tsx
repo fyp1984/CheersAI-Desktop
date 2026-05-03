@@ -6,7 +6,7 @@ import type { Tag } from '@/app/components/base/tag-management/constant'
 import type { CreateAppModalProps } from '@/app/components/explore/create-app-modal'
 import type { EnvironmentVariable } from '@/app/components/workflow/types'
 import type { App } from '@/types/app'
-import { RiBuildingLine, RiGlobalLine, RiLockLine, RiMoreFill, RiVerifiedBadgeLine } from '@remixicon/react'
+import { RiBuildingLine, RiGlobalLine, RiLockLine, RiMoreFill, RiShareForwardLine, RiVerifiedBadgeLine } from '@remixicon/react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import * as React from 'react'
@@ -37,6 +37,7 @@ import { cn } from '@/utils/classnames'
 import { downloadBlob } from '@/utils/download'
 import { formatTime } from '@/utils/time'
 import { basePath } from '@/utils/var'
+import SharePosterModal from '../app/overview/share-poster-modal'
 
 const EditAppModal = dynamic(() => import('@/app/components/explore/create-app-modal'), {
   ssr: false,
@@ -115,13 +116,14 @@ const getAppPublishStatus = (app: App) => {
     }
   }
 
-  if (app.has_draft_trigger)
+  if (app.has_draft_trigger) {
     return {
       label: '待发布',
       description: '当前存在未发布改动',
       className: 'border border-[#fcd34d] bg-[#fef3c7] text-[#92400e]',
       dotClassName: 'bg-amber-400',
     }
+  }
 
   if (app.enable_site || app.enable_api) {
     return {
@@ -166,6 +168,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   const [showAccessControl, setShowAccessControl] = useState(false)
   const [showUnavailableConfirm, setShowUnavailableConfirm] = useState(false)
+  const [showSharePosterModal, setShowSharePosterModal] = useState(false)
   const [secretEnvList, setSecretEnvList] = useState<EnvironmentVariable[]>([])
 
   const onConfirmDelete = useCallback(async () => {
@@ -420,6 +423,21 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
         <button type="button" className="mx-1 flex h-8 cursor-pointer items-center gap-2 rounded-lg px-3 hover:bg-state-base-hover" onClick={onClickExport}>
           <span className="system-sm-regular text-text-secondary">{t('export', { ns: 'app' })}</span>
         </button>
+        {!isAppUnavailableForExplore(app) && (
+          <button
+            type="button"
+            className="mx-1 flex h-8 cursor-pointer items-center gap-2 rounded-lg px-3 hover:bg-state-base-hover"
+            onClick={(e) => {
+              e.stopPropagation()
+              props.onClick?.()
+              e.preventDefault()
+              setShowSharePosterModal(true)
+            }}
+          >
+            <RiShareForwardLine className="h-4 w-4 text-text-tertiary" />
+            <span className="system-sm-regular text-text-secondary">分享海报</span>
+          </button>
+        )}
         {(app.mode === AppModeEnum.COMPLETION || app.mode === AppModeEnum.CHAT) && (
           <>
             <Divider className="my-1" />
@@ -618,6 +636,20 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
               </div>
             </>
           )}
+          {!isAppUnavailableForExplore(app) && (
+            <button
+              type="button"
+              className="ml-auto flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-text-accent hover:bg-state-accent-hover"
+              onClick={(e) => {
+                e.stopPropagation()
+                e.preventDefault()
+                setShowSharePosterModal(true)
+              }}
+            >
+              <RiShareForwardLine className="h-4 w-4" />
+              分享海报
+            </button>
+          )}
         </div>
       </div>
       {showEditModal && (
@@ -678,6 +710,11 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
           onCancel={() => setShowUnavailableConfirm(false)}
         />
       )}
+      <SharePosterModal
+        isShow={showSharePosterModal}
+        onClose={() => setShowSharePosterModal(false)}
+        appInfo={app}
+      />
       {secretEnvList.length > 0 && (
         <DSLExportConfirmModal
           envList={secretEnvList}

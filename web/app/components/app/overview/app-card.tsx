@@ -11,6 +11,7 @@ import {
   RiGlobalLine,
   RiLockLine,
   RiPaintBrushLine,
+  RiShareForwardLine,
   RiVerifiedBadgeLine,
   RiWindowLine,
 } from '@remixicon/react'
@@ -46,6 +47,7 @@ import AccessControl from '../app-access-control'
 import CustomizeModal from './customize'
 import EmbeddedModal from './embedded'
 import SettingsModal from './settings'
+import SharePosterModal from './share-poster-modal'
 import style from './style.module.css'
 
 export type IAppCardProps = {
@@ -59,6 +61,11 @@ export type IAppCardProps = {
   onChangeStatus: (val: boolean) => Promise<void>
   onSaveSiteConfig?: (params: ConfigParams) => Promise<void>
   onGenerateCode?: () => Promise<void>
+}
+
+type OperationItem = {
+  opName: string
+  opIcon: React.ComponentType<{ className?: string }>
 }
 
 function AppCard({
@@ -84,6 +91,7 @@ function AppCard({
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showEmbedded, setShowEmbedded] = useState(false)
   const [showCustomizeModal, setShowCustomizeModal] = useState(false)
+  const [showSharePosterModal, setShowSharePosterModal] = useState(false)
   const [genLoading, setGenLoading] = useState(false)
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   const [showAccessControl, setShowAccessControl] = useState<boolean>(false)
@@ -95,13 +103,14 @@ function AppCard({
     const operationsMap = {
       webapp: [
         { opName: t('overview.appInfo.launch', { ns: 'appOverview' }), opIcon: RiExternalLinkLine },
-      ] as { opName: string, opIcon: any }[],
+      ] as OperationItem[],
       api: [{ opName: t('overview.apiInfo.doc', { ns: 'appOverview' }), opIcon: RiBookOpenLine }],
       app: [],
     }
     if (appInfo.mode !== AppModeEnum.COMPLETION && appInfo.mode !== AppModeEnum.WORKFLOW)
       operationsMap.webapp.push({ opName: t('overview.appInfo.embedded.entry', { ns: 'appOverview' }), opIcon: RiWindowLine })
 
+    operationsMap.webapp.push({ opName: '分享海报', opIcon: RiShareForwardLine })
     operationsMap.webapp.push({ opName: t('overview.appInfo.customize.entry', { ns: 'appOverview' }), opIcon: RiPaintBrushLine })
 
     if (isCurrentWorkspaceEditor)
@@ -153,6 +162,10 @@ function AppCard({
       case t('overview.appInfo.embedded.entry', { ns: 'appOverview' }):
         return () => {
           setShowEmbedded(true)
+        }
+      case '分享海报':
+        return () => {
+          setShowSharePosterModal(true)
         }
       default:
         // jump to page develop
@@ -433,6 +446,11 @@ function AppCard({
                 appId={appInfo.id}
                 api_base_url={appInfo.api_base_url}
                 mode={appInfo.mode}
+              />
+              <SharePosterModal
+                isShow={showSharePosterModal}
+                onClose={() => setShowSharePosterModal(false)}
+                appInfo={appInfo}
               />
               {
                 showAccessControl && (
