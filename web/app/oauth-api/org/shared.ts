@@ -29,20 +29,26 @@ type ErrorResult = {
   response: NextResponse
 }
 
+type WorkspaceErrorResult = {
+  response: NextResponse
+  status: number
+}
+
 type ProxyRequestInit = {
   method?: string
   body?: string | null
   orgId?: string
 }
 
-const WORKSPACE_AUTH_COOKIE_NAMES = new Set([
+const PUBLIC_COOKIE_DOMAIN = process.env.NEXT_PUBLIC_COOKIE_DOMAIN?.trim() || ''
+const WORKSPACE_COOKIE_KEYS = [
   'access_token',
-  '__Host-access_token',
   'refresh_token',
-  '__Host-refresh_token',
   'csrf_token',
-  '__Host-csrf_token',
-])
+] as const
+const WORKSPACE_AUTH_COOKIE_NAMES = new Set(
+  WORKSPACE_COOKIE_KEYS.flatMap(cookieKey => [cookieKey, `__Host-${cookieKey}`]),
+)
 
 const parseCookieHeader = (rawCookieHeader: string) => {
   if (!rawCookieHeader.trim())
@@ -65,14 +71,35 @@ const parseCookieHeader = (rawCookieHeader: string) => {
     .filter((cookie): cookie is { name: string, value: string } => Boolean(cookie?.name))
 }
 
+const getWorkspaceCookiePreference = () => {
+  const preferHostCookies = !PUBLIC_COOKIE_DOMAIN
+  return WORKSPACE_COOKIE_KEYS.map((cookieKey) => {
+    return preferHostCookies
+      ? [`__Host-${cookieKey}`, cookieKey]
+      : [cookieKey, `__Host-${cookieKey}`]
+  })
+}
+
 const buildWorkspaceAuthCookieHeader = (request: NextRequest) => {
   const requestCookies = typeof request.cookies?.getAll === 'function'
     ? request.cookies.getAll()
     : parseCookieHeader(request.headers.get('cookie') || '')
 
-  return requestCookies
-    .filter(cookie => WORKSPACE_AUTH_COOKIE_NAMES.has(cookie.name))
-    .map(cookie => `${cookie.name}=${cookie.value}`)
+  const cookieValueByName = new Map(
+    requestCookies
+      .filter(cookie => WORKSPACE_AUTH_COOKIE_NAMES.has(cookie.name))
+      .map(cookie => [cookie.name, cookie.value] as const),
+  )
+
+  return getWorkspaceCookiePreference()
+    .map((cookieNames) => {
+      const matchedName = cookieNames.find(cookieName => cookieValueByName.has(cookieName))
+      if (!matchedName)
+        return null
+
+      return `${matchedName}=${cookieValueByName.get(matchedName)}`
+    })
+    .filter((cookie): cookie is string => Boolean(cookie))
     .join('; ')
 }
 
@@ -103,6 +130,23 @@ export const getResponsePayload = async (response: Response) => {
   catch {
     return {}
   }
+}
+
+const fetchInternalConsoleJson = async (request: NextRequest, pathname: string, init?: { method?: string, body?: string }) => {
+  const csrfToken = resolveWorkspaceCsrfToken(request)
+  const workspaceCookieHeader = buildWorkspaceAuthCookieHeader(request)
+
+  return fetch(`${INTERNAL_CONSOLE_API_PREFIX}${pathname}`, {
+    method: init?.method || 'GET',
+    headers: {
+      Accept: 'application/json',
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(workspaceCookieHeader ? { cookie: workspaceCookieHeader } : {}),
+      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+    },
+    ...(init?.body ? { body: init.body } : {}),
+    cache: 'no-store',
+  })
 }
 
 const clearSSOCookies = async () => {
@@ -221,27 +265,25 @@ const relayResponse = async (response: Response) => {
   })
 }
 
-const fetchCurrentWorkspace = async (request: NextRequest) => {
-  const csrfToken = resolveWorkspaceCsrfToken(request)
-  const workspaceCookieHeader = buildWorkspaceAuthCookieHeader(request)
-  const response = await fetch(`${INTERNAL_CONSOLE_API_PREFIX}/workspaces/current`, {
+const getWorkspaceAccessErrorResponse = (status: number) => {
+  return NextResponse.json(
+    { message: status === 401 ? 'Workspace session expired.' : 'Failed to resolve workspace access.' },
+    { status: status === 401 ? 401 : status === 403 ? 403 : 500 },
+  )
+}
+
+const fetchCurrentWorkspace = async (request: NextRequest): Promise<{ workspace: ICurrentWorkspace } | { error: WorkspaceErrorResult }> => {
+  const response = await fetchInternalConsoleJson(request, '/workspaces/current', {
     method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      ...(workspaceCookieHeader ? { cookie: workspaceCookieHeader } : {}),
-      'X-CSRF-Token': csrfToken,
-    },
     body: JSON.stringify({}),
-    cache: 'no-store',
   })
 
   if (!response.ok) {
     return {
-      error: NextResponse.json(
-        { message: response.status === 401 ? 'Workspace session expired.' : 'Failed to resolve workspace access.' },
-        { status: response.status === 401 ? 401 : response.status === 403 ? 403 : 500 },
-      ),
+      error: {
+        status: response.status,
+        response: getWorkspaceAccessErrorResponse(response.status),
+      },
     }
   }
 
@@ -249,10 +291,91 @@ const fetchCurrentWorkspace = async (request: NextRequest) => {
   return { workspace }
 }
 
+type CurrentAccountProfile = {
+  id: string
+  email: string
+}
+
+type CurrentWorkspaceMember = {
+  id: string
+  email: string
+  role: string
+}
+
+const fetchCurrentAccountProfile = async (request: NextRequest): Promise<CurrentAccountProfile | null> => {
+  const response = await fetchInternalConsoleJson(request, '/account/profile')
+  if (!response.ok)
+    return null
+
+  const payload = await response.json() as Partial<CurrentAccountProfile>
+  const id = String(payload?.id || '').trim()
+  const email = String(payload?.email || '').trim().toLowerCase()
+  if (!id && !email)
+    return null
+
+  return { id, email }
+}
+
+const fetchCurrentWorkspaceMembers = async (request: NextRequest): Promise<CurrentWorkspaceMember[] | null> => {
+  const response = await fetchInternalConsoleJson(request, '/workspaces/current/members')
+  if (!response.ok)
+    return null
+
+  const payload = await response.json() as { accounts?: Array<Partial<CurrentWorkspaceMember>> }
+  if (!Array.isArray(payload?.accounts))
+    return null
+
+  return payload.accounts.map(member => ({
+    id: String(member?.id || '').trim(),
+    email: String(member?.email || '').trim().toLowerCase(),
+    role: String(member?.role || '').trim().toLowerCase(),
+  })).filter(member => Boolean(member.id || member.email))
+}
+
+const ensureWorkspaceTagManagementAccessFromMembers = async (request: NextRequest, userId: string) => {
+  const [currentAccount, members] = await Promise.all([
+    fetchCurrentAccountProfile(request),
+    fetchCurrentWorkspaceMembers(request),
+  ])
+
+  if (!currentAccount || !members)
+    return null
+
+  const currentMember = members.find((member) => {
+    if (currentAccount.id && member.id)
+      return member.id === currentAccount.id
+    if (currentAccount.email && member.email)
+      return member.email === currentAccount.email
+    return false
+  })
+  const targetMemberExists = members.some(member => member.id === userId)
+
+  if (!currentMember || !targetMemberExists)
+    return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
+
+  if (!['owner', 'admin'].includes(currentMember.role))
+    return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
+
+  return null
+}
+
 export const ensureWorkspaceTagManagementAccess = async (request: NextRequest, orgId: string) => {
   const workspaceResult = await fetchCurrentWorkspace(request)
-  if ('error' in workspaceResult)
-    return workspaceResult.error
+  if ('error' in workspaceResult) {
+    if (workspaceResult.error.status === 401)
+      return workspaceResult.error.response
+
+    const targetUserId = request.nextUrl.pathname.match(/\/users\/([^/]+)\/profile-tag\/?$/)?.[1] || ''
+    if (targetUserId) {
+      const fallbackResponse = await ensureWorkspaceTagManagementAccessFromMembers(request, targetUserId)
+      if (!fallbackResponse)
+        return null
+      if (fallbackResponse.status === 403)
+        return fallbackResponse
+    }
+
+    return workspaceResult.error.response
+  }
 
   const { workspace } = workspaceResult
   const capabilities = getWorkspaceCapabilities(workspace)
