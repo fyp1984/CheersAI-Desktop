@@ -4,6 +4,7 @@ from flask import request
 from flask_restx import Resource, fields, marshal, marshal_with
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.orm import load_only
 from werkzeug.exceptions import Unauthorized
 
 import services
@@ -108,7 +109,7 @@ class TenantListApi(Resource):
     @account_initialization_required
     def get(self):
         current_user, current_tenant_id = current_account_with_tenant()
-        tenants = TenantService.get_join_tenants(current_user)
+        tenants = WorkspaceService.get_visible_tenants(current_user, TenantService.get_join_tenants(current_user))
         tenant_dicts = []
 
         for tenant in tenants:
@@ -166,12 +167,12 @@ class TenantApi(Resource):
             logger.warning("Deprecated URL /info was used.")
 
         current_user, _ = current_account_with_tenant()
-        tenant = current_user.current_tenant
+        tenant = WorkspaceService.ensure_current_workspace_access(current_user)
         if not tenant:
             raise ValueError("No current tenant")
 
         if tenant.status == TenantStatus.ARCHIVE:
-            tenants = TenantService.get_join_tenants(current_user)
+            tenants = WorkspaceService.get_visible_tenants(current_user, TenantService.get_join_tenants(current_user))
             # if there is any tenant, switch to the first one
             if len(tenants) > 0:
                 TenantService.switch_tenant(current_user, tenants[0].id)
@@ -194,13 +195,21 @@ class SwitchWorkspaceApi(Resource):
         payload = console_ns.payload or {}
         args = SwitchWorkspacePayload.model_validate(payload)
 
+        visible_tenants = WorkspaceService.get_visible_tenants(
+            current_user,
+            TenantService.get_join_tenants(current_user),
+        )
+        visible_tenant_ids = {tenant.id for tenant in visible_tenants}
+        if args.tenant_id not in visible_tenant_ids:
+            raise AccountNotLinkTenantError("Account not link tenant")
+
         # check if tenant_id is valid, 403 if not
         try:
             TenantService.switch_tenant(current_user, args.tenant_id)
         except Exception:
             raise AccountNotLinkTenantError("Account not link tenant")
 
-        new_tenant = db.session.query(Tenant).get(args.tenant_id)  # Get new tenant
+        new_tenant = db.session.query(Tenant).options(load_only(Tenant.id, Tenant.name, Tenant.status)).get(args.tenant_id)
         if new_tenant is None:
             raise ValueError("Tenant not found")
 

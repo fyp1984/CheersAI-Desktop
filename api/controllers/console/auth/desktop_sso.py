@@ -47,19 +47,25 @@ desktop_sso_login_model = console_ns.model(
 )
 
 
-def _get_sso_group_name(payload: dict) -> str | None:
+def _get_sso_group_names(payload: dict) -> list[str]:
     groups = payload.get("groups")
     if not isinstance(groups, list):
-        return None
+        return []
 
+    normalized_groups: list[str] = []
     for group in groups:
         if not isinstance(group, str):
             continue
         normalized_group = group.strip()
-        if normalized_group:
-            return normalized_group
+        if normalized_group and normalized_group not in normalized_groups:
+            normalized_groups.append(normalized_group)
 
-    return None
+    return normalized_groups
+
+
+def _get_sso_group_name(payload: dict) -> str | None:
+    group_names = _get_sso_group_names(payload)
+    return group_names[0] if group_names else None
 
 
 def _get_sso_group_tenant_cache_key(group_name: str) -> str:
@@ -91,16 +97,12 @@ def _get_current_tenant_join(account: Account) -> TenantAccountJoin | None:
     )
 
 
-def _resolve_shared_tenant(account: Account, payload: dict) -> Tenant | None:
-    group_name = _get_sso_group_name(payload)
-    if not group_name:
-        tenant_join = _get_preferred_tenant_join(account)
-        return (
-            db.session.query(Tenant).filter_by(id=tenant_join.tenant_id, status=TenantStatus.NORMAL).first()
-            if tenant_join
-            else None
-        )
+def _get_fallback_tenant(account: Account) -> Tenant | None:
+    tenant_join = _get_preferred_tenant_join(account)
+    return db.session.query(Tenant).filter_by(id=tenant_join.tenant_id, status=TenantStatus.NORMAL).first() if tenant_join else None
 
+
+def _resolve_group_tenant(group_name: str) -> Tenant:
     cache_key = _get_sso_group_tenant_cache_key(group_name)
     cached_tenant_id = redis_client.get(cache_key)
     if isinstance(cached_tenant_id, bytes):
@@ -109,25 +111,54 @@ def _resolve_shared_tenant(account: Account, payload: dict) -> Tenant | None:
     tenant = None
     if isinstance(cached_tenant_id, str) and cached_tenant_id:
         tenant = db.session.query(Tenant).filter_by(id=cached_tenant_id, status=TenantStatus.NORMAL).first()
+        if tenant and tenant.name != group_name:
+            logger.warning(
+                "Desktop SSO group cache mismatch for group '%s': cached tenant '%s' (%s), resetting mapping",
+                group_name,
+                tenant.name,
+                tenant.id,
+            )
+            tenant = None
 
     if not tenant:
-        tenant_join = _get_preferred_tenant_join(account)
-        tenant = (
-            db.session.query(Tenant).filter_by(id=tenant_join.tenant_id, status=TenantStatus.NORMAL).first()
-            if tenant_join
-            else None
-        )
+        tenant = db.session.query(Tenant).filter_by(name=group_name, status=TenantStatus.NORMAL).first()
 
     if not tenant:
         tenant = TenantService.create_tenant(name=group_name, is_setup=True)
+        logger.info("Created tenant %s for Desktop SSO group '%s'", tenant.id, group_name)
 
     redis_client.set(cache_key, tenant.id)
     return tenant
 
 
+def _resolve_shared_tenant(account: Account, payload: dict) -> Tenant | None:
+    group_name = _get_sso_group_name(payload)
+    if not group_name:
+        return _get_fallback_tenant(account)
+
+    return _resolve_group_tenant(group_name)
+
+
+def _ensure_tenant_join(account: Account, tenant: Tenant, system_role: str) -> TenantAccountJoin:
+    tenant_join = TenantService.create_tenant_member(tenant, account, role=system_role)
+    if tenant_join.role != system_role:
+        tenant_join.role = system_role
+        db.session.commit()
+    return tenant_join
+
+
 def _ensure_desktop_sso_tenant_join(account: Account, system_role: str, payload: dict) -> TenantAccountJoin:
     current_tenant_join = _get_current_tenant_join(account)
-    tenant = _resolve_shared_tenant(account, payload)
+    group_names = _get_sso_group_names(payload)
+    resolved_group_joins: list[TenantAccountJoin] = []
+
+    # Always rebuild Redis group->tenant mappings from the current SSO payload.
+    for group_name in group_names:
+        tenant = _resolve_group_tenant(group_name)
+        resolved_group_joins.append(_ensure_tenant_join(account, tenant, system_role))
+
+    tenant_join = resolved_group_joins[0] if resolved_group_joins else None
+    tenant = db.session.query(Tenant).filter_by(id=tenant_join.tenant_id, status=TenantStatus.NORMAL).first() if tenant_join else None
     if not tenant:
         TenantService.create_owner_tenant_if_not_exist(account, is_setup=True)
         tenant_join = _get_preferred_tenant_join(account)
@@ -136,15 +167,13 @@ def _ensure_desktop_sso_tenant_join(account: Account, system_role: str, payload:
         if tenant_join.role != system_role:
             tenant_join.role = system_role
             db.session.commit()
-        if not current_tenant_join:
+        if not current_tenant_join or current_tenant_join.tenant_id != tenant_join.tenant_id:
             TenantService.switch_tenant(account, tenant_join.tenant_id)
         return tenant_join
 
-    tenant_join = TenantService.create_tenant_member(tenant, account, role=system_role)
-    if tenant_join.role != system_role:
-        tenant_join.role = system_role
-        db.session.commit()
-    if not current_tenant_join:
+    if not tenant_join:
+        tenant_join = _ensure_tenant_join(account, tenant, system_role)
+    if not current_tenant_join or current_tenant_join.tenant_id != tenant.id:
         TenantService.switch_tenant(account, tenant.id)
     return tenant_join
 
@@ -287,6 +316,7 @@ class DesktopSSOLoginApi(Resource):
                 "desktop_sso_username": sso_username,
                 "desktop_sso_preferred_username": (data.get("preferred_username") or "").strip(),
                 "desktop_sso_email": normalized_email,
+                "desktop_sso_groups": _get_sso_group_names(data),
                 "desktop_sso_password_set": bool(custom_config.get("desktop_sso_password_set")),
             })
 
