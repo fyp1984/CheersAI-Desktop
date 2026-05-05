@@ -117,6 +117,17 @@ vi.mock('@/utils/time', () => ({
   formatTime: () => 'Jan 1, 2024',
 }))
 
+vi.mock('../app/overview/share-poster-modal', () => ({
+  default: ({ isShow, appInfo }: any) => {
+    if (!isShow)
+      return null
+    const resourceLabel = appInfo.mode === AppModeEnum.WORKFLOW || appInfo.mode === AppModeEnum.ADVANCED_CHAT
+      ? '工作流'
+      : '智能体'
+    return React.createElement('div', { 'data-testid': 'share-poster-modal' }, `${resourceLabel}分享海报`)
+  },
+}))
+
 // Mock dynamic imports
 vi.mock('next/dynamic', () => ({
   default: (importFn: () => Promise<any>) => {
@@ -310,6 +321,12 @@ describe('AppCard', () => {
       render(<AppCard app={{ ...mockApp, has_draft_trigger: false, enable_site: true, enable_api: false }} />)
       expect(screen.getByText('已发布')).toBeInTheDocument()
       expect(screen.getByText('当前版本已可对外使用')).toBeInTheDocument()
+    })
+
+    it('should render icon-only share button for published agent apps', () => {
+      render(<AppCard app={mockApp} />)
+      expect(screen.getByRole('button', { name: '智能体分享海报' })).toBeInTheDocument()
+      expect(screen.queryByText('分享海报')).not.toBeInTheDocument()
     })
 
     it('should show pending publish status when app has unpublished changes', () => {
@@ -544,6 +561,16 @@ describe('AppCard', () => {
   })
 
   describe('Modal Interactions', () => {
+    it('should open workflow share poster modal from the top-right share button', async () => {
+      render(<AppCard app={{ ...mockApp, mode: AppModeEnum.WORKFLOW, workflow: { id: 'workflow-1' }, publish_status: 'published' } as any} />)
+
+      fireEvent.click(screen.getByRole('button', { name: '工作流分享海报' }))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('share-poster-modal')).toHaveTextContent('工作流分享海报')
+      })
+    })
+
     it('should open edit modal when edit button is clicked', async () => {
       render(<AppCard app={mockApp} />)
 

@@ -244,3 +244,4 @@ scripts/stress-test/reports/
 .eslintcache
 dify-plugin-daemon
 api/tests/*
+docker/volumes/*

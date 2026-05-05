@@ -70,6 +70,74 @@ When the local Docker stack has already been initialized or contains historical 
 - Treat `/install` after redeploy as evidence that the stack is attached to an empty or wrong database source, not as proof that code deploy succeeded
 - Treat `/apps` empty state with non-zero `apps` rows as a workspace-context issue before assuming a frontend bug
 
+## Data Source Scan Order
+
+When local Docker starts but the user lands on `/install`, or login succeeds but `/apps` cannot show historical agents, do not assume the latest bind-mounted PostgreSQL directory is the real business source.
+
+Use this exact scan order:
+
+1. Read the runtime datasource from the running `api` container:
+   - `DB_HOST`
+   - `DB_PORT`
+   - `DB_DATABASE`
+   - `DB_USERNAME`
+   - `PGDATA`
+2. Query the currently connected PostgreSQL and record:
+   - `count(*) from dify_setups`
+   - `count(*) from accounts`
+   - `count(*) from tenants`
+   - `count(*) from apps`
+   - `count(*) from installed_apps`
+3. Enumerate all local PostgreSQL candidates on the machine:
+   - bind-mounted directories such as `docker/volumes/db/data`
+   - sibling historical directories such as `bak/docker/volumes/db/data`
+   - historical project directories such as other local Dify/Desktop repos
+   - Docker named volumes such as `*_postgres_data`
+4. For every PostgreSQL candidate, identify its major version from `PG_VERSION` before mounting it:
+   - PostgreSQL 15 data must be inspected with a PostgreSQL 15 container
+   - PostgreSQL 16 data must be inspected with a PostgreSQL 16 container
+5. A candidate is considered a valid local Desktop business source only if all checks pass:
+   - the database is initialized: `dify_setups > 0`
+   - it contains Desktop/Dify business tables: `accounts`, `tenants`, `apps`, `installed_apps`
+   - it contains historical app data: `apps > 0` or `installed_apps > 0`
+   - after binding the stack to that source, local login reaches `/apps`
+6. If a candidate is initialized but `apps = 0`, treat it as an incomplete source, not the final answer.
+7. If a candidate contains non-Desktop schemas such as `nexus` and has no Dify business tables, classify it as another product's database and exclude it.
+8. If no candidate passes the business-data check, conclude that the machine currently has no valid local Desktop business datasource and that a restore/import step is required before Docker acceptance can succeed.
+
+## Current Known Local Cases
+
+The following patterns have already been observed locally and should be recognized quickly:
+
+- `docker/volumes/db/data` can contain a migrated but effectively empty Dify database:
+  - `dify_setups = 0`
+  - `accounts > 0`
+  - `apps = 0`
+  - this source will drive Desktop into `/install`
+- `bak/docker/volumes/db/data` or other historical PG15 directories can contain an initialized Dify database with users but still no app data:
+  - `dify_setups > 0`
+  - `apps = 0`
+  - this source is closer to valid than the current empty bind mount, but still cannot satisfy the "show published agents" requirement
+- Docker named volume `docker_postgres_data` can be a PostgreSQL 16 historical volume for another product:
+  - if inspected with a PostgreSQL 15 container, it will fail to start due to version mismatch
+  - if inspected with the matching PostgreSQL 16 container and only exposes `cheersai` / `nexus` tables instead of Dify tables, it is not the Desktop datasource
+- Docker named volume `cheersaidesktop_postgres_data` can be an old initialized Dify database with no app records:
+  - usable for login history checks
+  - not sufficient for validating published-agent visibility
+
+## Switching Rules
+
+When the currently mounted datasource is wrong:
+
+- Do not use `docker compose down -v`
+- Do not overwrite a candidate source before proving it contains valid business data
+- Prefer temporary read-only style verification first:
+  - clone the candidate data directory or volume to a temporary inspection container
+  - verify version, database names, business tables, and row counts
+- After a candidate is proven valid, then update the local Docker datasource binding
+- If the only discovered valid business source is a Docker named volume with a different PostgreSQL major version than the current compose file, align the PostgreSQL image major version before switching the stack to that source
+- If no candidate has `apps > 0`, stop treating the issue as "wrong current binding only" and classify it as "missing local business backup"
+
 ## Standard Validation Flow
 
 ### 1. Preflight
@@ -80,6 +148,8 @@ When the local Docker stack has already been initialized or contains historical 
 - Confirm nginx routes `/api/nexus/beta-applications/apply` correctly
 - If the environment is expected to remain initialized, verify `dify_setups`, `accounts`, and `tenants` in PostgreSQL before rebuild
 - If historical apps are expected, verify `apps` and `installed_apps` counts before and after rebuild
+- If `/install` appears, immediately perform the full datasource scan order above instead of rebuilding repeatedly against the same bind mount
+- If a named volume candidate uses a different PostgreSQL major version than compose, inspect it with a matching temporary container before any switch
 
 ### 2. Submission Validation
 
@@ -133,6 +203,14 @@ When testing member users:
   current Docker stack is attached to an empty database or the wrong restored data directory
 - `/apps` shows no app cards but PostgreSQL contains app rows:
   check the logged-in account's current workspace against the app `tenant_id`
+- The current bind-mounted PostgreSQL looks healthy but `dify_setups = 0` and `apps = 0`:
+  this is a structurally valid but business-empty Dify source, not the historical Desktop business database
+- A historical named volume fails under the current PostgreSQL image:
+  check `PG_VERSION`; the volume may require a higher PostgreSQL major version than the compose file currently uses
+- A historical PostgreSQL candidate only contains `nexus` or other non-Dify schemas:
+  exclude it from Desktop datasource candidates even if it is initialized and queryable
+- Every discovered local candidate has `apps = 0`:
+  the machine currently lacks a valid local Desktop business source and needs backup restore or data import before agent visibility can be validated
 
 ## Deliverables
 
@@ -144,3 +222,9 @@ When finishing a task with this skill, provide:
 4. Any broken hop in the chain
 5. Exact fix applied
 6. Remaining acceptance risks
+7. Datasource scan matrix:
+   - candidate path or volume
+   - PostgreSQL major version
+   - database names
+   - `dify_setups/accounts/tenants/apps/installed_apps` counts
+   - final classification: empty Dify source / non-Desktop source / valid business source / restore required

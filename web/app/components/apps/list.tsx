@@ -139,7 +139,15 @@ const List: FC<Props> = ({
   const { t } = useTranslation()
 
   const router = useRouter()
-  const { isLoadingCurrentWorkspace, canViewWorkflow, canEditWorkflow, canViewApps, canEditApps } = useAppContext()
+  const {
+    isLoadingCurrentWorkspace,
+    canViewWorkflow,
+    canEditWorkflow,
+    canViewApps,
+    canEditApps,
+    isCurrentWorkspaceManager,
+    isCurrentWorkspaceEditor,
+  } = useAppContext()
   const showTagManagementModal = useTagStore(s => s.showTagManagementModal)
   const tagList = useTagStore(s => s.tagList)
   const [activeTab] = useQueryState(
@@ -160,6 +168,7 @@ const List: FC<Props> = ({
   const groupedResourceLabel = isWorkflowCategory ? '工作流' : 'Agent'
   const canAccessCurrentCategory = isWorkflowCategory ? canViewWorkflow : canViewApps
   const canEditCurrentCategory = isWorkflowCategory ? canEditWorkflow : canEditApps
+  const canViewInternalStates = isCurrentWorkspaceManager || isCurrentWorkspaceEditor
   const setKeywords = useCallback((keywords: string) => {
     setQuery(prev => ({ ...prev, keywords }))
   }, [setQuery])
@@ -281,9 +290,13 @@ const List: FC<Props> = ({
     () => flatApps.filter(app => ['unpublished', 'recalled'].includes(getAppDisplayStatus(app))),
     [flatApps],
   )
+  const visibleApps = useMemo(
+    () => (canViewInternalStates ? flatApps : publishedAndPendingApps),
+    [canViewInternalStates, flatApps, publishedAndPendingApps],
+  )
   const groupedApps = useMemo(() => groupAppsByPrimaryTag(publishedAndPendingApps, tagList.map(tag => tag.id)), [publishedAndPendingApps, tagList])
   const groupedArchivedApps = useMemo(() => groupAppsByPrimaryTag(archivedApps, tagList.map(tag => tag.id)), [archivedApps, tagList])
-  const hasAnyApp = flatApps.length > 0
+  const hasAnyApp = visibleApps.length > 0
   const emptyStateHint = useMemo(() => {
     if (tagIDs.length || searchKeywords || isCreatedByMe)
       return undefined
@@ -381,11 +394,6 @@ const List: FC<Props> = ({
                             >
                               {group.label}
                             </div>
-                            <div className="text-xs text-[#4b5563]">
-                              同标签
-                              {groupedResourceLabel}
-                              已聚合展示
-                            </div>
                           </div>
                           <div className="rounded-full bg-[#dbeafe] px-3 py-1 text-xs font-medium text-[#1e40af]">
                             {group.count}
@@ -401,7 +409,7 @@ const List: FC<Props> = ({
                         </div>
                       </section>
                     ))}
-                    {groupedArchivedApps.length > 0 && (
+                    {canViewInternalStates && groupedArchivedApps.length > 0 && (
                       <section className="rounded-xl border border-[#e5e7eb] bg-[#f8fafc] p-5 shadow-sm">
                         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                           <div className="flex items-center gap-3">
@@ -434,9 +442,6 @@ const List: FC<Props> = ({
                                   )}
                                   >
                                     {group.label}
-                                  </div>
-                                  <div className="text-xs text-[#4b5563]">
-                                    已按标签分类展示
                                   </div>
                                 </div>
                                 <div className="rounded-full bg-[#f1f5f9] px-3 py-1 text-xs font-medium text-[#475569]">

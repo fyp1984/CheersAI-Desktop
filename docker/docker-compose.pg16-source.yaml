@@ -1,0 +1,14 @@
+services:
+  db_postgres:
+    image: postgres:16-alpine
+    environment:
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - type: volume
+        source: desktop_pg16_source
+        target: /var/lib/postgresql/data
+
+volumes:
+  desktop_pg16_source:
+    external: true
+    name: docker_postgres_data
