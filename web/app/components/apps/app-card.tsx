@@ -147,6 +147,12 @@ const isAppUnavailableForExplore = (app: App) => {
   return publishStatus === '未发布' || publishStatus === '已回收' || publishStatus === '待发布'
 }
 
+const getShareResourceLabel = (mode: AppModeEnum) => {
+  return mode === AppModeEnum.WORKFLOW || mode === AppModeEnum.ADVANCED_CHAT
+    ? '工作流'
+    : '智能体'
+}
+
 export type AppCardProps = {
   app: App
   onRefresh?: () => void
@@ -498,6 +504,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
   const [tags, setTags] = useState<Tag[]>(app.tags)
   const canManageAppTags = isCurrentWorkspaceManager || isCurrentWorkspaceOwner
   const showTagSelector = canManageAppTags || tags.length > 0
+  const shareResourceLabel = useMemo(() => getShareResourceLabel(app.mode), [app.mode])
   useEffect(() => {
     setTags(app.tags)
   }, [app.tags])
@@ -557,27 +564,44 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
               </span>
             </div>
           </div>
-          <div className="flex h-5 w-5 shrink-0 items-center justify-center pt-1">
-            {app.access_mode === AccessMode.PUBLIC && (
-              <Tooltip asChild={false} popupContent={t('accessItemsDescription.anyone', { ns: 'app' })}>
-                <RiGlobalLine className="h-4 w-4 text-text-quaternary" />
-              </Tooltip>
+          <div className="flex shrink-0 items-center gap-1 pt-1">
+            {!isAppUnavailableForExplore(app) && (
+              <button
+                type="button"
+                aria-label={`${shareResourceLabel}分享海报`}
+                title={`${shareResourceLabel}分享海报`}
+                className="flex h-8 w-8 items-center justify-center rounded-md text-text-accent transition-colors duration-200 hover:bg-state-accent-hover"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  e.preventDefault()
+                  setShowSharePosterModal(true)
+                }}
+              >
+                <RiShareForwardLine className="h-4 w-4" />
+              </button>
             )}
-            {app.access_mode === AccessMode.SPECIFIC_GROUPS_MEMBERS && (
-              <Tooltip asChild={false} popupContent={t('accessItemsDescription.specific', { ns: 'app' })}>
-                <RiLockLine className="h-4 w-4 text-text-quaternary" />
-              </Tooltip>
-            )}
-            {app.access_mode === AccessMode.ORGANIZATION && (
-              <Tooltip asChild={false} popupContent={t('accessItemsDescription.organization', { ns: 'app' })}>
-                <RiBuildingLine className="h-4 w-4 text-text-quaternary" />
-              </Tooltip>
-            )}
-            {app.access_mode === AccessMode.EXTERNAL_MEMBERS && (
-              <Tooltip asChild={false} popupContent={t('accessItemsDescription.external', { ns: 'app' })}>
-                <RiVerifiedBadgeLine className="h-4 w-4 text-text-quaternary" />
-              </Tooltip>
-            )}
+            <div className="flex h-5 w-5 items-center justify-center">
+              {app.access_mode === AccessMode.PUBLIC && (
+                <Tooltip asChild={false} popupContent={t('accessItemsDescription.anyone', { ns: 'app' })}>
+                  <RiGlobalLine className="h-4 w-4 text-text-quaternary" />
+                </Tooltip>
+              )}
+              {app.access_mode === AccessMode.SPECIFIC_GROUPS_MEMBERS && (
+                <Tooltip asChild={false} popupContent={t('accessItemsDescription.specific', { ns: 'app' })}>
+                  <RiLockLine className="h-4 w-4 text-text-quaternary" />
+                </Tooltip>
+              )}
+              {app.access_mode === AccessMode.ORGANIZATION && (
+                <Tooltip asChild={false} popupContent={t('accessItemsDescription.organization', { ns: 'app' })}>
+                  <RiBuildingLine className="h-4 w-4 text-text-quaternary" />
+                </Tooltip>
+              )}
+              {app.access_mode === AccessMode.EXTERNAL_MEMBERS && (
+                <Tooltip asChild={false} popupContent={t('accessItemsDescription.external', { ns: 'app' })}>
+                  <RiVerifiedBadgeLine className="h-4 w-4 text-text-quaternary" />
+                </Tooltip>
+              )}
+            </div>
           </div>
         </div>
         <div className="title-wrapper h-[90px] px-[14px] text-xs leading-normal text-text-tertiary">
@@ -643,20 +667,6 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
                 </>
               )}
             </>
-          )}
-          {!isAppUnavailableForExplore(app) && (
-            <button
-              type="button"
-              className="ml-auto flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-text-accent hover:bg-state-accent-hover"
-              onClick={(e) => {
-                e.stopPropagation()
-                e.preventDefault()
-                setShowSharePosterModal(true)
-              }}
-            >
-              <RiShareForwardLine className="h-4 w-4" />
-              分享海报
-            </button>
           )}
         </div>
       </div>

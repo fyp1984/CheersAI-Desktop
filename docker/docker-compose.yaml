@@ -85,6 +85,8 @@ x-shared-env: &shared-api-worker-env
   DB_HOST: ${DB_HOST:-db_postgres}
   DB_PORT: ${DB_PORT:-5432}
   DB_DATABASE: ${DB_DATABASE:-dify}
+  POSTGRES_IMAGE: ${POSTGRES_IMAGE:-postgres:15-alpine}
+  PGDATA_HOST_VOLUME: ${PGDATA_HOST_VOLUME:-./volumes/db/data}
   SQLALCHEMY_POOL_SIZE: ${SQLALCHEMY_POOL_SIZE:-30}
   SQLALCHEMY_MAX_OVERFLOW: ${SQLALCHEMY_MAX_OVERFLOW:-10}
   SQLALCHEMY_POOL_RECYCLE: ${SQLALCHEMY_POOL_RECYCLE:-3600}
@@ -894,7 +896,7 @@ services:
 
   # The PostgreSQL database.
   db_postgres:
-    image: postgres:15-alpine
+    image: ${POSTGRES_IMAGE:-postgres:15-alpine}
     profiles:
       - postgresql
     restart: always
@@ -912,7 +914,7 @@ services:
                -c 'statement_timeout=${POSTGRES_STATEMENT_TIMEOUT:-0}'
                -c 'idle_in_transaction_session_timeout=${POSTGRES_IDLE_IN_TRANSACTION_SESSION_TIMEOUT:-0}'
     volumes:
-      - ./volumes/db/data:/var/lib/postgresql/data
+      - ${PGDATA_HOST_VOLUME:-./volumes/db/data}:/var/lib/postgresql/data
     healthcheck:
       test:
         [

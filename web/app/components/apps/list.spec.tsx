@@ -15,6 +15,7 @@ vi.mock('next/navigation', () => ({
 }))
 
 // Mock app context
+const mockIsCurrentWorkspaceManager = vi.fn(() => true)
 const mockIsCurrentWorkspaceEditor = vi.fn(() => true)
 const mockIsCurrentWorkspaceDatasetOperator = vi.fn(() => false)
 const mockCanViewApps = vi.fn(() => true)
@@ -23,6 +24,7 @@ const mockCanViewWorkflow = vi.fn(() => true)
 const mockCanEditWorkflow = vi.fn(() => true)
 vi.mock('@/context/app-context', () => ({
   useAppContext: () => ({
+    isCurrentWorkspaceManager: mockIsCurrentWorkspaceManager(),
     isCurrentWorkspaceEditor: mockIsCurrentWorkspaceEditor(),
     isCurrentWorkspaceDatasetOperator: mockIsCurrentWorkspaceDatasetOperator(),
     isLoadingCurrentWorkspace: false,
@@ -287,6 +289,7 @@ describe('List', () => {
       tagList: [{ id: 'tag-1', name: 'Test Tag', type: 'app', binding_count: 0 }],
       showTagManagementModal: false,
     })
+    mockIsCurrentWorkspaceManager.mockReturnValue(true)
     mockIsCurrentWorkspaceEditor.mockReturnValue(true)
     mockIsCurrentWorkspaceDatasetOperator.mockReturnValue(false)
     mockCanViewApps.mockReturnValue(true)
@@ -373,6 +376,7 @@ describe('List', () => {
 
       expect(screen.getByText('Test Tag')).toBeInTheDocument()
       expect(screen.getByText('未分组')).toBeInTheDocument()
+      expect(screen.queryByText('同标签Agent已聚合展示')).not.toBeInTheDocument()
     })
 
     it('should render new app card for editors', () => {
@@ -449,6 +453,62 @@ describe('List', () => {
       expect(screen.getByText('未发布 / 已回收')).toBeInTheDocument()
       expect(screen.getByText('当前不可在探索页直接使用，已统一置于列表底部')).toBeInTheDocument()
       expect(screen.getByText(/2\s*个 Agent/)).toBeInTheDocument()
+    })
+
+    it('should hide unpublished and recalled apps for normal members', () => {
+      mockIsCurrentWorkspaceManager.mockReturnValue(false)
+      mockIsCurrentWorkspaceEditor.mockReturnValue(false)
+      mockCanEditApps.mockReturnValue(false)
+      defaultAppData.pages[0].data = [
+        {
+          id: 'published-app',
+          name: 'Published App',
+          description: 'Description',
+          mode: AppModeEnum.CHAT,
+          icon: '🤖',
+          icon_type: 'emoji',
+          icon_background: '#FFEAD5',
+          tags: [],
+          author_name: 'Author',
+          created_at: 1704067200,
+          updated_at: 1704153600,
+          publish_status: 'published',
+        } as any,
+        {
+          id: 'unpublished-app',
+          name: 'Unpublished App',
+          description: 'Description',
+          mode: AppModeEnum.CHAT,
+          icon: '🤖',
+          icon_type: 'emoji',
+          icon_background: '#FFEAD5',
+          tags: [],
+          author_name: 'Author',
+          created_at: 1704067200,
+          updated_at: 1704153400,
+        } as any,
+        {
+          id: 'recalled-app',
+          name: 'Recalled App',
+          description: 'Description',
+          mode: AppModeEnum.CHAT,
+          icon: '🤖',
+          icon_type: 'emoji',
+          icon_background: '#FFEAD5',
+          tags: [],
+          author_name: 'Author',
+          created_at: 1704067200,
+          updated_at: 1704153700,
+          publish_status: 'recalled',
+        } as any,
+      ]
+
+      render(<List />)
+
+      expect(screen.getByTestId('app-card-published-app')).toBeInTheDocument()
+      expect(screen.queryByTestId('app-card-unpublished-app')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('app-card-recalled-app')).not.toBeInTheDocument()
+      expect(screen.queryByText('未发布 / 已回收')).not.toBeInTheDocument()
     })
   })
 

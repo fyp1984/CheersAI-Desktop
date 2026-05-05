@@ -14,6 +14,7 @@ import AppIcon from '@/app/components/base/app-icon'
 import Button from '@/app/components/base/button'
 import Modal from '@/app/components/base/modal'
 import Toast from '@/app/components/base/toast'
+import { AppModeEnum } from '@/types/app'
 import { downloadUrl } from '@/utils/download'
 import { basePath } from '@/utils/var'
 
@@ -33,6 +34,18 @@ const clampText = (text: string, maxLength: number) => {
   return cleanText.length > maxLength ? `${cleanText.slice(0, maxLength)}...` : cleanText
 }
 
+const getPosterContentConfig = (mode: AppDetailResponse['mode']) => {
+  const isWorkflow = mode === AppModeEnum.WORKFLOW || mode === AppModeEnum.ADVANCED_CHAT
+
+  return {
+    resourceLabel: isWorkflow ? '工作流' : '智能体',
+    introLabel: isWorkflow ? '工作流介绍' : '智能体介绍',
+    helperDescription: isWorkflow
+      ? '这个工作流可以帮助你更高效地完成业务流转、内容处理和知识协作。'
+      : '这个智能体可以帮助你更高效地完成业务咨询、内容生成和知识协作。',
+  }
+}
+
 const SharePosterModal = ({
   isShow,
   appInfo,
@@ -40,10 +53,14 @@ const SharePosterModal = ({
 }: SharePosterModalProps) => {
   const posterRef = useRef<HTMLDivElement>(null)
   const [isRendering, setIsRendering] = useState(false)
+  const { resourceLabel, introLabel, helperDescription } = useMemo(
+    () => getPosterContentConfig(appInfo.mode),
+    [appInfo.mode],
+  )
   const posterTitle = appInfo.site?.title || appInfo.name
-  const agentDescription = useMemo(
-    () => clampText(appInfo.description || appInfo.site?.description || '这个智能体可以帮助你更高效地完成业务咨询、内容生成和知识协作。', 128),
-    [appInfo.description, appInfo.site?.description],
+  const resourceDescription = useMemo(
+    () => clampText(appInfo.description || appInfo.site?.description || helperDescription, 128),
+    [appInfo.description, appInfo.site?.description, helperDescription],
   )
 
   const renderPoster = async () => {
@@ -67,7 +84,7 @@ const SharePosterModal = ({
     const dataUrl = await renderPoster()
     if (!dataUrl)
       return
-    downloadUrl({ url: dataUrl, fileName: `${posterTitle}-分享海报.png` })
+    downloadUrl({ url: dataUrl, fileName: `${posterTitle}-${resourceLabel}-分享海报.png` })
     Toast.notify({ type: 'success', message: '海报已导出为图片' })
   }
 
@@ -97,8 +114,8 @@ const SharePosterModal = ({
       <div className="flex max-h-[88vh] flex-col overflow-hidden rounded-2xl">
         <div className="flex shrink-0 items-start justify-between border-b border-divider-subtle px-6 py-5">
           <div>
-            <div className="text-xl font-semibold leading-7 text-text-primary">智能体分享海报</div>
-            <div className="mt-1 text-sm leading-5 text-text-tertiary">生成一张可转发到微信、朋友圈和社群的智能体介绍图。</div>
+            <div className="text-xl font-semibold leading-7 text-text-primary">{resourceLabel}分享海报</div>
+            <div className="mt-1 text-sm leading-5 text-text-tertiary">生成一张可转发到微信、朋友圈和社群的{resourceLabel}介绍图。</div>
           </div>
           <button
             type="button"
@@ -147,7 +164,7 @@ const SharePosterModal = ({
                     </div>
                     <div className="min-w-0 flex-1 pt-0.5">
                       <div className="text-[11px] font-semibold leading-[16px] text-[#2f6bff]">
-                        智能体
+                        {resourceLabel}
                       </div>
                       <div className="mt-1 line-clamp-2 text-[24px] font-semibold leading-[31px] text-[#101828]">
                         {posterTitle}
@@ -159,9 +176,9 @@ const SharePosterModal = ({
                   <div className="mt-7 h-[178px] bg-white/90 px-5 py-5 shadow-[0_12px_32px_rgba(18,32,47,0.08)]">
                     <div className="flex items-center gap-2">
                       <div className="h-4 w-[3px] bg-[#2f6bff]" />
-                      <div className="text-[12px] font-semibold leading-none text-[#2364d2]">智能体介绍</div>
+                      <div className="text-[12px] font-semibold leading-none text-[#2364d2]">{introLabel}</div>
                     </div>
-                    <div className="mt-4 line-clamp-5 text-[14px] leading-[25px] text-[#344054]">{agentDescription}</div>
+                    <div className="mt-4 line-clamp-5 text-[14px] leading-[25px] text-[#344054]">{resourceDescription}</div>
                   </div>
 
                   <div className="mx-[-28px] mt-auto border-t border-[#dce8f3] bg-[#f7fbff] px-7 pb-5 pt-5">
@@ -203,8 +220,8 @@ const SharePosterModal = ({
             <div>
               <div className="text-sm font-semibold leading-5 text-text-primary">海报内容</div>
               <div className="mt-3 border-y border-divider-subtle py-4">
-                <div className="system-sm-semibold text-text-primary">智能体介绍</div>
-                <div className="system-xs-regular mt-2 text-text-tertiary">{agentDescription}</div>
+                <div className="system-sm-semibold text-text-primary">{introLabel}</div>
+                <div className="system-xs-regular mt-2 text-text-tertiary">{resourceDescription}</div>
                 <div className="system-xs-regular mt-2 text-text-quaternary">海报内最多展示 4 行，超出自动省略。</div>
               </div>
             </div>
