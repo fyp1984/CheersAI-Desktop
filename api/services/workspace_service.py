@@ -2,13 +2,41 @@ from flask_login import current_user
 
 from configs import dify_config
 from extensions.ext_database import db
-from libs.desktop_auth import get_role_capabilities, load_desktop_sso_projection
+from libs.desktop_auth import get_account_allowed_workspace_tenant_ids, get_role_capabilities, load_desktop_sso_projection
 from models.account import Tenant, TenantAccountJoin, TenantAccountRole
 from services.account_service import TenantService
 from services.feature_service import FeatureService
 
 
 class WorkspaceService:
+    @classmethod
+    def get_visible_tenants(cls, account, tenants: list[Tenant]) -> list[Tenant]:
+        allowed_tenant_ids = get_account_allowed_workspace_tenant_ids(account)
+        if allowed_tenant_ids is None:
+            return tenants
+
+        allowed_tenant_id_set = set(allowed_tenant_ids)
+        visible_tenants = [tenant for tenant in tenants if tenant.id in allowed_tenant_id_set]
+        visible_tenants.sort(key=lambda tenant: allowed_tenant_ids.index(tenant.id) if tenant.id in allowed_tenant_id_set else len(allowed_tenant_ids))
+        return visible_tenants
+
+    @classmethod
+    def ensure_current_workspace_access(cls, account) -> Tenant | None:
+        current_tenant = getattr(account, "current_tenant", None)
+        allowed_tenant_ids = get_account_allowed_workspace_tenant_ids(account)
+        if allowed_tenant_ids is None:
+            return current_tenant
+
+        if current_tenant and current_tenant.id in allowed_tenant_ids:
+            return current_tenant
+
+        joined_tenants = cls.get_visible_tenants(account, TenantService.get_join_tenants(account))
+        if not joined_tenants:
+            return None
+
+        TenantService.switch_tenant(account, joined_tenants[0].id)
+        return joined_tenants[0]
+
     @classmethod
     def get_tenant_info(cls, tenant: Tenant):
         if not tenant:

@@ -3,13 +3,15 @@ import json
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from extensions.ext_database import db
 from extensions.ext_redis import redis_client
-from models.account import TenantAccountRole
+from models.account import Account, Tenant, TenantAccountJoin, TenantAccountRole, TenantStatus
 
 DESKTOP_ACCESS_CAPABILITY = "desktop_access"
 DESKTOP_AGENT_MANAGE_CAPABILITY = "desktop_agent_manage"
 DESKTOP_PLUGIN_MANAGE_CAPABILITY = "desktop_plugin_manage"
 DESKTOP_SSO_PROJECTION_KEY_PREFIX = "desktop:sso:projection"
+DESKTOP_SSO_GROUP_TENANT_CACHE_PREFIX = "desktop:sso:group-tenant:"
 DESKTOP_SSO_PROJECTION_TTL = 60 * 60 * 24 * 7
 
 WORKSPACE_ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
@@ -361,6 +363,11 @@ def _desktop_sso_projection_key(account_id: str, tenant_id: str) -> str:
     return f"{DESKTOP_SSO_PROJECTION_KEY_PREFIX}:{tenant_id}:{account_id}"
 
 
+def _desktop_sso_group_tenant_cache_key(group_name: str) -> str:
+    group_hash = hashlib.sha256(group_name.strip().lower().encode("utf-8")).hexdigest()
+    return f"{DESKTOP_SSO_GROUP_TENANT_CACHE_PREFIX}{group_hash}"
+
+
 def save_desktop_sso_projection(account_id: str, tenant_id: str, projection: Mapping[str, Any]) -> None:
     try:
         redis_client.set(
@@ -438,6 +445,104 @@ def get_account_sso_tags(account: Any, tenant_id: str | None = None) -> list[str
             return [tag for tag in stored_tags if isinstance(tag, str) and tag]
 
     return []
+
+
+def get_account_sso_groups(account: Any) -> list[str]:
+    custom_config = getattr(account, "custom_config_dict", None)
+    account_id = getattr(account, "id", None)
+
+    if (not isinstance(custom_config, dict) or not isinstance(custom_config.get("desktop_sso_groups"), list)) and isinstance(account_id, str):
+        persisted_account = db.session.query(Account).filter_by(id=account_id).first()
+        if persisted_account:
+            custom_config = persisted_account.custom_config_dict
+
+    if not isinstance(custom_config, dict):
+        return []
+
+    stored_groups = custom_config.get("desktop_sso_groups")
+    if not isinstance(stored_groups, list):
+        return []
+
+    normalized_groups: list[str] = []
+    for group in stored_groups:
+        if not isinstance(group, str):
+            continue
+        normalized_group = group.strip()
+        if normalized_group and normalized_group not in normalized_groups:
+            normalized_groups.append(normalized_group)
+
+    return normalized_groups
+
+
+def get_account_allowed_workspace_tenant_ids(account: Any) -> list[str] | None:
+    groups = get_account_sso_groups(account)
+    if not groups:
+        return None
+
+    allowed_tenant_ids: list[str] = []
+    for group_name in groups:
+        cache_key = _desktop_sso_group_tenant_cache_key(group_name)
+        cached_tenant_id = None
+        try:
+            cached_tenant_id = redis_client.get(cache_key)
+        except RuntimeError:
+            cached_tenant_id = None
+
+        if isinstance(cached_tenant_id, bytes):
+            cached_tenant_id = cached_tenant_id.decode("utf-8")
+
+        tenant = None
+        if isinstance(cached_tenant_id, str) and cached_tenant_id:
+            tenant = db.session.query(Tenant).filter_by(id=cached_tenant_id, status=TenantStatus.NORMAL).first()
+            if tenant and tenant.name != group_name:
+                tenant = None
+
+        if not tenant:
+            tenant = db.session.query(Tenant).filter_by(name=group_name, status=TenantStatus.NORMAL).first()
+            if tenant:
+                try:
+                    redis_client.set(cache_key, tenant.id)
+                except RuntimeError:
+                    pass
+
+        if tenant and tenant.id not in allowed_tenant_ids:
+            allowed_tenant_ids.append(tenant.id)
+
+    account_id = getattr(account, "id", None)
+    persisted_account = db.session.query(Account).filter_by(id=account_id).first() if isinstance(account_id, str) else None
+    persisted_account_name = persisted_account.name.strip() if persisted_account and isinstance(persisted_account.name, str) else None
+    if isinstance(account_id, str):
+        personal_tenant = None
+        if persisted_account_name:
+            personal_workspace_name = f"{persisted_account_name}'s Workspace"
+            personal_tenant = (
+                db.session.query(Tenant)
+                .join(TenantAccountJoin, Tenant.id == TenantAccountJoin.tenant_id)
+                .filter(
+                    TenantAccountJoin.account_id == account_id,
+                    Tenant.name == personal_workspace_name,
+                    Tenant.status == TenantStatus.NORMAL,
+                )
+                .order_by(TenantAccountJoin.id.asc())
+                .first()
+            )
+
+        if not personal_tenant:
+            personal_tenant = (
+            db.session.query(Tenant)
+            .join(TenantAccountJoin, Tenant.id == TenantAccountJoin.tenant_id)
+            .filter(
+                TenantAccountJoin.account_id == account_id,
+                TenantAccountJoin.role == TenantAccountRole.OWNER,
+                Tenant.status == TenantStatus.NORMAL,
+            )
+            .order_by(TenantAccountJoin.id.asc())
+            .first()
+        )
+        if personal_tenant and personal_tenant.id not in allowed_tenant_ids:
+            allowed_tenant_ids.append(personal_tenant.id)
+
+    return allowed_tenant_ids
 
 
 def has_any_workspace_capability(account: Any, capabilities: Iterable[str], tenant_id: str | None = None) -> bool:
