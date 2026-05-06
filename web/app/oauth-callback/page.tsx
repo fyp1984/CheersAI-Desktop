@@ -45,6 +45,11 @@ export default function OAuthCallbackPage() {
 
     const storedState = sessionStorage.getItem('desktop-sso-state') || decodeURIComponent(getCookieValue('desktop-sso-state'))
     const codeVerifier = sessionStorage.getItem('desktop-sso-code-verifier') || decodeURIComponent(getCookieValue('desktop-sso-code-verifier'))
+    
+    console.log('[SSO] Callback - received state:', state)
+    console.log('[SSO] Callback - stored state:', storedState)
+    console.log('[SSO] Callback - code verifier exists:', !!codeVerifier)
+    
     if (state !== storedState) {
       console.error('[SSO] State mismatch - stored:', storedState, 'received:', state)
       Toast.notify({ type: 'error', message: 'SSO login failed: state mismatch' })

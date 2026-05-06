@@ -133,6 +133,9 @@ from .explore import (
 # Import gitea API controllers
 from .gitea_api import gitea_config, gitea_files
 
+# Import vault integration controllers
+from . import vault_integration
+
 # Import tag controllers
 from .tag import tags
 

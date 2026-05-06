@@ -55,7 +55,14 @@ const SSOAuth: FC<SSOAuthProps> = ({
           sessionStorage.setItem('desktop-sso-code-verifier', codeVerifier)
           document.cookie = `desktop-sso-state=${encodeURIComponent(state)}; Path=/; SameSite=Lax`
           document.cookie = `desktop-sso-code-verifier=${encodeURIComponent(codeVerifier)}; Path=/; SameSite=Lax`
-          window.location.href = loginUrl
+          
+          console.log('[SSO] Stored state:', state)
+          console.log('[SSO] Stored code verifier:', codeVerifier.substring(0, 10) + '...')
+          
+          // Add a small delay to ensure sessionStorage and cookies are saved before redirect
+          setTimeout(() => {
+            window.location.href = loginUrl
+          }, 100)
         })
         .catch(() => {
           Toast.notify({

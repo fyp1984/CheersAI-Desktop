@@ -172,6 +172,13 @@ class LoginApi(Resource):
         except Exception as e:
             logger.warning("Failed to record login audit log: %s", e)
 
+        # 自动同步 FileBay 配置到 Vault
+        try:
+            from services.vault_sync_service import VaultSyncService
+            VaultSyncService.auto_sync_on_login(str(account.id))
+        except Exception as e:
+            logger.warning("Failed to sync FileBay config to Vault: %s", e)
+
         return response
 
 
@@ -333,6 +340,13 @@ class EmailCodeLoginApi(Resource):
                 raise WorkspacesLimitExceeded()
         token_pair = AccountService.login(account, ip_address=extract_remote_ip(request))
         AccountService.reset_login_error_rate_limit(user_email)
+
+        # 自动同步 FileBay 配置到 Vault
+        try:
+            from services.vault_sync_service import VaultSyncService
+            VaultSyncService.auto_sync_on_login(str(account.id))
+        except Exception as e:
+            logger.warning("Failed to sync FileBay config to Vault: %s", e)
 
         # Create response with cookies instead of returning tokens in body
         response = make_response({"result": "success"})
