@@ -49,6 +49,10 @@ def init_app(app: DifyApp):
         force=True,
     )
 
+    # Silence high-volume third-party HTTP client access logs while keeping warnings/errors.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+
     # Disable propagation for noisy loggers to avoid duplicate logs
     logging.getLogger("sqlalchemy.engine").propagate = False
 

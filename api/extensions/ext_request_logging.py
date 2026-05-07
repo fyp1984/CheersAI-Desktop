@@ -20,6 +20,13 @@ def _is_content_type_json(content_type: str) -> bool:
     return content_type_no_option.lower() == "application/json"
 
 
+def _should_skip_info_access_log(req_method: str, req_path: str, status_code: int | None) -> bool:
+    if status_code is None or status_code >= 400:
+        return False
+
+    return req_method == "GET" and req_path.startswith("/plugin/") and req_path.endswith("/management/models")
+
+
 def _log_request_started(_sender, **_extra):
     """Log the start of a request."""
     # Record start time for access logging
@@ -69,15 +76,17 @@ def _log_request_finished(_sender, response, **_extra):
         req_method = "-"
         req_path = "-"
 
+    status_code = getattr(response, "status_code", None)
     trace_id = get_trace_id_from_otel_context() or response.headers.get("X-Trace-Id") or ""
-    logger.info(
-        "%s %s %s %s %s",
-        req_method,
-        req_path,
-        getattr(response, "status_code", "-"),
-        duration_ms if duration_ms is not None else "-",
-        trace_id,
-    )
+    if not _should_skip_info_access_log(req_method, req_path, status_code):
+        logger.info(
+            "%s %s %s %s %s",
+            req_method,
+            req_path,
+            status_code if status_code is not None else "-",
+            duration_ms if duration_ms is not None else "-",
+            trace_id,
+        )
 
     if not logger.isEnabledFor(logging.DEBUG):
         return
