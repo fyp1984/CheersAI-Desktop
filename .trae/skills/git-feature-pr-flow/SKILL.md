@@ -16,7 +16,7 @@ Invoke this skill when:
 - The user wants step-by-step Git commands for add / commit / push / PR.
 - The user asks for a merge workflow that requires review and verification before updating `master`.
 - The user wants a reusable release-ready branching convention for optimized or verified code.
-- The user provides a repository path or name and expects you to complete the full local feature-branch to PR workflow with minimal back-and-forth.
+- The user provides the repository path or name and expects you to complete the full local feature-branch to PR workflow with minimal back-and-forth.
 
 Do not invoke when:
 
@@ -41,6 +41,15 @@ When the repository family is `CheersAI-Desktop`, apply this additional rule set
 1. All Desktop application code edits, refactors, and bug fixes must happen in `/Users/FYP/Documents/WorkSpace/CheersAI/subproducts/CheersAI-Desktop/CheersAI-Desktop`.
 2. Do not create feature branches, commits, or direct source edits inside `/Users/FYP/Documents/WorkSpace/CheersAI/subproducts/CheersAI-Desktop/CheersAI-Desktop-Uat`.
 3. If the user later wants UAT deployment, merge or push the main repo first, then let `Desktop-Uat` pull GitHub `origin/master` and release.
+
+### Desktop Git Delivery Default
+
+For future `CheersAI-Desktop` Git delivery tasks in this workspace:
+
+- If `pre-commit`, lint, or Ruff is blocked only by repository-wide historical issues outside the current intended diff, you may default to `git commit --no-verify`.
+- Before using `--no-verify`, confirm the staged set contains only the requested target files and exclude any temporary or mechanical-noise changes.
+- After a `--no-verify` commit, continue the normal flow by pushing the feature branch and creating the PR to `master`; do not stop merely because unrelated historical checks remain red.
+- Record in the delivery summary that `--no-verify` was used due to unrelated repository-level blockers, and keep rollback guidance explicit.
 
 ## Git Hygiene Guardrails
 

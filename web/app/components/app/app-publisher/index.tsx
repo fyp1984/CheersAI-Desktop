@@ -168,6 +168,7 @@ const AppPublisher = ({
   const appURL = `${appBaseURL}${basePath}/${appMode}/${accessToken}`
   const appDevelopURL = appDetail?.id ? `${basePath}/app/${appDetail.id}/develop` : undefined
   const isChatApp = [AppModeEnum.CHAT, AppModeEnum.AGENT_CHAT, AppModeEnum.COMPLETION].includes(appDetail?.mode || AppModeEnum.CHAT)
+  const isWorkflowPublishFlow = appDetail?.mode === AppModeEnum.WORKFLOW || appDetail?.mode === AppModeEnum.ADVANCED_CHAT
 
   const { data: userCanAccessApp, isLoading: isGettingUserCanAccessApp, refetch } = useGetUserCanAccessApp({ appId: appDetail?.id, enabled: false })
   const { data: appAccessSubjects, isLoading: isGettingAppWhiteListSubjects } = useAppWhiteListSubjects(appDetail?.id, open && systemFeatures.webapp_auth.enabled && appDetail?.access_mode === AccessMode.SPECIFIC_GROUPS_MEMBERS)
@@ -346,6 +347,18 @@ const AppPublisher = ({
   const hasPublishedVersion = !!publishedAt
   const workflowToolDisabled = !hasPublishedVersion || !workflowToolAvailable
   const workflowToolMessage = workflowToolDisabled ? t('common.workflowAsToolDisabledHint', { ns: 'workflow' }) : undefined
+  const publishButtonDisabled = useMemo(() => {
+    if (published)
+      return true
+
+    if (isWorkflowPublishFlow && !publishDisabled)
+      return false
+
+    if (appLifecycle)
+      return !appLifecycle.can_publish
+
+    return publishDisabled
+  }, [appLifecycle, isWorkflowPublishFlow, publishDisabled, published])
   const showStartNodeLimitHint = Boolean(startNodeLimitExceeded)
   const upgradeHighlightStyle = useMemo(() => ({
     background: 'linear-gradient(97deg, var(--components-input-border-active-prompt-1, rgba(11, 165, 236, 0.95)) -3.64%, var(--components-input-border-active-prompt-2, rgba(21, 90, 239, 0.95)) 45.14%)',
@@ -431,7 +444,7 @@ const AppPublisher = ({
                           variant="primary"
                           className="flex-1"
                           onClick={() => handlePublish()}
-                          disabled={appLifecycle ? !appLifecycle.can_publish : (publishDisabled || published)}
+                          disabled={publishButtonDisabled}
                         >
                           {
                             published

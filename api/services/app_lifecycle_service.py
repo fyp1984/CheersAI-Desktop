@@ -15,9 +15,71 @@ class AppLifecycleValidationException(Exception):
 
 class AppLifecycleService:
     @staticmethod
+    def _get_latest_published_workflow(app: App):
+        from sqlalchemy import desc
+
+        from models.workflow import Workflow
+
+        return (
+            db.session.query(Workflow)
+            .filter(
+                Workflow.app_id == app.id,
+                Workflow.version != Workflow.VERSION_DRAFT,
+            )
+            .order_by(desc(Workflow.created_at))
+            .first()
+        )
+
+    @staticmethod
+    def _get_effective_published_workflow(app: App):
+        if app.mode not in {"workflow", "advanced-chat"}:
+            return None
+
+        workflow = app.workflow
+        if workflow:
+            return workflow
+
+        return AppLifecycleService._get_latest_published_workflow(app)
+
+    @staticmethod
+    def _has_workflow_draft(app: App) -> bool:
+        from models.workflow import Workflow
+
+        return (
+            db.session.query(Workflow.id)
+            .filter(
+                Workflow.app_id == app.id,
+                Workflow.version == Workflow.VERSION_DRAFT,
+            )
+            .first()
+            is not None
+        )
+
+    @staticmethod
+    def _can_start_workflow_publish_flow(app: App) -> bool:
+        if app.mode not in {"workflow", "advanced-chat"}:
+            return False
+
+        if AppLifecycleService._get_effective_published_workflow(app):
+            return True
+
+        return AppLifecycleService._has_workflow_draft(app)
+
+    @staticmethod
+    def _ensure_published_workflow_binding(app: App) -> None:
+        if app.mode not in {"workflow", "advanced-chat"} or app.workflow_id:
+            return
+
+        latest_published_workflow = AppLifecycleService._get_latest_published_workflow(app)
+        if latest_published_workflow:
+            # Backfill the app pointer so lifecycle publish can validate against
+            # the workflow version that was just published in the previous step.
+            app.workflow_id = latest_published_workflow.id
+
+    @staticmethod
     def _is_configuration_ready(app: App):
         if app.mode in {"workflow", "advanced-chat"}:
-            return bool(app.workflow)
+            return bool(AppLifecycleService._get_effective_published_workflow(app))
         return bool(app.app_model_config)
 
     @staticmethod
@@ -47,18 +109,12 @@ class AppLifecycleService:
         elif display_status == "published":
             display_status_description = "当前版本已可对外使用"
 
-        can_publish = False
-        can_recall = False
+        can_publish = True
+        can_recall = app.lifecycle_status == "published"
         can_stash = True
 
-        can_publish = True
-        can_recall = True
-
         if app.lifecycle_status == "unpublished" and not val_passed:
-            can_publish = False
-
-        if app.lifecycle_status != "published":
-            can_recall = False
+            can_publish = AppLifecycleService._can_start_workflow_publish_flow(app)
 
         return {
             "app_id": app.id,
@@ -120,6 +176,7 @@ class AppLifecycleService:
 
     @staticmethod
     def publish_app(app: App, expected_row_version: int, reason: str = None):
+        AppLifecycleService._ensure_published_workflow_binding(app)
         passed, errors = AppLifecycleService._validate_publish(app)
         
         content = {
