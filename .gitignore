@@ -245,3 +245,6 @@ scripts/stress-test/reports/
 dify-plugin-daemon
 api/tests/*
 docker/volumes/*
+!docker/volumes/plugin_daemon/
+docker/volumes/plugin_daemon/*
+!docker/volumes/plugin_daemon/.gitkeep

@@ -20,7 +20,8 @@ const nodeDefault: NodeDefault<TemplateTransformNodeType> = {
   },
   checkValid(payload: TemplateTransformNodeType, t: any) {
     let errorMessages = ''
-    const { template, variables } = payload
+    const { template } = payload
+    const variables = payload.variables ?? []
 
     if (!errorMessages && variables.filter(v => !v.variable).length > 0)
       errorMessages = t(`${i18nPrefix}.fieldRequired`, { ns: 'workflow', field: t(`${i18nPrefix}.fields.variable`, { ns: 'workflow' }) })
