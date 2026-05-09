@@ -192,6 +192,8 @@ const ChatPage = () => {
   const inputValueRef = useRef('')
   const [showSensitiveConfirm, setShowSensitiveConfirm] = useState(false)
   const [skipSensitiveConfirm, setSkipSensitiveConfirm] = useState(false)
+  const [isInputCollapsed, setIsInputCollapsed] = useState(false)
+  const [enableWebSearch, setEnableWebSearch] = useState(false)
 
   useEffect(() => {
     if (!isLoadingCurrentWorkspace && !canUseChat)
@@ -668,6 +670,8 @@ const ChatPage = () => {
 
       let fullResponse = ''
 
+      console.log('[Chat Page - Regenerate] Calling sendSimpleChatMessage with webSearch:', enableWebSearch)
+
       await sendSimpleChatMessage(
         queryWithFiles,
         resolvedSelectedModel.provider,
@@ -684,7 +688,10 @@ const ChatPage = () => {
         (error) => {
           throw new Error(error)
         },
+        { webSearch: enableWebSearch },
       )
+
+      console.log('[Chat Page - Regenerate] sendSimpleChatMessage completed')
 
       // 流式输出完成，清除流式状态
       setStreamingMessageId(null)
@@ -831,6 +838,8 @@ const ChatPage = () => {
 
       let fullResponse = ''
 
+      console.log('[Chat Page - Send] Calling sendSimpleChatMessage with webSearch:', enableWebSearch)
+
       await sendSimpleChatMessage(
         queryWithFiles,
         resolvedSelectedModel.provider,
@@ -847,7 +856,10 @@ const ChatPage = () => {
         (error) => {
           throw new Error(error)
         },
+        { webSearch: enableWebSearch },
       )
+
+      console.log('[Chat Page - Send] sendSimpleChatMessage completed')
 
       // 流式输出完成，清除流式状态
       setStreamingMessageId(null)
@@ -1484,83 +1496,143 @@ const ChatPage = () => {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm transition-all duration-200 focus-within:border-[#3b82f6] focus-within:ring-2 focus-within:ring-[rgba(59,130,246,0.12)]">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-xs text-[#4b5563]">
-                  <span className="rounded-full bg-[#d1fae5] px-2 py-1 font-medium text-[#065f46]">已脱敏保护</span>
-                  <span>支持语音输入、搜索历史和 Markdown 导出</span>
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-sm transition-all duration-200 focus-within:border-[#3b82f6] focus-within:ring-2 focus-within:ring-[rgba(59,130,246,0.12)]">
+              {/* 收缩/展开控制栏 */}
+              <div className="flex items-center justify-between border-b border-[#e5e7eb] px-4 py-2.5">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsInputCollapsed(!isInputCollapsed)}
+                    className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-[#f3f4f6] hover:text-gray-700"
+                    title={isInputCollapsed ? '展开输入框' : '收缩输入框'}
+                  >
+                    <svg
+                      className={cn('h-4 w-4 transition-transform duration-300', isInputCollapsed && 'rotate-180')}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <span>{isInputCollapsed ? '展开输入框' : '收缩输入框'}</span>
+                  </button>
+                  
+                  {/* 联网搜索开关 */}
+                  <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-[#f3f4f6]">
+                    <input
+                      type="checkbox"
+                      checked={enableWebSearch}
+                      onChange={(e) => {
+                        const newValue = e.target.checked
+                        console.log('[Chat Page] Web search toggled:', newValue)
+                        setEnableWebSearch(newValue)
+                      }}
+                      className="h-3.5 w-3.5 rounded border-gray-300 text-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6]"
+                    />
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                    </svg>
+                    <span>联网搜索</span>
+                  </label>
                 </div>
-                {voiceDraft && (
-                  <div className="max-w-[280px] truncate rounded-full bg-[#fff3cc] px-3 py-1 text-xs text-[#92400e]">
-                    正在识别：
-                    {voiceDraft}
+                
+                {enableWebSearch && (
+                  <div className="flex items-center gap-1 rounded-md bg-[#eff6ff] px-2 py-1 text-xs text-[#2563eb]">
+                    <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    <span>已启用</span>
                   </div>
                 )}
               </div>
-              <div className="relative flex items-end gap-3">
-                <button
-                  onClick={handleAttachmentClick}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600"
-                  title="从沙箱选择文件"
-                >
-                  <RiAttachmentLine className="h-4 w-4" />
-                </button>
 
-                <div className="relative flex min-h-[96px] flex-1 items-start">
-                  {isAutoFilled && autoFilledText && (
-                    <div className="pointer-events-none absolute inset-0 z-10 flex items-start pt-3">
-                      <span className="rounded-md border border-[#bfdbfe] bg-[#eff6ff] px-2 py-1 text-sm text-[#2563eb]">
-                        {autoFilledText}
-                      </span>
-                      {inputValue.length > autoFilledText.length && (
-                        <span className="ml-1 pt-1 text-sm text-[#111827]">
-                          {inputValue.slice(autoFilledText.length)}
-                        </span>
-                      )}
+              {/* 输入区域 - 可收缩 */}
+              <div
+                className={cn(
+                  'transition-all duration-300 overflow-hidden',
+                  isInputCollapsed ? 'max-h-0 opacity-0' : 'max-h-[400px] opacity-100',
+                )}
+              >
+                <div className="p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-xs text-[#4b5563]">
+                      <span className="rounded-full bg-[#d1fae5] px-2 py-1 font-medium text-[#065f46]">已脱敏保护</span>
+                      <span>支持语音输入、搜索历史和 Markdown 导出</span>
                     </div>
-                  )}
+                    {voiceDraft && (
+                      <div className="max-w-[280px] truncate rounded-full bg-[#fff3cc] px-3 py-1 text-xs text-[#92400e]">
+                        正在识别：
+                        {voiceDraft}
+                      </div>
+                    )}
+                  </div>
+                  <div className="relative flex items-end gap-3">
+                    <button
+                      onClick={handleAttachmentClick}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600"
+                      title="从沙箱选择文件"
+                    >
+                      <RiAttachmentLine className="h-4 w-4" />
+                    </button>
 
-                  <textarea
-                    ref={textareaRef}
-                    value={inputValue}
-                    onChange={handleTextareaChange}
-                    onKeyDown={handleKeyDown}
-                    placeholder="输入消息，Ctrl+Enter 换行"
-                    className={cn(
-                      'min-h-[96px] w-full resize-none border-0 bg-transparent py-3 text-sm leading-6 placeholder:text-gray-400 focus:outline-none',
-                      isAutoFilled ? 'text-transparent' : 'text-gray-900',
-                    )}
-                    rows={4}
-                    style={{ maxHeight: '160px' }}
-                  />
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <button
-                    onClick={handleVoiceInput}
-                    className={cn(
-                      'flex h-10 w-10 items-center justify-center rounded-lg border transition-colors',
-                      isVoiceListening
-                        ? 'border-red-100 bg-red-50 text-red-500 hover:bg-red-100'
-                        : 'border-[#e5e7eb] text-gray-400 hover:bg-[#f3f4f6] hover:text-gray-600',
-                      !isVoiceSupported && 'cursor-not-allowed opacity-50',
-                    )}
-                    title={isVoiceSupported ? (isVoiceListening ? '停止语音输入' : '语音输入') : '当前浏览器不支持语音输入'}
-                    disabled={!isVoiceSupported}
-                  >
-                    {isVoiceListening ? <RiMicFill className="h-4 w-4" /> : <RiMicLine className="h-4 w-4" />}
-                  </button>
-                  <button
-                    onClick={handleSend}
-                    disabled={!inputValue.trim() || isLoading}
-                    className={cn(
-                      'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-                      inputValue.trim() && !isLoading
-                        ? 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'
-                        : 'cursor-not-allowed bg-gray-100 text-gray-400',
-                    )}
-                  >
-                    发送回复
-                  </button>
+                    <div className="relative flex min-h-[96px] flex-1 items-start">
+                      {isAutoFilled && autoFilledText && (
+                        <div className="pointer-events-none absolute inset-0 z-10 flex items-start pt-3">
+                          <span className="rounded-md border border-[#bfdbfe] bg-[#eff6ff] px-2 py-1 text-sm text-[#2563eb]">
+                            {autoFilledText}
+                          </span>
+                          {inputValue.length > autoFilledText.length && (
+                            <span className="ml-1 pt-1 text-sm text-[#111827]">
+                              {inputValue.slice(autoFilledText.length)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      <textarea
+                        ref={textareaRef}
+                        value={inputValue}
+                        onChange={handleTextareaChange}
+                        onKeyDown={handleKeyDown}
+                        placeholder="输入消息，Ctrl+Enter 换行"
+                        className={cn(
+                          'min-h-[32px] w-full resize-none border-0 bg-transparent py-1.5 text-sm leading-5 placeholder:text-gray-400 focus:outline-none',
+                          isAutoFilled ? 'text-transparent' : 'text-gray-900',
+                        )}
+                        rows={1}
+                        style={{ maxHeight: '80px' }}
+                      />
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        onClick={handleVoiceInput}
+                        className={cn(
+                          'flex h-10 w-10 items-center justify-center rounded-lg border transition-colors',
+                          isVoiceListening
+                            ? 'border-red-100 bg-red-50 text-red-500 hover:bg-red-100'
+                            : 'border-[#e5e7eb] text-gray-400 hover:bg-[#f3f4f6] hover:text-gray-600',
+                          !isVoiceSupported && 'cursor-not-allowed opacity-50',
+                        )}
+                        title={isVoiceSupported ? (isVoiceListening ? '停止语音输入' : '语音输入') : '当前浏览器不支持语音输入'}
+                        disabled={!isVoiceSupported}
+                      >
+                        {isVoiceListening ? <RiMicFill className="h-4 w-4" /> : <RiMicLine className="h-4 w-4" />}
+                      </button>
+                      <button
+                        onClick={handleSend}
+                        disabled={!inputValue.trim() || isLoading}
+                        className={cn(
+                          'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                          inputValue.trim() && !isLoading
+                            ? 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'
+                            : 'cursor-not-allowed bg-gray-100 text-gray-400',
+                        )}
+                      >
+                        发送回复
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1695,3 +1767,4 @@ const ChatPage = () => {
 }
 
 export default ChatPage
+

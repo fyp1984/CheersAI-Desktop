@@ -111,7 +111,22 @@ export const sendSimpleChatMessage = async (
   history?: Array<{ type: 'user' | 'assistant', content: string }>,
   onData?: (data: string) => void,
   onError?: (error: string) => void,
+  options?: { webSearch?: boolean },
 ) => {
+  const requestBody = {
+    query,
+    provider,
+    model,
+    history,
+    web_search: options?.webSearch || false,
+  }
+  
+  console.log('[Simple Chat] Sending request:', {
+    url: `${API_PREFIX}/simple-chat`,
+    webSearch: options?.webSearch,
+    body: requestBody,
+  })
+  
   const response = await fetch(`${API_PREFIX}/simple-chat`, {
     method: 'POST',
     headers: {
@@ -119,13 +134,10 @@ export const sendSimpleChatMessage = async (
       [CSRF_HEADER_NAME]: Cookies.get(CSRF_COOKIE_NAME()) || '',
     },
     credentials: 'include',
-    body: JSON.stringify({
-      query,
-      provider,
-      model,
-      history,
-    }),
+    body: JSON.stringify(requestBody),
   })
+  
+  console.log('[Simple Chat] Response status:', response.status, response.statusText)
 
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`)

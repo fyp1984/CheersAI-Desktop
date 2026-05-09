@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>获取真实 FileBay 配置</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        .status.ok {
+            background: #28a745;
+            color: white;
+        }
+        .status.error {
+            background: #dc3545;
+            color: white;
+        }
+        .status.pending {
+            background: #ffc107;
+            color: #333;
+        }
+        .config-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        .config-label {
+            font-weight: bold;
+            color: #667eea;
+            display: inline-block;
+            width: 120px;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 获取真实 FileBay 配置</h1>
+        
+        <div class="step">
+            <h3>📋 使用说明</h3>
+            <p>1. 确保你已经登录到 Vault 系统（http://localhost:3000）</p>
+            <p>2. 点击下面的按钮依次执行各个步骤</p>
+            <p>3. 系统会自动获取你的真实 FileBay 配置并同步到 Vault 数据库</p>
+        </div>
+
+        <div class="step">
+            <h3>步骤 1: 检查 Vault Bridge 服务</h3>
+            <button onclick="checkVaultBridge()">检查服务状态</button>
+            <div id="vaultBridgeStatus"></div>
+        </div>
+
+        <div class="step">
+            <h3>步骤 2: 获取当前用户信息</h3>
+            <button onclick="getUserInfo()" id="getUserBtn">获取用户信息</button>
+            <div id="userInfo"></div>
+        </div>
+
+        <div class="step">
+            <h3>步骤 3: 获取 FileBay 配置</h3>
+            <button onclick="getFileBayConfig()" id="getConfigBtn" disabled>获取 FileBay 配置</button>
+            <div id="fileBayConfig"></div>
+        </div>
+
+        <div class="step">
+            <h3>步骤 4: 同步到 Vault 数据库</h3>
+            <button onclick="syncToVault()" id="syncBtn" disabled>同步到 Vault</button>
+            <div id="syncResult"></div>
+        </div>
+
+        <div class="step">
+            <h3>步骤 5: 验证配置已保存</h3>
+            <button onclick="verifyConfig()" id="verifyBtn" disabled>验证配置</button>
+            <div id="verifyResult"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let currentConfig = null;
+
+        async function checkVaultBridge() {
+            const statusDiv = document.getElementById('vaultBridgeStatus');
+            statusDiv.innerHTML = '<div class="loading"></div> 检查中...';
+            
+            try {
+                const response = await fetch('http://localhost:8765/health');
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    statusDiv.innerHTML = `
+                        <div class="result success">
+                            <span class="status ok">✓ 运行正常</span>
+                            <div class="config-item">
+                                <span class="config-label">服务:</span> ${data.service}
+                            </div>
+                            <div class="config-item">
+                                <span class="config-label">版本:</span> ${data.version}
+                            </div>
+                            <div class="config-item">
+                                <span class="config-label">数据库:</span> ${data.database}
+                            </div>
+                            <div class="config-item">
+                                <span class="config-label">数据库存在:</span> ${data.database_exists ? '是' : '否'}
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('getUserBtn').disabled = false;
+                } else {
+                    throw new Error('服务状态异常');
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `
+                    <div class="result error">
+                        <span class="status error">✗ 服务未运行</span>
+                        <p>错误: ${error.message}</p>
+                        <p>请确保 Vault Bridge 服务已启动：<code>.\\start_vault_bridge.ps1</code></p>
+                    </div>
+                `;
+            }
+        }
+
+        async function getUserInfo() {
+            const userDiv = document.getElementById('userInfo');
+            userDiv.innerHTML = '<div class="loading"></div> 获取中...';
+            
+            try {
+                const response = await fetch('http://localhost:5001/console/api/account/profile', {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('未登录或会话已过期');
+                }
+                
+                const user = await response.json();
+                currentUser = user;
+                
+                userDiv.innerHTML = `
+                    <div class="result success">
+                        <span class="status ok">✓ 获取成功</span>
+                        <div class="config-item">
+                            <span class="config-label">用户 ID:</span> ${user.id}
+                        </div>
+                        <div class="config-item">
+                            <span class="config-label">邮箱:</span> ${user.email}
+                        </div>
+                        <div class="config-item">
+                            <span class="config-label">姓名:</span> ${user.name}
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('getConfigBtn').disabled = false;
+            } catch (error) {
+                userDiv.innerHTML = `
+                    <div class="result error">
+                        <span class="status error">✗ 获取失败</span>
+                        <p>错误: ${error.message}</p>
+                        <p>请先登录到 Vault 系统：<a href="http://localhost:3000/signin" target="_blank">http://localhost:3000/signin</a></p>
+                    </div>
+                `;
+            }
+        }
+
+        async function getFileBayConfig() {
+            const configDiv = document.getElementById('fileBayConfig');
+            configDiv.innerHTML = '<div class="loading"></div> 获取中...';
+            
+            try {
+                const response = await fetch('http://localhost:5001/console/api/gitea/config/download', {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('获取配置失败');
+                }
+                
+                const config = await response.json();
+                currentConfig = config;
+                
+                configDiv.innerHTML = `
+                    <div class="result success">
+                        <span class="status ok">✓ 获取成功</span>
+                        <div class="config-item">
+                            <span class="config-label">URL:</span> ${config.gitea_url}
+                        </div>
+                        <div class="config-item">
+                            <span class="config-label">用户名:</span> ${config.gitea_owner}
+                        </div>
+                        <div class="config-item">
+                            <span class="config-label">仓库:</span> ${config.gitea_repo}
+                        </div>
+                        <div class="config-item">
+                            <span class="config-label">Token:</span> ${config.gitea_token.substring(0, 20)}...
+                        </div>
+                        <div class="config-item">
+                            <span class="config-label">完整配置:</span>
+                            <pre>${JSON.stringify(config, null, 2)}</pre>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('syncBtn').disabled = false;
+            } catch (error) {
+                configDiv.innerHTML = `
+                    <div class="result error">
+                        <span class="status error">✗ 获取失败</span>
+                        <p>错误: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function syncToVault() {
+            const syncDiv = document.getElementById('syncResult');
+            syncDiv.innerHTML = '<div class="loading"></div> 同步中...';
+            
+            try {
+                const payload = {
+                    user_id: currentUser.id,
+                    config: {
+                        url: currentConfig.gitea_url,
+                        username: currentConfig.gitea_owner,
+                        repoName: currentConfig.gitea_repo,
+                        email: currentUser.email,
+                        token: currentConfig.gitea_token
+                    }
+                };
+                
+                const response = await fetch('http://localhost:8765/vault/config/filebay', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('同步失败');
+                }
+                
+                const result = await response.json();
+                
+                syncDiv.innerHTML = `
+                    <div class="result success">
+                        <span class="status ok">✓ 同步成功</span>
+                        <div class="config-item">
+                            <span class="config-label">用户 ID:</span> ${result.user_id}
+                        </div>
+                        <div class="config-item">
+                            <span class="config-label">用户名:</span> ${result.username}
+                        </div>
+                        <div class="config-item">
+                            <span class="config-label">仓库:</span> ${result.repo_name}
+                        </div>
+                        <div class="config-item">
+                            <span class="config-label">消息:</span> ${result.message}
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('verifyBtn').disabled = false;
+            } catch (error) {
+                syncDiv.innerHTML = `
+                    <div class="result error">
+                        <span class="status error">✗ 同步失败</span>
+                        <p>错误: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function verifyConfig() {
+            const verifyDiv = document.getElementById('verifyResult');
+            verifyDiv.innerHTML = '<div class="loading"></div> 验证中...';
+            
+            try {
+                const response = await fetch(`http://localhost:8765/vault/config/filebay/${currentUser.id}`);
+                
+                if (!response.ok) {
+                    throw new Error('配置不存在');
+                }
+                
+                const config = await response.json();
+                
+                verifyDiv.innerHTML = `
+                    <div class="result success">
+                        <span class="status ok">✓ 验证成功 - 配置已保存到 Vault 数据库</span>
+                        <div class="config-item">
+                            <span class="config-label">URL:</span> ${config.url}
+                        </div>
+                        <div class="config-item">
+                            <span class="config-label">用户名:</span> ${config.username}
+                        </div>
+                        <div class="config-item">
+                            <span class="config-label">仓库:</span> ${config.repoName}
+                        </div>
+                        <div class="config-item">
+                            <span class="config-label">邮箱:</span> ${config.email}
+                        </div>
+                        <div class="config-item">
+                            <span class="config-label">Token:</span> ${config.token.substring(0, 20)}...
+                        </div>
+                        <div class="config-item">
+                            <span class="config-label">更新时间:</span> ${config.updatedAt}
+                        </div>
+                        <div class="config-item">
+                            <span class="config-label">完整配置:</span>
+                            <pre>${JSON.stringify(config, null, 2)}</pre>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                verifyDiv.innerHTML = `
+                    <div class="result error">
+                        <span class="status error">✗ 验证失败</span>
+                        <p>错误: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 页面加载时自动检查 Vault Bridge
+        window.onload = function() {
+            checkVaultBridge();
+        };
+    </script>
+</body>
+</html>
