@@ -3,6 +3,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 import Toast from '@/app/components/base/toast'
 import { exchangeSSOToken } from '@/service/sso'
+import { checkVaultBridgeHealth, notifyVaultBridge } from '@/service/vault-bridge'
 
 const getCookieValue = (name: string) => {
   const prefix = `${name}=`
@@ -64,6 +65,68 @@ export default function OAuthCallbackPage() {
     exchangeSSOToken({ code, state, redirectUri, codeVerifier })
       .then(async () => {
         clearDesktopSSOCache()
+        
+        // 尝试同步 FileBay 配置到 Vault Bridge
+        try {
+          // 检查 Vault Bridge 是否运行
+          const isVaultBridgeRunning = await checkVaultBridgeHealth()
+          
+          if (isVaultBridgeRunning) {
+            console.log('[Vault Bridge] Service is running, attempting to sync FileBay config')
+            
+            // 获取用户信息
+            const userResponse = await fetch('/console/api/account/profile', {
+              method: 'GET',
+              credentials: 'include',
+            })
+            
+            if (userResponse.ok) {
+              const userData = await userResponse.json()
+              const userId = userData.id
+              const userEmail = userData.email
+              
+              // 获取 FileBay 配置（使用下载专用端点，包含完整 token）
+              const configResponse = await fetch('/console/api/gitea/config/download', {
+                method: 'GET',
+                credentials: 'include',
+              })
+              
+              if (configResponse.ok) {
+                const config = await configResponse.json()
+                
+                // 检查配置是否完整
+                if (config.gitea_url && config.gitea_owner && config.gitea_repo && config.gitea_token) {
+                  // 通知 Vault Bridge
+                  const syncSuccess = await notifyVaultBridge(userId, {
+                    url: config.gitea_url,
+                    username: config.gitea_owner,
+                    repoName: config.gitea_repo,
+                    email: userEmail,
+                    token: config.gitea_token,
+                  })
+                  
+                  if (syncSuccess) {
+                    console.log('[Vault Bridge] FileBay config synced successfully')
+                  } else {
+                    console.warn('[Vault Bridge] Failed to sync FileBay config')
+                  }
+                } else {
+                  console.warn('[Vault Bridge] FileBay config is incomplete, skipping sync')
+                }
+              } else {
+                console.warn('[Vault Bridge] Failed to fetch FileBay config')
+              }
+            } else {
+              console.warn('[Vault Bridge] Failed to fetch user profile')
+            }
+          } else {
+            console.debug('[Vault Bridge] Service is not running, skipping config sync')
+          }
+        } catch (vaultError) {
+          // 不影响登录流程，只记录错误
+          console.error('[Vault Bridge] Error during config sync:', vaultError)
+        }
+        
         await new Promise<void>((resolve) => {
           const redirectTimer = window.setTimeout(() => {
             window.clearTimeout(redirectTimer)

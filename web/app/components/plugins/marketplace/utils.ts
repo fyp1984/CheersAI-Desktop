@@ -80,6 +80,7 @@ export const getMarketplacePluginsByCollectionId = async (
   }
   // eslint-disable-next-line unused-imports/no-unused-vars
   catch (e) {
+    // Silently handle marketplace API errors (e.g., when marketplace is not configured)
     plugins = []
   }
 

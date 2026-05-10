@@ -43,6 +43,7 @@ from . import (
     setup,
     spec,
     token_billing,
+    token_quota,
     version,
 )
 
@@ -221,6 +222,7 @@ __all__ = [
     "statistic",
     "tags",
     "token_billing",
+    "token_quota",
     "tool_providers",
     "trial",
     "trigger_providers",

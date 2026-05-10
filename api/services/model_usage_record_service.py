@@ -12,6 +12,7 @@ from core.model_runtime.entities.model_entities import ModelType
 from extensions.ext_database import db
 from models.account import Account
 from models.model_usage import ModelUsageRecord
+from services.token_quota_service import TokenQuotaService
 
 logger = logging.getLogger(__name__)
 
@@ -267,6 +268,28 @@ class ModelUsageRecordService:
             )
             db.session.add(record)
             db.session.commit()
+            
+            # 记录到配额系统
+            try:
+                TokenQuotaService.record_token_usage(
+                    tenant_id=tenant_id,
+                    model_provider=provider,
+                    model_name=model_instance.model,
+                    tokens_used=total_tokens,
+                    user_id=user_id,
+                    request_id=record.id,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    extra_info={
+                        "model_type": model_type,
+                        "is_cloud": cls._is_cloud_model(provider),
+                        "total_price": str(total_price),
+                        "currency": currency or "USD",
+                    },
+                )
+            except Exception:
+                logger.exception("Failed to record token usage to quota system")
+                
         except Exception:
             db.session.rollback()
             logger.exception("Failed to persist model usage record for %s/%s", provider, model_instance.model)

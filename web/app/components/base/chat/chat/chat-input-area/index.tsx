@@ -93,6 +93,8 @@ const ChatInputArea = ({
   const [showSensitiveConfirm, setShowSensitiveConfirm] = useState(false)
   const [skipSensitiveConfirm, setSkipSensitiveConfirm] = useState(false)
   const pendingSendRef = useRef(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [enableWebSearch, setEnableWebSearch] = useState(false)
 
   const handleQueryChange = useCallback(
     (value: string) => {
@@ -218,63 +220,118 @@ const ChatInputArea = ({
     <>
       <div
         className={cn(
-          'relative z-10 overflow-hidden rounded-xl border border-components-chat-input-border bg-components-panel-bg-blur pb-[9px] shadow-md',
+          'relative z-10 overflow-hidden rounded-xl border border-components-chat-input-border bg-components-panel-bg-blur shadow-md transition-all duration-300',
           isDragActive && 'border border-dashed border-components-option-card-option-selected-border',
           disabled && 'pointer-events-none border-components-panel-border opacity-50 shadow-none',
+          isCollapsed ? 'pb-0' : 'pb-[9px]',
         )}
       >
-        <div className="relative max-h-[158px] overflow-y-auto overflow-x-hidden px-[9px] pt-[9px]">
-          <FileListInChatInput fileConfig={visionConfig!} />
-          <div
-            ref={wrapperRef}
-            className="flex items-center justify-between"
-          >
-            <div className="relative flex w-full grow items-center">
-              <div
-                ref={textValueRef}
-                className="body-lg-regular pointer-events-none invisible absolute h-auto w-auto whitespace-pre p-1 leading-6"
+        {/* 收缩/展开控制栏 */}
+        <div className="flex items-center justify-between border-b border-components-panel-border px-3 py-2">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-background-section-burn hover:text-text-primary"
+              title={isCollapsed ? '展开输入框' : '收缩输入框'}
+            >
+              <svg
+                className={cn('h-4 w-4 transition-transform duration-300', isCollapsed && 'rotate-180')}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
               >
-                {query}
-              </div>
-              <Textarea
-                ref={ref => textareaRef.current = ref as any}
-                className={cn(
-                  'body-lg-regular w-full resize-none bg-transparent p-1 leading-6 text-text-primary outline-none',
-                )}
-                placeholder={decode(t(readonly ? 'chat.inputDisabledPlaceholder' : 'chat.inputPlaceholder', { ns: 'common', botName }) || '')}
-                autoFocus
-                minRows={1}
-                value={query}
-                onChange={e => handleQueryChange(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onCompositionStart={handleCompositionStart}
-                onCompositionEnd={handleCompositionEnd}
-                onPaste={handleClipboardPasteFile}
-                onDragEnter={handleDragFileEnter}
-                onDragLeave={handleDragFileLeave}
-                onDragOver={handleDragFileOver}
-                onDrop={handleDropFile}
-                readOnly={readonly}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+              <span>{isCollapsed ? '展开' : '收缩'}</span>
+            </button>
+            
+            {/* 联网搜索开关 */}
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-background-section-burn">
+              <input
+                type="checkbox"
+                checked={enableWebSearch}
+                onChange={(e) => setEnableWebSearch(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-2 focus:ring-primary-500"
               />
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+              </svg>
+              <span>联网搜索</span>
+            </label>
+          </div>
+          
+          {enableWebSearch && (
+            <div className="flex items-center gap-1 rounded-md bg-primary-50 px-2 py-1 text-xs text-primary-600">
+              <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              <span>已启用</span>
+            </div>
+          )}
+        </div>
+
+        {/* 输入区域 - 可收缩 */}
+        <div
+          className={cn(
+            'transition-all duration-300 overflow-hidden',
+            isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[158px] opacity-100',
+          )}
+        >
+          <div className="relative overflow-y-auto overflow-x-hidden px-[9px] pt-[9px]">
+            <FileListInChatInput fileConfig={visionConfig!} />
+            <div
+              ref={wrapperRef}
+              className="flex items-center justify-between"
+            >
+              <div className="relative flex w-full grow items-center">
+                <div
+                  ref={textValueRef}
+                  className="body-lg-regular pointer-events-none invisible absolute h-auto w-auto whitespace-pre p-1 leading-6"
+                >
+                  {query}
+                </div>
+                <Textarea
+                  ref={ref => textareaRef.current = ref as any}
+                  className={cn(
+                    'body-lg-regular w-full resize-none bg-transparent p-1 leading-6 text-text-primary outline-none',
+                  )}
+                  placeholder={decode(t(readonly ? 'chat.inputDisabledPlaceholder' : 'chat.inputPlaceholder', { ns: 'common', botName }) || '')}
+                  autoFocus
+                  minRows={1}
+                  value={query}
+                  onChange={e => handleQueryChange(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onCompositionStart={handleCompositionStart}
+                  onCompositionEnd={handleCompositionEnd}
+                  onPaste={handleClipboardPasteFile}
+                  onDragEnter={handleDragFileEnter}
+                  onDragLeave={handleDragFileLeave}
+                  onDragOver={handleDragFileOver}
+                  onDrop={handleDropFile}
+                  readOnly={readonly}
+                />
+              </div>
+              {
+                !isMultipleLine && operation
+              }
             </div>
             {
-              !isMultipleLine && operation
+              showVoiceInput && (
+                <VoiceInput
+                  onCancel={() => setShowVoiceInput(false)}
+                  onConverted={text => handleQueryChange(text)}
+                />
+              )
             }
           </div>
           {
-            showVoiceInput && (
-              <VoiceInput
-                onCancel={() => setShowVoiceInput(false)}
-                onConverted={text => handleQueryChange(text)}
-              />
+            isMultipleLine && (
+              <div className="px-[9px]">{operation}</div>
             )
           }
         </div>
-        {
-          isMultipleLine && (
-            <div className="px-[9px]">{operation}</div>
-          )
-        }
       </div>
       {showFeatureBar && (
         <FeatureBar

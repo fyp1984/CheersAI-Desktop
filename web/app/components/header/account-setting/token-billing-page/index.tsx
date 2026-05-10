@@ -9,6 +9,7 @@ import Badge from '@/app/components/base/badge'
 import { useAppContext } from '@/context/app-context'
 import { useTokenBillingUsage } from '@/service/use-common'
 import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
+import QuotaStatusCard from './quota-status-card'
 
 const cardClassName = 'rounded-2xl border border-divider-regular bg-components-panel-bg p-4 shadow-xs'
 
@@ -166,6 +167,9 @@ const TokenBillingPage: FC = () => {
         </div>
       </div>
 
+      {/* Token 配额状态卡片 */}
+      <QuotaStatusCard />
+
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         {cards.map(card => (
           <StatCard key={card.title} title={card.title} value={card.value} helper={card.helper} icon={card.icon} />
@@ -173,103 +177,103 @@ const TokenBillingPage: FC = () => {
       </div>
 
       {scope === 'workspace' && leaderboard.length > 0 && (
-        <div className="overflow-hidden rounded-3xl border border-divider-regular bg-components-panel-bg">
-          <div className="border-b border-divider-regular px-4 py-4">
-            <div className="system-md-semibold text-text-primary">{t('tokenBilling.leaderboard.title', { ns: 'common' })}</div>
-            <div className="system-sm-regular mt-1 text-text-tertiary">{t('tokenBilling.leaderboard.subtitle', { ns: 'common' })}</div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-divider-regular">
-              <thead className="bg-background-section-burn">
-                <tr className="text-left system-xs-medium-uppercase text-text-tertiary">
-                  <th className="px-4 py-3">{t('tokenBilling.leaderboard.user', { ns: 'common' })}</th>
-                  <th className="px-4 py-3">{t('tokenBilling.leaderboard.calls', { ns: 'common' })}</th>
-                  <th className="px-4 py-3">{t('tokenBilling.columns.tokens', { ns: 'common' })}</th>
-                  <th className="px-4 py-3">{t('tokenBilling.columns.cost', { ns: 'common' })}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-divider-regular">
-                {leaderboard.map(item => (
-                  <tr key={item.user_id || item.email || 'unknown'} className="system-sm-regular text-text-secondary">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-text-primary">{getDisplayName(item)}</div>
-                      {item.email && <div className="mt-1 text-text-tertiary">{item.email}</div>}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3">{formatInteger(item.record_count)}</td>
-                    <td className="whitespace-nowrap px-4 py-3">{formatInteger(item.total_tokens)}</td>
-                    <td className="whitespace-nowrap px-4 py-3">{formatMoney(item.total_cost, summary?.currency || 'USD')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+            <div className="overflow-hidden rounded-3xl border border-divider-regular bg-components-panel-bg">
+              <div className="border-b border-divider-regular px-4 py-4">
+                <div className="system-md-semibold text-text-primary">{t('tokenBilling.leaderboard.title', { ns: 'common' })}</div>
+                <div className="system-sm-regular mt-1 text-text-tertiary">{t('tokenBilling.leaderboard.subtitle', { ns: 'common' })}</div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-divider-regular">
+                  <thead className="bg-background-section-burn">
+                    <tr className="text-left system-xs-medium-uppercase text-text-tertiary">
+                      <th className="px-4 py-3">{t('tokenBilling.leaderboard.user', { ns: 'common' })}</th>
+                      <th className="px-4 py-3">{t('tokenBilling.leaderboard.calls', { ns: 'common' })}</th>
+                      <th className="px-4 py-3">{t('tokenBilling.columns.tokens', { ns: 'common' })}</th>
+                      <th className="px-4 py-3">{t('tokenBilling.columns.cost', { ns: 'common' })}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-divider-regular">
+                    {leaderboard.map(item => (
+                      <tr key={item.user_id || item.email || 'unknown'} className="system-sm-regular text-text-secondary">
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-text-primary">{getDisplayName(item)}</div>
+                          {item.email && <div className="mt-1 text-text-tertiary">{item.email}</div>}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3">{formatInteger(item.record_count)}</td>
+                        <td className="whitespace-nowrap px-4 py-3">{formatInteger(item.total_tokens)}</td>
+                        <td className="whitespace-nowrap px-4 py-3">{formatMoney(item.total_cost, summary?.currency || 'USD')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
         </div>
       )}
 
       <div className="overflow-hidden rounded-3xl border border-divider-regular bg-components-panel-bg">
-        <div className="flex items-center justify-between border-b border-divider-regular px-4 py-4">
-          <div>
-            <div className="system-md-semibold text-text-primary">{t('tokenBilling.recent.title', { ns: 'common' })}</div>
-            <div className="system-sm-regular mt-1 text-text-tertiary">
-              {t('tokenBilling.recent.subtitle', { ns: 'common', count: records.length })}
+            <div className="flex items-center justify-between border-b border-divider-regular px-4 py-4">
+              <div>
+                <div className="system-md-semibold text-text-primary">{t('tokenBilling.recent.title', { ns: 'common' })}</div>
+                <div className="system-sm-regular mt-1 text-text-tertiary">
+                  {t('tokenBilling.recent.subtitle', { ns: 'common', count: records.length })}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {records.length === 0 && (
-          <div className="px-4 py-10 text-center">
-            <div className="system-md-semibold text-text-primary">{t('tokenBilling.empty.recordsTitle', { ns: 'common' })}</div>
-            <div className="system-sm-regular mt-2 text-text-tertiary">{t('tokenBilling.empty.recordsDescription', { ns: 'common' })}</div>
-          </div>
-        )}
+            {records.length === 0 && (
+              <div className="px-4 py-10 text-center">
+                <div className="system-md-semibold text-text-primary">{t('tokenBilling.empty.recordsTitle', { ns: 'common' })}</div>
+                <div className="system-sm-regular mt-2 text-text-tertiary">{t('tokenBilling.empty.recordsDescription', { ns: 'common' })}</div>
+              </div>
+            )}
 
-        {records.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-divider-regular">
-              <thead className="bg-background-section-burn">
-                <tr className="text-left system-xs-medium-uppercase text-text-tertiary">
-                  <th className="px-4 py-3">{t('tokenBilling.columns.time', { ns: 'common' })}</th>
-                  <th className="px-4 py-3">{t('tokenBilling.columns.model', { ns: 'common' })}</th>
-                  <th className="px-4 py-3">{t('tokenBilling.columns.source', { ns: 'common' })}</th>
-                  <th className="px-4 py-3">{t('tokenBilling.columns.tokens', { ns: 'common' })}</th>
-                  <th className="px-4 py-3">{t('tokenBilling.columns.cost', { ns: 'common' })}</th>
-                  <th className="px-4 py-3">{t('tokenBilling.columns.latency', { ns: 'common' })}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-divider-regular">
-                {records.map(record => (
-                  <tr key={record.id} className="system-sm-regular text-text-secondary">
-                    <td className="whitespace-nowrap px-4 py-3">
-                      {record.created_at ? dayjs(record.created_at).format('YYYY-MM-DD HH:mm:ss') : '-'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-text-primary">{record.model_name}</div>
-                      <div className="mt-1 flex items-center gap-2 text-text-tertiary">
-                        <span>{record.provider}</span>
-                        <Badge>{record.model_type}</Badge>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {record.invocation_source || (record.is_cloud
-                        ? t('tokenBilling.sources.cloud', { ns: 'common' })
-                        : t('tokenBilling.sources.local', { ns: 'common' }))}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-text-primary">{formatInteger(record.total_tokens)}</div>
-                      <div className="mt-1 text-text-tertiary">
-                        {t('tokenBilling.tokenBreakdown', {
-                          ns: 'common',
-                          input: formatInteger(record.input_tokens),
-                          output: formatInteger(record.output_tokens),
-                        })}
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3">{formatMoney(record.total_price, record.currency)}</td>
-                    <td className="whitespace-nowrap px-4 py-3">{formatLatency(record.latency)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {records.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-divider-regular">
+                  <thead className="bg-background-section-burn">
+                    <tr className="text-left system-xs-medium-uppercase text-text-tertiary">
+                      <th className="px-4 py-3">{t('tokenBilling.columns.time', { ns: 'common' })}</th>
+                      <th className="px-4 py-3">{t('tokenBilling.columns.model', { ns: 'common' })}</th>
+                      <th className="px-4 py-3">{t('tokenBilling.columns.source', { ns: 'common' })}</th>
+                      <th className="px-4 py-3">{t('tokenBilling.columns.tokens', { ns: 'common' })}</th>
+                      <th className="px-4 py-3">{t('tokenBilling.columns.cost', { ns: 'common' })}</th>
+                      <th className="px-4 py-3">{t('tokenBilling.columns.latency', { ns: 'common' })}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-divider-regular">
+                    {records.map(record => (
+                      <tr key={record.id} className="system-sm-regular text-text-secondary">
+                        <td className="whitespace-nowrap px-4 py-3">
+                          {record.created_at ? dayjs(record.created_at).format('YYYY-MM-DD HH:mm:ss') : '-'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-text-primary">{record.model_name}</div>
+                          <div className="mt-1 flex items-center gap-2 text-text-tertiary">
+                            <span>{record.provider}</span>
+                            <Badge>{record.model_type}</Badge>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          {record.invocation_source || (record.is_cloud
+                            ? t('tokenBilling.sources.cloud', { ns: 'common' })
+                            : t('tokenBilling.sources.local', { ns: 'common' }))}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-text-primary">{formatInteger(record.total_tokens)}</div>
+                          <div className="mt-1 text-text-tertiary">
+                            {t('tokenBilling.tokenBreakdown', {
+                              ns: 'common',
+                              input: formatInteger(record.input_tokens),
+                              output: formatInteger(record.output_tokens),
+                            })}
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3">{formatMoney(record.total_price, record.currency)}</td>
+                        <td className="whitespace-nowrap px-4 py-3">{formatLatency(record.latency)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
           </div>
         )}
       </div>
