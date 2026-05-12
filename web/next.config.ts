@@ -59,20 +59,24 @@ const nextConfig: NextConfig = {
     })),
   },
   reactStrictMode: true,
+  async rewrites() {
+    return [
+      {
+        source: '/console/api/:path*/',
+        destination: 'http://localhost:9000/console/api/:path*',
+      },
+      {
+        source: '/console/api/:path*',
+        destination: 'http://localhost:9000/console/api/:path*',
+      },
+    ]
+  },
   async redirects() {
     return [
       {
         source: '/',
         destination: '/signin',
         permanent: false,
-      },
-    ]
-  },
-  async rewrites() {
-    return [
-      {
-        source: '/console/api/:path*',
-        destination: 'http://localhost:9000/console/api/:path*',
       },
     ]
   },

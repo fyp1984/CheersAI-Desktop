@@ -514,3 +514,99 @@ class FileBayUploadFileApi(Resource):
         except Exception as e:
             logger.error(f'[FileBay API] Failed to upload file: {str(e)}', exc_info=True)
             return {'error': f'Failed to upload file: {str(e)}'}, 500
+
+
+@console_ns.route('/filebay/sync-reply')
+class FileBaySyncReplyApi(Resource):
+    """FileBay sync reply API - uploads AI reply content to FileBay."""
+
+    @setup_required
+    @login_required
+    def post(self):
+        """
+        Sync AI reply content to FileBay repository.
+        
+        Request body:
+            file_name: Name of the file to create
+            content: Content to upload
+            
+        Returns:
+            Success status and file information
+        """
+        data = request.get_json()
+        file_name = data.get('file_name', '').strip()
+        content = data.get('content', '')
+        
+        if not file_name:
+            return {'success': False, 'message': 'file_name is required'}, 400
+        
+        if not content:
+            return {'success': False, 'message': 'content is required'}, 400
+        
+        try:
+            # Get user FileBay config
+            user_config = _get_user_filebay_config()
+            
+            filebay_url = user_config.get('gitea_url', '').rstrip('/')
+            filebay_token = user_config.get('gitea_token', '')
+            filebay_owner = user_config.get('gitea_owner', '')
+            filebay_repo = user_config.get('gitea_repo', '')
+            filebay_branch = user_config.get('gitea_branch', 'main')
+            
+            if not all([filebay_url, filebay_token, filebay_owner, filebay_repo]):
+                logger.error('[FileBay API] Missing required FileBay credentials')
+                return {'success': False, 'message': 'FileBay 未配置，请先在设置中配置 FileBay'}, 400
+            
+            logger.info('[FileBay API] Syncing reply to FileBay: %s', file_name)
+            
+            # Create client
+            client = NoSNIHTTPSClient(filebay_url, filebay_token)
+            
+            # Build remote path (save to ai-replies directory)
+            remote_path = f"ai-replies/{file_name}"
+            
+            # Check if file exists first
+            api_path = f"/api/v1/repos/{filebay_owner}/{filebay_repo}/contents/{remote_path}"
+            params = f"?ref={filebay_branch}"
+            
+            status_code, response = client.get(api_path + params)
+            
+            # Encode content to base64
+            content_base64 = base64.b64encode(content.encode('utf-8')).decode('utf-8')
+            
+            # Prepare request body
+            body = {
+                "branch": filebay_branch,
+                "content": content_base64,
+                "message": f"Update AI reply: {file_name}"
+            }
+            
+            # If file exists, include SHA for update
+            if status_code == 200 and isinstance(response, dict):
+                file_sha = response.get('sha', '')
+                if file_sha:
+                    body["sha"] = file_sha
+                    logger.info('[FileBay API] File exists, updating with SHA: %s', file_sha)
+            else:
+                body["message"] = f"Add AI reply: {file_name}"
+                logger.info('[FileBay API] File does not exist, creating new file')
+            
+            # Upload/update file
+            status_code, response = client._make_request("PUT", api_path, body)
+            
+            if status_code in [200, 201]:
+                logger.info('[FileBay API] Successfully synced reply to FileBay: %s', file_name)
+                return {
+                    'success': True,
+                    'message': f'已同步到 FileBay: {remote_path}',
+                    'file_path': remote_path,
+                    'url': f"{filebay_url}/{filebay_owner}/{filebay_repo}/src/branch/{filebay_branch}/{remote_path}"
+                }
+            else:
+                error_msg = response.get('message', 'Unknown error') if isinstance(response, dict) else 'Unknown error'
+                logger.error('[FileBay API] Error syncing reply (HTTP %s): %s', status_code, error_msg)
+                return {'success': False, 'message': f'同步失败: {error_msg}'}, 500
+                
+        except Exception as e:
+            logger.error(f'[FileBay API] Failed to sync reply: {str(e)}', exc_info=True)
+            return {'success': False, 'message': f'同步失败: {str(e)}'}, 500
