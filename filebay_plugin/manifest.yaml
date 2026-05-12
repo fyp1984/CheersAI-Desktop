@@ -1,0 +1,30 @@
+version: 0.0.1
+type: plugin
+author: cheersai
+name: filebay-sync
+label:
+  en_US: FileBay Sync
+  zh_Hans: FileBay Sync
+description:
+  en_US: Read files from FileBay and sync generated files back to FileBay repository
+  zh_Hans: Read and write files to FileBay repository
+icon: icon.svg
+created_at: 2026-05-10
+resource:
+  memory: 256
+plugins:
+  tools:
+    - provider/filebay.yaml
+permissions:
+  - tool.provider
+  - storage.write
+  - storage.read
+meta:
+  version: 0.0.1
+  arch:
+    - amd64
+    - arm64
+  runner:
+    language: python
+    version: "3.12"
+    entrypoint: main

@@ -741,7 +741,7 @@ services:
       dockerfile: Dockerfile.local
     restart: always
     ports:
-      - "5001:5001"
+      - "15001:5001"
     environment:
       # Use the shared environment variables.
       <<: *shared-api-worker-env

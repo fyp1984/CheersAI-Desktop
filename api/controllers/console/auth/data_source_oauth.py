@@ -10,7 +10,6 @@ from controllers.common.schema import register_schema_models
 from controllers.console.workspace import require_data_source_manage_capability
 from libs.login import login_required
 from libs.oauth_data_source import NotionOAuth
-from controllers.console.workspace import require_data_source_manage_capability
 
 from .. import console_ns
 from ..wraps import account_initialization_required, setup_required

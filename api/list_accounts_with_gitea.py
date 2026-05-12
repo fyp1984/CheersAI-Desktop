@@ -2,9 +2,10 @@
 查询所有账号及其 Gitea 配置信息
 """
 import json
+
+from app import create_app
 from extensions.ext_database import db
 from models.account import Account
-from app import create_app
 
 app = create_app()
 
@@ -12,9 +13,9 @@ with app.app_context():
     # 查询所有账号
     accounts = db.session.query(Account).order_by(Account.created_at.desc()).all()
     
-    print(f'\n{"="*80}')
+    print(f'\n{"=" * 80}')
     print(f'系统账号列表（共 {len(accounts)} 个账号）')
-    print(f'{"="*80}\n')
+    print(f'{"=" * 80}\n')
     
     for idx, account in enumerate(accounts, 1):
         print(f'【账号 {idx}】')
@@ -36,7 +37,7 @@ with app.app_context():
             
             # 检查是否有 Gitea 配置
             if config.get('gitea_url'):
-                print(f'\n  ✅ Gitea 配置:')
+                print('\n  ✅ Gitea 配置:')
                 print(f'    - URL: {config.get("gitea_url")}')
                 print(f'    - Owner: {config.get("gitea_owner")}')
                 print(f'    - Repo: {config.get("gitea_repo")}')
@@ -46,20 +47,20 @@ with app.app_context():
                     masked = token[:4] + '****' + token[-4:] if len(token) > 8 else '****'
                     print(f'    - Token: {masked} (长度: {len(token)})')
                 else:
-                    print(f'    - Token: 未设置')
+                    print('    - Token: 未设置')
             else:
-                print(f'\n  ❌ 无 Gitea 配置')
+                print('\n  ❌ 无 Gitea 配置')
                 if config:
                     print(f'  custom_config 内容: {json.dumps(config, ensure_ascii=False)}')
         else:
-            print(f'\n  ❌ custom_config 为空')
+            print('\n  ❌ custom_config 为空')
         
-        print(f'\n{"-"*80}\n')
+        print(f'\n{"-" * 80}\n')
     
     # 统计信息
-    print(f'\n{"="*80}')
-    print(f'统计信息')
-    print(f'{"="*80}')
+    print(f'\n{"=" * 80}')
+    print('统计信息')
+    print(f'{"=" * 80}')
     
     total = len(accounts)
     with_password = sum(1 for a in accounts if a.password)
@@ -70,4 +71,4 @@ with app.app_context():
     print(f'  已设置密码: {with_password}')
     print(f'  已配置 Gitea: {with_gitea}')
     print(f'  活跃账号: {active}')
-    print(f'{"="*80}\n')
+    print(f'{"=" * 80}\n')

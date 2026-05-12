@@ -2214,6 +2214,7 @@ class TenantCreditPool(TypeBase):
     def has_sufficient_credits(self, required_credits: int) -> bool:
         return self.remaining_credits >= required_credits
 
+
 class AppLifecycleEvent(Base):
     __tablename__ = "app_lifecycle_events"
     __table_args__ = (
@@ -2229,7 +2230,7 @@ class AppLifecycleEvent(Base):
     to_status: Mapped[str] = mapped_column(String(32), nullable=True)
     action: Mapped[str] = mapped_column(String(32), nullable=False)
     reason = mapped_column(LongText, nullable=True)
-    validation_result = mapped_column(sa.Text, nullable=True) # json
+    validation_result = mapped_column(sa.Text, nullable=True)  # json
     draft_version: Mapped[str] = mapped_column(String(64), nullable=True)
     published_version: Mapped[str] = mapped_column(String(64), nullable=True)
     operator_id = mapped_column(StringUUID, nullable=True)

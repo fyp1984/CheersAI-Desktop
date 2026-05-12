@@ -44,7 +44,6 @@ from libs.token import (
     set_refresh_token_to_cookie,
 )
 from services.account_service import AccountService, RegisterService, TenantService
-from services.audit_service import log_operation
 from services.billing_service import BillingService
 from services.errors.account import AccountRegisterError
 from services.errors.workspace import WorkSpaceNotAllowedCreateError, WorkspacesLimitExceededError

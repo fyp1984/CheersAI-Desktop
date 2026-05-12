@@ -8,8 +8,8 @@ API_ROOT = Path(__file__).resolve().parents[3]
 if str(API_ROOT) not in sys.path:
     sys.path.insert(0, str(API_ROOT))
 
+
 import psycopg2
-import json
 
 conn = psycopg2.connect(
     host="127.0.0.1",
@@ -42,7 +42,7 @@ cur.execute("""
 
 rows = cur.fetchall()
 if rows:
-    print(f"\nFound dify_extractor installation:")
+    print("\nFound dify_extractor installation:")
     print(rows[0])
 else:
     print("\nNo dify_extractor installations found")

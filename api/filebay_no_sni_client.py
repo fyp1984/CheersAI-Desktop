@@ -5,12 +5,12 @@ FileBay 客户端 - 禁用 SNI 解决 SSL 问题
 根本原因: UAT FileBay 服务器的 SNI 配置有问题
 解决方案: 使用原始 socket + SSL，不传递 server_hostname
 """
-import ssl
-import socket
-import json
 import base64
-from urllib.parse import urlparse, urlencode
-from typing import Optional, Dict, Any
+import json
+import socket
+import ssl
+from typing import Any, Optional
+from urllib.parse import urlencode, urlparse
 
 
 class NoSNIHTTPSClient:
@@ -57,9 +57,9 @@ class NoSNIHTTPSClient:
         self,
         method: str,
         path: str,
-        headers: Optional[Dict[str, str]] = None,
+        headers: Optional[dict[str, str]] = None,
         body: Optional[str] = None
-    ) -> tuple[int, Dict[str, str], bytes]:
+    ) -> tuple[int, dict[str, str], bytes]:
         """发送 HTTP 请求"""
         ssl_sock = self._create_ssl_socket()
         
@@ -127,7 +127,7 @@ class NoSNIHTTPSClient:
         finally:
             ssl_sock.close()
     
-    def get(self, path: str, params: Optional[Dict[str, Any]] = None) -> tuple[int, Any]:
+    def get(self, path: str, params: Optional[dict[str, Any]] = None) -> tuple[int, Any]:
         """发送 GET 请求"""
         if params:
             query_string = urlencode(params)
@@ -146,8 +146,8 @@ class NoSNIHTTPSClient:
     def post(
         self,
         path: str,
-        data: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None
+        data: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, str]] = None
     ) -> tuple[int, Any]:
         """发送 POST 请求"""
         body = json.dumps(data) if data else None
@@ -171,6 +171,7 @@ class NoSNIHTTPSClient:
 def test_no_sni_client():
     """测试 NoSNI 客户端"""
     import os
+
     from dotenv import load_dotenv
     
     load_dotenv()

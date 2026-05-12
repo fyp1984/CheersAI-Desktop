@@ -4,7 +4,6 @@ Token 配额系统测试脚本
 """
 
 import logging
-from datetime import datetime
 
 import click
 from flask import current_app
@@ -72,7 +71,7 @@ def test_token_quota():
             logger.info(f"   云端模型: {len(quota_config.cloud_models)} 个")
             logger.info(f"   本地模型: {len(quota_config.local_models)} 个")
         except Exception as e:
-            logger.error(f"❌ 创建配额配置失败: {e}")
+            logger.error("❌ 创建配额配置失败: %s", e)
             return
 
         logger.info("")
@@ -84,12 +83,12 @@ def test_token_quota():
             quota_check = TokenQuotaService.check_quota(
                 tenant_id=tenant.id, user_id=None, tokens_to_use=1000
             )
-            logger.info(f"✅ 配额检查成功")
+            logger.info("✅ 配额检查成功")
             logger.info(f"   是否在配额内: {quota_check['within_quota']}")
             logger.info(f"   剩余 Token: {quota_check['remaining_tokens']:,}")
             logger.info(f"   是否应使用本地模型: {quota_check['should_use_local']}")
         except Exception as e:
-            logger.error(f"❌ 检查配额失败: {e}")
+            logger.error("❌ 检查配额失败: %s", e)
             return
 
         logger.info("")
@@ -108,15 +107,15 @@ def test_token_quota():
                     tokens_used=1000,
                     input_tokens=700,
                     output_tokens=300,
-                    request_id=f"test_request_{i+1}",
+                    request_id=f"test_request_{i + 1}",
                 )
                 logger.info(
-                    f"   记录 #{i+1}: 使用 1,000 tokens, "
+                    f"   记录 #{i + 1}: 使用 1,000 tokens, "
                     f"累计: {quota_log.tokens_after:,}/{quota_log.quota_limit:,}"
                 )
-            logger.info(f"✅ Token 使用记录成功")
+            logger.info("✅ Token 使用记录成功")
         except Exception as e:
-            logger.error(f"❌ 记录 Token 使用失败: {e}")
+            logger.error("❌ 记录 Token 使用失败: %s", e)
             return
 
         logger.info("")
@@ -128,12 +127,12 @@ def test_token_quota():
             quota_check = TokenQuotaService.check_quota(
                 tenant_id=tenant.id, user_id=None, tokens_to_use=1000
             )
-            logger.info(f"✅ 配额检查成功")
+            logger.info("✅ 配额检查成功")
             logger.info(f"   是否在配额内: {quota_check['within_quota']}")
             logger.info(f"   剩余 Token: {quota_check['remaining_tokens']:,}")
             logger.info(f"   是否应使用本地模型: {quota_check['should_use_local']}")
         except Exception as e:
-            logger.error(f"❌ 检查配额失败: {e}")
+            logger.error("❌ 检查配额失败: %s", e)
             return
 
         logger.info("")
@@ -160,9 +159,9 @@ def test_token_quota():
             logger.info(f"   累计: {quota_log.tokens_after:,}/{quota_log.quota_limit:,}")
             logger.info(f"   是否在配额内: {quota_log.is_within_quota}")
             logger.info(f"   是否切换到本地: {quota_log.switched_to_local}")
-            logger.info(f"✅ 超额使用测试成功")
+            logger.info("✅ 超额使用测试成功")
         except Exception as e:
-            logger.error(f"❌ 超额使用测试失败: {e}")
+            logger.error("❌ 超额使用测试失败: %s", e)
             return
 
         logger.info("")
@@ -174,14 +173,14 @@ def test_token_quota():
             quota_check = TokenQuotaService.check_quota(
                 tenant_id=tenant.id, user_id=None, tokens_to_use=1000
             )
-            logger.info(f"✅ 配额检查成功")
+            logger.info("✅ 配额检查成功")
             logger.info(f"   是否在配额内: {quota_check['within_quota']}")
             logger.info(f"   剩余 Token: {quota_check['remaining_tokens']:,}")
             logger.info(f"   是否应使用本地模型: {quota_check['should_use_local']}")
             if quota_check["should_use_local"]:
-                logger.info(f"   ⚠️  配额已用完，应切换到本地模型")
+                logger.info("   ⚠️  配额已用完，应切换到本地模型")
         except Exception as e:
-            logger.error(f"❌ 检查配额失败: {e}")
+            logger.error("❌ 检查配额失败: %s", e)
             return
 
         logger.info("")
@@ -193,16 +192,16 @@ def test_token_quota():
             statistics = TokenQuotaService.get_quota_statistics(
                 tenant_id=tenant.id, user_id=None
             )
-            logger.info(f"✅ 统计信息获取成功")
+            logger.info("✅ 统计信息获取成功")
             logger.info(f"   总 Token 数: {statistics['total_tokens']:,}")
             logger.info(f"   总请求数: {statistics['total_requests']:,}")
             logger.info(f"   总时间段数: {statistics['total_periods']}")
             logger.info(f"   超额时间段数: {statistics['exceeded_periods']}")
-            logger.info(f"   模型统计:")
+            logger.info("   模型统计:")
             for model_key, stats in statistics["model_statistics"].items():
                 logger.info(f"     - {model_key}: {stats['tokens']:,} tokens, {stats['requests']} 请求")
         except Exception as e:
-            logger.error(f"❌ 获取统计信息失败: {e}")
+            logger.error("❌ 获取统计信息失败: %s", e)
             return
 
         logger.info("")
@@ -213,7 +212,7 @@ def test_token_quota():
         try:
             success = TokenQuotaService.reset_quota(tenant_id=tenant.id, user_id=None)
             if success:
-                logger.info(f"✅ 配额重置成功")
+                logger.info("✅ 配额重置成功")
 
                 # 验证重置后的状态
                 quota_check = TokenQuotaService.check_quota(
@@ -222,9 +221,9 @@ def test_token_quota():
                 logger.info(f"   重置后剩余 Token: {quota_check['remaining_tokens']:,}")
                 logger.info(f"   是否应使用本地模型: {quota_check['should_use_local']}")
             else:
-                logger.error(f"❌ 配额重置失败")
+                logger.error("❌ 配额重置失败")
         except Exception as e:
-            logger.error(f"❌ 重置配额失败: {e}")
+            logger.error("❌ 重置配额失败: %s", e)
             return
 
         logger.info("")
@@ -246,9 +245,9 @@ def test_token_quota():
                 TokenQuotaConfig.id == quota_config.id
             ).delete()
             db.session.commit()
-            logger.info(f"✅ 测试数据清理成功")
+            logger.info("✅ 测试数据清理成功")
         except Exception as e:
-            logger.error(f"❌ 清理测试数据失败: {e}")
+            logger.error("❌ 清理测试数据失败: %s", e)
             db.session.rollback()
 
         logger.info("")

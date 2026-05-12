@@ -1,7 +1,7 @@
 from typing import Any
 
-from libs.desktop_auth import get_account_sso_tags
 from extensions.ext_database import db
+from libs.desktop_auth import get_account_sso_tags
 from models import App
 from services.tag_service import TagService
 

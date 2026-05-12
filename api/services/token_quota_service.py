@@ -7,10 +7,9 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import and_, func, or_
+from sqlalchemy import or_
 
 from extensions.ext_database import db
-from models.account import Account
 from models.token_quota import (
     QuotaIntervalType,
     QuotaStatus,
@@ -138,7 +137,7 @@ class TokenQuotaService:
         quota_config.updated_by = updated_by
         db.session.commit()
 
-        logger.info(f"Updated token quota config: {config_id}")
+        logger.info("Updated token quota config: %s", config_id)
 
         return quota_config
 
@@ -525,6 +524,6 @@ class TokenQuotaService:
 
         db.session.commit()
 
-        logger.info(f"Reset token quota for tenant: {tenant_id}, user: {user_id}")
+        logger.info("Reset token quota for tenant: %s, user: %s", tenant_id, user_id)
 
         return True

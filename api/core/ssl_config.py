@@ -23,7 +23,7 @@ def configure_ssl_backend():
         )
         return False
     except Exception as e:
-        logger.error(f"Failed to inject pyOpenSSL: {e}")
+        logger.error("Failed to inject pyOpenSSL: %s", e)
         return False
 
 

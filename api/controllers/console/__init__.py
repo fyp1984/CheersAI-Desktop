@@ -131,6 +131,9 @@ from .explore import (
     trial,
 )
 
+# Import filebay API controllers
+from .filebay_api import filebay_files
+
 # Import gitea API controllers
 from .gitea_api import gitea_config, gitea_files
 
@@ -188,6 +191,7 @@ __all__ = [
     "extension",
     "external",
     "feature",
+    "filebay_files",
     "forgot_password",
     "generator",
     "hit_testing",

@@ -13,7 +13,9 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 # 加载环境变量
 from dotenv import load_dotenv
+
 load_dotenv()
+
 
 def test_web_search():
     """测试联网搜索功能"""

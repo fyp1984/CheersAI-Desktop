@@ -31,8 +31,8 @@ from libs.helper import uuid_value
 from models.model import AppMode
 from services.app_generate_service import AppGenerateService
 from services.app_task_service import AppTaskService
-from services.errors.llm import InvokeRateLimitError
 from services.audit_service import log_operation
+from services.errors.llm import InvokeRateLimitError
 
 logger = logging.getLogger(__name__)
 

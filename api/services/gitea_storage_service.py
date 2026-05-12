@@ -1,11 +1,9 @@
 """Gitea storage service for file retrieval - 使用 NoSNI 客户端解决 SSL 问题"""
-import os
-import ssl
-import socket
 import json
-import base64
-from urllib.parse import urlencode
-from typing import Optional, Dict, Any
+import os
+import socket
+import ssl
+from typing import Optional
 
 
 class NoSNIHTTPSClient:
@@ -53,9 +51,9 @@ class NoSNIHTTPSClient:
         self,
         method: str,
         path: str,
-        headers: Optional[Dict[str, str]] = None,
+        headers: Optional[dict[str, str]] = None,
         body: Optional[bytes] = None
-    ) -> tuple[int, Dict[str, str], bytes]:
+    ) -> tuple[int, dict[str, str], bytes]:
         """发送 HTTP 请求"""
         ssl_sock = self._create_ssl_socket()
         

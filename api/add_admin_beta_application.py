@@ -7,9 +7,10 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
+from app import create_flask_app
 from extensions.ext_database import db
 from models.beta_application import BetaApplication
-from app import create_flask_app
+
 
 def add_admin_beta_application():
     """为 admin 用户添加 beta application 记录"""
@@ -20,7 +21,7 @@ def add_admin_beta_application():
         existing = BetaApplication.query.filter_by(email='admin@cheersai.cloud').first()
         
         if existing:
-            print(f'✓ Beta application already exists for admin@cheersai.cloud')
+            print('✓ Beta application already exists for admin@cheersai.cloud')
             print(f'  Status: {existing.status}')
             print(f'  FileBay Username: {existing.filebay_username}')
             print(f'  FileBay Repo: {existing.filebay_repo}')
@@ -29,7 +30,7 @@ def add_admin_beta_application():
             if existing.status != 'success':
                 existing.status = 'success'
                 db.session.commit()
-                print(f'✓ Updated status to success')
+                print('✓ Updated status to success')
             
             return
         
@@ -47,10 +48,11 @@ def add_admin_beta_application():
         db.session.add(beta_app)
         db.session.commit()
         
-        print(f'✓ Created beta application for admin@cheersai.cloud')
+        print('✓ Created beta application for admin@cheersai.cloud')
         print(f'  FileBay Username: {beta_app.filebay_username}')
         print(f'  FileBay Repo: {beta_app.filebay_repo}')
         print(f'  Status: {beta_app.status}')
+
 
 if __name__ == '__main__':
     add_admin_beta_application()

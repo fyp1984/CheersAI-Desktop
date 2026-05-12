@@ -1,15 +1,15 @@
 """FileBay configuration service - 使用 NoSNI 客户端解决 SSL 问题"""
 from __future__ import annotations
 
-import os
-import ssl
-import socket
-import json
 import base64
+import json
+import os
+import socket
+import ssl
 from dataclasses import dataclass
-from uuid import uuid4
+from typing import Any, Optional
 from urllib.parse import urlencode
-from typing import Optional, Dict, Any
+from uuid import uuid4
 
 from configs import dify_config
 from extensions.ext_database import db
@@ -65,9 +65,9 @@ class NoSNIHTTPSClient:
         self,
         method: str,
         path: str,
-        headers: Optional[Dict[str, str]] = None,
+        headers: Optional[dict[str, str]] = None,
         body: Optional[str] = None
-    ) -> tuple[int, Dict[str, str], bytes]:
+    ) -> tuple[int, dict[str, str], bytes]:
         """发送 HTTP 请求"""
         ssl_sock = self._create_ssl_socket()
         
@@ -135,7 +135,7 @@ class NoSNIHTTPSClient:
         finally:
             ssl_sock.close()
     
-    def get(self, path: str, params: Optional[Dict[str, Any]] = None) -> tuple[int, Any]:
+    def get(self, path: str, params: Optional[dict[str, Any]] = None) -> tuple[int, Any]:
         """发送 GET 请求"""
         if params:
             query_string = urlencode(params)
@@ -154,8 +154,8 @@ class NoSNIHTTPSClient:
     def post(
         self,
         path: str,
-        data: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None
+        data: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, str]] = None
     ) -> tuple[int, Any]:
         """发送 POST 请求"""
         body = json.dumps(data) if data else None
@@ -178,8 +178,8 @@ class NoSNIHTTPSClient:
     def patch(
         self,
         path: str,
-        data: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None
+        data: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, str]] = None
     ) -> tuple[int, Any]:
         """发送 PATCH 请求"""
         body = json.dumps(data) if data else None
@@ -560,10 +560,7 @@ def _auto_provision_filebay_user(email: str) -> dict:
     Returns:
         配置字典 {gitea_url, gitea_owner, gitea_repo, gitea_token}
     """
-    import hashlib
     import secrets
-    import string
-    import base64
     
     # 1. 生成用户名
     username = _generate_username_from_email(email)
@@ -606,8 +603,8 @@ def _auto_provision_filebay_user(email: str) -> dict:
 
 def _generate_username_from_email(email: str) -> str:
     """从邮箱生成唯一用户名"""
-    import re
     import hashlib
+    import re
     
     email = (email or "").strip().lower()
     # 移除特殊字符，只保留字母数字和下划线
@@ -694,10 +691,10 @@ def _create_filebay_user(username: str, email: str, password: str):
         )
         if status_code not in (200, 201):
             import logging
-            logging.warning(f"Failed to update must_change_password for {username}: {status_code}")
+            logging.warning("Failed to update must_change_password for %s: %s", username, status_code)
     except Exception as e:
         import logging
-        logging.warning(f"Failed to update must_change_password for {username}: {e}")
+        logging.warning("Failed to update must_change_password for %s: %s", username, e)
 
 
 def _create_filebay_repo(username: str, repo_name: str):
@@ -863,7 +860,7 @@ def resolve_filebay_config(
         except Exception as e:
             # 查找失败（可能是 SSL 问题），继续尝试自动配置
             import logging
-            logging.warning(f"User lookup failed for {normalized_identifier}: {e}")
+            logging.warning("User lookup failed for %s: %s", normalized_identifier, e)
         
         # 3. 自动创建新用户（如果启用）
         if auto_provision and "@" in normalized_identifier:
@@ -880,7 +877,7 @@ def resolve_filebay_config(
             except Exception as e:
                 # 自动配置失败，继续尝试 fallback
                 import logging
-                logging.warning(f"Auto provision failed for {normalized_identifier}: {e}")
+                logging.warning("Auto provision failed for %s: %s", normalized_identifier, e)
 
         if not allow_global_fallback:
             raise LookupError(f"No FileBay user found for {normalized_identifier}.")

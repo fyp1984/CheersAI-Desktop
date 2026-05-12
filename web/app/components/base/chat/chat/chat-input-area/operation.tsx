@@ -44,7 +44,16 @@ const Operation: FC<OperationProps> = ({
         ref={ref}
       >
         <div className="flex items-center space-x-1">
-          {fileConfig?.enabled && <FileUploaderInChatInput readonly={readonly} fileConfig={fileConfig} />}
+          <FileUploaderInChatInput 
+            readonly={readonly} 
+            fileConfig={fileConfig || { 
+              enabled: true, 
+              allowed_file_types: [], 
+              allowed_file_upload_methods: [],
+              number_limits: 10,
+              filesize_limit: 15
+            }} 
+          />
           {
             speechToTextConfig?.enabled && (
               <ActionButton

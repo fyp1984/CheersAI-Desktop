@@ -26,9 +26,9 @@ from libs.login import current_account_with_tenant, login_required
 from services.dataset_service import DatasetService
 from services.external_knowledge_service import ExternalDatasetService
 from services.hit_testing_service import HitTestingService
+from services.knowledge_service import ExternalDatasetTestService
 
 from .visibility import get_visible_dataset
-from services.knowledge_service import ExternalDatasetTestService
 
 
 def _build_dataset_detail_model():

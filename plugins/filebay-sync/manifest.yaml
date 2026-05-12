@@ -1,0 +1,23 @@
+version: 0.0.1
+type: plugin
+author: CheersAI
+name: filebay_sync
+label:
+  en_US: FileBay Sync
+  zh_Hans: FileBay 同步
+description:
+  en_US: Read files from FileBay and sync generated files back to FileBay
+  zh_Hans: 从 FileBay 读取文件并将生成的文件同步回 FileBay
+icon: icon.svg
+tags:
+  - storage
+  - file-management
+  - sync
+plugins:
+  tools:
+    - provider: filebay_sync
+meta:
+  version: 0.0.1
+  arch:
+    - amd64
+    - arm64

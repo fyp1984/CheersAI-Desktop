@@ -59,7 +59,8 @@ from models.dataset import DatasetPermissionEnum
 from models.provider_ids import ModelProviderID
 from services.audit_service import log_operation
 from services.dataset_service import DatasetPermissionService, DatasetService, DocumentService
-from .visibility import ensure_dataset_visible, get_visible_dataset
+
+from .visibility import get_visible_dataset
 
 # Register models for flask_restx to avoid dict type issues in Swagger
 dataset_base_model = get_or_create_model("DatasetBase", dataset_fields)

@@ -9,7 +9,7 @@ if str(API_ROOT) not in sys.path:
     sys.path.insert(0, str(API_ROOT))
 
 from extensions.ext_database import db
-from models.dataset import Document, Dataset
+from models.dataset import Dataset, Document
 from services.document_indexing_proxy.document_indexing_task_proxy import DocumentIndexingTaskProxy
 
 # Find the waiting document

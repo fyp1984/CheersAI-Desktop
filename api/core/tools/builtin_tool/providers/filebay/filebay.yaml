@@ -1,0 +1,76 @@
+identity:
+  author: CheersAI
+  name: filebay
+  label:
+    en_US: FileBay
+    zh_Hans: FileBay文件管理
+  description:
+    en_US: Access and manage files in FileBay repository
+    zh_Hans: 访问和管理FileBay仓库中的文件
+  icon: icon.svg
+  tags:
+    - utilities
+    - other
+credentials_for_provider:
+  filebay_url:
+    type: text-input
+    required: true
+    label:
+      en_US: FileBay URL
+      zh_Hans: FileBay地址
+    placeholder:
+      en_US: https://uat-filebay.cheersai.cloud
+      zh_Hans: https://uat-filebay.cheersai.cloud
+    help:
+      en_US: The base URL of your FileBay instance
+      zh_Hans: FileBay实例的基础URL
+  filebay_token:
+    type: secret-input
+    required: true
+    label:
+      en_US: Access Token
+      zh_Hans: 访问令牌
+    placeholder:
+      en_US: Enter your FileBay access token
+      zh_Hans: 输入您的FileBay访问令牌
+    help:
+      en_US: Personal access token for FileBay API
+      zh_Hans: FileBay API的个人访问令牌
+  filebay_owner:
+    type: text-input
+    required: true
+    label:
+      en_US: Repository Owner
+      zh_Hans: 仓库所有者
+    placeholder:
+      en_US: username
+      zh_Hans: 用户名
+    help:
+      en_US: The owner of the repository
+      zh_Hans: 仓库的所有者
+  filebay_repo:
+    type: text-input
+    required: true
+    label:
+      en_US: Repository Name
+      zh_Hans: 仓库名称
+    placeholder:
+      en_US: workspace
+      zh_Hans: workspace
+    default: workspace
+    help:
+      en_US: The name of the repository
+      zh_Hans: 仓库的名称
+  filebay_branch:
+    type: text-input
+    required: false
+    label:
+      en_US: Branch
+      zh_Hans: 分支
+    placeholder:
+      en_US: main
+      zh_Hans: main
+    default: main
+    help:
+      en_US: The branch to use (default main)
+      zh_Hans: 要使用的分支（默认main）

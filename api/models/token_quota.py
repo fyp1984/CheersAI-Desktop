@@ -5,7 +5,6 @@ Token Quota Management Models
 
 import enum
 from datetime import datetime
-from decimal import Decimal
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB

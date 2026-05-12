@@ -8,6 +8,7 @@ if str(API_ROOT) not in sys.path:
     sys.path.insert(0, str(API_ROOT))
 
 import os
+
 from sqlalchemy import create_engine, text
 
 # Get database URL from environment

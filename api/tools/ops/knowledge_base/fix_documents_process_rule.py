@@ -9,12 +9,13 @@ if str(API_ROOT) not in sys.path:
     sys.path.insert(0, str(API_ROOT))
 
 import click
-from flask import Flask
-from models.dataset import Dataset, Document, DatasetProcessRule
-from extensions.ext_database import db
+
 from app_factory import create_app
+from extensions.ext_database import db
+from models.dataset import Dataset, DatasetProcessRule, Document
 
 app = create_app()
+
 
 @click.command()
 @click.option('--dataset-id', help='Specific dataset ID to fix (optional)')
@@ -78,6 +79,7 @@ def fix_process_rules(dataset_id, auto_trigger):
                         document_ids=doc_ids
                     )
                     click.echo(f'Triggered indexing for {len(doc_ids)} documents in dataset {ds_id}')
+
 
 if __name__ == '__main__':
     fix_process_rules()

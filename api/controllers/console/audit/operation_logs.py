@@ -415,5 +415,5 @@ class OperationLogExportApi(Resource):
                 headers={"Content-Disposition": f"attachment; filename={filename}"},
             )
         except Exception as e:
-            logger.error(f"[EXPORT] Error: {e}")
+            logger.error("[EXPORT] Error: %s", e)
             return {"error": str(e)}, 500

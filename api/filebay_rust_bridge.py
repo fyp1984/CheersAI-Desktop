@@ -61,11 +61,11 @@ def auto_provision_user(email: str) -> Optional[dict]:
     print(f"开始为用户配置 FileBay: {email}")
     
     # 1. 搜索用户
-    print(f"  1. 搜索用户...")
+    print("  1. 搜索用户...")
     user = search_user(email)
     
     if not user:
-        print(f"  ✗ 未找到用户")
+        print("  ✗ 未找到用户")
         return None
     
     username = user.get('username') or user.get('login')
@@ -74,12 +74,12 @@ def auto_provision_user(email: str) -> Optional[dict]:
     print(f"  ✓ 找到用户: {username} (ID: {user_id})")
     
     # 2. 创建 Token
-    print(f"  2. 创建 Token...")
+    print("  2. 创建 Token...")
     token_name = f"desktop-auto-{username}"
     token = create_token(username, token_name)
     
     if not token:
-        print(f"  ✗ Token 创建失败")
+        print("  ✗ Token 创建失败")
         return None
     
     print(f"  ✓ Token 创建成功: {token[:20]}...{token[-10:]}")
@@ -92,7 +92,7 @@ def auto_provision_user(email: str) -> Optional[dict]:
         'gitea_token': token
     }
     
-    print(f"  ✓ 配置完成")
+    print("  ✓ 配置完成")
     return config
 
 
@@ -100,9 +100,10 @@ def save_config_to_database(email: str, config: dict) -> bool:
     """保存配置到数据库"""
     try:
         from flask import Flask
+
+        from configs import dify_config
         from extensions.ext_database import db
         from models.account import Account
-        from configs import dify_config
         
         app = Flask(__name__)
         app.config['SQLALCHEMY_DATABASE_URI'] = dify_config.SQLALCHEMY_DATABASE_URI
@@ -120,7 +121,7 @@ def save_config_to_database(email: str, config: dict) -> bool:
             account.custom_config = config
             db.session.commit()
             
-            print(f"✓ 配置已保存到数据库")
+            print("✓ 配置已保存到数据库")
             return True
     except Exception as e:
         print(f"✗ 保存失败: {e}")
@@ -143,7 +144,7 @@ if __name__ == "__main__":
     email = sys.argv[1]
     
     print("=" * 80)
-    print(f"使用 Rust 桥接自动配置 FileBay")
+    print("使用 Rust 桥接自动配置 FileBay")
     print("=" * 80)
     print()
     
@@ -153,7 +154,7 @@ if __name__ == "__main__":
         print()
         print("请先编译 Rust 工具:")
         print(f"  cd {RUST_TOOL_PATH.parent}")
-        print(f"  rustc --edition 2021 filebay_token_tool.rs -o filebay_token_tool.exe")
+        print("  rustc --edition 2021 filebay_token_tool.rs -o filebay_token_tool.exe")
         sys.exit(1)
     
     # 自动配置

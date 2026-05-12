@@ -5,12 +5,14 @@ import type {
 } from '../../types'
 import {
   RiClipboardLine,
+  RiDatabase2Line,
   RiDownloadLine,
   RiResetLeftLine,
   RiThumbDownLine,
   RiThumbUpLine,
 } from '@remixicon/react'
 import copy from 'copy-to-clipboard'
+import Cookies from 'js-cookie'
 import {
   memo,
   useMemo,
@@ -26,7 +28,7 @@ import NewAudioButton from '@/app/components/base/new-audio-button'
 import Textarea from '@/app/components/base/textarea'
 import Toast from '@/app/components/base/toast'
 import Tooltip from '@/app/components/base/tooltip'
-import { API_PREFIX } from '@/config'
+import { API_PREFIX, CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '@/config'
 import { cn } from '@/utils/classnames'
 import { useChatContext } from '../context'
 
@@ -355,6 +357,53 @@ const Operation: FC<OperationProps> = ({
             >
               <RiDownloadLine className="h-4 w-4" />
             </ActionButton>
+            <Tooltip popupContent="同步到 FileBay">
+              <ActionButton onClick={async () => {
+                const fileName = `reply-${id.slice(0, 8)}.md`
+                try {
+                  // 获取 CSRF token
+                  const csrfToken = Cookies.get(CSRF_COOKIE_NAME())
+
+                  if (!csrfToken) {
+                    Toast.notify({ type: 'error', message: '无法获取认证信息' })
+                    return
+                  }
+
+                  // 准备请求头
+                  const headers: Record<string, string> = {
+                    'Content-Type': 'application/json',
+                  }
+                  headers[CSRF_HEADER_NAME] = csrfToken
+
+                  // 直接上传到 FileBay（使用相对路径，通过 Next.js 代理）
+                  const response = await fetch('/console/api/filebay/sync-reply', {
+                    method: 'POST',
+                    headers,
+                    credentials: 'include',
+                    body: JSON.stringify({
+                      file_name: fileName,
+                      content,
+                    }),
+                  })
+
+                  const data = await response.json()
+
+                  if (response.ok && data.success) {
+                    Toast.notify({ type: 'success', message: `已同步到 FileBay: ${fileName}` })
+                  }
+                  else {
+                    Toast.notify({ type: 'error', message: data.message || '同步失败' })
+                  }
+                }
+                catch (error) {
+                  console.error('Sync to FileBay failed:', error)
+                  Toast.notify({ type: 'error', message: '同步失败，请检查 FileBay 配置' })
+                }
+              }}
+              >
+                <RiDatabase2Line className="h-4 w-4" />
+              </ActionButton>
+            </Tooltip>
             {!noChatInput && (
               <ActionButton onClick={() => onRegenerate?.(item)}>
                 <RiResetLeftLine className="h-4 w-4" />
