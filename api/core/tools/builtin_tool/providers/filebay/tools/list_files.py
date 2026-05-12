@@ -147,7 +147,7 @@ class ListFilesTool(BuiltinTool):
                             files.append(item_info)
                     
                     result = {
-                        "directory": directory_path if directory_path else "/",
+                        "directory": directory_path or "/",
                         "branch": filebay_branch,
                         "directories": directories,
                         "files": files,
@@ -158,7 +158,7 @@ class ListFilesTool(BuiltinTool):
                 else:
                     # Single file response
                     result = {
-                        "directory": directory_path if directory_path else "/",
+                        "directory": directory_path or "/",
                         "branch": filebay_branch,
                         "item": {
                             "name": response.get('name', ''),
@@ -170,7 +170,7 @@ class ListFilesTool(BuiltinTool):
                     }
                     yield self.create_json_message(result)
             elif status_code == 404:
-                yield self.create_text_message(f"Error: Directory not found: {directory_path if directory_path else '/'}")
+                yield self.create_text_message(f"Error: Directory not found: {directory_path or '/'}")
             else:
                 error_msg = response.get('message', 'Unknown error') if isinstance(response, dict) else 'Unknown error'
                 yield self.create_text_message(f"Error listing files (HTTP {status_code}): {error_msg}")

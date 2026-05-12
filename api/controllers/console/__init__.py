@@ -131,11 +131,11 @@ from .explore import (
     trial,
 )
 
-# Import gitea API controllers
-from .gitea_api import gitea_config, gitea_files
-
 # Import filebay API controllers
 from .filebay_api import filebay_files
+
+# Import gitea API controllers
+from .gitea_api import gitea_config, gitea_files
 
 # Import tag controllers
 from .tag import tags

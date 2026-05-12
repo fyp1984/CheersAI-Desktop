@@ -136,7 +136,7 @@ class FileBayListFilesApi(Resource):
         """
         directory_path = request.args.get('path', '').strip().strip('/')
         
-        logger.info(f'[FileBay API] ===== LIST FILES REQUEST =====')
+        logger.info('[FileBay API] ===== LIST FILES REQUEST =====')
         logger.info(f'[FileBay API] Path: {directory_path or "/"}')
         logger.info(f'[FileBay API] User: {current_user.email if hasattr(current_user, "email") else "Unknown"}')
         
@@ -152,7 +152,7 @@ class FileBayListFilesApi(Resource):
             filebay_repo = user_config.get('gitea_repo', '')
             filebay_branch = user_config.get('gitea_branch', 'main')
             
-            logger.info(f'[FileBay API] Config - url: {filebay_url}, owner: {filebay_owner}, repo: {filebay_repo}, branch: {filebay_branch}')
+            logger.info('[FileBay API] Config - url: %s, owner: %s, repo: %s, branch: %s', filebay_url, filebay_owner, filebay_repo, filebay_branch)
             
             if not all([filebay_url, filebay_token, filebay_owner, filebay_repo]):
                 logger.error('[FileBay API] Missing required FileBay credentials')
@@ -194,7 +194,7 @@ class FileBayListFilesApi(Resource):
                             files.append(item_info)
                     
                     result = {
-                        "directory": directory_path if directory_path else "/",
+                        "directory": directory_path or "/",
                         "branch": filebay_branch,
                         "directories": directories,
                         "files": files,
@@ -206,7 +206,7 @@ class FileBayListFilesApi(Resource):
                 else:
                     # Single file response
                     result = {
-                        "directory": directory_path if directory_path else "/",
+                        "directory": directory_path or "/",
                         "branch": filebay_branch,
                         "directories": [],
                         "files": [{
@@ -225,7 +225,7 @@ class FileBayListFilesApi(Resource):
                 return {'error': f'Directory not found: {directory_path or "/"}'}, 404
             else:
                 error_msg = response.get('message', 'Unknown error') if isinstance(response, dict) else 'Unknown error'
-                logger.error(f'[FileBay API] Error listing files (HTTP {status_code}): {error_msg}')
+                logger.error('[FileBay API] Error listing files (HTTP %s): %s', status_code, error_msg)
                 return {'error': f'Error listing files: {error_msg}'}, 500
                 
         except Exception as e:
@@ -270,7 +270,7 @@ class FileBayReadFileApi(Resource):
                 logger.error('[FileBay API] Missing required FileBay credentials')
                 return {'error': 'Missing required FileBay credentials'}, 400
             
-            logger.info(f'[FileBay API] Reading file: {file_path}')
+            logger.info('[FileBay API] Reading file: %s', file_path)
             
             # Create client
             client = NoSNIHTTPSClient(filebay_url, filebay_token)
@@ -304,11 +304,11 @@ class FileBayReadFileApi(Resource):
                     logger.error('[FileBay API] File content is empty')
                     return {'error': 'File content is empty'}, 500
             elif status_code == 404:
-                logger.error(f'[FileBay API] File not found: {file_path}')
+                logger.error('[FileBay API] File not found: %s', file_path)
                 return {'error': f'File not found: {file_path}'}, 404
             else:
                 error_msg = response.get('message', 'Unknown error') if isinstance(response, dict) else 'Unknown error'
-                logger.error(f'[FileBay API] Error reading file (HTTP {status_code}): {error_msg}')
+                logger.error('[FileBay API] Error reading file (HTTP %s): %s', status_code, error_msg)
                 return {'error': f'Error reading file: {error_msg}'}, 500
                 
         except Exception as e:
@@ -351,7 +351,7 @@ class FileBayDownloadFileApi(Resource):
                 logger.error('[FileBay API] Missing required FileBay credentials')
                 return {'error': 'Missing required FileBay credentials'}, 400
             
-            logger.info(f'[FileBay API] Downloading file: {file_path}')
+            logger.info('[FileBay API] Downloading file: %s', file_path)
             
             # Create client
             client = NoSNIHTTPSClient(filebay_url, filebay_token)
@@ -384,17 +384,16 @@ class FileBayDownloadFileApi(Resource):
                     logger.error('[FileBay API] File content is empty')
                     return {'error': 'File content is empty'}, 500
             elif status_code == 404:
-                logger.error(f'[FileBay API] File not found: {file_path}')
+                logger.error('[FileBay API] File not found: %s', file_path)
                 return {'error': f'File not found: {file_path}'}, 404
             else:
                 error_msg = response.get('message', 'Unknown error') if isinstance(response, dict) else 'Unknown error'
-                logger.error(f'[FileBay API] Error downloading file (HTTP {status_code}): {error_msg}')
+                logger.error('[FileBay API] Error downloading file (HTTP %s): %s', status_code, error_msg)
                 return {'error': f'Error downloading file: {error_msg}'}, 500
                 
         except Exception as e:
             logger.error(f'[FileBay API] Failed to download file: {str(e)}', exc_info=True)
             return {'error': f'Failed to download file: {str(e)}'}, 500
-
 
 
 @console_ns.route('/filebay/upload-file')
@@ -413,12 +412,10 @@ class FileBayUploadFileApi(Resource):
         Returns:
             Uploaded file information
         """
-        from controllers.common import helpers
-        from controllers.common.errors import FileTooLargeError, UnsupportedFileTypeError
+        import services
         from core.file import helpers as file_helpers
         from extensions.ext_database import db
         from services.file_service import FileService
-        import services
         
         data = request.get_json()
         file_path = data.get('file_path', '').strip().lstrip('/')
@@ -440,7 +437,7 @@ class FileBayUploadFileApi(Resource):
                 logger.error('[FileBay API] Missing required FileBay credentials')
                 return {'error': 'Missing required FileBay credentials'}, 400
             
-            logger.info(f'[FileBay API] Uploading file: {file_path}')
+            logger.info('[FileBay API] Uploading file: %s', file_path)
             
             # Create client
             client = NoSNIHTTPSClient(filebay_url, filebay_token)
@@ -507,11 +504,11 @@ class FileBayUploadFileApi(Resource):
                     logger.error('[FileBay API] File content is empty')
                     return {'error': 'File content is empty'}, 500
             elif status_code == 404:
-                logger.error(f'[FileBay API] File not found: {file_path}')
+                logger.error('[FileBay API] File not found: %s', file_path)
                 return {'error': f'File not found: {file_path}'}, 404
             else:
                 error_msg = response.get('message', 'Unknown error') if isinstance(response, dict) else 'Unknown error'
-                logger.error(f'[FileBay API] Error downloading file (HTTP {status_code}): {error_msg}')
+                logger.error('[FileBay API] Error downloading file (HTTP %s): %s', status_code, error_msg)
                 return {'error': f'Error downloading file: {error_msg}'}, 500
                 
         except Exception as e:
