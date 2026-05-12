@@ -8,10 +8,12 @@ from libs.login import current_user
 from models.model import App, AppLifecycleEvent
 from services.audit_service import log_operation
 
+
 class AppLifecycleValidationException(Exception):
     def __init__(self, message, details=None):
         self.message = message
         self.details = details or []
+
 
 class AppLifecycleService:
     @staticmethod
@@ -133,8 +135,9 @@ class AppLifecycleService:
 
     @staticmethod
     def _has_draft_difference(app: App):
-        from models.workflow import Workflow
         from sqlalchemy import desc
+
+        from models.workflow import Workflow
 
         if app.last_published_at and app.updated_at and app.updated_at > app.last_published_at:
             return True

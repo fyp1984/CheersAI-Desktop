@@ -1,0 +1,54 @@
+identity:
+  name: read_file
+  author: cheersai
+  label:
+    en_US: Read File
+    zh_Hans: Read File
+  
+description:
+  human:
+    en_US: Read a file from FileBay repository
+    zh_Hans: Read file from FileBay
+  llm: A tool to read file content from FileBay repository. Input the file path and get the file content as text or base64 encoded data.
+
+parameters:
+  - name: file_path
+    type: string
+    required: true
+    label:
+      en_US: File Path
+      zh_Hans: File Path
+    human_description:
+      en_US: The path to the file in the repository
+      zh_Hans: File path in repository
+    llm_description: The relative path to the file in the FileBay repository, starting from the repository root
+    form: llm
+  - name: encoding
+    type: select
+    required: false
+    label:
+      en_US: Encoding
+      zh_Hans: Encoding
+    human_description:
+      en_US: The encoding of the file (default utf-8)
+      zh_Hans: File encoding (default utf-8)
+    llm_description: The text encoding format, use binary for non-text files
+    form: form
+    default: utf-8
+    options:
+      - value: utf-8
+        label:
+          en_US: UTF-8
+          zh_Hans: UTF-8
+      - value: gbk
+        label:
+          en_US: GBK
+          zh_Hans: GBK
+      - value: binary
+        label:
+          en_US: Binary (Base64)
+          zh_Hans: Binary (Base64)
+
+extra:
+  python:
+    source: tools/read_file.py

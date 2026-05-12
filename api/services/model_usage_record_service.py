@@ -6,9 +6,10 @@ from decimal import Decimal
 from typing import Any
 
 import sqlalchemy as sa
+
 from core.model_runtime.entities.llm_entities import LLMUsage
-from core.model_runtime.entities.text_embedding_entities import EmbeddingUsage
 from core.model_runtime.entities.model_entities import ModelType
+from core.model_runtime.entities.text_embedding_entities import EmbeddingUsage
 from extensions.ext_database import db
 from models.account import Account
 from models.model_usage import ModelUsageRecord
@@ -206,11 +207,11 @@ class ModelUsageRecordService:
             output_tokens=0,
             total_tokens=usage.total_tokens,
             input_unit_price=usage.unit_price,
-            output_unit_price=Decimal("0"),
+            output_unit_price=Decimal(0),
             input_price_unit=usage.price_unit,
-            output_price_unit=Decimal("0"),
+            output_price_unit=Decimal(0),
             input_price=usage.total_price,
-            output_price=Decimal("0"),
+            output_price=Decimal(0),
             total_price=usage.total_price,
             currency=usage.currency,
             latency=usage.latency,

@@ -1,0 +1,30 @@
+identity:
+  name: list_files
+  author: cheersai
+  label:
+    en_US: List Files
+    zh_Hans: List Files
+
+description:
+  human:
+    en_US: List files and directories in a FileBay repository path
+    zh_Hans: List files in FileBay
+  llm: A tool to list all files and directories in a specific path of the FileBay repository. Returns file names, types, and sizes.
+
+parameters:
+  - name: directory_path
+    type: string
+    required: false
+    label:
+      en_US: Directory Path
+      zh_Hans: Directory Path
+    human_description:
+      en_US: The directory path to list (leave empty for root)
+      zh_Hans: Directory path (empty for root)
+    llm_description: The relative directory path in the repository. Leave empty or use / for root directory.
+    form: llm
+    default: ""
+
+extra:
+  python:
+    source: tools/list_files.py

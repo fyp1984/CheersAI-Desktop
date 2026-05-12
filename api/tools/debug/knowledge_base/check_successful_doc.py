@@ -30,7 +30,7 @@ cur.execute("""
 
 row = cur.fetchone()
 if row:
-    print(f'\nSuccessful document:')
+    print('\nSuccessful document:')
     print(f'  Name: {row[1]}')
     print(f'  Status: {row[2]}')
     print(f'  Data source type: {row[3]}')

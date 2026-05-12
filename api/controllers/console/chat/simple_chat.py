@@ -43,11 +43,11 @@ class SimpleChatApi(Resource):
         Tavily is specifically designed for AI applications with optimized results for LLM consumption.
         Returns (search_results, success) tuple.
         """
-        from datetime import datetime
         import os
+        from datetime import datetime
         
         # 添加调试日志
-        logger.info(f"[Simple Chat] _perform_web_search called with query: {query}")
+        logger.info("[Simple Chat] _perform_web_search called with query: %s", query)
         logger.info(f"[Simple Chat] Current working directory: {os.getcwd()}")
         logger.info(f"[Simple Chat] TAVILY_API_KEY exists: {bool(os.environ.get('TAVILY_API_KEY'))}")
         
@@ -57,7 +57,7 @@ class SimpleChatApi(Resource):
                 from tavily import TavilyClient
                 logger.info("[Simple Chat] tavily-python imported successfully")
             except ImportError as e:
-                logger.error(f"[Simple Chat] tavily-python not installed: {e}")
+                logger.error("[Simple Chat] tavily-python not installed: %s", e)
                 # 返回空字符串和失败标志，让 AI 自然地回应
                 return "", False
             
@@ -69,7 +69,7 @@ class SimpleChatApi(Resource):
                 # 返回空字符串和失败标志，让 AI 自然地回应
                 return "", False
             
-            logger.info(f"[Simple Chat] Using Tavily AI Search for query: {query}")
+            logger.info("[Simple Chat] Using Tavily AI Search for query: %s", query)
             
             # 初始化 Tavily 客户端
             client = TavilyClient(api_key=api_key)
@@ -111,17 +111,17 @@ class SimpleChatApi(Resource):
                 now = datetime.now()
                 results_list.append(f"\n搜索时间：{now.strftime('%Y年%m月%d日 %H:%M:%S')}")
                 results_list.append(f"星期{['一', '二', '三', '四', '五', '六', '日'][now.weekday()]}")
-                results_list.append(f"搜索引擎：Tavily AI Search")
+                results_list.append("搜索引擎：Tavily AI Search")
                 
                 logger.info(f"[Simple Chat] Successfully got {len(response['results'])} results from Tavily")
                 return "\n".join(results_list), True
             else:
-                logger.warning(f"[Simple Chat] No results found for query: {query}")
+                logger.warning("[Simple Chat] No results found for query: %s", query)
                 # 返回空字符串和失败标志，让 AI 自然地回应
                 return "", False
                 
         except Exception as e:
-            logger.error(f"[Simple Chat] Tavily search error: {e}")
+            logger.error("[Simple Chat] Tavily search error: %s", e)
             # 返回空字符串和失败标志，让 AI 自然地回应
             return "", False
 
@@ -181,12 +181,12 @@ class SimpleChatApi(Resource):
                     }
                 )
             ]
-            logger.info(f"[Simple Chat] Web search tool enabled")
+            logger.info("[Simple Chat] Web search tool enabled")
 
         def generate():
-            import json  # 在函数开头导入 json
             import time
-            from core.model_runtime.entities.message_entities import AssistantPromptMessage, ToolPromptMessage
+
+            from core.model_runtime.entities.message_entities import ToolPromptMessage
             
             try:
                 model_instance = ModelManager().get_model_instance(
@@ -243,7 +243,7 @@ class SimpleChatApi(Resource):
                             try:
                                 args_dict = json.loads(tool_call.function.arguments)
                                 search_query = args_dict.get("query", "")
-                                logger.info(f"[Simple Chat] Executing web search: {search_query}")
+                                logger.info("[Simple Chat] Executing web search: %s", search_query)
                                 
                                 search_results, success = self._perform_web_search(search_query)
                                 
@@ -255,7 +255,7 @@ class SimpleChatApi(Resource):
                                         name=tool_call.function.name
                                     )
                                     messages.append(tool_message)
-                                    logger.info(f"[Simple Chat] Search successful, added results to context")
+                                    logger.info("[Simple Chat] Search successful, added results to context")
                                 else:
                                     # 搜索失败
                                     tool_message = ToolPromptMessage(
@@ -264,9 +264,9 @@ class SimpleChatApi(Resource):
                                         name=tool_call.function.name
                                     )
                                     messages.append(tool_message)
-                                    logger.warning(f"[Simple Chat] Search failed")
+                                    logger.warning("[Simple Chat] Search failed")
                             except Exception as e:
-                                logger.error(f"[Simple Chat] Tool call error: {e}")
+                                logger.error("[Simple Chat] Tool call error: %s", e)
                                 # 添加错误消息
                                 tool_message = ToolPromptMessage(
                                     content="搜索服务遇到错误，请基于你的知识回答用户的问题。",
@@ -276,7 +276,7 @@ class SimpleChatApi(Resource):
                                 messages.append(tool_message)
                     
                     # 第二次调用：让 AI 基于搜索结果生成回答（流式，带重试）
-                    logger.info(f"[Simple Chat] Calling AI again with search results")
+                    logger.info("[Simple Chat] Calling AI again with search results")
                     
                     for attempt in range(max_retries):
                         try:
@@ -309,7 +309,7 @@ class SimpleChatApi(Resource):
                                 yield f"data: {json.dumps({'content': content})}\n\n"
                 else:
                     # 没有工具调用，直接返回 AI 的回答
-                    logger.info(f"[Simple Chat] No tool calls, returning direct response")
+                    logger.info("[Simple Chat] No tool calls, returning direct response")
                     content = response.message.get_text_content()
                     if content:
                         # 将内容分块流式返回
@@ -319,10 +319,10 @@ class SimpleChatApi(Resource):
                 yield "data: [DONE]\n\n"
 
             except InvokeError as e:
-                logger.error(f"[Simple Chat] InvokeError: {e}")
+                logger.error("[Simple Chat] InvokeError: %s", e)
                 yield f"data: {json.dumps({'error': str(e)})}\n\n"
             except Exception as e:
-                logger.error(f"[Simple Chat] Exception: {e}")
+                logger.error("[Simple Chat] Exception: %s", e)
                 import traceback
                 traceback.print_exc()
                 yield f"data: {json.dumps({'error': str(e)})}\n\n"

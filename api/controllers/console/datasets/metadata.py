@@ -2,7 +2,6 @@ from typing import Literal
 
 from flask_restx import Resource, marshal_with
 from pydantic import BaseModel
-from werkzeug.exceptions import NotFound
 
 from controllers.common.schema import register_schema_models
 from controllers.console import console_ns

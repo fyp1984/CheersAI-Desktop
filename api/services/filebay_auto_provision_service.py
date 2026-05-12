@@ -10,8 +10,6 @@ import requests
 import urllib3
 
 from configs import dify_config
-from extensions.ext_database import db
-from models.account import Account
 
 logger = logging.getLogger(__name__)
 
@@ -45,38 +43,38 @@ class FileBayAutoProvisionService:
         Raises:
             Exception: If any step fails
         """
-        logger.info(f"[FileBay Auto Provision] Starting for {email}")
+        logger.info("[FileBay Auto Provision] Starting for %s", email)
         
         # 1. Generate username from email
         username = self.generate_username_from_email(email)
-        logger.info(f"[FileBay Auto Provision] Generated username: {username}")
+        logger.info("[FileBay Auto Provision] Generated username: %s", username)
         
         # 2. Check if user already exists
         existing_user = self._get_user(username)
         if existing_user:
-            logger.info(f"[FileBay Auto Provision] User {username} already exists")
+            logger.info("[FileBay Auto Provision] User %s already exists", username)
         else:
             # Create user
             password = self.create_filebay_user(username, email)
-            logger.info(f"[FileBay Auto Provision] Created user {username}")
+            logger.info("[FileBay Auto Provision] Created user %s", username)
         
         # 3. Check if repo already exists
         repo_name = self.default_repo
         existing_repo = self._get_repo(username, repo_name)
         if existing_repo:
-            logger.info(f"[FileBay Auto Provision] Repo {username}/{repo_name} already exists")
+            logger.info("[FileBay Auto Provision] Repo %s/%s already exists", username, repo_name)
         else:
             # Create repo
             self.create_filebay_repo(username, repo_name)
-            logger.info(f"[FileBay Auto Provision] Created repo {username}/{repo_name}")
+            logger.info("[FileBay Auto Provision] Created repo %s/%s", username, repo_name)
         
         # 4. Generate access token (use admin to create token for user)
         token = self.generate_filebay_token(username)
-        logger.info(f"[FileBay Auto Provision] Generated token for {username}")
+        logger.info("[FileBay Auto Provision] Generated token for %s", username)
         
         # 5. Initialize masked directory
         self.init_masked_directory(username, repo_name, token)
-        logger.info(f"[FileBay Auto Provision] Initialized masked directory")
+        logger.info("[FileBay Auto Provision] Initialized masked directory")
         
         config = {
             "gitea_url": self.filebay_base_url,
@@ -85,7 +83,7 @@ class FileBayAutoProvisionService:
             "gitea_token": token,
         }
         
-        logger.info(f"[FileBay Auto Provision] Completed for {email}")
+        logger.info("[FileBay Auto Provision] Completed for %s", email)
         return config
 
     def generate_username_from_email(self, email: str) -> str:
@@ -143,7 +141,7 @@ class FileBayAutoProvisionService:
         if response.status_code not in (200, 201):
             # Check if user already exists
             if self._looks_like_already_exists(response):
-                logger.warning(f"[FileBay Auto Provision] User {username} already exists")
+                logger.warning("[FileBay Auto Provision] User %s already exists", username)
                 return password
             
             error_msg = self._extract_error_message(response)
@@ -181,7 +179,7 @@ class FileBayAutoProvisionService:
         if response.status_code not in (200, 201):
             # Check if repo already exists
             if self._looks_like_already_exists(response):
-                logger.warning(f"[FileBay Auto Provision] Repo {username}/{repo_name} already exists")
+                logger.warning("[FileBay Auto Provision] Repo %s/%s already exists", username, repo_name)
                 return {}
             
             error_msg = self._extract_error_message(response)
@@ -245,7 +243,7 @@ class FileBayAutoProvisionService:
         # Check if already exists
         existing = self._get_content(username, repo_name, placeholder_path)
         if existing:
-            logger.info(f"[FileBay Auto Provision] Masked directory already initialized")
+            logger.info("[FileBay Auto Provision] Masked directory already initialized")
             return
         
         # Create placeholder file
@@ -268,7 +266,7 @@ class FileBayAutoProvisionService:
         if response.status_code not in (200, 201):
             # Check if already exists
             if self._looks_like_already_exists(response):
-                logger.warning(f"[FileBay Auto Provision] Masked directory already exists")
+                logger.warning("[FileBay Auto Provision] Masked directory already exists")
                 return
             
             error_msg = self._extract_error_message(response)

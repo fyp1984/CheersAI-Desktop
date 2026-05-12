@@ -6,9 +6,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from flask import Flask
+
+from configs import dify_config
 from extensions.ext_database import db
 from models.account import Account
-from configs import dify_config
 
 
 def save_token(email: str, username: str, repo: str, token: str):
@@ -39,8 +40,8 @@ def save_token(email: str, username: str, repo: str, token: str):
         
         db.session.commit()
         
-        print(f"\n✓ FileBay 配置已保存:")
-        print(f"  URL:   https://uat-filebay.cheersai.cloud")
+        print("\n✓ FileBay 配置已保存:")
+        print("  URL:   https://uat-filebay.cheersai.cloud")
         print(f"  Owner: {username}")
         print(f"  Repo:  {repo}")
         print(f"  Token: {token[:10]}...{token[-10:]}")
@@ -104,10 +105,10 @@ def main():
         print("=" * 80)
         print("下一步:")
         print("=" * 80)
-        print(f"1. 验证配置:")
+        print("1. 验证配置:")
         print(f"   python check_accounts_filebay.py check {email}")
         print()
-        print(f"2. 测试 Enterprise API:")
+        print("2. 测试 Enterprise API:")
         print(f'   curl "http://localhost:5001/inner/api/enterprise/gitea/config?email={email}"')
         print()
 

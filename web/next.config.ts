@@ -72,7 +72,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/console/api/:path*',
-        destination: 'http://localhost:5001/console/api/:path*',
+        destination: 'http://localhost:9000/console/api/:path*',
       },
     ]
   },

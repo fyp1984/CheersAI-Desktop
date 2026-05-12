@@ -5,13 +5,13 @@ Desktop 登录成功 → HTTP POST → Vault Bridge (localhost:8765) → SQLite 
 
 数据库位置：~/.cheersai/vault.db
 """
-import json
-import sqlite3
 import logging
-from pathlib import Path
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+import sqlite3
 from datetime import datetime
+from pathlib import Path
+
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 logger = logging.getLogger(__name__)
 
@@ -55,9 +55,9 @@ def init_vault_db():
         conn.commit()
         conn.close()
         
-        logger.info(f"Vault database initialized at {VAULT_DB_PATH}")
+        logger.info("Vault database initialized at %s", VAULT_DB_PATH)
     except Exception as e:
-        logger.error(f"Failed to initialize Vault database: {e}")
+        logger.error("Failed to initialize Vault database: %s", e)
         raise
 
 
@@ -147,7 +147,7 @@ def create_vault_bridge_app():
             })
         
         except Exception as e:
-            logger.error(f"Failed to save FileBay config: {e}")
+            logger.error("Failed to save FileBay config: %s", e)
             return jsonify({'error': str(e)}), 500
     
     @app.route('/vault/config/filebay/<user_id>', methods=['GET'])
@@ -196,7 +196,7 @@ def create_vault_bridge_app():
             })
         
         except Exception as e:
-            logger.error(f"Failed to get FileBay config: {e}")
+            logger.error("Failed to get FileBay config: %s", e)
             return jsonify({'error': str(e)}), 500
     
     @app.route('/vault/config/filebay/by-email/<email>', methods=['GET'])
@@ -232,7 +232,7 @@ def create_vault_bridge_app():
             })
         
         except Exception as e:
-            logger.error(f"Failed to get FileBay config by email: {e}")
+            logger.error("Failed to get FileBay config by email: %s", e)
             return jsonify({'error': str(e)}), 500
     
     @app.route('/vault/config/filebay/<user_id>', methods=['DELETE'])
@@ -254,7 +254,7 @@ def create_vault_bridge_app():
             if deleted_count == 0:
                 return jsonify({'error': 'Config not found'}), 404
             
-            logger.info(f"FileBay config deleted for user {user_id}")
+            logger.info("FileBay config deleted for user %s", user_id)
             
             return jsonify({
                 'success': True,
@@ -262,7 +262,7 @@ def create_vault_bridge_app():
             })
         
         except Exception as e:
-            logger.error(f"Failed to delete FileBay config: {e}")
+            logger.error("Failed to delete FileBay config: %s", e)
             return jsonify({'error': str(e)}), 500
     
     return app
@@ -282,8 +282,8 @@ def start_vault_bridge(host='127.0.0.1', port=8765, debug=False):
     # 创建应用
     app = create_vault_bridge_app()
     
-    logger.info(f"Starting Vault Bridge service on {host}:{port}")
-    logger.info(f"Database location: {VAULT_DB_PATH}")
+    logger.info("Starting Vault Bridge service on %s:%s", host, port)
+    logger.info("Database location: %s", VAULT_DB_PATH)
     
     # 启动服务
     app.run(host=host, port=port, debug=debug, threaded=True)

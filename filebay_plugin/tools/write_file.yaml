@@ -1,0 +1,77 @@
+identity:
+  name: write_file
+  author: cheersai
+  label:
+    en_US: Write File
+    zh_Hans: Write File
+
+description:
+  human:
+    en_US: Write or update a file in FileBay repository
+    zh_Hans: Write file to FileBay
+  llm: A tool to write or update file content in FileBay repository. Provide the file path, content, and an optional commit message.
+
+parameters:
+  - name: file_path
+    type: string
+    required: true
+    label:
+      en_US: File Path
+      zh_Hans: File Path
+    human_description:
+      en_US: The path where the file will be saved
+      zh_Hans: File save path
+    llm_description: The relative path where the file will be saved in the FileBay repository
+    form: llm
+  - name: content
+    type: string
+    required: true
+    label:
+      en_US: File Content
+      zh_Hans: File Content
+    human_description:
+      en_US: The content to write to the file
+      zh_Hans: File content
+    llm_description: The content to write to the file. For binary files, provide base64 encoded string.
+    form: llm
+  - name: commit_message
+    type: string
+    required: false
+    label:
+      en_US: Commit Message
+      zh_Hans: Commit Message
+    human_description:
+      en_US: A message describing the changes
+      zh_Hans: Commit message
+    llm_description: A commit message describing what was changed
+    form: llm
+    default: Update file via Dify agent
+  - name: encoding
+    type: select
+    required: false
+    label:
+      en_US: Encoding
+      zh_Hans: Encoding
+    human_description:
+      en_US: The encoding of the file content (default utf-8)
+      zh_Hans: File encoding (default utf-8)
+    llm_description: The text encoding format, use binary if content is base64 encoded
+    form: form
+    default: utf-8
+    options:
+      - value: utf-8
+        label:
+          en_US: UTF-8
+          zh_Hans: UTF-8
+      - value: gbk
+        label:
+          en_US: GBK
+          zh_Hans: GBK
+      - value: binary
+        label:
+          en_US: Binary (Base64)
+          zh_Hans: Binary (Base64)
+
+extra:
+  python:
+    source: tools/write_file.py

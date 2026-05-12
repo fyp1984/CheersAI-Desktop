@@ -1,0 +1,57 @@
+identity:
+  author: CheersAI
+  name: filebay_sync
+  label:
+    en_US: FileBay Sync
+    zh_Hans: FileBay 同步
+  description:
+    en_US: Read files from FileBay and sync generated files back to FileBay
+    zh_Hans: 从 FileBay 读取文件并将生成的文件同步回 FileBay
+  icon: icon.svg
+credentials_for_provider:
+  filebay_url:
+    type: text-input
+    required: true
+    label:
+      en_US: FileBay URL
+      zh_Hans: FileBay 地址
+    placeholder:
+      en_US: https://filebay.example.com
+      zh_Hans: https://filebay.example.com
+  filebay_token:
+    type: secret-input
+    required: true
+    label:
+      en_US: FileBay Access Token
+      zh_Hans: FileBay 访问令牌
+    placeholder:
+      en_US: Your FileBay access token
+      zh_Hans: 你的 FileBay 访问令牌
+  filebay_owner:
+    type: text-input
+    required: true
+    label:
+      en_US: Repository Owner
+      zh_Hans: 仓库所有者
+    placeholder:
+      en_US: username or organization
+      zh_Hans: 用户名或组织名
+  filebay_repo:
+    type: text-input
+    required: true
+    label:
+      en_US: Repository Name
+      zh_Hans: 仓库名称
+    placeholder:
+      en_US: workspace
+      zh_Hans: workspace
+  filebay_branch:
+    type: text-input
+    required: false
+    default: main
+    label:
+      en_US: Branch Name
+      zh_Hans: 分支名称
+    placeholder:
+      en_US: main
+      zh_Hans: main

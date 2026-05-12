@@ -4,7 +4,6 @@ Audit Logs API - Fetch from Nexus
 """
 
 import logging
-from datetime import datetime
 
 import httpx
 from flask import Blueprint, request

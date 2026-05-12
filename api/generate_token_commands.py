@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """生成创建 FileBay Token 的命令和配置"""
+import json
 import sys
 from pathlib import Path
-import json
 from uuid import uuid4
 
 sys.path.insert(0, str(Path(__file__).parent))
 
 from flask import Flask
+
+from configs import dify_config
 from extensions.ext_database import db
 from models.account import Account
-from configs import dify_config
 
 
 def generate_token_name(email: str) -> str:
@@ -43,16 +44,16 @@ def generate_commands_for_user(email: str):
         username_suggestion = email.split('@')[0].replace('.', '_')
         token_name = generate_token_name(email)
         
-        print(f"账号信息:")
+        print("账号信息:")
         print(f"  邮箱: {account.email}")
         print(f"  姓名: {account.name}")
         print(f"  ID:   {account.id}")
         print()
         
-        print(f"建议的配置:")
+        print("建议的配置:")
         print(f"  FileBay 用户名: {username_suggestion} (请确认实际用户名)")
         print(f"  Token 名称: {token_name}")
-        print(f"  仓库名称: workspace")
+        print("  仓库名称: workspace")
         print()
         
         # 生成 curl 命令
@@ -63,7 +64,7 @@ def generate_commands_for_user(email: str):
         
         # 步骤 1: 查找用户
         print("# 步骤 1: 查找用户信息")
-        print(f'curl -k -u "admin:3DIS9cqlR8@E" \\')
+        print('curl -k -u "admin:3DIS9cqlR8@E" \\')
         print(f'  "https://uat-filebay.cheersai.cloud/api/v1/admin/emails/search?q={email}"')
         print()
         
@@ -73,11 +74,11 @@ def generate_commands_for_user(email: str):
             "name": token_name,
             "scopes": ["read:user", "read:repository", "write:repository"]
         }
-        print(f'curl -k -X POST -u "admin:3DIS9cqlR8@E" \\')
-        print(f'  -H "Content-Type: application/json" \\')
-        print(f'  -H "Sudo: <username>" \\')
+        print('curl -k -X POST -u "admin:3DIS9cqlR8@E" \\')
+        print('  -H "Content-Type: application/json" \\')
+        print('  -H "Sudo: <username>" \\')
         print(f"  -d '{json.dumps(token_payload)}' \\")
-        print(f'  "https://uat-filebay.cheersai.cloud/api/v1/users/<username>/tokens"')
+        print('  "https://uat-filebay.cheersai.cloud/api/v1/users/<username>/tokens"')
         print()
         
         # 生成 Postman 配置
@@ -86,26 +87,26 @@ def generate_commands_for_user(email: str):
         print("-" * 80)
         print()
         print("请求 1: 查找用户")
-        print(f"  Method: GET")
-        print(f"  URL: https://uat-filebay.cheersai.cloud/api/v1/admin/emails/search")
-        print(f"  Query Params:")
+        print("  Method: GET")
+        print("  URL: https://uat-filebay.cheersai.cloud/api/v1/admin/emails/search")
+        print("  Query Params:")
         print(f"    q: {email}")
-        print(f"    limit: 10")
-        print(f"  Auth: Basic Auth")
-        print(f"    Username: admin")
-        print(f"    Password: 3DIS9cqlR8@E")
+        print("    limit: 10")
+        print("  Auth: Basic Auth")
+        print("    Username: admin")
+        print("    Password: 3DIS9cqlR8@E")
         print()
         
         print("请求 2: 创建 Token")
-        print(f"  Method: POST")
-        print(f"  URL: https://uat-filebay.cheersai.cloud/api/v1/users/<username>/tokens")
-        print(f"  Headers:")
-        print(f"    Content-Type: application/json")
-        print(f"    Sudo: <username>")
-        print(f"  Auth: Basic Auth")
-        print(f"    Username: admin")
-        print(f"    Password: 3DIS9cqlR8@E")
-        print(f"  Body (JSON):")
+        print("  Method: POST")
+        print("  URL: https://uat-filebay.cheersai.cloud/api/v1/users/<username>/tokens")
+        print("  Headers:")
+        print("    Content-Type: application/json")
+        print("    Sudo: <username>")
+        print("  Auth: Basic Auth")
+        print("    Username: admin")
+        print("    Password: 3DIS9cqlR8@E")
+        print("  Body (JSON):")
         print(f"    {json.dumps(token_payload, indent=4)}")
         print()
         
@@ -119,7 +120,7 @@ def generate_commands_for_user(email: str):
         print(f'python save_filebay_token.py "{email}" "<username>" "workspace" "<token>"')
         print()
         print("或使用交互模式:")
-        print(f'python save_filebay_token.py')
+        print('python save_filebay_token.py')
         print()
         
         # 生成 Python 代码

@@ -10,7 +10,7 @@ from flask import current_app
 
 from extensions.ext_database import db
 from models.account import Tenant
-from models.token_quota import QuotaIntervalType, TokenQuotaConfig
+from models.token_quota import TokenQuotaConfig
 from services.token_quota_service import TokenQuotaService
 
 logging.basicConfig(level=logging.INFO)
@@ -149,9 +149,9 @@ def init_default_quota(token_limit: int, interval_type: str, force: bool):
         logger.info("=" * 60)
         logger.info("Default quota initialization completed:")
         logger.info(f"  Total tenants: {len(tenants)}")
-        logger.info(f"  Successfully created/updated: {success_count}")
-        logger.info(f"  Skipped (already exists): {skip_count}")
-        logger.info(f"  Errors: {error_count}")
+        logger.info("  Successfully created/updated: %s", success_count)
+        logger.info("  Skipped (already exists): %s", skip_count)
+        logger.info("  Errors: %s", error_count)
         logger.info("=" * 60)
 
 

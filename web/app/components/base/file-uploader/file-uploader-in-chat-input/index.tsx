@@ -40,6 +40,7 @@ const FileUploaderInChatInput = ({
       fileConfig={fileConfig}
       showFromLocal={fileConfig?.allowed_file_upload_methods?.includes(TransferMethod.local_file)}
       showFromLink={fileConfig?.allowed_file_upload_methods?.includes(TransferMethod.remote_url)}
+      showFromFileBay={true}
     />
   )
 }

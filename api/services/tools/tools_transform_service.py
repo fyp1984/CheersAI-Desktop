@@ -42,8 +42,7 @@ class ToolTransformService:
 
         parts = urlsplit(console_api_url)
         normalized_path = parts.path.rstrip("/")
-        if normalized_path.endswith("/console/api"):
-            normalized_path = normalized_path[: -len("/console/api")]
+        normalized_path = normalized_path.removesuffix("/console/api")
 
         return urlunsplit((parts.scheme, parts.netloc, normalized_path or "", parts.query, parts.fragment)) or "/"
 

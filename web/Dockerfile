@@ -66,8 +66,8 @@ ENV TZ=UTC
 RUN ln -s /usr/share/zoneinfo/${TZ} /etc/localtime \
     && echo ${TZ} > /etc/timezone
 
-# global runtime packages
-RUN pnpm add -g pm2
+# global runtime packages - skip pm2 installation for now
+RUN echo "Skipping pm2 installation"
 
 
 # Create non-root user

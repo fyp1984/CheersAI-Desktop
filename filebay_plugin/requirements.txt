@@ -1,0 +1,5 @@
+# Dify Plugin SDK
+dify-plugin>=0.0.1
+
+# No additional dependencies required
+# All functionality uses Python standard library

@@ -18,6 +18,11 @@ import { request } from './base'
 const MARKETPLACE_REQUEST_TIMEOUT = 8000
 
 const marketplaceFetch = (request: Request | URL | string, init?: RequestInit) => {
+  // If marketplace is not configured, reject immediately
+  if (!MARKETPLACE_API_PREFIX || MARKETPLACE_API_PREFIX === 'http://localhost:5002/api') {
+    return Promise.reject(new Error('Marketplace is not configured'))
+  }
+
   const controller = new AbortController()
   const timeoutId = globalThis.setTimeout(() => {
     controller.abort()

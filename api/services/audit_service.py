@@ -112,7 +112,7 @@ def log_operation(
         # Skip logging if required fields are missing
         if not tenant_id or not account_id:
             logger.warning(
-                f"[AUDIT] Skipping - missing tenant_id ({tenant_id}) or account_id ({account_id}), action: {action}"
+                "[AUDIT] Skipping - missing tenant_id (%s) or account_id (%s), action: %s", tenant_id, account_id, action
             )
             return None
 
@@ -141,7 +141,7 @@ def log_operation(
             session.add(log_entry)
             session.commit()
 
-        logger.info(f"[AUDIT] ✓ Recorded: action={action}, tenant_id={tenant_id}, account_id={account_id}")
+        logger.info("[AUDIT] ✓ Recorded: action=%s, tenant_id=%s, account_id=%s", action, tenant_id, account_id)
         return log_id
 
     except Exception as e:
