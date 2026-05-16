@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAppContext } from '@/context/app-context'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 import { useInvalidateReferenceSettings, useMutationReferenceSettings, useReferenceSettings } from '@/service/use-plugins'
+import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import Toast from '../../base/toast'
 import { PermissionType } from '../types'
 
@@ -21,7 +22,7 @@ const hasPermission = (permission: PermissionType | undefined, isAdmin: boolean)
 
 const useReferenceSetting = () => {
   const { t } = useTranslation()
-  const { isCurrentWorkspaceManager, isCurrentWorkspaceOwner } = useAppContext()
+  const { currentWorkspace } = useAppContext()
   const { data } = useReferenceSettings()
   // console.log(data)
   const { permission: permissions } = data || {}
@@ -35,14 +36,14 @@ const useReferenceSetting = () => {
       })
     },
   })
-  const isAdmin = isCurrentWorkspaceManager || isCurrentWorkspaceOwner
+  const isSystemAdmin = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.systemAdmin)
 
   return {
     referenceSetting: data,
     setReferenceSettings: updateReferenceSetting,
-    canManagement: hasPermission(permissions?.install_permission, isAdmin),
-    canDebugger: hasPermission(permissions?.debug_permission, isAdmin),
-    canSetPermissions: isAdmin,
+    canManagement: isSystemAdmin && hasPermission(permissions?.install_permission, true),
+    canDebugger: isSystemAdmin && hasPermission(permissions?.debug_permission, true),
+    canSetPermissions: isSystemAdmin,
     isUpdatePending,
   }
 }

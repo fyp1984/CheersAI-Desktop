@@ -7,10 +7,13 @@ import { useTheme } from 'next-themes'
 import * as React from 'react'
 import { useMemo } from 'react'
 import Button from '@/app/components/base/button'
+import Toast from '@/app/components/base/toast'
 import Card from '@/app/components/plugins/card'
 import CardMoreInfo from '@/app/components/plugins/card/card-more-info'
 import { useTags } from '@/app/components/plugins/hooks'
 import InstallFromMarketplace from '@/app/components/plugins/install-plugin/install-from-marketplace'
+import { useAppContext } from '@/context/app-context'
+import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import { getPluginDetailLinkInMarketplace, getPluginLinkInMarketplace } from '../utils'
 
 type CardWrapperProps = {
@@ -29,6 +32,22 @@ const CardWrapperComponent = ({
   }] = useBoolean(false)
   const locale = useLocale()
   const { getTagLabel } = useTags()
+  const { currentWorkspace } = useAppContext()
+  const isSystemAdmin = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.systemAdmin)
+  const notifyInstallRestricted = () => {
+    Toast.notify({
+      type: 'warning',
+      message: '请联系系统管理员进行安装',
+    })
+  }
+  const handleInstallClick = () => {
+    if (!isSystemAdmin) {
+      notifyInstallRestricted()
+      return
+    }
+
+    showInstallFromMarketplace()
+  }
 
   // Memoize marketplace link params to prevent unnecessary re-renders
   const marketplaceLinkParams = useMemo(() => ({
@@ -59,7 +78,7 @@ const CardWrapperComponent = ({
           <Button
             variant="primary"
             className="w-[calc(50%-4px)]"
-            onClick={showInstallFromMarketplace}
+            onClick={handleInstallClick}
           >
             {t('detailPanel.operation.install', { ns: 'plugin' })}
           </Button>

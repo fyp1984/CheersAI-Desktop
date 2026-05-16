@@ -1,14 +1,11 @@
 import type { ComponentType, FC } from 'react'
 import type { ModelProvider } from '../declarations'
-import type { Plugin } from '@/app/components/plugins/types'
-import { useBoolean } from 'ahooks'
 import * as React from 'react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AnthropicShortLight, Deepseek, Gemini, Grok, OpenaiSmall, Tongyi } from '@/app/components/base/icons/src/public/llm'
 import Loading from '@/app/components/base/loading'
 import Tooltip from '@/app/components/base/tooltip'
-import InstallFromMarketplace from '@/app/components/plugins/install-plugin/install-from-marketplace'
 import { useAppContext } from '@/context/app-context'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 import useTimestamp from '@/hooks/use-timestamp'
@@ -16,7 +13,6 @@ import { ModelProviderQuotaGetPaid } from '@/types/model-provider'
 import { cn } from '@/utils/classnames'
 import { formatNumber } from '@/utils/format'
 import { PreferredProviderTypeEnum } from '../declarations'
-import { useMarketplaceAllPlugins } from '../hooks'
 import { MODEL_PROVIDER_QUOTA_GET_PAID, modelNameMap } from '../utils'
 
 // Icon map for each provider - single source of truth for provider icons
@@ -35,17 +31,6 @@ const allProviders = MODEL_PROVIDER_QUOTA_GET_PAID.map(key => ({
   Icon: providerIconMap[key],
 }))
 
-// Map provider key to plugin ID
-// provider key format: langgenius/provider/model, plugin ID format: langgenius/provider
-const providerKeyToPluginId: Record<ModelProviderQuotaGetPaid, string> = {
-  [ModelProviderQuotaGetPaid.OPENAI]: 'langgenius/openai',
-  [ModelProviderQuotaGetPaid.ANTHROPIC]: 'langgenius/anthropic',
-  [ModelProviderQuotaGetPaid.GEMINI]: 'langgenius/gemini',
-  [ModelProviderQuotaGetPaid.X]: 'langgenius/x',
-  [ModelProviderQuotaGetPaid.DEEPSEEK]: 'langgenius/deepseek',
-  [ModelProviderQuotaGetPaid.TONGYI]: 'langgenius/tongyi',
-}
-
 type QuotaPanelProps = {
   providers: ModelProvider[]
   isLoading?: boolean
@@ -55,7 +40,7 @@ const QuotaPanel: FC<QuotaPanelProps> = ({
   isLoading = false,
 }) => {
   const { t } = useTranslation()
-  const { currentWorkspace } = useAppContext()
+  const { currentWorkspace, isCurrentWorkspaceManager } = useAppContext()
   const { trial_models } = useGlobalPublicStore(s => s.systemFeatures)
   const credits = Math.max((currentWorkspace.trial_credits - currentWorkspace.trial_credits_used) || 0, 0)
   const providerMap = useMemo(() => new Map(
@@ -65,38 +50,6 @@ const QuotaPanel: FC<QuotaPanelProps> = ({
     providers.map(p => [p.provider, p.custom_configuration.available_credentials]),
   ), [providers])
   const { formatTime } = useTimestamp()
-  const {
-    plugins: allPlugins,
-  } = useMarketplaceAllPlugins(providers, '')
-  const [selectedPlugin, setSelectedPlugin] = useState<Plugin | null>(null)
-  const [isShowInstallModal, {
-    setTrue: showInstallFromMarketplace,
-    setFalse: hideInstallFromMarketplace,
-  }] = useBoolean(false)
-  const selectedPluginIdRef = useRef<string | null>(null)
-
-  const handleIconClick = useCallback((key: ModelProviderQuotaGetPaid) => {
-    const isInstalled = providerMap.get(key)
-    if (!isInstalled && allPlugins) {
-      const pluginId = providerKeyToPluginId[key]
-      const plugin = allPlugins.find(p => p.plugin_id === pluginId)
-      if (plugin) {
-        setSelectedPlugin(plugin)
-        selectedPluginIdRef.current = pluginId
-        showInstallFromMarketplace()
-      }
-    }
-  }, [allPlugins, providerMap, showInstallFromMarketplace])
-
-  useEffect(() => {
-    if (isShowInstallModal && selectedPluginIdRef.current) {
-      const isInstalled = providers.some(p => p.provider.startsWith(selectedPluginIdRef.current!))
-      if (isInstalled) {
-        hideInstallFromMarketplace()
-        selectedPluginIdRef.current = null
-      }
-    }
-  }, [providers, isShowInstallModal, hideInstallFromMarketplace])
 
   if (isLoading) {
     return (
@@ -138,7 +91,7 @@ const QuotaPanel: FC<QuotaPanelProps> = ({
             const getTooltipKey = () => {
               // if provider type is not set, it means the provider is not installed
               if (!providerType)
-                return 'modelProvider.card.modelNotSupported'
+                return isCurrentWorkspaceManager ? 'modelProvider.configureTip' : 'model.sharedConfigHint'
               if (isConfigured && providerType === PreferredProviderTypeEnum.custom)
                 return 'modelProvider.card.modelAPI'
               return 'modelProvider.card.modelSupported'
@@ -146,11 +99,12 @@ const QuotaPanel: FC<QuotaPanelProps> = ({
             return (
               <Tooltip
                 key={key}
-                popupContent={t(getTooltipKey(), { modelName: modelNameMap[key], ns: 'common' })}
+                popupContent={!providerType
+                  ? t(getTooltipKey(), { ns: 'common' })
+                  : t(getTooltipKey(), { modelName: modelNameMap[key], ns: 'common' })}
               >
                 <div
-                  className={cn('relative h-6 w-6', !providerType && 'cursor-pointer hover:opacity-80')}
-                  onClick={() => handleIconClick(key)}
+                  className="relative h-6 w-6"
                 >
                   <Icon className="h-6 w-6 rounded-lg" />
                   {!providerType && (
@@ -162,14 +116,6 @@ const QuotaPanel: FC<QuotaPanelProps> = ({
           })}
         </div>
       </div>
-      {isShowInstallModal && selectedPlugin && (
-        <InstallFromMarketplace
-          manifest={selectedPlugin}
-          uniqueIdentifier={selectedPlugin.latest_package_identifier}
-          onClose={hideInstallFromMarketplace}
-          onSuccess={hideInstallFromMarketplace}
-        />
-      )}
     </div>
   )
 }

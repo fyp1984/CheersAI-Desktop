@@ -13,14 +13,14 @@
  * - Use shallow routing to avoid unnecessary re-renders
  */
 
+import { usePathname, useRouter } from 'next/navigation'
 import {
   createParser,
   parseAsString,
-  useQueryStates,
   useQueryState,
+  useQueryStates,
 } from 'nuqs'
 import { useCallback } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
 import { ACCOUNT_SETTING_MODAL_ACTION } from '@/app/components/header/account-setting/constants'
 import { isServer } from '@/utils/client'
 
@@ -93,6 +93,13 @@ export function useAccountSettingModal<T extends string = string>() {
         { action: ACCOUNT_SETTING_MODAL_ACTION, tab: state.payload },
         { history: shouldPush ? 'push' : 'replace' },
       )
+      if (!isServer) {
+        const url = new URL(window.location.href)
+        url.searchParams.set('action', ACCOUNT_SETTING_MODAL_ACTION)
+        url.searchParams.set('tab', state.payload)
+        const nextUrl = `${pathname}${url.search}${url.hash}`
+        router.replace(nextUrl, { scroll: false })
+      }
     },
     [accountState.action, pathname, router, setAccountState],
   )

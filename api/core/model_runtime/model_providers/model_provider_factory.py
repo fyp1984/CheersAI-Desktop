@@ -55,15 +55,18 @@ class ModelProviderFactory:
             contexts.plugin_model_providers.get()
         except LookupError:
             contexts.plugin_model_providers.set(None)
+            contexts.plugin_model_providers_tenant_id.set(None)
             contexts.plugin_model_providers_lock.set(Lock())
 
         with contexts.plugin_model_providers_lock.get():
             plugin_model_providers = contexts.plugin_model_providers.get()
-            if plugin_model_providers is not None:
+            cached_tenant_id = contexts.plugin_model_providers_tenant_id.get()
+            if plugin_model_providers is not None and cached_tenant_id == self.tenant_id:
                 return plugin_model_providers
 
             plugin_model_providers = []
             contexts.plugin_model_providers.set(plugin_model_providers)
+            contexts.plugin_model_providers_tenant_id.set(self.tenant_id)
 
             # Fetch plugin model providers
             plugin_providers = self.plugin_model_manager.fetch_model_providers(self.tenant_id)

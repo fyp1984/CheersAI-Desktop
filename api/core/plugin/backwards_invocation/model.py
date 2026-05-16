@@ -34,6 +34,10 @@ from models.account import Tenant
 
 
 class PluginModelBackwardsInvocation(BaseBackwardsInvocation):
+    @staticmethod
+    def _build_usage_metadata(source: str) -> dict[str, str]:
+        return {"source": source}
+
     @classmethod
     def invoke_llm(
         cls, user_id: str, tenant: Tenant, payload: RequestInvokeLLM
@@ -46,6 +50,7 @@ class PluginModelBackwardsInvocation(BaseBackwardsInvocation):
             provider=payload.provider,
             model_type=payload.model_type,
             model=payload.model,
+            usage_metadata=cls._build_usage_metadata("plugin_backwards_llm"),
         )
 
         # invoke model
@@ -101,6 +106,7 @@ class PluginModelBackwardsInvocation(BaseBackwardsInvocation):
             provider=payload.provider,
             model_type=payload.model_type,
             model=payload.model,
+            usage_metadata=cls._build_usage_metadata("plugin_backwards_structured_output"),
         )
 
         model_schema = model_instance.model_type_instance.get_model_schema(payload.model, model_instance.credentials)
@@ -165,6 +171,7 @@ class PluginModelBackwardsInvocation(BaseBackwardsInvocation):
             provider=payload.provider,
             model_type=payload.model_type,
             model=payload.model,
+            usage_metadata=cls._build_usage_metadata("plugin_backwards_embedding"),
         )
 
         # invoke model
@@ -185,6 +192,7 @@ class PluginModelBackwardsInvocation(BaseBackwardsInvocation):
             provider=payload.provider,
             model_type=payload.model_type,
             model=payload.model,
+            usage_metadata=cls._build_usage_metadata("plugin_backwards_rerank"),
         )
 
         # invoke model
@@ -208,6 +216,7 @@ class PluginModelBackwardsInvocation(BaseBackwardsInvocation):
             provider=payload.provider,
             model_type=payload.model_type,
             model=payload.model,
+            usage_metadata=cls._build_usage_metadata("plugin_backwards_tts"),
         )
 
         # invoke model
@@ -234,6 +243,7 @@ class PluginModelBackwardsInvocation(BaseBackwardsInvocation):
             provider=payload.provider,
             model_type=payload.model_type,
             model=payload.model,
+            usage_metadata=cls._build_usage_metadata("plugin_backwards_speech2text"),
         )
 
         # invoke model
@@ -261,6 +271,7 @@ class PluginModelBackwardsInvocation(BaseBackwardsInvocation):
             provider=payload.provider,
             model_type=payload.model_type,
             model=payload.model,
+            usage_metadata=cls._build_usage_metadata("plugin_backwards_moderation"),
         )
 
         # invoke model

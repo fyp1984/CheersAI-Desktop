@@ -4,8 +4,10 @@ import logging
 from collections import defaultdict
 from collections.abc import Sequence
 from json import JSONDecodeError
+from threading import Lock
 from typing import Any, cast
 
+import contexts
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -54,6 +56,8 @@ from models.provider import (
 )
 from models.provider_ids import ModelProviderID
 from services.feature_service import FeatureService
+from services.global_plugin_service import GlobalPluginService
+from services.team_model_config_service import TeamModelConfigService
 
 logger = logging.getLogger(__name__)
 
@@ -150,6 +154,7 @@ class ProviderManager:
         # Get all provider entities
         model_provider_factory = ModelProviderFactory(tenant_id)
         provider_entities = model_provider_factory.get_providers()
+        provider_entities = self._merge_global_provider_entities(tenant_id, provider_entities)
 
         # Get All preferred provider types of the workspace
         provider_name_to_preferred_model_provider_records_dict = self._get_all_preferred_model_providers(tenant_id)
@@ -205,8 +210,15 @@ class ProviderManager:
                 )
 
             # Convert to custom configuration
+            global_plugin = GlobalPluginService.get_enabled_plugin(provider_entity.provider)
+
             custom_configuration = self._to_custom_configuration(
-                tenant_id, provider_entity, provider_records, provider_model_records, provider_model_credentials
+                tenant_id,
+                provider_entity,
+                provider_records,
+                provider_model_records,
+                provider_model_credentials,
+                global_plugin=global_plugin,
             )
 
             # Convert to system configuration
@@ -267,6 +279,8 @@ class ProviderManager:
 
             provider_configuration = ProviderConfiguration(
                 tenant_id=tenant_id,
+                runtime_tenant_id=global_plugin.source_tenant_id if global_plugin else tenant_id,
+                requires_team_model_config=global_plugin is not None,
                 provider=provider_entity,
                 preferred_provider_type=preferred_provider_type,
                 using_provider_type=using_provider_type,
@@ -279,6 +293,49 @@ class ProviderManager:
 
         # Return the encapsulated object
         return provider_configurations
+
+    def _merge_global_provider_entities(
+        self,
+        tenant_id: str,
+        provider_entities: Sequence[ProviderEntity],
+    ) -> list[ProviderEntity]:
+        merged_provider_entities = {provider_entity.provider: provider_entity for provider_entity in provider_entities}
+
+        for global_plugin in GlobalPluginService.list_enabled_plugins():
+            if global_plugin.plugin_code in merged_provider_entities:
+                continue
+
+            cached_plugin_providers = None
+            cached_plugin_providers_tenant_id = None
+            cached_plugin_providers_lock = None
+            with contextlib.suppress(LookupError):
+                cached_plugin_providers = contexts.plugin_model_providers.get()
+            with contextlib.suppress(LookupError):
+                cached_plugin_providers_tenant_id = contexts.plugin_model_providers_tenant_id.get()
+            with contextlib.suppress(LookupError):
+                cached_plugin_providers_lock = contexts.plugin_model_providers_lock.get()
+
+            try:
+                # Cross-tenant shared providers must bypass the current request's cached plugin-provider list.
+                contexts.plugin_model_providers.set(None)
+                contexts.plugin_model_providers_tenant_id.set(None)
+                if cached_plugin_providers_lock is None:
+                    contexts.plugin_model_providers_lock.set(Lock())
+                provider_entity = ModelProviderFactory(global_plugin.source_tenant_id).get_provider_schema(
+                    global_plugin.plugin_code
+                )
+            except Exception:
+                logger.warning("skip unavailable global plugin provider %s", global_plugin.plugin_code, exc_info=True)
+                continue
+            finally:
+                contexts.plugin_model_providers.set(cached_plugin_providers)
+                contexts.plugin_model_providers_tenant_id.set(cached_plugin_providers_tenant_id)
+                if cached_plugin_providers_lock is not None:
+                    contexts.plugin_model_providers_lock.set(cached_plugin_providers_lock)
+
+            merged_provider_entities[provider_entity.provider] = provider_entity
+
+        return list(merged_provider_entities.values())
 
     def get_provider_model_bundle(self, tenant_id: str, provider: str, model_type: ModelType) -> ProviderModelBundle:
         """
@@ -684,6 +741,7 @@ class ProviderManager:
         provider_records: list[Provider],
         provider_model_records: list[ProviderModel],
         provider_model_credentials: list[ProviderModelCredential],
+        global_plugin=None,
     ) -> CustomConfiguration:
         """
         Convert to custom configuration.
@@ -711,11 +769,35 @@ class ProviderManager:
             UnaddedModelConfiguration(model=model["model"], model_type=model["model_type"]) for model in unadded_models
         ]
 
-        return CustomConfiguration(
+        custom_configuration = CustomConfiguration(
             provider=custom_provider_configuration,
             models=custom_model_configurations,
             can_added_models=can_added_models,
         )
+
+        if custom_configuration.provider or custom_configuration.models:
+            return custom_configuration
+
+        if global_plugin:
+            team_binding = TeamModelConfigService.get_team_model_binding(tenant_id, provider_entity.provider)
+            if team_binding:
+                return CustomConfiguration(
+                    provider=CustomProviderConfiguration(
+                        credentials=team_binding.credentials,
+                        current_credential_id=team_binding.config.id,
+                        current_credential_name="team-managed",
+                        available_credentials=[
+                            CredentialConfiguration(
+                                credential_id=team_binding.config.id,
+                                credential_name="team-managed",
+                            )
+                        ],
+                    ),
+                    models=[],
+                    can_added_models=[],
+                )
+
+        return custom_configuration
 
     def _get_custom_provider_configuration(
         self, tenant_id: str, provider_entity: ProviderEntity, provider_records: list[Provider]
@@ -729,6 +811,20 @@ class ProviderManager:
         if not custom_provider_record:
             return None
 
+        active_credential = custom_provider_record.credential
+        if not active_credential:
+            provider_names = self._get_provider_names(custom_provider_record.provider_name)
+            with Session(db.engine, expire_on_commit=False) as session:
+                stmt = (
+                    select(ProviderCredential)
+                    .where(
+                        ProviderCredential.tenant_id == tenant_id,
+                        ProviderCredential.provider_name.in_(provider_names),
+                    )
+                    .order_by(ProviderCredential.created_at.desc())
+                )
+                active_credential = session.execute(stmt).scalars().first()
+
         # Get provider credential secret variables
         provider_credential_secret_variables = self._extract_secret_variables(
             provider_entity.provider_credential_schema.credential_form_schemas
@@ -739,8 +835,8 @@ class ProviderManager:
         # Get and decrypt provider credentials
         provider_credentials = self._get_and_decrypt_credentials(
             tenant_id=tenant_id,
-            record_id=custom_provider_record.id,
-            encrypted_config=custom_provider_record.encrypted_config,
+            record_id=active_credential.id if active_credential else custom_provider_record.id,
+            encrypted_config=active_credential.encrypted_config if active_credential else custom_provider_record.encrypted_config,
             secret_variables=provider_credential_secret_variables,
             cache_type=ProviderCredentialsCacheType.PROVIDER,
             is_provider=True,
@@ -748,8 +844,8 @@ class ProviderManager:
 
         return CustomProviderConfiguration(
             credentials=provider_credentials,
-            current_credential_name=custom_provider_record.credential_name,
-            current_credential_id=custom_provider_record.credential_id,
+            current_credential_name=active_credential.credential_name if active_credential else None,
+            current_credential_id=active_credential.id if active_credential else None,
             available_credentials=self.get_provider_available_credentials(
                 tenant_id, custom_provider_record.provider_name
             ),

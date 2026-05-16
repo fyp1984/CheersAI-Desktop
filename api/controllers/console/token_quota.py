@@ -9,18 +9,34 @@ from datetime import datetime
 from flask import request
 from flask_login import current_user, login_required
 from flask_restx import Namespace, Resource, fields
+from werkzeug.exceptions import Forbidden
 
 from controllers.console import api
 from controllers.console.wraps import account_initialization_required
+from libs.desktop_auth import has_any_workspace_capability
 from libs.helper import TimestampField
 from models.token_quota import QuotaIntervalType, QuotaStatus
 from services.token_quota_service import TokenQuotaService
 
 logger = logging.getLogger(__name__)
+TEAM_TOKEN_QUOTA_MANAGE_CAPABILITIES = (
+    "desktop_settings_team",
+    "desktop_model_manage",
+    "desktop_model_provider_manage",
+)
 
 # 创建命名空间
 ns = Namespace("token-quota", description="Token 配额管理")
 api.add_namespace(ns)
+
+
+def _require_token_quota_manage_capability() -> None:
+    if not has_any_workspace_capability(
+        current_user,
+        TEAM_TOKEN_QUOTA_MANAGE_CAPABILITIES,
+        current_user.current_tenant_id,
+    ):
+        raise Forbidden("You do not have permission to manage token quota.")
 
 # 定义数据模型
 model_info_model = api.model(
@@ -95,6 +111,7 @@ class TokenQuotaConfigListApi(Resource):
     @ns.marshal_list_with(quota_config_model)
     def get(self):
         """获取配额配置列表"""
+        _require_token_quota_manage_capability()
         tenant_id = current_user.current_tenant_id
 
         from models.token_quota import TokenQuotaConfig
@@ -114,6 +131,7 @@ class TokenQuotaConfigListApi(Resource):
     @ns.marshal_with(quota_config_model, code=201)
     def post(self):
         """创建配额配置"""
+        _require_token_quota_manage_capability()
         tenant_id = current_user.current_tenant_id
         user_id = current_user.id
         data = request.get_json()
@@ -153,6 +171,7 @@ class TokenQuotaConfigApi(Resource):
     @ns.marshal_with(quota_config_model)
     def get(self, config_id):
         """获取配额配置详情"""
+        _require_token_quota_manage_capability()
         from models.token_quota import TokenQuotaConfig
 
         quota_config = TokenQuotaConfig.query.filter_by(
@@ -171,6 +190,7 @@ class TokenQuotaConfigApi(Resource):
     @ns.marshal_with(quota_config_model)
     def put(self, config_id):
         """更新配额配置"""
+        _require_token_quota_manage_capability()
         from models.token_quota import TokenQuotaConfig
 
         quota_config = TokenQuotaConfig.query.filter_by(
@@ -200,6 +220,7 @@ class TokenQuotaConfigApi(Resource):
     @ns.doc("delete_quota_config")
     def delete(self, config_id):
         """删除配额配置"""
+        _require_token_quota_manage_capability()
         from extensions.ext_database import db
         from models.token_quota import TokenQuotaConfig
 
@@ -287,6 +308,7 @@ class TokenQuotaStatisticsApi(Resource):
     @ns.doc("get_quota_statistics")
     def get(self):
         """获取配额统计信息"""
+        _require_token_quota_manage_capability()
         tenant_id = current_user.current_tenant_id
         user_id = request.args.get("user_id")  # 可选
         start_date_str = request.args.get("start_date")
@@ -317,6 +339,7 @@ class TokenQuotaRecordApi(Resource):
     @ns.doc("record_token_usage")
     def post(self):
         """记录 Token 使用"""
+        _require_token_quota_manage_capability()
         tenant_id = current_user.current_tenant_id
         data = request.get_json()
 
@@ -359,6 +382,7 @@ class TokenQuotaResetApi(Resource):
     @ns.doc("reset_quota")
     def post(self):
         """重置配额（清除当前时间窗口的使用记录）"""
+        _require_token_quota_manage_capability()
         tenant_id = current_user.current_tenant_id
         data = request.get_json() or {}
         user_id = data.get("user_id")  # 可选

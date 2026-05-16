@@ -1,3 +1,12 @@
+"""Desktop SSO role projection and capability helpers.
+
+This module converts SSO `roles[]` / `permissions[]` / `sub` metadata into the
+workspace capabilities consumed by Desktop. The key invariant is that tenant
+members keep tenant-scoped capabilities, while the built-in `built-in/Admin`
+account receives a separate system capability pack and must not inherit team
+editing permissions by accident.
+"""
+
 import hashlib
 import json
 from collections.abc import Iterable, Mapping
@@ -10,9 +19,29 @@ from models.account import Account, Tenant, TenantAccountJoin, TenantAccountRole
 DESKTOP_ACCESS_CAPABILITY = "desktop_access"
 DESKTOP_AGENT_MANAGE_CAPABILITY = "desktop_agent_manage"
 DESKTOP_PLUGIN_MANAGE_CAPABILITY = "desktop_plugin_manage"
+DESKTOP_SYSTEM_ADMIN_CAPABILITY = "desktop_system_admin"
+DESKTOP_TOKEN_BILLING_GLOBAL_VIEW_CAPABILITY = "desktop_token_billing_global_view"
+DESKTOP_TOKEN_BILLING_EXPORT_CAPABILITY = "desktop_token_billing_export"
 DESKTOP_SSO_PROJECTION_KEY_PREFIX = "desktop:sso:projection"
 DESKTOP_SSO_GROUP_TENANT_CACHE_PREFIX = "desktop:sso:group-tenant:"
 DESKTOP_SSO_PROJECTION_TTL = 60 * 60 * 24 * 7
+BUILTIN_ADMIN_OWNER = "built-in"
+BUILTIN_ADMIN_USERNAMES = frozenset({"admin"})
+
+SYSTEM_ADMIN_CAPABILITIES = frozenset({
+    DESKTOP_ACCESS_CAPABILITY,
+    DESKTOP_SYSTEM_ADMIN_CAPABILITY,
+    DESKTOP_PLUGIN_MANAGE_CAPABILITY,
+    "desktop_chat_use",
+    "desktop_model_use",
+    "desktop_audit_view",
+    "desktop_model_manage",
+    "desktop_model_provider_manage",
+    "desktop_settings_personal",
+    "desktop_language_manage",
+    DESKTOP_TOKEN_BILLING_GLOBAL_VIEW_CAPABILITY,
+    DESKTOP_TOKEN_BILLING_EXPORT_CAPABILITY,
+})
 
 WORKSPACE_ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
     TenantAccountRole.OWNER: frozenset({
@@ -85,7 +114,6 @@ WORKSPACE_ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
         "desktop_agent_view",
         "desktop_agent_run",
         DESKTOP_AGENT_MANAGE_CAPABILITY,
-        DESKTOP_PLUGIN_MANAGE_CAPABILITY,
         "desktop_chat_use",
         "desktop_knowledge_view",
         "desktop_knowledge_edit",
@@ -97,8 +125,6 @@ WORKSPACE_ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
         "desktop_app_edit",
         "desktop_explore_view",
         "desktop_settings_personal",
-        "desktop_model_manage",
-        "desktop_model_provider_manage",
         "desktop_data_source_manage",
         "desktop_language_manage",
     }),
@@ -217,22 +243,77 @@ def collect_sso_identifiers(payload: Mapping[str, Any] | None) -> list[str]:
     return list(dict.fromkeys(identifiers))
 
 
+def get_sso_subject_owner(payload: Mapping[str, Any] | None) -> str | None:
+    """Return the normalized owner from explicit claim or `sub`.
+
+    SSO subjects follow the `owner/username` shape in current Desktop
+    integrations. We use the owner segment to distinguish the `built-in`
+    platform admin domain from business tenants.
+    """
+
+    explicit_owner = normalize_sso_identifier(payload.get("owner") if payload else None)
+    if explicit_owner:
+        return explicit_owner
+
+    subject = payload.get("sub") if payload else None
+    if not isinstance(subject, str):
+        return None
+
+    owner = subject.split("/", 1)[0]
+    return normalize_sso_identifier(owner)
+
+
+def get_sso_subject_username(payload: Mapping[str, Any] | None) -> str | None:
+    """Return the normalized username from `preferred_username` or `sub`."""
+
+    preferred_username = normalize_sso_identifier(payload.get("preferred_username") if payload else None)
+    if preferred_username:
+        return preferred_username
+
+    subject = payload.get("sub") if payload else None
+    if not isinstance(subject, str) or "/" not in subject:
+        return None
+
+    _, username = subject.split("/", 1)
+    return normalize_sso_identifier(username)
+
+
+def is_builtin_system_admin(payload: Mapping[str, Any] | None) -> bool:
+    """Detect the fixed Desktop system administrator from the SSO built-in domain."""
+
+    owner = get_sso_subject_owner(payload)
+    username = get_sso_subject_username(payload)
+    return owner == BUILTIN_ADMIN_OWNER and username in BUILTIN_ADMIN_USERNAMES
+
+
+def get_system_admin_capabilities(payload: Mapping[str, Any] | None) -> list[str]:
+    """Return the non-team capability pack for the built-in Desktop admin."""
+
+    if not is_builtin_system_admin(payload):
+        return []
+
+    return list(SYSTEM_ADMIN_CAPABILITIES)
+
+
 def has_desktop_access(payload: Mapping[str, Any] | None) -> bool:
+    if is_builtin_system_admin(payload):
+        return True
+
     # Allow access if user has desktop_access capability
     if DESKTOP_ACCESS_CAPABILITY in collect_sso_identifiers(payload):
         return True
-    
+
     # Auto-grant desktop_access to users with valid SSO roles
     identifiers = collect_sso_identifiers(payload)
     for identifier in identifiers:
         if identifier in SSO_IDENTIFIER_TO_WORKSPACE_ROLE:
             return True
-    
+
     # Auto-grant desktop_access to all valid SSO users (with email and sub)
     # This allows users without explicit roles to access the system
     if payload and payload.get('sub') and payload.get('email'):
         return True
-    
+
     return False
 
 
@@ -295,6 +376,12 @@ def resolve_workspace_capabilities(
     fallback_role: str | None = None,
     sso_tags: Iterable[str] | None = None,
 ) -> list[str]:
+    if is_builtin_system_admin(payload):
+        capabilities = set(get_system_admin_capabilities(payload))
+        if has_desktop_access(payload):
+            capabilities.add(DESKTOP_ACCESS_CAPABILITY)
+        return sorted(capabilities)
+
     identifiers = collect_sso_identifiers(payload)
     capabilities: set[str] = set()
 
@@ -311,6 +398,7 @@ def resolve_workspace_capabilities(
         capabilities.update(get_role_capabilities(fallback_role))
 
     capabilities.update(get_admin_override_capabilities(sso_tags))
+    capabilities.update(get_system_admin_capabilities(payload))
 
     if has_desktop_access(payload):
         capabilities.add(DESKTOP_ACCESS_CAPABILITY)

@@ -31,6 +31,7 @@ import { useModalContext } from '@/context/modal-context'
 import { useProviderContext } from '@/context/provider-context'
 import { useLogout } from '@/service/use-common'
 import { cn } from '@/utils/classnames'
+import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import AccountAbout from '../account-about'
 import GithubStar from '../github-star'
 import Indicator from '../indicator'
@@ -54,10 +55,11 @@ export default function AppSelector({ placement = 'side', showLabel = false }: A
 
   const { t } = useTranslation()
   const docLink = useDocLink()
-  const { userProfile, langGeniusVersionInfo, isCurrentWorkspaceOwner, isCurrentWorkspaceManager } = useAppContext()
+  const { userProfile, langGeniusVersionInfo, isCurrentWorkspaceOwner, isCurrentWorkspaceManager, currentWorkspace } = useAppContext()
   const { isEducationAccount } = useProviderContext()
   const { setShowAccountSettingModal } = useModalContext()
   const canViewAdminOnlyLinks = isCurrentWorkspaceOwner || isCurrentWorkspaceManager
+  const isSystemAdmin = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.systemAdmin)
 
   const { mutateAsync: logout } = useLogout()
   const handleLogout = async () => {
@@ -90,8 +92,8 @@ export default function AppSelector({ placement = 'side', showLabel = false }: A
                   {showLabel && (
                     <div className="flex min-w-0 items-center gap-2">
                       <div className="min-w-0 text-left">
-                        <div className="truncate system-sm-medium text-text-primary">{userProfile.name}</div>
-                        <div className="truncate system-2xs-regular text-text-tertiary">{userProfile.email}</div>
+                        <div className="system-sm-medium truncate text-text-primary">{userProfile.name}</div>
+                        <div className="system-2xs-regular truncate text-text-tertiary">{userProfile.email}</div>
                       </div>
                       <RiArrowDownSLine className={cn('size-4 shrink-0 text-text-tertiary transition-transform', open && 'rotate-180')} />
                     </div>
@@ -151,7 +153,9 @@ export default function AppSelector({ placement = 'side', showLabel = false }: A
                     <MenuItem>
                       <div
                         className={cn(itemClassName, 'data-[active]:bg-state-base-hover')}
-                        onClick={() => setShowAccountSettingModal({ payload: ACCOUNT_SETTING_TAB.MEMBERS })}
+                        onClick={() => setShowAccountSettingModal({
+                          payload: isSystemAdmin ? ACCOUNT_SETTING_TAB.PROVIDER : ACCOUNT_SETTING_TAB.MEMBERS,
+                        })}
                       >
                         <RiSettings3Line className="size-4 shrink-0 text-text-tertiary" />
                         <div className="system-md-regular grow px-1 text-text-secondary">{t('userProfile.settings', { ns: 'common' })}</div>

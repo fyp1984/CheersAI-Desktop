@@ -35,6 +35,16 @@ describe('workspace-capabilities', () => {
     })).toContain(WORKSPACE_CAPABILITIES.teamManage)
   })
 
+  it('keeps team editor away from provider and plugin governance defaults', () => {
+    const editorCapabilities = getCapabilitiesByRole('editor')
+
+    expect(editorCapabilities).not.toContain(WORKSPACE_CAPABILITIES.modelManage)
+    expect(editorCapabilities).not.toContain(WORKSPACE_CAPABILITIES.modelProviderManage)
+    expect(editorCapabilities).not.toContain(WORKSPACE_CAPABILITIES.pluginManage)
+    expect(editorCapabilities).toContain(WORKSPACE_CAPABILITIES.knowledgeEdit)
+    expect(editorCapabilities).toContain(WORKSPACE_CAPABILITIES.workflowEdit)
+  })
+
   it('checks single and multi capability helpers correctly', () => {
     const workspace = {
       role: 'normal',

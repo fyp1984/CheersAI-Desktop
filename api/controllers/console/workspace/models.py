@@ -8,7 +8,11 @@ from pydantic import BaseModel, Field, field_validator
 from controllers.common.schema import register_enum_models, register_schema_models
 from controllers.console import console_ns
 from controllers.console.workspace import require_model_provider_manage_capability
-from controllers.console.wraps import account_initialization_required, setup_required
+from controllers.console.wraps import (
+    account_initialization_required,
+    is_admin_or_owner_required,
+    setup_required,
+)
 from core.model_runtime.entities.model_entities import ModelType
 from core.model_runtime.errors.validate import CredentialsValidateFailedError
 from core.model_runtime.utils.encoders import jsonable_encoder
@@ -146,6 +150,7 @@ class DefaultModelApi(Resource):
     @console_ns.expect(console_ns.models[ParserPostDefault.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @require_model_provider_manage_capability
     @account_initialization_required
     def post(self):
@@ -192,6 +197,7 @@ class ModelProviderModelApi(Resource):
     @console_ns.expect(console_ns.models[ParserPostModels.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @require_model_provider_manage_capability
     @account_initialization_required
     def post(self, provider: str):
@@ -238,6 +244,7 @@ class ModelProviderModelApi(Resource):
     @console_ns.expect(console_ns.models[ParserDeleteModels.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @require_model_provider_manage_capability
     @account_initialization_required
     def delete(self, provider: str):
@@ -258,7 +265,9 @@ class ModelProviderModelCredentialApi(Resource):
     @console_ns.expect(console_ns.models[ParserGetCredentials.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
+    @require_model_provider_manage_capability
     def get(self, provider: str):
         _, tenant_id = current_account_with_tenant()
 
@@ -310,6 +319,7 @@ class ModelProviderModelCredentialApi(Resource):
     @console_ns.expect(console_ns.models[ParserCreateCredential.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @require_model_provider_manage_capability
     @account_initialization_required
     def post(self, provider: str):
@@ -342,6 +352,7 @@ class ModelProviderModelCredentialApi(Resource):
     @console_ns.expect(console_ns.models[ParserUpdateCredential.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @require_model_provider_manage_capability
     @account_initialization_required
     def put(self, provider: str):
@@ -368,6 +379,7 @@ class ModelProviderModelCredentialApi(Resource):
     @console_ns.expect(console_ns.models[ParserDeleteCredential.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @require_model_provider_manage_capability
     @account_initialization_required
     def delete(self, provider: str):
@@ -402,6 +414,7 @@ class ModelProviderModelCredentialSwitchApi(Resource):
     @console_ns.expect(console_ns.models[ParserSwitch.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @require_model_provider_manage_capability
     @account_initialization_required
     def post(self, provider: str):
@@ -426,6 +439,7 @@ class ModelProviderModelEnableApi(Resource):
     @console_ns.expect(console_ns.models[ParserDeleteModels.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @require_model_provider_manage_capability
     @account_initialization_required
     def patch(self, provider: str):
@@ -448,6 +462,7 @@ class ModelProviderModelDisableApi(Resource):
     @console_ns.expect(console_ns.models[ParserDeleteModels.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @require_model_provider_manage_capability
     @account_initialization_required
     def patch(self, provider: str):
@@ -479,6 +494,7 @@ class ModelProviderModelValidateApi(Resource):
     @console_ns.expect(console_ns.models[ParserValidate.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @require_model_provider_manage_capability
     @account_initialization_required
     def post(self, provider: str):

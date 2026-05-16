@@ -2,6 +2,7 @@ import type { ICurrentWorkspace } from '@/models/common'
 
 export const WORKSPACE_CAPABILITIES = {
   desktopAccess: 'desktop_access',
+  systemAdmin: 'desktop_system_admin',
   modelUse: 'desktop_model_use',
   agentUse: 'desktop_agent_use',
   agentTest: 'desktop_agent_test',
@@ -23,6 +24,8 @@ export const WORKSPACE_CAPABILITIES = {
   settingsTeam: 'desktop_settings_team',
   teamManage: 'desktop_team_manage',
   auditView: 'desktop_audit_view',
+  tokenBillingGlobalView: 'desktop_token_billing_global_view',
+  tokenBillingExport: 'desktop_token_billing_export',
   modelManage: 'desktop_model_manage',
   modelProviderManage: 'desktop_model_provider_manage',
   memberManage: 'desktop_member_manage',
@@ -114,8 +117,6 @@ const WORKSPACE_ROLE_CAPABILITIES: Record<string, string[]> = {
     WORKSPACE_CAPABILITIES.appEdit,
     WORKSPACE_CAPABILITIES.exploreView,
     WORKSPACE_CAPABILITIES.settingsPersonal,
-    WORKSPACE_CAPABILITIES.modelManage,
-    WORKSPACE_CAPABILITIES.modelProviderManage,
     WORKSPACE_CAPABILITIES.dataSourceManage,
     WORKSPACE_CAPABILITIES.languageManage,
   ],

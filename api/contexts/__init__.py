@@ -24,6 +24,10 @@ plugin_model_providers: RecyclableContextVar[list["PluginModelProviderEntity"] |
     ContextVar("plugin_model_providers")
 )
 
+plugin_model_providers_tenant_id: RecyclableContextVar[str | None] = RecyclableContextVar(
+    ContextVar("plugin_model_providers_tenant_id")
+)
+
 plugin_model_providers_lock: RecyclableContextVar[Lock] = RecyclableContextVar(
     ContextVar("plugin_model_providers_lock")
 )

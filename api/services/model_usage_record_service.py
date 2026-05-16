@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -11,7 +12,7 @@ from core.model_runtime.entities.llm_entities import LLMUsage
 from core.model_runtime.entities.model_entities import ModelType
 from core.model_runtime.entities.text_embedding_entities import EmbeddingUsage
 from extensions.ext_database import db
-from models.account import Account
+from models.account import Account, Tenant, TenantAccountJoin
 from models.model_usage import ModelUsageRecord
 from services.token_quota_service import TokenQuotaService
 
@@ -25,7 +26,9 @@ class ModelUsageRecordService:
         return inspector.has_table(ModelUsageRecord.__tablename__)
 
     @classmethod
-    def get_usage_overview(cls, tenant_id: str, limit: int = 20, user_id: str | None = None) -> dict[str, Any]:
+    def get_usage_overview(cls, tenant_id: str | None, limit: int = 20, user_id: str | None = None) -> dict[str, Any]:
+        """Return token usage aggregates for one tenant, one user, or the whole system."""
+
         if not cls.is_table_ready():
             return {
                 "table_ready": False,
@@ -41,12 +44,16 @@ class ModelUsageRecordService:
                     "cost_last_30d": "0",
                 },
                 "records": [],
+                "leaderboard": [],
+                "organizations": [],
             }
 
         now = datetime.now(UTC)
         last_7d = now - timedelta(days=7)
         last_30d = now - timedelta(days=30)
-        filters = [ModelUsageRecord.tenant_id == tenant_id]
+        filters = []
+        if tenant_id:
+            filters.append(ModelUsageRecord.tenant_id == tenant_id)
         if user_id:
             filters.append(ModelUsageRecord.user_id == user_id)
 
@@ -84,12 +91,14 @@ class ModelUsageRecordService:
             ).where(*filters)
         ).one()
 
-        recent_records = db.session.execute(
+        recent_records = list(
+            db.session.execute(
             sa.select(ModelUsageRecord)
             .where(*filters)
             .order_by(ModelUsageRecord.created_at.desc())
             .limit(limit)
-        ).scalars()
+            ).scalars()
+        )
 
         leaderboard = []
         if user_id is None:
@@ -100,7 +109,7 @@ class ModelUsageRecordService:
                     sa.func.coalesce(sa.func.sum(ModelUsageRecord.total_price), 0).label("total_cost"),
                     sa.func.count(ModelUsageRecord.id).label("record_count"),
                 )
-                .where(ModelUsageRecord.tenant_id == tenant_id, ModelUsageRecord.user_id.is_not(None))
+                .where(*filters, ModelUsageRecord.user_id.is_not(None))
                 .group_by(ModelUsageRecord.user_id)
                 .order_by(sa.desc("total_tokens"))
                 .limit(10)
@@ -130,6 +139,21 @@ class ModelUsageRecordService:
                 for row in leaderboard_rows
             ]
 
+        organization_leaderboard = []
+        tenant_ids = {record.tenant_id for record in recent_records if record.tenant_id}
+        tenant_rows = {}
+        tenant_organization_rows = {}
+        if tenant_id is None and user_id is None:
+            organization_leaderboard = cls._build_organization_leaderboard(filters)
+        if tenant_ids:
+            tenant_rows = {
+                row.id: row.name
+                for row in db.session.execute(
+                    sa.select(Tenant.id, Tenant.name).where(Tenant.id.in_(tenant_ids))
+                ).all()
+            }
+            tenant_organization_rows = cls._resolve_tenant_organization_names(tenant_ids)
+
         return {
             "table_ready": True,
             "summary": {
@@ -146,6 +170,9 @@ class ModelUsageRecordService:
             "records": [
                 {
                     "id": record.id,
+                    "tenant_id": record.tenant_id,
+                    "tenant_name": tenant_rows.get(record.tenant_id),
+                    "organization_name": tenant_organization_rows.get(record.tenant_id),
                     "provider": record.provider,
                     "provider_type": record.provider_type,
                     "model_name": record.model_name,
@@ -161,11 +188,23 @@ class ModelUsageRecordService:
                     "total_price": cls._decimal_to_str(record.total_price),
                     "currency": record.currency,
                     "latency": float(record.latency or 0),
+                    "business_type": cls._extract_business_type(record.request_metadata),
+                    "business_id": cls._extract_business_id(record.request_metadata),
                     "created_at": record.created_at.isoformat() if record.created_at else None,
                 }
                 for record in recent_records
             ],
             "leaderboard": leaderboard,
+            "organizations": [
+                {
+                    "organization_name": item.get("organization_name"),
+                    "workspace_count": int(item.get("workspace_count", 0) or 0),
+                    "total_tokens": int(item.get("total_tokens", 0) or 0),
+                    "total_cost": cls._decimal_to_str(item.get("total_cost")),
+                    "record_count": int(item.get("record_count", 0) or 0),
+                }
+                for item in organization_leaderboard
+            ],
         }
 
     @classmethod
@@ -306,3 +345,125 @@ class ModelUsageRecordService:
         if value is None:
             return "0"
         return format(value.normalize(), "f") if value != 0 else "0"
+
+    @staticmethod
+    def _extract_business_type(metadata: dict | None) -> str | None:
+        if not isinstance(metadata, dict):
+            return None
+
+        if metadata.get("workflow_id") or metadata.get("workflow_app_id"):
+            return "workflow"
+        if metadata.get("agent_id"):
+            return "agent"
+        if metadata.get("app_id"):
+            return "app"
+
+        source = metadata.get("source")
+        return source if isinstance(source, str) and source in {"app", "agent", "workflow"} else None
+
+    @staticmethod
+    def _extract_business_id(metadata: dict | None) -> str | None:
+        if not isinstance(metadata, dict):
+            return None
+
+        for key in ("workflow_id", "workflow_app_id", "agent_id", "app_id"):
+            value = metadata.get(key)
+            if isinstance(value, str) and value:
+                return value
+
+        return None
+
+    @classmethod
+    def _resolve_tenant_organization_names(cls, tenant_ids: set[str]) -> dict[str, str]:
+        if not tenant_ids:
+            return {}
+
+        rows = db.session.execute(
+            sa.select(TenantAccountJoin.tenant_id, Account.custom_config)
+            .join(Account, Account.id == TenantAccountJoin.account_id)
+            .where(TenantAccountJoin.tenant_id.in_(tenant_ids))
+            .order_by(TenantAccountJoin.created_at.asc())
+        ).all()
+
+        tenant_organization_names: dict[str, str] = {}
+        for row in rows:
+            tenant_id = getattr(row, "tenant_id", None)
+            if not isinstance(tenant_id, str) or tenant_id in tenant_organization_names:
+                continue
+
+            organization_name = cls._extract_organization_name(getattr(row, "custom_config", None))
+            if organization_name:
+                tenant_organization_names[tenant_id] = organization_name
+
+        return tenant_organization_names
+
+    @staticmethod
+    def _extract_organization_name(custom_config: str | None) -> str | None:
+        if not isinstance(custom_config, str) or not custom_config.strip():
+            return None
+
+        try:
+            config = json.loads(custom_config)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return None
+
+        organization_name = config.get("desktop_sso_owner")
+        if isinstance(organization_name, str):
+            organization_name = organization_name.strip()
+            if organization_name:
+                return organization_name
+
+        return None
+
+    @classmethod
+    def _build_organization_leaderboard(cls, filters: list[Any]) -> list[dict[str, Any]]:
+        tenant_usage_rows = db.session.execute(
+            sa.select(
+                ModelUsageRecord.tenant_id.label("tenant_id"),
+                sa.func.coalesce(sa.func.sum(ModelUsageRecord.total_tokens), 0).label("total_tokens"),
+                sa.func.coalesce(sa.func.sum(ModelUsageRecord.total_price), 0).label("total_cost"),
+                sa.func.count(ModelUsageRecord.id).label("record_count"),
+            )
+            .where(*filters, ModelUsageRecord.tenant_id.is_not(None))
+            .group_by(ModelUsageRecord.tenant_id)
+        ).all()
+
+        tenant_ids = {
+            row.tenant_id
+            for row in tenant_usage_rows
+            if isinstance(getattr(row, "tenant_id", None), str) and row.tenant_id
+        }
+        tenant_organization_rows = cls._resolve_tenant_organization_names(tenant_ids)
+
+        organization_summary: dict[str | None, dict[str, Any]] = {}
+        for row in tenant_usage_rows:
+            organization_name = tenant_organization_rows.get(row.tenant_id)
+            current = organization_summary.setdefault(
+                organization_name,
+                {
+                    "organization_name": organization_name,
+                    "workspace_ids": set(),
+                    "total_tokens": 0,
+                    "total_cost": Decimal("0"),
+                    "record_count": 0,
+                },
+            )
+            current["workspace_ids"].add(row.tenant_id)
+            current["total_tokens"] += int(row.total_tokens or 0)
+            current["total_cost"] += row.total_cost or Decimal("0")
+            current["record_count"] += int(row.record_count or 0)
+
+        return sorted(
+            [
+                {
+                    "organization_name": item["organization_name"],
+                    "workspace_count": len(item["workspace_ids"]),
+                    "total_tokens": item["total_tokens"],
+                    "total_cost": item["total_cost"],
+                    "record_count": item["record_count"],
+                }
+                for item in organization_summary.values()
+            ],
+            key=lambda item: item["total_tokens"],
+            reverse=True,
+        )[:10]

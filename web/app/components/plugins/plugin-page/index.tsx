@@ -14,8 +14,10 @@ import { useTranslation } from 'react-i18next'
 import Button from '@/app/components/base/button'
 import TabSlider from '@/app/components/base/tab-slider'
 import Tooltip from '@/app/components/base/tooltip'
+import Toast from '@/app/components/base/toast'
 import ReferenceSettingModal from '@/app/components/plugins/reference-setting-modal'
 import { MARKETPLACE_API_PREFIX, SUPPORT_INSTALL_LOCAL_FILE_EXTENSIONS } from '@/config'
+import { useAppContext } from '@/context/app-context'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 import { useDocLink } from '@/context/i18n'
 import useDocumentTitle from '@/hooks/use-document-title'
@@ -23,6 +25,7 @@ import { usePluginInstallation } from '@/hooks/use-query-params'
 import { fetchBundleInfoFromMarketPlace, fetchManifestFromMarketPlace } from '@/service/plugins'
 import { sleep } from '@/utils'
 import { cn } from '@/utils/classnames'
+import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import { PLUGIN_PAGE_TABS_MAP } from '../hooks'
 import InstallFromLocalPackage from '../install-plugin/install-from-local-package'
 import InstallFromMarketplace from '../install-plugin/install-from-marketplace'
@@ -66,6 +69,8 @@ const PluginPage = ({
   }
 
   const [manifest, setManifest] = useState<PluginDeclaration | PluginManifestInMarket | null>(null)
+  var currentWorkspace = useAppContext().currentWorkspace
+  var isSystemAdmin = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.systemAdmin)
 
   useEffect(() => {
     let isCancelled = false
@@ -74,6 +79,15 @@ const PluginPage = ({
       setUniqueIdentifier(null)
       setManifest(null)
       await sleep(100)
+      if ((packageId || bundleInfo) && currentWorkspace && !isSystemAdmin) {
+        Toast.notify({
+          type: 'warning',
+          message: '请联系系统管理员进行安装',
+        })
+        setInstallState(null)
+        return
+      }
+
       if (packageId) {
         try {
           const { data } = await fetchManifestFromMarketPlace(encodeURIComponent(packageId))
@@ -117,7 +131,7 @@ const PluginPage = ({
     return () => {
       isCancelled = true
     }
-  }, [packageId, bundleInfo, showInstallFromMarketplace, setInstallState])
+  }, [bundleInfo, currentWorkspace, isSystemAdmin, packageId, setInstallState, showInstallFromMarketplace])
 
   const {
     referenceSetting,
@@ -183,7 +197,7 @@ const PluginPage = ({
           </div>
           <div className="flex shrink-0 items-center gap-1">
             {
-              isExploringMarketplace && (
+              isExploringMarketplace && isSystemAdmin && (
                 <>
                   <Link
                     href="https://github.com/langgenius/dify-plugins/issues/new?template=plugin_request.yaml"

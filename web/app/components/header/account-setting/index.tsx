@@ -8,29 +8,24 @@ import {
   RiColorFilterLine,
   RiDatabase2Fill,
   RiDatabase2Line,
+  RiGitRepositoryFill,
+  RiGitRepositoryLine,
   RiGroup2Fill,
   RiGroup2Line,
   RiMoneyDollarCircleFill,
   RiMoneyDollarCircleLine,
-  RiReceiptFill,
-  RiReceiptLine,
-  RiShieldKeyholeFill,
-  RiShieldKeyholeLine,
   RiPuzzle2Fill,
   RiPuzzle2Line,
+  RiReceiptFill,
+  RiReceiptLine,
   RiTranslate2,
-  RiGitRepositoryLine,
-  RiGitRepositoryFill,
 } from '@remixicon/react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Input from '@/app/components/base/input'
 import BillingPage from '@/app/components/billing/billing-page'
 import CustomPage from '@/app/components/custom/custom-page'
-import {
-  ACCOUNT_SETTING_TAB,
-
-} from '@/app/components/header/account-setting/constants'
+import { ACCOUNT_SETTING_TAB } from '@/app/components/header/account-setting/constants'
 import MenuDialog from '@/app/components/header/account-setting/menu-dialog'
 import { useAppContext } from '@/context/app-context'
 import { useProviderContext } from '@/context/provider-context'
@@ -78,8 +73,10 @@ export default function AccountSetting({
   const canManageDataSource = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.dataSourceManage)
   const canManagePlugin = hasPluginManageWorkspaceCapability(currentWorkspace)
   const canManageWorkspaceSettings = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.settingsTeam)
+  const isSystemAdmin = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.systemAdmin)
+  const isNormalMember = currentWorkspace?.role === 'normal'
 
-  const workplaceGroupItems: GroupItem[] = (() => {
+  const systemGroupItems: GroupItem[] = (() => {
     const items: GroupItem[] = []
 
     if (canManageModelProviders) {
@@ -91,16 +88,7 @@ export default function AccountSetting({
       })
     }
 
-    if (canManageMembers) {
-      items.push({
-        key: ACCOUNT_SETTING_TAB.MEMBERS,
-        name: t('settings.members', { ns: 'common' }),
-        icon: <RiGroup2Line className={iconClassName} />,
-        activeIcon: <RiGroup2Fill className={iconClassName} />,
-      })
-    }
-
-    if (enableBilling && canManageWorkspaceSettings) {
+    if (!isSystemAdmin && enableBilling && canManageWorkspaceSettings) {
       items.push({
         key: ACCOUNT_SETTING_TAB.BILLING,
         name: t('settings.billing', { ns: 'common' }),
@@ -114,27 +102,46 @@ export default function AccountSetting({
       items.push({
         key: ACCOUNT_SETTING_TAB.TOKEN_BILLING,
         name: t('settings.tokenBilling', { ns: 'common' }),
-        description: t('tokenBilling.pageDescription', { ns: 'common' }),
+        description: isSystemAdmin
+          ? t('tokenBilling.systemSubtitle', { ns: 'common' })
+          : t('tokenBilling.pageDescription', { ns: 'common' }),
         icon: <RiReceiptLine className={iconClassName} />,
         activeIcon: <RiReceiptFill className={iconClassName} />,
       })
     }
 
-    if (canManageDataSource) {
-      items.push({
-        key: ACCOUNT_SETTING_TAB.DATA_SOURCE,
-        name: t('settings.dataSource', { ns: 'common' }),
-        icon: <RiDatabase2Line className={iconClassName} />,
-        activeIcon: <RiDatabase2Fill className={iconClassName} />,
-      })
-    }
-
-    if (canManagePlugin) {
+    if (!isSystemAdmin && canManagePlugin) {
       items.push({
         key: ACCOUNT_SETTING_TAB.API_BASED_EXTENSION,
         name: t('settings.apiBasedExtension', { ns: 'common' }),
         icon: <RiPuzzle2Line className={iconClassName} />,
         activeIcon: <RiPuzzle2Fill className={iconClassName} />,
+      })
+    }
+    return items
+  })()
+
+  const workplaceGroupItems: GroupItem[] = (() => {
+    if (isSystemAdmin)
+      return []
+
+    const items: GroupItem[] = []
+
+    if (canManageMembers) {
+      items.push({
+        key: ACCOUNT_SETTING_TAB.MEMBERS,
+        name: t('settings.members', { ns: 'common' }),
+        icon: <RiGroup2Line className={iconClassName} />,
+        activeIcon: <RiGroup2Fill className={iconClassName} />,
+      })
+    }
+
+    if (canManageDataSource && !isNormalMember) {
+      items.push({
+        key: ACCOUNT_SETTING_TAB.DATA_SOURCE,
+        name: t('settings.dataSource', { ns: 'common' }),
+        icon: <RiDatabase2Line className={iconClassName} />,
+        activeIcon: <RiDatabase2Fill className={iconClassName} />,
       })
     }
 
@@ -155,7 +162,6 @@ export default function AccountSetting({
       })
     }
 
-
     return items
   })()
 
@@ -164,9 +170,14 @@ export default function AccountSetting({
 
   const menuItems = [
     {
+      key: 'system-group',
+      name: t('settings.systemGroup', { ns: 'common' }),
+      items: isSystemAdmin ? systemGroupItems : [],
+    },
+    {
       key: 'workspace-group',
       name: t('settings.workplaceGroup', { ns: 'common' }),
-      items: workplaceGroupItems,
+      items: isSystemAdmin ? workplaceGroupItems : [...systemGroupItems, ...workplaceGroupItems],
     },
     {
       key: 'account-group',
@@ -181,7 +192,12 @@ export default function AccountSetting({
       ],
     },
   ]
-  const activeMenu = onTabChange ? activeTab : internalActiveMenu
+
+  useEffect(() => {
+    setInternalActiveMenu(activeTab)
+  }, [activeTab])
+
+  const activeMenu = internalActiveMenu
   const availableItems = menuItems.flatMap(menuItem => menuItem.items)
   const effectiveActiveMenu = availableItems.some(item => item.key === activeMenu)
     ? activeMenu
@@ -211,7 +227,7 @@ export default function AccountSetting({
       onClose={onCancel}
     >
       <div className="mx-auto flex h-[100vh] max-w-[1048px]">
-        <div className="flex w-[44px] flex-col border-r border-divider-burn pl-4 pr-6 sm:w-[224px]">
+        <div className="relative z-10 flex w-[44px] flex-col border-r border-divider-burn pl-4 pr-6 sm:w-[224px]">
           <div className="title-2xl-semi-bold mb-8 mt-6 px-3 py-2 text-text-primary">{t('userProfile.settings', { ns: 'common' })}</div>
           <div className="w-full">
             {
@@ -223,22 +239,22 @@ export default function AccountSetting({
                   <div>
                     {
                       menuItem.items.map(item => (
-                        <div
+                        <button
+                          type="button"
                           key={item.key}
                           className={cn(
-                            'mb-0.5 flex h-[37px] cursor-pointer items-center rounded-lg p-1 pl-3 text-sm',
+                            'mb-0.5 flex h-[37px] w-full items-center rounded-lg p-1 pl-3 text-left text-sm transition-colors hover:bg-state-base-hover',
                             effectiveActiveMenu === item.key ? 'system-sm-semibold bg-state-base-active text-components-menu-item-text-active' : 'system-sm-medium text-components-menu-item-text',
                           )}
                           title={item.name}
                           onClick={() => {
-                            if (!onTabChange)
-                              setInternalActiveMenu(item.key)
+                            setInternalActiveMenu(item.key)
                             onTabChange?.(item.key)
                           }}
                         >
                           {effectiveActiveMenu === item.key ? item.activeIcon : item.icon}
                           {!isMobile && <div className="truncate">{item.name}</div>}
-                        </div>
+                        </button>
                       ))
                     }
                   </div>
@@ -247,7 +263,7 @@ export default function AccountSetting({
             }
           </div>
         </div>
-        <div className="relative flex w-[824px]">
+        <div className="relative z-0 flex w-[824px]">
           <div className="fixed right-6 top-6 z-[9999] flex flex-col items-center">
             <Button
               variant="tertiary"
