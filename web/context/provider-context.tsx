@@ -121,7 +121,11 @@ export const ProviderContextProvider = ({
     WORKSPACE_CAPABILITIES.modelProviderManage,
     WORKSPACE_CAPABILITIES.modelManage,
   ])
-  const canUseModels = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.modelUse)
+  const canUseModels = hasAnyWorkspaceCapability(currentWorkspace, [
+    WORKSPACE_CAPABILITIES.modelUse,
+    WORKSPACE_CAPABILITIES.modelProviderManage,
+    WORKSPACE_CAPABILITIES.modelManage,
+  ])
   const { data: providersData } = useModelProviders(canManageModelProviders)
   const { data: textGenerationModelList } = useModelListByType(ModelTypeEnum.textGeneration, canUseModels)
   const { data: supportRetrievalMethods } = useSupportRetrievalMethods()

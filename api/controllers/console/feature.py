@@ -57,4 +57,15 @@ class SystemFeatureApi(Resource):
             is_authenticated = current_user.is_authenticated
         except Unauthorized:
             is_authenticated = False
-        return FeatureService.get_system_features(is_authenticated=is_authenticated).model_dump()
+        payload = FeatureService.get_system_features(is_authenticated=is_authenticated).model_dump()
+        if is_authenticated:
+            owner = ""
+            try:
+                owner = (current_user.custom_config_dict.get("desktop_sso_owner") or "").strip().lower()
+            except Exception:
+                owner = ""
+            if owner != "built-in":
+                permission = payload.get("plugin_installation_permission")
+                if isinstance(permission, dict):
+                    permission["plugin_installation_scope"] = "none"
+        return payload

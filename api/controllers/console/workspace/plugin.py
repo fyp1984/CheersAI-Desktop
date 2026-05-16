@@ -19,11 +19,21 @@ from controllers.console.wraps import account_initialization_required, is_admin_
 from core.model_runtime.utils.encoders import jsonable_encoder
 from core.plugin.impl.exc import PluginDaemonClientSideError
 from libs.login import current_account_with_tenant, login_required
-from models.account import TenantPluginAutoUpgradeStrategy, TenantPluginPermission
+from models.account import Account, TenantPluginAutoUpgradeStrategy, TenantPluginPermission
 from services.plugin.plugin_auto_upgrade_service import PluginAutoUpgradeService
 from services.plugin.plugin_parameter_service import PluginParameterService
 from services.plugin.plugin_permission_service import PluginPermissionService
 from services.plugin.plugin_service import PluginService
+
+
+def is_system_admin(account: Account) -> bool:
+    owner = (account.custom_config_dict.get("desktop_sso_owner") or "").strip().lower()
+    return owner == "built-in"
+
+
+def require_system_admin(account: Account) -> None:
+    if not is_system_admin(account):
+        raise Forbidden("请联系系统管理员进行安装")
 
 
 class ParserList(BaseModel):
@@ -291,7 +301,8 @@ class PluginUploadFromPkgApi(Resource):
     @require_system_admin_plugin_install_capability
     @plugin_permission_required(install_required=True)
     def post(self):
-        _, tenant_id = current_account_with_tenant()
+        account, tenant_id = current_account_with_tenant()
+        require_system_admin(account)
 
         file = request.files["pkg"]
 
@@ -317,7 +328,8 @@ class PluginUploadFromGithubApi(Resource):
     @require_system_admin_plugin_install_capability
     @plugin_permission_required(install_required=True)
     def post(self):
-        _, tenant_id = current_account_with_tenant()
+        account, tenant_id = current_account_with_tenant()
+        require_system_admin(account)
 
         args = ParserGithubUpload.model_validate(console_ns.payload)
 
@@ -337,7 +349,8 @@ class PluginUploadFromBundleApi(Resource):
     @require_system_admin_plugin_install_capability
     @plugin_permission_required(install_required=True)
     def post(self):
-        _, tenant_id = current_account_with_tenant()
+        account, tenant_id = current_account_with_tenant()
+        require_system_admin(account)
 
         file = request.files["bundle"]
 
@@ -363,7 +376,8 @@ class PluginInstallFromPkgApi(Resource):
     @require_system_admin_plugin_install_capability
     @plugin_permission_required(install_required=True)
     def post(self):
-        _, tenant_id = current_account_with_tenant()
+        account, tenant_id = current_account_with_tenant()
+        require_system_admin(account)
         args = ParserPluginIdentifiers.model_validate(console_ns.payload)
 
         try:
@@ -383,7 +397,8 @@ class PluginInstallFromGithubApi(Resource):
     @require_system_admin_plugin_install_capability
     @plugin_permission_required(install_required=True)
     def post(self):
-        _, tenant_id = current_account_with_tenant()
+        account, tenant_id = current_account_with_tenant()
+        require_system_admin(account)
 
         args = ParserGithubInstall.model_validate(console_ns.payload)
 
@@ -410,7 +425,8 @@ class PluginInstallFromMarketplaceApi(Resource):
     @require_system_admin_plugin_install_capability
     @plugin_permission_required(install_required=True)
     def post(self):
-        _, tenant_id = current_account_with_tenant()
+        account, tenant_id = current_account_with_tenant()
+        require_system_admin(account)
 
         args = ParserPluginIdentifiers.model_validate(console_ns.payload)
 
@@ -560,7 +576,8 @@ class PluginUpgradeFromMarketplaceApi(Resource):
     @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def post(self):
-        _, tenant_id = current_account_with_tenant()
+        account, tenant_id = current_account_with_tenant()
+        require_system_admin(account)
 
         args = ParserMarketplaceUpgrade.model_validate(console_ns.payload)
 
@@ -583,7 +600,8 @@ class PluginUpgradeFromGithubApi(Resource):
     @require_plugin_manage_capability
     @plugin_permission_required(install_required=True)
     def post(self):
-        _, tenant_id = current_account_with_tenant()
+        account, tenant_id = current_account_with_tenant()
+        require_system_admin(account)
 
         args = ParserGithubUpgrade.model_validate(console_ns.payload)
 
@@ -613,7 +631,8 @@ class PluginUninstallApi(Resource):
     def post(self):
         args = ParserUninstall.model_validate(console_ns.payload)
 
-        _, tenant_id = current_account_with_tenant()
+        account, tenant_id = current_account_with_tenant()
+        require_system_admin(account)
 
         try:
             return {"success": PluginService.uninstall(tenant_id, args.plugin_installation_id)}
