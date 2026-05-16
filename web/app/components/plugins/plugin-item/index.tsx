@@ -21,6 +21,7 @@ import { useRenderI18nObject } from '@/hooks/use-i18n'
 import useTheme from '@/hooks/use-theme'
 import { cn } from '@/utils/classnames'
 import { getMarketplaceUrl } from '@/utils/var'
+import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import Badge from '../../base/badge'
 import { Github } from '../../base/icons/src/public/common'
 import Verified from '../base/badges/verified'
@@ -68,6 +69,8 @@ const PluginItem: FC<Props> = ({
   }, [source, author])
 
   const { langGeniusVersionInfo } = useAppContext()
+  const { currentWorkspace } = useAppContext()
+  const isSystemAdmin = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.systemAdmin)
 
   const isDifyVersionCompatible = useMemo(() => {
     if (!langGeniusVersionInfo.current_version)
@@ -145,7 +148,7 @@ const PluginItem: FC<Props> = ({
                   usedInApps={5}
                   isShowFetchNewVersion={source === PluginSource.github}
                   isShowInfo={source === PluginSource.github}
-                  isShowDelete
+                  isShowDelete={isSystemAdmin}
                   meta={meta}
                   onDelete={handleDelete}
                   category={category}

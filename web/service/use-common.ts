@@ -27,6 +27,7 @@ import { get, post } from './base'
 import { useInvalid } from './use-base'
 
 const NAME_SPACE = 'common'
+export type TokenBillingScope = 'workspace' | 'self' | 'system'
 
 export const commonQueryKeys = {
   fileUploadConfig: [NAME_SPACE, 'file-upload-config'] as const,
@@ -39,6 +40,8 @@ export const commonQueryKeys = {
   isLogin: [NAME_SPACE, 'is-login'] as const,
   modelProviders: (workspaceId?: string, userId?: string) =>
     [NAME_SPACE, 'model-providers', workspaceId ?? '', userId ?? ''] as const,
+  teamModelConfigs: (workspaceId?: string, userId?: string) =>
+    [NAME_SPACE, 'team-model-configs', workspaceId ?? '', userId ?? ''] as const,
   modelList: (type: ModelTypeEnum, workspaceId?: string, userId?: string) =>
     [NAME_SPACE, 'model-list', type, workspaceId ?? '', userId ?? ''] as const,
   defaultModel: (type: ModelTypeEnum, workspaceId?: string, userId?: string) =>
@@ -61,7 +64,7 @@ export const commonQueryKeys = {
   langGeniusVersion: (currentVersion?: string | null) => [NAME_SPACE, 'langgenius-version', currentVersion] as const,
   forgotPasswordValidity: (token?: string | null) => [NAME_SPACE, 'forgot-password-validity', token] as const,
   dataSourceIntegrates: [NAME_SPACE, 'data-source-integrates'] as const,
-  tokenBillingUsage: (scope: 'workspace' | 'self') => [NAME_SPACE, 'token-billing-usage', scope] as const,
+  tokenBillingUsage: (scope: TokenBillingScope) => [NAME_SPACE, 'token-billing-usage', scope] as const,
 }
 
 export const useFileUploadConfig = () => {
@@ -277,6 +280,48 @@ export const useModelProviders = (enabled = true) => {
   })
 }
 
+export type TeamModelConfigItem = {
+  plugin_code: string
+  name: string
+  version: string
+  description?: string
+  enabled: boolean
+  configured: boolean
+  api_key_set: boolean
+  base_url: string
+  max_concurrent: number | null
+  max_qps: number | null
+  updated_at: string | null
+}
+
+export type TeamModelConfigPayload = {
+  plugin_code: string
+  api_key?: string
+  base_url: string
+  max_concurrent?: number | null
+  max_qps?: number | null
+}
+
+export const useTeamModelConfigs = (enabled = true) => {
+  const { data: workspace } = useCurrentWorkspace()
+  const { data: userProfile } = useUserProfile()
+  return useQuery<{ data: TeamModelConfigItem[] }>({
+    queryKey: commonQueryKeys.teamModelConfigs(workspace?.id, userProfile?.profile?.id),
+    queryFn: () => get<{ data: TeamModelConfigItem[] }>('/team/model-config'),
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    refetchInterval: 5000,
+    enabled: enabled && !!workspace?.id && !!userProfile?.profile?.id,
+  })
+}
+
+export const useSaveTeamModelConfig = () => {
+  return useMutation({
+    mutationKey: [NAME_SPACE, 'save-team-model-config'],
+    mutationFn: (body: TeamModelConfigPayload) => post('/team/model-config', { body }),
+  })
+}
+
 export const useModelListByType = (type: ModelTypeEnum, enabled = true) => {
   const { data: workspace } = useCurrentWorkspace()
   const { data: userProfile } = useUserProfile()
@@ -350,6 +395,9 @@ export type TokenBillingSummary = {
 
 export type TokenBillingRecord = {
   id: string
+  tenant_id: string
+  tenant_name: string | null
+  organization_name?: string | null
   provider: string
   provider_type: string
   model_name: string
@@ -365,6 +413,8 @@ export type TokenBillingRecord = {
   total_price: string
   currency: string
   latency: number
+  business_type: string | null
+  business_id: string | null
   created_at: string | null
 }
 
@@ -377,14 +427,23 @@ export type TokenBillingLeaderboardItem = {
   record_count: number
 }
 
+export type TokenBillingOrganizationItem = {
+  organization_name: string | null
+  workspace_count: number
+  total_tokens: number
+  total_cost: string
+  record_count: number
+}
+
 export type TokenBillingUsage = {
   table_ready: boolean
   summary: TokenBillingSummary
   records: TokenBillingRecord[]
   leaderboard: TokenBillingLeaderboardItem[]
+  organizations: TokenBillingOrganizationItem[]
 }
 
-export const useTokenBillingUsage = (scope: 'workspace' | 'self') => {
+export const useTokenBillingUsage = (scope: TokenBillingScope) => {
   return useQuery<TokenBillingUsage>({
     queryKey: commonQueryKeys.tokenBillingUsage(scope),
     queryFn: () => get<TokenBillingUsage>('/token-billing/usage', { params: { scope } }),

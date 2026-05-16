@@ -53,6 +53,7 @@ export type ExchangeTokenParams = {
 
 export type SSOUserInfo = {
   sub: string
+  owner?: string
   email: string
   name: string
   preferred_username?: string
@@ -94,6 +95,7 @@ export const exchangeSSOToken = async (params: ExchangeTokenParams) => {
   const result = await post('/auth/desktop-sso/login', {
     body: {
       sub: userInfo.sub,
+      owner: userInfo.owner,
       email: userInfo.email,
       name: userInfo.name,
       preferred_username: userInfo.preferred_username,

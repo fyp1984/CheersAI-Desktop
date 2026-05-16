@@ -63,6 +63,11 @@ class SecurityConfig(BaseSettings):
         default=None,
     )
 
+    ENCRYPTION_KEY: str = Field(
+        description="AES-256-GCM key material used for team model API key encryption.",
+        default="",
+    )
+
 
 class AppExecutionConfig(BaseSettings):
     """

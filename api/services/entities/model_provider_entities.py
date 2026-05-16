@@ -77,6 +77,8 @@ class ProviderResponse(BaseModel):
     provider_credential_schema: ProviderCredentialSchema | None = None
     model_credential_schema: ModelCredentialSchema | None = None
     preferred_provider_type: ProviderType
+    is_shared_installation: bool = True
+    is_tenant_configured: bool = False
     custom_configuration: CustomConfigurationResponse
     system_configuration: SystemConfigurationResponse
 

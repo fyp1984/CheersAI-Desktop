@@ -6,8 +6,12 @@ from flask_restx import Resource
 from pydantic import BaseModel, Field, field_validator
 
 from controllers.console import console_ns
-from controllers.console.wraps import account_initialization_required, setup_required
 from controllers.console.workspace import require_model_provider_manage_capability
+from controllers.console.wraps import (
+    account_initialization_required,
+    is_admin_or_owner_required,
+    setup_required,
+)
 from core.model_runtime.entities.model_entities import ModelType
 from core.model_runtime.errors.validate import CredentialsValidateFailedError
 from core.model_runtime.utils.encoders import jsonable_encoder
@@ -115,7 +119,9 @@ class ModelProviderCredentialApi(Resource):
     @console_ns.expect(console_ns.models[ParserCredentialId.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
+    @require_model_provider_manage_capability
     def get(self, provider: str):
         _, current_tenant_id = current_account_with_tenant()
         tenant_id = current_tenant_id
@@ -133,6 +139,7 @@ class ModelProviderCredentialApi(Resource):
     @console_ns.expect(console_ns.models[ParserCredentialCreate.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
     @require_model_provider_manage_capability
     def post(self, provider: str):
@@ -157,6 +164,7 @@ class ModelProviderCredentialApi(Resource):
     @console_ns.expect(console_ns.models[ParserCredentialUpdate.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
     @require_model_provider_manage_capability
     def put(self, provider: str):
@@ -183,6 +191,7 @@ class ModelProviderCredentialApi(Resource):
     @console_ns.expect(console_ns.models[ParserCredentialDelete.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
     @require_model_provider_manage_capability
     def delete(self, provider: str):
@@ -203,6 +212,7 @@ class ModelProviderCredentialSwitchApi(Resource):
     @console_ns.expect(console_ns.models[ParserCredentialSwitch.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
     @require_model_provider_manage_capability
     def post(self, provider: str):
@@ -224,7 +234,9 @@ class ModelProviderValidateApi(Resource):
     @console_ns.expect(console_ns.models[ParserCredentialValidate.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
+    @require_model_provider_manage_capability
     def post(self, provider: str):
         _, current_tenant_id = current_account_with_tenant()
         payload = console_ns.payload or {}
@@ -277,6 +289,7 @@ class PreferredProviderTypeUpdateApi(Resource):
     @console_ns.expect(console_ns.models[ParserPreferredProviderType.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
     @require_model_provider_manage_capability
     def post(self, provider: str):

@@ -5,6 +5,7 @@ import { deleteSession, getSession, shouldRefreshSession, updateSession } from '
 
 type RawSSOUserInfo = {
   sub?: string
+  owner?: string
   preferred_username?: string
   preferredUsername?: string
   name?: string
@@ -71,6 +72,7 @@ const normalizeUserInfo = (rawUserInfo: RawSSOUserInfo) => {
   return {
     sub: rawUserInfo?.sub || '',
     preferred_username: rawUserInfo?.preferred_username || rawUserInfo?.preferredUsername || '',
+    owner: rawUserInfo?.owner || '',
     name: rawUserInfo?.name || rawUserInfo?.displayName || '',
     email: rawUserInfo?.email || '',
     groups: normalizeStringArray(rawUserInfo?.groups),
@@ -181,6 +183,7 @@ export async function POST() {
     }
 
     userinfoUrl.searchParams.set('access_token', accessToken)
+    const tokenClaims = decodeJwtPayload(accessToken)
 
     const userinfoResponse = await fetch(userinfoUrl.toString(), {
       method: 'GET',
@@ -213,7 +216,11 @@ export async function POST() {
     }
 
     const rawUserInfo = await userinfoResponse.json()
-    const userInfo = normalizeUserInfo(rawUserInfo)
+    const userInfo = normalizeUserInfo({
+      ...tokenClaims,
+      ...rawUserInfo,
+      owner: rawUserInfo?.owner || tokenClaims?.owner,
+    })
     const validationError = validateUserInfo(userInfo)
 
     if (validationError) {

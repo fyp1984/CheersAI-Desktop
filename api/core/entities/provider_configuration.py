@@ -63,6 +63,8 @@ class ProviderConfiguration(BaseModel):
     """
 
     tenant_id: str
+    runtime_tenant_id: str | None = None
+    requires_team_model_config: bool = False
     provider: ProviderEntity
     preferred_provider_type: ProviderType
     using_provider_type: ProviderType
@@ -75,6 +77,8 @@ class ProviderConfiguration(BaseModel):
 
     @model_validator(mode="after")
     def _(self):
+        if self.runtime_tenant_id is None:
+            self.runtime_tenant_id = self.tenant_id
         if self.provider.provider not in original_provider_configurate_methods:
             original_provider_configurate_methods[self.provider.provider] = []
             for configurate_method in self.provider.configurate_methods:
@@ -161,6 +165,13 @@ class ProviderConfiguration(BaseModel):
                             provider=self.provider.provider,
                             credential_type=PluginCredentialType.MODEL,
                         )
+
+            if credentials is None and self.requires_team_model_config:
+                from core.errors.error import TeamModelConfigRequiredError
+
+                raise TeamModelConfigRequiredError(
+                    f"Team model credentials for provider {self.provider.provider} are not initialized."
+                )
 
             return credentials
 
@@ -342,7 +353,7 @@ class ProviderConfiguration(BaseModel):
                                 tenant_id=self.tenant_id, token=original_credentials[key]
                             )
 
-            model_provider_factory = ModelProviderFactory(self.tenant_id)
+            model_provider_factory = ModelProviderFactory(self.runtime_tenant_id or self.tenant_id)
             validated_credentials = model_provider_factory.provider_credentials_validate(
                 provider=self.provider.provider, credentials=credentials
             )
@@ -475,6 +486,10 @@ class ProviderConfiguration(BaseModel):
                 else:
                     # some historical data may have a provider record but not be set as valid
                     provider_record.is_valid = True
+                    if provider_record.credential is None:
+                        provider_record.credential_id = new_record.id
+                        provider_record.updated_at = naive_utc_now()
+                        self.switch_preferred_provider_type(provider_type=ProviderType.CUSTOM, session=session)
 
                 session.commit()
             except Exception:
@@ -889,7 +904,7 @@ class ProviderConfiguration(BaseModel):
                                 tenant_id=self.tenant_id, token=original_credentials[key]
                             )
 
-            model_provider_factory = ModelProviderFactory(self.tenant_id)
+            model_provider_factory = ModelProviderFactory(self.runtime_tenant_id or self.tenant_id)
             validated_credentials = model_provider_factory.model_credentials_validate(
                 provider=self.provider.provider, model_type=model_type, model=model, credentials=credentials
             )
@@ -1375,7 +1390,7 @@ class ProviderConfiguration(BaseModel):
         :param model_type: model type
         :return:
         """
-        model_provider_factory = ModelProviderFactory(self.tenant_id)
+        model_provider_factory = ModelProviderFactory(self.runtime_tenant_id or self.tenant_id)
 
         # Get model instance of LLM
         return model_provider_factory.get_model_type_instance(provider=self.provider.provider, model_type=model_type)
@@ -1384,7 +1399,7 @@ class ProviderConfiguration(BaseModel):
         """
         Get model schema
         """
-        model_provider_factory = ModelProviderFactory(self.tenant_id)
+        model_provider_factory = ModelProviderFactory(self.runtime_tenant_id or self.tenant_id)
         return model_provider_factory.get_model_schema(
             provider=self.provider.provider, model_type=model_type, model=model, credentials=credentials
         )
@@ -1486,7 +1501,7 @@ class ProviderConfiguration(BaseModel):
         :param model: model name
         :return:
         """
-        model_provider_factory = ModelProviderFactory(self.tenant_id)
+        model_provider_factory = ModelProviderFactory(self.runtime_tenant_id or self.tenant_id)
         provider_schema = model_provider_factory.get_provider_schema(self.provider.provider)
 
         model_types: list[ModelType] = []

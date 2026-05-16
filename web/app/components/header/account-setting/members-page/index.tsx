@@ -1,9 +1,11 @@
 'use client'
 import type { InvitationResult } from '@/models/common'
-import { RiPencilLine } from '@remixicon/react'
-import { useState } from 'react'
+import { RiArrowRightLine, RiBrainLine, RiPencilLine, RiPuzzle2Line } from '@remixicon/react'
+import { useRouter } from 'next/navigation'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Avatar from '@/app/components/base/avatar'
+import Button from '@/app/components/base/button'
 import Tooltip from '@/app/components/base/tooltip'
 import { NUM_INFINITE } from '@/app/components/billing/config'
 import { Plan } from '@/app/components/billing/type'
@@ -11,11 +13,14 @@ import UpgradeBtn from '@/app/components/billing/upgrade-btn'
 import { useAppContext } from '@/context/app-context'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 import { useLocale } from '@/context/i18n'
+import { useModalContext } from '@/context/modal-context'
 import { useProviderContext } from '@/context/provider-context'
 import { useFormatTimeFromNow } from '@/hooks/use-format-time-from-now'
 import { LanguagesSupported } from '@/i18n-config/language'
 import { useMembers } from '@/service/use-common'
+import { useInstalledPluginList } from '@/service/use-plugins'
 import { hasAnyWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
+import { ACCOUNT_SETTING_TAB } from '../constants'
 import EditWorkspaceModal from './edit-workspace-modal'
 import InviteButton from './invite-button'
 import InviteModal from './invite-modal'
@@ -27,6 +32,7 @@ import TransferOwnershipModal from './transfer-ownership-modal'
 
 const MembersPage = () => {
   const { t } = useTranslation()
+  const router = useRouter()
   const RoleMap = {
     owner: t('members.owner', { ns: 'common' }),
     admin: t('members.admin', { ns: 'common' }),
@@ -39,12 +45,13 @@ const MembersPage = () => {
   const { userProfile, currentWorkspace, isCurrentWorkspaceOwner, isCurrentWorkspaceManager } = useAppContext()
   const { data, refetch } = useMembers()
   const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
+  const { setShowAccountSettingModal } = useModalContext()
   const { formatTimeFromNow } = useFormatTimeFromNow()
   const [inviteModalVisible, setInviteModalVisible] = useState(false)
   const [invitationResults, setInvitationResults] = useState<InvitationResult[]>([])
   const [invitedModalVisible, setInvitedModalVisible] = useState(false)
   const accounts = data?.accounts || []
-  const { plan, enableBilling, isAllowTransferWorkspace } = useProviderContext()
+  const { modelProviders, plan, enableBilling, isAllowTransferWorkspace } = useProviderContext()
   const isNotUnlimitedMemberPlan = enableBilling && plan.type !== Plan.team && plan.type !== Plan.enterprise
   const isMemberFull = enableBilling && isNotUnlimitedMemberPlan && accounts.length >= plan.total.teamMembers
   const [editWorkspaceModalVisible, setEditWorkspaceModalVisible] = useState(false)
@@ -55,6 +62,36 @@ const MembersPage = () => {
       WORKSPACE_CAPABILITIES.settingsTeam,
       WORKSPACE_CAPABILITIES.teamManage,
     ])
+  const canManageModelProviders = hasAnyWorkspaceCapability(currentWorkspace, [
+    WORKSPACE_CAPABILITIES.modelProviderManage,
+    WORKSPACE_CAPABILITIES.modelManage,
+  ])
+  const canManagePlugins = hasAnyWorkspaceCapability(currentWorkspace, [
+    WORKSPACE_CAPABILITIES.pluginManage,
+    WORKSPACE_CAPABILITIES.apiExtensionManage,
+  ])
+  const isSystemAdmin = hasAnyWorkspaceCapability(currentWorkspace, [
+    WORKSPACE_CAPABILITIES.systemAdmin,
+  ])
+  const showInstallWorkbench = isSystemAdmin && (canManageModelProviders || canManagePlugins)
+  const { data: installedPluginList, isLoading: isInstalledPluginListLoading } = useInstalledPluginList(!canManagePlugins, 20)
+  const configuredProviderCount = useMemo(() => {
+    return modelProviders.filter(provider =>
+      provider.custom_configuration.status === 'active'
+      || provider.system_configuration.enabled === true,
+    ).length
+  }, [modelProviders])
+
+  const openProviderSettings = () => {
+    setShowAccountSettingModal({
+      payload: ACCOUNT_SETTING_TAB.PROVIDER,
+    })
+  }
+
+  const openPluginCenter = () => {
+    setShowAccountSettingModal(null)
+    router.push('/plugins')
+  }
 
   return (
     <>
@@ -115,6 +152,131 @@ const MembersPage = () => {
             <InviteButton disabled={!isCurrentWorkspaceManager || isMemberFull} onClick={() => setInviteModalVisible(true)} />
           </div>
         </div>
+        {showInstallWorkbench && (
+          <div className="mb-5 rounded-xl border border-[#dbeafe] bg-[#f9fbff] p-4 shadow-sm">
+            <div className="flex flex-col gap-2 border-b border-[#dbeafe] pb-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <div className="system-md-semibold text-text-primary">
+                  {t('members.installWorkbenchTitle', { ns: 'common', defaultValue: '系统安装能力' })}
+                </div>
+                <div className="system-sm-regular mt-1 text-text-secondary">
+                  {t('members.installWorkbenchDescription', {
+                    ns: 'common',
+                    defaultValue: 'built-in Admin 可在此快速进入模型服务与工具插件安装入口，无需先切换到其他页面。',
+                  })}
+                </div>
+              </div>
+              <div className="system-xs-medium rounded-full bg-white px-3 py-1 text-[#2563eb] shadow-sm">
+                {t('members.installWorkbenchBadge', {
+                  ns: 'common',
+                  defaultValue: '系统管理员专属',
+                })}
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 xl:grid-cols-2">
+              {canManageModelProviders && (
+                <div className="rounded-xl border border-divider-subtle bg-white p-4 shadow-sm transition-all duration-200 hover:translate-y-[-2px] hover:shadow-md">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eff6ff] text-[#2563eb]">
+                      <RiBrainLine className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 grow">
+                      <div className="system-md-semibold text-text-primary">
+                        {t('members.modelInstallTitle', { ns: 'common', defaultValue: '模型服务安装' })}
+                      </div>
+                      <div className="system-xs-regular mt-1 text-text-secondary">
+                        {t('members.modelInstallDescription', {
+                          ns: 'common',
+                          defaultValue: '集中接入并配置当前工作空间可用的模型服务，安装后即可用于对话与应用。',
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="system-xs-medium rounded-full bg-[#eff6ff] px-3 py-1 text-[#2563eb]">
+                      {t('members.modelInstallCount', {
+                        ns: 'common',
+                        defaultValue: '已接入 {{count}} 个模型服务',
+                        count: configuredProviderCount,
+                      })}
+                    </div>
+                    <div className="system-xs-medium rounded-full bg-components-badge-bg-dimm px-3 py-1 text-text-secondary">
+                      {t('members.modelInstallScope', {
+                        ns: 'common',
+                        defaultValue: '支持系统默认模型设置',
+                      })}
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button variant="primary" onClick={openProviderSettings}>
+                      {t('members.modelInstallAction', {
+                        ns: 'common',
+                        defaultValue: configuredProviderCount > 0 ? '管理模型服务' : '安装模型服务',
+                      })}
+                    </Button>
+                    <Button variant="secondary" onClick={openProviderSettings}>
+                      {t('members.modelInstallSecondaryAction', {
+                        ns: 'common',
+                        defaultValue: '打开系统模型设置',
+                      })}
+                      <RiArrowRightLine className="ml-1 h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {canManagePlugins && (
+                <div className="rounded-xl border border-divider-subtle bg-white p-4 shadow-sm transition-all duration-200 hover:translate-y-[-2px] hover:shadow-md">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eef2ff] text-[#4f46e5]">
+                      <RiPuzzle2Line className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 grow">
+                      <div className="system-md-semibold text-text-primary">
+                        {t('members.pluginInstallTitle', { ns: 'common', defaultValue: '工具插件安装' })}
+                      </div>
+                      <div className="system-xs-regular mt-1 text-text-secondary">
+                        {t('members.pluginInstallDescription', {
+                          ns: 'common',
+                          defaultValue: '前往工具插件页面安装、更新或启停插件，统一管理当前系统可用工具。',
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="system-xs-medium rounded-full bg-[#eef2ff] px-3 py-1 text-[#4338ca]">
+                      {t('members.pluginInstallCount', {
+                        ns: 'common',
+                        defaultValue: '已安装 {{count}} 个插件',
+                        count: isInstalledPluginListLoading ? '--' : (installedPluginList?.total || 0),
+                      })}
+                    </div>
+                    <div className="system-xs-medium rounded-full bg-components-badge-bg-dimm px-3 py-1 text-text-secondary">
+                      {t('members.pluginInstallScope', {
+                        ns: 'common',
+                        defaultValue: '支持插件安装与启停管理',
+                      })}
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button variant="primary" onClick={openPluginCenter}>
+                      {t('members.pluginInstallAction', {
+                        ns: 'common',
+                        defaultValue: '安装工具插件',
+                      })}
+                    </Button>
+                    <Button variant="secondary" onClick={openPluginCenter}>
+                      {t('members.pluginInstallSecondaryAction', {
+                        ns: 'common',
+                        defaultValue: '打开工具插件页',
+                      })}
+                      <RiArrowRightLine className="ml-1 h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         <div className="overflow-visible lg:overflow-visible">
           <div className="flex min-w-[480px] items-center border-b border-divider-regular py-[7px]">
             <div className="system-xs-medium-uppercase grow px-3 text-text-tertiary">{t('members.name', { ns: 'common' })}</div>

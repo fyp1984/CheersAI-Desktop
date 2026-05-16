@@ -11,6 +11,8 @@ from extensions.ext_redis import redis_client
 from libs.datetime_utils import naive_utc_now
 from libs.desktop_auth import (
     build_desktop_sso_projection,
+    get_sso_subject_owner,
+    get_sso_subject_username,
     has_desktop_access,
     resolve_workspace_role,
     save_desktop_sso_projection,
@@ -33,6 +35,7 @@ desktop_sso_login_model = console_ns.model(
     "DesktopSSOLoginPayload",
     {
         "sub": fields.String(required=True, description="SSO subject"),
+        "owner": fields.String(required=False, description="SSO owner/domain"),
         "preferred_username": fields.String(required=False, description="SSO username"),
         "email": fields.String(required=True, description="User email from SSO"),
         "name": fields.String(required=False, description="User name from SSO"),
@@ -206,11 +209,12 @@ class DesktopSSOLoginApi(Resource):
 
             normalized_email = email.lower()
             resolved_sso_role, system_role = resolve_workspace_role(data)
-            subject_parts = subject_id.split("/", 1)
-            sso_owner = subject_parts[0] if len(subject_parts) == 2 and subject_parts[0] else (
-                dify_config.SSO_PROVISION_OWNER or "CheersAI"
-            )
-            sso_username = (data.get("preferred_username") or (subject_parts[1] if len(subject_parts) == 2 else "") or name).strip()
+            sso_owner = get_sso_subject_owner(data) or (dify_config.SSO_PROVISION_OWNER or "CheersAI")
+            sso_username = (
+                get_sso_subject_username(data)
+                or (data.get("preferred_username") or "")
+                or name
+            ).strip()
             logger.info(
                 "Resolved Desktop SSO subject %s with identifier '%s' to workspace role '%s'",
                 subject_id,

@@ -1,8 +1,8 @@
 'use client'
 import type { FC } from 'react'
-import type { TokenBillingLeaderboardItem, TokenBillingRecord, TokenBillingSummary } from '@/service/use-common'
+import type { TokenBillingLeaderboardItem, TokenBillingOrganizationItem, TokenBillingRecord, TokenBillingScope, TokenBillingSummary } from '@/service/use-common'
 import dayjs from 'dayjs'
-import { RiFlashlightLine, RiHistoryLine, RiPriceTag3Line, RiStackLine } from '@remixicon/react'
+import { RiDownloadLine, RiFlashlightLine, RiHistoryLine, RiPriceTag3Line, RiStackLine } from '@remixicon/react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Badge from '@/app/components/base/badge'
@@ -37,6 +37,19 @@ const getDisplayName = (item: TokenBillingLeaderboardItem) => {
   return item.name || item.email || item.user_id || '-'
 }
 
+const getOrganizationLabel = (item: TokenBillingOrganizationItem, fallback: string) => {
+  return item.organization_name || fallback
+}
+
+const getBusinessLabel = (record: TokenBillingRecord, labels: Record<string, string>) => {
+  if (!record.business_type)
+    return '-'
+
+  const label = labels[record.business_type] || record.business_type
+
+  return record.business_id ? `${label} · ${record.business_id}` : label
+}
+
 const StatCard = ({
   title,
   value,
@@ -62,15 +75,27 @@ const StatCard = ({
 
 const TokenBillingPage: FC = () => {
   const { t } = useTranslation()
+  const text = (key: string, options?: Record<string, unknown>) => String(t(key as never, options as never))
   const { currentWorkspace } = useAppContext()
   const canViewWorkspace = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.settingsTeam)
     || hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.modelManage)
-  const [scope, setScope] = useState<'workspace' | 'self'>(canViewWorkspace ? 'workspace' : 'self')
+    || hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.modelProviderManage)
+  const canViewSystem = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.tokenBillingGlobalView)
+  const canExportSystem = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.tokenBillingExport)
+  const businessLabels = {
+    agent: text('tokenBilling.business.agent', { ns: 'common' }),
+    app: text('tokenBilling.business.app', { ns: 'common' }),
+    workflow: text('tokenBilling.business.workflow', { ns: 'common' }),
+  }
+  const [scope, setScope] = useState<TokenBillingScope>(
+    canViewSystem ? 'system' : (canViewWorkspace ? 'workspace' : 'self'),
+  )
   const { data, isLoading, isFetching } = useTokenBillingUsage(scope)
 
   const summary: TokenBillingSummary | undefined = data?.summary
   const records = data?.records || []
   const leaderboard = data?.leaderboard || []
+  const organizations = data?.organizations || []
 
   const cards = !summary
     ? []
@@ -140,10 +165,17 @@ const TokenBillingPage: FC = () => {
         <div className="title-2xl-semi-bold mt-3 text-text-primary">
           {scope === 'self'
             ? t('tokenBilling.myTitle', { ns: 'common' })
-            : t('tokenBilling.title', { ns: 'common' })}
+            : scope === 'system'
+              ? t('tokenBilling.systemTitle', { ns: 'common' })
+              : t('tokenBilling.title', { ns: 'common' })}
         </div>
-        <div className="system-md-regular mt-2 text-text-secondary">{t('tokenBilling.subtitle', { ns: 'common' })}</div>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="system-md-regular mt-2 text-text-secondary">
+          {scope === 'system'
+            ? t('tokenBilling.systemSubtitle', { ns: 'common' })
+            : t('tokenBilling.subtitle', { ns: 'common' })}
+        </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap gap-2">
           {canViewWorkspace && (
             <button
               type="button"
@@ -155,6 +187,17 @@ const TokenBillingPage: FC = () => {
               {t('tokenBilling.scope.workspace', { ns: 'common' })}
             </button>
           )}
+          {canViewSystem && (
+            <button
+              type="button"
+              className={scope === 'system'
+                ? 'rounded-lg bg-state-base-active px-3 py-1.5 text-sm text-text-primary'
+                : 'rounded-lg bg-components-button-secondary-bg px-3 py-1.5 text-sm text-text-secondary'}
+              onClick={() => setScope('system')}
+            >
+              {text('tokenBilling.scope.system', { ns: 'common' })}
+            </button>
+          )}
           <button
             type="button"
             className={scope === 'self'
@@ -164,6 +207,17 @@ const TokenBillingPage: FC = () => {
           >
             {t('tokenBilling.scope.self', { ns: 'common' })}
           </button>
+        </div>
+          {canExportSystem && scope === 'system' && (
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-lg bg-components-button-secondary-bg px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary"
+              onClick={() => window.open(`/console/api/token-billing/export?scope=${scope}`, '_blank', 'noopener,noreferrer')}
+            >
+              <RiDownloadLine className="h-4 w-4" />
+              {text('tokenBilling.export', { ns: 'common' })}
+            </button>
+          )}
         </div>
       </div>
 
@@ -210,6 +264,39 @@ const TokenBillingPage: FC = () => {
         </div>
       )}
 
+      {scope === 'system' && organizations.length > 0 && (
+        <div className="overflow-hidden rounded-3xl border border-divider-regular bg-components-panel-bg">
+          <div className="border-b border-divider-regular px-4 py-4">
+            <div className="system-md-semibold text-text-primary">{text('tokenBilling.organizations.title', { ns: 'common' })}</div>
+            <div className="system-sm-regular mt-1 text-text-tertiary">{text('tokenBilling.organizations.subtitle', { ns: 'common' })}</div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-divider-regular">
+              <thead className="bg-background-section-burn">
+                <tr className="text-left system-xs-medium-uppercase text-text-tertiary">
+                  <th className="px-4 py-3">{text('tokenBilling.columns.organization', { ns: 'common' })}</th>
+                  <th className="px-4 py-3">{text('tokenBilling.columns.workspaceCount', { ns: 'common' })}</th>
+                  <th className="px-4 py-3">{t('tokenBilling.leaderboard.calls', { ns: 'common' })}</th>
+                  <th className="px-4 py-3">{t('tokenBilling.columns.tokens', { ns: 'common' })}</th>
+                  <th className="px-4 py-3">{t('tokenBilling.columns.cost', { ns: 'common' })}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-divider-regular">
+                {organizations.map(item => (
+                  <tr key={item.organization_name || 'unassigned'} className="system-sm-regular text-text-secondary">
+                    <td className="px-4 py-3 font-medium text-text-primary">{getOrganizationLabel(item, text('tokenBilling.organizations.unassigned', { ns: 'common' }))}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{formatInteger(item.workspace_count)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{formatInteger(item.record_count)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{formatInteger(item.total_tokens)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{formatMoney(item.total_cost, summary?.currency || 'USD')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       <div className="overflow-hidden rounded-3xl border border-divider-regular bg-components-panel-bg">
             <div className="flex items-center justify-between border-b border-divider-regular px-4 py-4">
               <div>
@@ -232,8 +319,10 @@ const TokenBillingPage: FC = () => {
                 <table className="min-w-full divide-y divide-divider-regular">
                   <thead className="bg-background-section-burn">
                     <tr className="text-left system-xs-medium-uppercase text-text-tertiary">
+                      {scope === 'system' && <th className="px-4 py-3">{text('tokenBilling.columns.workspace', { ns: 'common' })}</th>}
                       <th className="px-4 py-3">{t('tokenBilling.columns.time', { ns: 'common' })}</th>
                       <th className="px-4 py-3">{t('tokenBilling.columns.model', { ns: 'common' })}</th>
+                      <th className="px-4 py-3">{text('tokenBilling.columns.business', { ns: 'common' })}</th>
                       <th className="px-4 py-3">{t('tokenBilling.columns.source', { ns: 'common' })}</th>
                       <th className="px-4 py-3">{t('tokenBilling.columns.tokens', { ns: 'common' })}</th>
                       <th className="px-4 py-3">{t('tokenBilling.columns.cost', { ns: 'common' })}</th>
@@ -243,6 +332,14 @@ const TokenBillingPage: FC = () => {
                   <tbody className="divide-y divide-divider-regular">
                     {records.map(record => (
                       <tr key={record.id} className="system-sm-regular text-text-secondary">
+                        {scope === 'system' && (
+                          <td className="whitespace-nowrap px-4 py-3">
+                            <div className="font-medium text-text-primary">{record.tenant_name || '-'}</div>
+                            <div className="mt-1 text-text-tertiary">
+                              {(record.organization_name || text('tokenBilling.organizations.unassigned', { ns: 'common' }))} · {record.tenant_id}
+                            </div>
+                          </td>
+                        )}
                         <td className="whitespace-nowrap px-4 py-3">
                           {record.created_at ? dayjs(record.created_at).format('YYYY-MM-DD HH:mm:ss') : '-'}
                         </td>
@@ -253,6 +350,7 @@ const TokenBillingPage: FC = () => {
                             <Badge>{record.model_type}</Badge>
                           </div>
                         </td>
+                        <td className="px-4 py-3">{getBusinessLabel(record, businessLabels)}</td>
                         <td className="px-4 py-3">
                           {record.invocation_source || (record.is_cloud
                             ? t('tokenBilling.sources.cloud', { ns: 'common' })

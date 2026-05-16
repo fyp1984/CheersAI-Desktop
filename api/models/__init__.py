@@ -38,6 +38,7 @@ from .enums import (
     WorkflowRunTriggeredFrom,
     WorkflowTriggerStatus,
 )
+from .global_plugin import SystemPlugin, TeamModelConfig
 from .model import (
     AccountTrialAppRecord,
     ApiRequest,
@@ -192,6 +193,7 @@ __all__ = [
     "RecommendedApp",
     "SavedMessage",
     "Site",
+    "SystemPlugin",
     "Tag",
     "TagBinding",
     "Tenant",
@@ -200,6 +202,7 @@ __all__ = [
     "TenantCreditPool",
     "TenantDefaultModel",
     "TenantPreferredModelProvider",
+    "TeamModelConfig",
     "TenantStatus",
     "TidbAuthBinding",
     "ToolConversationVariables",

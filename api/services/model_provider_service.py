@@ -16,6 +16,7 @@ from services.entities.model_provider_entities import (
     SystemConfigurationResponse,
 )
 from services.errors.app_model_config import ProviderNotFoundError
+from services.global_plugin_service import GlobalPluginService
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,8 @@ class ModelProviderService:
                 provider_credential_schema=provider_configuration.provider.provider_credential_schema,
                 model_credential_schema=provider_configuration.provider.model_credential_schema,
                 preferred_provider_type=provider_configuration.preferred_provider_type,
+                is_shared_installation=True,
+                is_tenant_configured=provider_configuration.is_custom_configuration_available(),
                 custom_configuration=CustomConfigurationResponse(
                     status=CustomConfigurationStatus.ACTIVE
                     if provider_configuration.is_custom_configuration_available()
@@ -523,7 +526,14 @@ class ModelProviderService:
         :param lang: language (zh_Hans or en_US)
         :return:
         """
-        model_provider_factory = ModelProviderFactory(tenant_id)
+        # Shared providers are installed in the built-in admin workspace, so icon
+        # assets must be resolved from the source tenant instead of the current team.
+        source_tenant_id = tenant_id
+        global_plugin = GlobalPluginService.get_enabled_plugin(provider)
+        if global_plugin and global_plugin.source_tenant_id:
+            source_tenant_id = global_plugin.source_tenant_id
+
+        model_provider_factory = ModelProviderFactory(source_tenant_id)
         byte_data, mime_type = model_provider_factory.get_provider_icon(provider, icon_type, lang)
 
         return byte_data, mime_type

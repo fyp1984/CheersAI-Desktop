@@ -37,6 +37,13 @@ const ModelIcon: FC<ModelIconProps> = ({
     language,
   )
 
+  const normalizeConsoleApiPath = (path: string) => {
+    if (!path)
+      return ''
+
+    return path.replace('/console/api/console/api/', '/console/api/')
+  }
+
   const getIconUrl = (url: string) => {
     if (!url)
       return ''
@@ -44,9 +51,18 @@ const ModelIcon: FC<ModelIconProps> = ({
     try {
       if (url.startsWith('http://') || url.startsWith('https://')) {
         const urlObj = new URL(url)
-        let path = urlObj.pathname + urlObj.search
-        if (path.includes('/console/api/console/api/'))
-          path = path.replace('/console/api/console/api/', '/console/api/')
+        const path = normalizeConsoleApiPath(urlObj.pathname + urlObj.search)
+
+        if (typeof window !== 'undefined') {
+          const currentUrl = new URL(window.location.href)
+          const loopbackHosts = new Set(['localhost', '127.0.0.1', '0.0.0.0'])
+          const useAbsoluteLocalUrl = loopbackHosts.has(currentUrl.hostname) && loopbackHosts.has(urlObj.hostname)
+          const sameHostDifferentPort = currentUrl.hostname === urlObj.hostname && currentUrl.port !== urlObj.port
+
+          if (useAbsoluteLocalUrl || sameHostDifferentPort)
+            return `${urlObj.origin}${path}`
+        }
+
         return path
       }
     }
@@ -54,10 +70,7 @@ const ModelIcon: FC<ModelIconProps> = ({
       // Ignore parsing errors
     }
 
-    if (url.includes('/console/api/console/api/'))
-      return url.replace('/console/api/console/api/', '/console/api/')
-
-    return url
+    return normalizeConsoleApiPath(url)
   }
 
   if (provider?.icon_small) {

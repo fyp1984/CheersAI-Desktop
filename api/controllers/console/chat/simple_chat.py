@@ -193,7 +193,10 @@ class SimpleChatApi(Resource):
                     tenant_id=tenant_id,
                     provider=provider,
                     model_type=ModelType.LLM,
-                    model=model_name
+                    model=model_name,
+                    usage_metadata={
+                        "source": "simple_chat",
+                    },
                 )
 
                 # 第一次调用：让 AI 决定是否需要搜索（带重试）
@@ -322,9 +325,7 @@ class SimpleChatApi(Resource):
                 logger.error(f"[Simple Chat] InvokeError: {e}")
                 yield f"data: {json.dumps({'error': str(e)})}\n\n"
             except Exception as e:
-                logger.error(f"[Simple Chat] Exception: {e}")
-                import traceback
-                traceback.print_exc()
+                logger.exception("[Simple Chat] Exception: %s", e)
                 yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
         return Response(

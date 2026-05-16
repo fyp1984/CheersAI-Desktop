@@ -41,9 +41,7 @@ class ToolTransformService:
             return console_api_url.rstrip("/")
 
         parts = urlsplit(console_api_url)
-        normalized_path = parts.path.rstrip("/")
-        if normalized_path.endswith("/console/api"):
-            normalized_path = normalized_path[: -len("/console/api")]
+        normalized_path = parts.path.rstrip("/").removesuffix("/console/api")
 
         return urlunsplit((parts.scheme, parts.netloc, normalized_path or "", parts.query, parts.fragment)) or "/"
 
@@ -54,7 +52,9 @@ class ToolTransformService:
         """
         get tool provider icon url
         """
-        url_prefix = URL(cls._get_console_base_url() or "/") / "console" / "api" / "workspaces" / "current" / "tool-provider"
+        url_prefix = (
+            URL(cls._get_console_base_url() or "/") / "console" / "api" / "workspaces" / "current" / "tool-provider"
+        )
 
         if provider_type == ToolProviderType.BUILT_IN:
             return str(url_prefix / "builtin" / provider_name / "icon")
@@ -128,6 +128,8 @@ class ToolTransformService:
             plugin_id=None,
             tools=[],
             labels=provider_controller.tool_labels,
+            is_shared_installation=True,
+            is_tenant_configured=False,
         )
 
         if isinstance(provider_controller, PluginToolProviderController):
@@ -151,8 +153,10 @@ class ToolTransformService:
         if not provider_controller.need_credentials:
             result.is_team_authorization = True
             result.allow_delete = False
+            result.is_tenant_configured = True
         elif db_provider:
             result.is_team_authorization = True
+            result.is_tenant_configured = True
 
             if decrypt_credentials:
                 credentials = db_provider.credentials
@@ -236,6 +240,8 @@ class ToolTransformService:
             tools=[],
             labels=labels or [],
             workflow_app_id=workflow_app_id,
+            is_shared_installation=False,
+            is_tenant_configured=True,
         )
 
     @staticmethod
@@ -272,6 +278,8 @@ class ToolTransformService:
                 sse_read_timeout=float(response["configuration"]["sse_read_timeout"]),
             )
 
+        response["is_shared_installation"] = False
+        response["is_tenant_configured"] = db_provider.authed
         return ToolProviderApiEntity(**response)
 
     @staticmethod
@@ -340,6 +348,8 @@ class ToolTransformService:
             is_team_authorization=True,
             tools=[],
             labels=labels or [],
+            is_shared_installation=False,
+            is_tenant_configured=True,
         )
 
         if decrypt_credentials:

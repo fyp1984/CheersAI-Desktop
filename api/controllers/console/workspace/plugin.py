@@ -10,7 +10,11 @@ from werkzeug.exceptions import Forbidden
 from configs import dify_config
 from controllers.common.schema import register_enum_models, register_schema_models
 from controllers.console import console_ns
-from controllers.console.workspace import plugin_permission_required, require_plugin_manage_capability
+from controllers.console.workspace import (
+    plugin_permission_required,
+    require_plugin_manage_capability,
+    require_system_admin_plugin_install_capability,
+)
 from controllers.console.wraps import account_initialization_required, is_admin_or_owner_required, setup_required
 from core.model_runtime.utils.encoders import jsonable_encoder
 from core.plugin.impl.exc import PluginDaemonClientSideError
@@ -284,7 +288,7 @@ class PluginUploadFromPkgApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
-    @require_plugin_manage_capability
+    @require_system_admin_plugin_install_capability
     @plugin_permission_required(install_required=True)
     def post(self):
         _, tenant_id = current_account_with_tenant()
@@ -310,7 +314,7 @@ class PluginUploadFromGithubApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
-    @require_plugin_manage_capability
+    @require_system_admin_plugin_install_capability
     @plugin_permission_required(install_required=True)
     def post(self):
         _, tenant_id = current_account_with_tenant()
@@ -330,7 +334,7 @@ class PluginUploadFromBundleApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
-    @require_plugin_manage_capability
+    @require_system_admin_plugin_install_capability
     @plugin_permission_required(install_required=True)
     def post(self):
         _, tenant_id = current_account_with_tenant()
@@ -356,7 +360,7 @@ class PluginInstallFromPkgApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
-    @require_plugin_manage_capability
+    @require_system_admin_plugin_install_capability
     @plugin_permission_required(install_required=True)
     def post(self):
         _, tenant_id = current_account_with_tenant()
@@ -376,7 +380,7 @@ class PluginInstallFromGithubApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
-    @require_plugin_manage_capability
+    @require_system_admin_plugin_install_capability
     @plugin_permission_required(install_required=True)
     def post(self):
         _, tenant_id = current_account_with_tenant()
@@ -403,7 +407,7 @@ class PluginInstallFromMarketplaceApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
-    @require_plugin_manage_capability
+    @require_system_admin_plugin_install_capability
     @plugin_permission_required(install_required=True)
     def post(self):
         _, tenant_id = current_account_with_tenant()

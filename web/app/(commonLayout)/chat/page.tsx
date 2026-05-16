@@ -2,7 +2,7 @@
 
 import { RiAddLine, RiArrowDownSLine, RiArrowLeftSLine, RiArrowRightSLine, RiAttachmentLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiDownloadLine, RiFileCopyLine, RiMicFill, RiMicLine, RiMoreLine, RiRefreshLine, RiSearchLine } from '@remixicon/react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import Checkbox from '@/app/components/base/checkbox'
 import Loading from '@/app/components/base/loading'
 import { Markdown } from '@/app/components/base/markdown'
@@ -87,6 +87,61 @@ type StoredConversation = Omit<Conversation, 'messages' | 'timestamp'> & {
   timestamp: string
 }
 
+type ChatStorageState = {
+  conversations: Conversation[]
+  currentConversationId: string | null
+  messages: Message[]
+  hasHydratedConversations: boolean
+}
+
+type ChatStorageAction
+  = | { type: 'hydrateScope', conversations: Conversation[], hydrated: boolean }
+    | { type: 'setConversations', updater: Conversation[] | ((prev: Conversation[]) => Conversation[]) }
+    | { type: 'setCurrentConversationId', conversationId: string | null }
+    | { type: 'setMessages', updater: Message[] | ((prev: Message[]) => Message[]) }
+    | { type: 'setHasHydratedConversations', hydrated: boolean }
+
+const initialChatStorageState: ChatStorageState = {
+  conversations: [],
+  currentConversationId: null,
+  messages: [],
+  hasHydratedConversations: false,
+}
+
+function chatStorageReducer(state: ChatStorageState, action: ChatStorageAction): ChatStorageState {
+  switch (action.type) {
+    case 'hydrateScope':
+      return {
+        conversations: action.conversations,
+        currentConversationId: null,
+        messages: [],
+        hasHydratedConversations: action.hydrated,
+      }
+    case 'setConversations':
+      return {
+        ...state,
+        conversations: typeof action.updater === 'function' ? action.updater(state.conversations) : action.updater,
+      }
+    case 'setCurrentConversationId':
+      return {
+        ...state,
+        currentConversationId: action.conversationId,
+      }
+    case 'setMessages':
+      return {
+        ...state,
+        messages: typeof action.updater === 'function' ? action.updater(state.messages) : action.updater,
+      }
+    case 'setHasHydratedConversations':
+      return {
+        ...state,
+        hasHydratedConversations: action.hydrated,
+      }
+    default:
+      return state
+  }
+}
+
 // 格式化时间戳
 function formatTimestamp(date: Date): string {
   const now = new Date()
@@ -145,16 +200,31 @@ function getInitialConversations(storageKey: string): Conversation[] {
 
 const ChatPage = () => {
   useDocumentTitle('对话')
-  const STORAGE_KEY = 'cheersai_conversations'
+  const LEGACY_STORAGE_KEY = 'cheersai_conversations'
+  const STORAGE_KEY_PREFIX = 'cheersai_conversations'
   const SIDEBAR_STORAGE_KEY = 'cheersai_sidebar_collapsed'
   const { currentWorkspace } = useAppContext()
   const canManageModels = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.modelManage)
   const router = useRouter()
-  const { canUseChat, isLoadingCurrentWorkspace } = useAppContext()
+  const { canUseChat, isLoadingCurrentWorkspace, userProfile } = useAppContext()
+  const conversationStorageKey = useMemo(() => {
+    if (!userProfile.id || !currentWorkspace.id)
+      return null
 
-  const [conversations, setConversations] = useState<Conversation[]>(() => getInitialConversations(STORAGE_KEY))
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
+    return `${STORAGE_KEY_PREFIX}:${userProfile.id}:${currentWorkspace.id}`
+  }, [currentWorkspace.id, userProfile.id])
+
+  const [chatStorageState, dispatchChatStorage] = useReducer(chatStorageReducer, initialChatStorageState)
+  const { conversations, currentConversationId, messages, hasHydratedConversations } = chatStorageState
+  const setConversations = useCallback((updater: Conversation[] | ((prev: Conversation[]) => Conversation[])) => {
+    dispatchChatStorage({ type: 'setConversations', updater })
+  }, [])
+  const setCurrentConversationId = useCallback((conversationId: string | null) => {
+    dispatchChatStorage({ type: 'setCurrentConversationId', conversationId })
+  }, [])
+  const setMessages = useCallback((updater: Message[] | ((prev: Message[]) => Message[])) => {
+    dispatchChatStorage({ type: 'setMessages', updater })
+  }, [])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -194,11 +264,31 @@ const ChatPage = () => {
   const [skipSensitiveConfirm, setSkipSensitiveConfirm] = useState(false)
   const [isInputCollapsed, setIsInputCollapsed] = useState(false)
   const [enableWebSearch, setEnableWebSearch] = useState(false)
+  const syncScopedConversationState = useCallback((nextConversations: Conversation[], hydrated: boolean) => {
+    dispatchChatStorage({ type: 'hydrateScope', conversations: nextConversations, hydrated })
+  }, [])
 
   useEffect(() => {
     if (!isLoadingCurrentWorkspace && !canUseChat)
       router.replace('/apps')
   }, [canUseChat, isLoadingCurrentWorkspace, router])
+
+  useEffect(() => {
+    if (!conversationStorageKey) {
+      syncScopedConversationState([], false)
+      return
+    }
+
+    syncScopedConversationState(getInitialConversations(conversationStorageKey), true)
+
+    // Drop the legacy unscoped history to prevent cross-account leakage.
+    try {
+      localStorage.removeItem(LEGACY_STORAGE_KEY)
+    }
+    catch {
+      // 清理旧版无作用域历史失败时忽略，避免影响当前页面使用
+    }
+  }, [LEGACY_STORAGE_KEY, conversationStorageKey, syncScopedConversationState])
 
   // 保存侧边栏状态到本地存储
   useEffect(() => {
@@ -212,16 +302,19 @@ const ChatPage = () => {
 
   // 保存对话到本地存储
   useEffect(() => {
+    if (!conversationStorageKey || !hasHydratedConversations)
+      return
+
     try {
       if (conversations.length > 0)
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations))
+        localStorage.setItem(conversationStorageKey, JSON.stringify(conversations))
       else
-        localStorage.removeItem(STORAGE_KEY)
+        localStorage.removeItem(conversationStorageKey)
     }
     catch {
       // 保存对话到本地存储失败，忽略错误
     }
-  }, [conversations])
+  }, [conversationStorageKey, conversations, hasHydratedConversations])
 
   useEffect(() => {
     inputValueRef.current = inputValue
@@ -1767,4 +1860,3 @@ const ChatPage = () => {
 }
 
 export default ChatPage
-

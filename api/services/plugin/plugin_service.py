@@ -14,12 +14,14 @@ from core.plugin.entities.bundle import PluginBundleDependency
 from core.plugin.entities.plugin import (
     PluginDeclaration,
     PluginEntity,
+    PluginCategory,
     PluginInstallation,
     PluginInstallationSource,
 )
 from core.plugin.entities.plugin_daemon import (
     PluginDecodeResponse,
     PluginInstallTask,
+    PluginInstallTaskStatus,
     PluginListResponse,
     PluginVerification,
 )
@@ -154,22 +156,72 @@ class PluginService:
         return PluginService.fetch_latest_plugin_version(plugin_ids)
 
     @staticmethod
+    def _get_model_plugin_code(plugin: PluginEntity) -> str | None:
+        if plugin.declaration.category != PluginCategory.Model:
+            return None
+
+        model_declaration = getattr(plugin.declaration, "model", None)
+        provider = getattr(model_declaration, "provider", None)
+        if not provider:
+            return None
+
+        return f"{plugin.plugin_id}/{provider}"
+
+    @classmethod
+    def _merge_global_model_plugins(cls, plugins: Sequence[PluginEntity]) -> list[PluginEntity]:
+        from services.global_plugin_service import GlobalPluginService
+
+        merged_plugins: dict[str, PluginEntity] = {}
+        for plugin in plugins:
+            key = plugin.plugin_unique_identifier or plugin.plugin_id
+            merged_plugins[key] = plugin
+
+        enabled_global_plugins = GlobalPluginService.list_enabled_plugins()
+        if not enabled_global_plugins:
+            return list(merged_plugins.values())
+
+        plugin_codes_by_source: dict[str, set[str]] = {}
+        for global_plugin in enabled_global_plugins:
+            plugin_codes_by_source.setdefault(global_plugin.source_tenant_id, set()).add(global_plugin.plugin_code)
+
+        manager = PluginInstaller()
+        for source_tenant_id, plugin_codes in plugin_codes_by_source.items():
+            try:
+                source_plugins = manager.list_plugins(source_tenant_id)
+            except Exception:
+                logger.exception("failed to list global model plugins from source tenant %s", source_tenant_id)
+                continue
+
+            for plugin in source_plugins:
+                plugin_code = cls._get_model_plugin_code(plugin)
+                if not plugin_code or plugin_code not in plugin_codes:
+                    continue
+
+                key = plugin.plugin_unique_identifier or plugin.plugin_id
+                merged_plugins.setdefault(key, plugin)
+
+        return list(merged_plugins.values())
+
+    @classmethod
     def list(tenant_id: str) -> list[PluginEntity]:
         """
         list all plugins of the tenant
         """
         manager = PluginInstaller()
         plugins = manager.list_plugins(tenant_id)
-        return plugins
+        return cls._merge_global_model_plugins(plugins)
 
-    @staticmethod
-    def list_with_total(tenant_id: str, page: int, page_size: int) -> PluginListResponse:
+    @classmethod
+    def list_with_total(cls, tenant_id: str, page: int, page_size: int) -> PluginListResponse:
         """
         list all plugins of the tenant
         """
         manager = PluginInstaller()
-        plugins = manager.list_plugins_with_total(tenant_id, page, page_size)
-        return plugins
+        plugins = cls._merge_global_model_plugins(manager.list_plugins(tenant_id))
+
+        start = max(page - 1, 0) * page_size
+        end = start + page_size
+        return PluginListResponse(list=plugins[start:end], total=len(plugins))
 
     @staticmethod
     def list_installations_from_ids(tenant_id: str, ids: Sequence[str]) -> Sequence[PluginInstallation]:
@@ -234,12 +286,17 @@ class PluginService:
         Fetch plugin installation tasks
         """
         manager = PluginInstaller()
-        return manager.fetch_plugin_installation_tasks(tenant_id, page, page_size)
+        tasks = manager.fetch_plugin_installation_tasks(tenant_id, page, page_size)
+        for task in tasks:
+            PluginService._sync_global_model_plugins_from_task(tenant_id, task)
+        return tasks
 
     @staticmethod
     def fetch_install_task(tenant_id: str, task_id: str) -> PluginInstallTask:
         manager = PluginInstaller()
-        return manager.fetch_plugin_installation_task(tenant_id, task_id)
+        task = manager.fetch_plugin_installation_task(tenant_id, task_id)
+        PluginService._sync_global_model_plugins_from_task(tenant_id, task)
+        return task
 
     @staticmethod
     def delete_install_task(tenant_id: str, task_id: str) -> bool:
@@ -258,6 +315,30 @@ class PluginService:
         """
         manager = PluginInstaller()
         return manager.delete_all_plugin_installation_task_items(tenant_id)
+
+    @staticmethod
+    def _sync_global_model_plugins_from_task(tenant_id: str, task: PluginInstallTask) -> None:
+        if task.status != PluginInstallTaskStatus.Success:
+            return
+
+        plugin_unique_identifiers = [
+            plugin.plugin_unique_identifier
+            for plugin in task.plugins
+            if plugin.status == PluginInstallTaskStatus.Success
+        ]
+        if not plugin_unique_identifiers:
+            return
+
+        try:
+            from services.global_plugin_service import GlobalPluginService
+
+            GlobalPluginService.sync_installed_plugins(
+                source_tenant_id=tenant_id,
+                source_account_id=None,
+                plugin_unique_identifiers=plugin_unique_identifiers,
+            )
+        except Exception:
+            logger.exception("failed to sync global plugins from install task", extra={"tenant_id": tenant_id})
 
     @staticmethod
     def delete_install_task_item(tenant_id: str, task_id: str, identifier: str) -> bool:

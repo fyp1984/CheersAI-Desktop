@@ -28,6 +28,7 @@ import {
 import {
   useEducationStatus,
 } from '@/service/use-education'
+import { hasAnyWorkspaceCapability, hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import { useSelector as useAppContextSelector } from './app-context'
 
 export type ProviderContextState = {
@@ -115,12 +116,14 @@ export const ProviderContextProvider = ({
   children,
 }: ProviderContextProviderProps) => {
   const queryClient = useQueryClient()
-  const canManageModelProviders = useAppContextSelector((state) => {
-    const capabilities = state.currentWorkspace.capabilities || []
-    return capabilities.includes('desktop_model_provider_manage') || capabilities.includes('desktop_model_manage')
-  })
+  const currentWorkspace = useAppContextSelector(state => state.currentWorkspace)
+  const canManageModelProviders = hasAnyWorkspaceCapability(currentWorkspace, [
+    WORKSPACE_CAPABILITIES.modelProviderManage,
+    WORKSPACE_CAPABILITIES.modelManage,
+  ])
+  const canUseModels = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.modelUse)
   const { data: providersData } = useModelProviders(canManageModelProviders)
-  const { data: textGenerationModelList } = useModelListByType(ModelTypeEnum.textGeneration, canManageModelProviders)
+  const { data: textGenerationModelList } = useModelListByType(ModelTypeEnum.textGeneration, canUseModels)
   const { data: supportRetrievalMethods } = useSupportRetrievalMethods()
 
   const [plan, setPlan] = useState(defaultPlan)

@@ -170,10 +170,13 @@ export const ModalContextProvider = ({
   const searchAction = searchParams.get('action')
   const searchTab = searchParams.get('tab')
   const isAccountSettingOpen = !forceCloseAccountSetting && (urlAccountModalState.isOpen || searchAction === ACCOUNT_SETTING_MODAL_ACTION)
+  const searchTabPayload = isValidAccountSettingTab(searchTab) ? searchTab : null
   const accountSettingTab = isAccountSettingOpen
-    ? (isValidAccountSettingTab(urlAccountModalState.payload)
-        ? urlAccountModalState.payload
-        : (isValidAccountSettingTab(searchTab) ? searchTab : DEFAULT_ACCOUNT_SETTING_TAB))
+    ? (searchAction === ACCOUNT_SETTING_MODAL_ACTION && searchTabPayload
+        ? searchTabPayload
+        : (isValidAccountSettingTab(urlAccountModalState.payload)
+            ? urlAccountModalState.payload
+            : DEFAULT_ACCOUNT_SETTING_TAB))
     : null
   const [showApiBasedExtensionModal, setShowApiBasedExtensionModal] = useState<ModalState<ApiBasedExtension> | null>(null)
   const [showModerationSettingModal, setShowModerationSettingModal] = useState<ModalState<ModerationConfig> | null>(null)
@@ -227,11 +230,11 @@ export const ModalContextProvider = ({
 
   useEffect(() => {
     if (searchAction === ACCOUNT_SETTING_MODAL_ACTION
-      && isValidAccountSettingTab(searchTab)
-      && !urlAccountModalState.isOpen) {
-      setUrlAccountModalState({ payload: searchTab })
+      && searchTabPayload
+      && urlAccountModalState.payload !== searchTabPayload) {
+      setUrlAccountModalState({ payload: searchTabPayload })
     }
-  }, [searchAction, searchTab, setUrlAccountModalState, urlAccountModalState.isOpen])
+  }, [searchAction, searchTabPayload, setUrlAccountModalState, urlAccountModalState.payload])
 
   useEffect(() => {
     if (!urlAccountModalState.isOpen)

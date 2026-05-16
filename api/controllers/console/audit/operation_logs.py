@@ -11,10 +11,10 @@ from sqlalchemy.orm import Session
 from controllers.console import console_ns
 from controllers.console.wraps import account_initialization_required, require_workspace_capabilities
 from extensions.ext_database import db
-from libs.desktop_auth import has_role_capability
+from libs.desktop_auth import has_any_workspace_capability
 from libs.helper import TimestampField
 from libs.login import login_required
-from models.account import Account
+from models.account import Account, TenantAccountJoin
 from models.model import OperationLog
 
 operation_log_model = console_ns.model(
@@ -65,6 +65,135 @@ stats_model = console_ns.model(
 
 operation_logs_bp = Blueprint("operation_logs", __name__, url_prefix="/console/api")
 
+SYSTEM_AUDIT_CAPABILITIES = ("desktop_system_admin",)
+TEAM_AUDIT_CAPABILITIES = ("desktop_team_manage", "desktop_member_manage")
+
+
+def _resolve_current_tenant_id(session: Session) -> str | None:
+    tenant_id = current_user.current_tenant_id
+    if tenant_id:
+        return tenant_id
+
+    join = (
+        session.query(TenantAccountJoin)
+        .filter(TenantAccountJoin.account_id == str(current_user.id))
+        .order_by(TenantAccountJoin.current.desc(), TenantAccountJoin.id.asc())
+        .first()
+    )
+    return join.tenant_id if join else None
+
+
+def _resolve_audit_scope(session: Session) -> tuple[str | None, bool, bool]:
+    tenant_id = _resolve_current_tenant_id(session)
+    can_view_system = bool(
+        tenant_id
+        and has_any_workspace_capability(current_user, SYSTEM_AUDIT_CAPABILITIES, tenant_id)
+    )
+    can_view_team = can_view_system or bool(
+        tenant_id
+        and has_any_workspace_capability(current_user, TEAM_AUDIT_CAPABILITIES, tenant_id)
+    )
+    return tenant_id, can_view_system, can_view_team
+
+
+def _apply_common_filters(query, args: dict):
+    if args.get("action"):
+        query = query.filter(OperationLog.action == args["action"])
+
+    if args.get("keyword"):
+        keyword = f"%{args['keyword']}%"
+        query = query.filter(
+            or_(
+                OperationLog.action.ilike(keyword),
+                OperationLog.operation_type.ilike(keyword),
+                OperationLog.created_ip.ilike(keyword),
+                OperationLog.error_message.ilike(keyword),
+                Account.name.ilike(keyword),
+                Account.email.ilike(keyword),
+            )
+        )
+
+    if args.get("start_date") and args["start_date"]:
+        try:
+            start = datetime.strptime(args["start_date"], "%Y-%m-%d")
+            query = query.filter(OperationLog.created_at >= start)
+        except (ValueError, TypeError):
+            pass
+
+    if args.get("end_date") and args["end_date"]:
+        try:
+            end = datetime.strptime(args["end_date"], "%Y-%m-%d")
+            end = end.replace(hour=23, minute=59, second=59)
+            query = query.filter(OperationLog.created_at <= end)
+        except (ValueError, TypeError):
+            pass
+
+    if args.get("operation_type"):
+        query = query.filter(OperationLog.operation_type == args["operation_type"])
+
+    if args.get("sync_status"):
+        query = query.filter(OperationLog.sync_status == args["sync_status"])
+
+    return query
+
+
+def _apply_user_scope_filters(query, args: dict, *, can_view_team: bool):
+    if not can_view_team:
+        return query.filter(OperationLog.account_id == str(current_user.id))
+
+    if args.get("account_id"):
+        query = query.filter(OperationLog.account_id == args["account_id"])
+
+    if args.get("account_name"):
+        account_name = f"%{args['account_name']}%"
+        query = query.filter(
+            or_(
+                Account.name.ilike(account_name),
+                Account.email.ilike(account_name),
+            )
+        )
+
+    if args.get("user_keyword"):
+        user_keyword = f"%{args['user_keyword']}%"
+        query = query.filter(
+            or_(
+                Account.name.ilike(user_keyword),
+                Account.email.ilike(user_keyword),
+            )
+        )
+
+    return query
+
+
+def _build_operation_log_query(session: Session, args: dict):
+    tenant_id, can_view_system, can_view_team = _resolve_audit_scope(session)
+
+    query = session.query(OperationLog, Account).join(Account, OperationLog.account_id == Account.id)
+
+    if not can_view_system:
+        if not tenant_id:
+            return None, tenant_id, can_view_system, can_view_team
+        query = query.filter(OperationLog.tenant_id == tenant_id)
+
+    query = _apply_common_filters(query, args)
+    query = _apply_user_scope_filters(query, args, can_view_team=can_view_team)
+    return query, tenant_id, can_view_system, can_view_team
+
+
+def _build_operation_log_scope_query(session: Session):
+    tenant_id, can_view_system, can_view_team = _resolve_audit_scope(session)
+    query = session.query(OperationLog)
+
+    if not can_view_system:
+        if not tenant_id:
+            return None, tenant_id, can_view_system, can_view_team
+        query = query.filter(OperationLog.tenant_id == tenant_id)
+
+    if not can_view_team:
+        query = query.filter(OperationLog.account_id == str(current_user.id))
+
+    return query, tenant_id, can_view_system, can_view_team
+
 
 @console_ns.route("/operation-logs")
 class OperationLogListApi(Resource):
@@ -80,6 +209,7 @@ class OperationLogListApi(Resource):
         parser.add_argument("action", type=str, location="args")
         parser.add_argument("account_id", type=str, location="args")
         parser.add_argument("account_name", type=str, location="args")
+        parser.add_argument("user_keyword", type=str, location="args")
         parser.add_argument("keyword", type=str, location="args")
         parser.add_argument("start_date", type=str, location="args")
         parser.add_argument("end_date", type=str, location="args")
@@ -92,67 +222,9 @@ class OperationLogListApi(Resource):
         offset = (page - 1) * limit
 
         with Session(db.engine) as session:
-            # Fallback to tenant join lookup for locally initialized accounts whose current_tenant_id is still empty.
-            tenant_id = current_user.current_tenant_id
-            if not tenant_id:
-                from models.account import TenantAccountJoin
-
-                join = (
-                    session.query(TenantAccountJoin)
-                    .filter(TenantAccountJoin.account_id == str(current_user.id))
-                    .first()
-                )
-                if join:
-                    tenant_id = join.tenant_id
-
-            if not tenant_id:
+            query, _tenant_id, _can_view_system, _can_view_team = _build_operation_log_query(session, args)
+            if query is None:
                 return {"data": [], "total": 0, "page": page, "limit": limit, "has_more": False}
-
-            query = (
-                session.query(OperationLog, Account)
-                .join(Account, OperationLog.account_id == Account.id)
-                .filter(OperationLog.tenant_id == tenant_id)
-            )
-
-            if args.get("action"):
-                query = query.filter(OperationLog.action == args["action"])
-
-            if args.get("account_id"):
-                query = query.filter(OperationLog.account_id == args["account_id"])
-
-            if args.get("account_name"):
-                query = query.filter(Account.name.ilike(f"%{args['account_name']}%"))
-
-            if args.get("keyword"):
-                keyword = f"%{args['keyword']}%"
-                query = query.filter(
-                    or_(
-                        Account.name.ilike(keyword),
-                        Account.email.ilike(keyword),
-                        OperationLog.action.ilike(keyword),
-                    )
-                )
-
-            if args.get("start_date") and args["start_date"]:
-                try:
-                    start = datetime.strptime(args["start_date"], "%Y-%m-%d")
-                    query = query.filter(OperationLog.created_at >= start)
-                except (ValueError, TypeError):
-                    pass
-
-            if args.get("end_date") and args["end_date"]:
-                try:
-                    end = datetime.strptime(args["end_date"], "%Y-%m-%d")
-                    end = end.replace(hour=23, minute=59, second=59)
-                    query = query.filter(OperationLog.created_at <= end)
-                except (ValueError, TypeError):
-                    pass
-
-            if args.get("operation_type"):
-                query = query.filter(OperationLog.operation_type == args["operation_type"])
-
-            if args.get("sync_status"):
-                query = query.filter(OperationLog.sync_status == args["sync_status"])
 
             total = query.count()
 
@@ -201,53 +273,26 @@ class OperationLogStatsApi(Resource):
     @console_ns.marshal_with(stats_model)
     def get(self):
         """Get operation logs statistics"""
-        # Get tenant_id from user context
-        tenant_id = current_user.current_tenant_id
-        if not tenant_id:
-            from models.account import TenantAccountJoin
-
-            join = (
-                db.session.query(TenantAccountJoin).filter(TenantAccountJoin.account_id == str(current_user.id)).first()
-            )
-            if join:
-                tenant_id = join.tenant_id
-
-        if not tenant_id:
-            return {"today_count": 0, "total_count": 0, "verified_count": 0, "failed_count": 0}
-
         with Session(db.engine) as session:
-            today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            today_count = (
-                session.query(func.count(OperationLog.id))
-                .filter(
-                    OperationLog.tenant_id == tenant_id,
-                    OperationLog.created_at >= today_start,
-                )
-                .scalar()
-            )
+            base_query, _tenant_id, _can_view_system, _can_view_team = _build_operation_log_scope_query(session)
+            if base_query is None:
+                return {"today_count": 0, "total_count": 0, "verified_count": 0, "failed_count": 0}
 
-            total_count = (
-                session.query(func.count(OperationLog.id)).filter(OperationLog.tenant_id == tenant_id).scalar()
-            )
+            today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            today_count = base_query.filter(OperationLog.created_at >= today_start).count()
+
+            total_count = base_query.count()
 
             verified_actions = ["login", "create", "update", "delete"]
-            verified_count = (
-                session.query(func.count(OperationLog.id))
-                .filter(
-                    OperationLog.tenant_id == tenant_id,
-                    OperationLog.action.in_(verified_actions),
-                )
-                .scalar()
-            )
+            verified_count = base_query.filter(OperationLog.action.in_(verified_actions)).count()
 
-            failed_count = (
-                session.query(func.count(OperationLog.id))
-                .filter(
-                    OperationLog.tenant_id == tenant_id,
+            failed_count = base_query.filter(
+                or_(
                     OperationLog.action.like("%fail%"),
+                    OperationLog.error_message.is_not(None),
+                    OperationLog.sync_status == "failed",
                 )
-                .scalar()
-            )
+            ).count()
 
             return {
                 "today_count": today_count or 0,
@@ -264,22 +309,12 @@ class OperationLogActionsApi(Resource):
     @require_workspace_capabilities("desktop_audit_view")
     def get(self):
         """Get all unique action types"""
-        # Get tenant_id from user context
-        tenant_id = current_user.current_tenant_id
-        if not tenant_id:
-            from models.account import TenantAccountJoin
-
-            join = (
-                db.session.query(TenantAccountJoin).filter(TenantAccountJoin.account_id == str(current_user.id)).first()
-            )
-            if join:
-                tenant_id = join.tenant_id
-
-        if not tenant_id:
-            return {"actions": []}
-
         with Session(db.engine) as session:
-            actions = session.query(OperationLog.action).filter(OperationLog.tenant_id == tenant_id).distinct().all()
+            base_query, _tenant_id, _can_view_system, _can_view_team = _build_operation_log_scope_query(session)
+            if base_query is None:
+                return {"actions": []}
+
+            actions = base_query.with_entities(OperationLog.action).distinct().all()
 
             return {"actions": [action[0] for action in actions]}
 
@@ -295,15 +330,12 @@ class OperationLogExportApi(Resource):
 
         logger = logging.getLogger(__name__)
 
-        if not has_role_capability(current_user.role, "desktop_audit_view"):
-            logger.error(f"[EXPORT] Permission denied for user role: {current_user.role}")
-            return {"error": "Permission denied"}, 403
-
         parser = console_ns.parser()
         parser.add_argument("format", type=str, default="excel", location="json")
         parser.add_argument("action", type=str, location="json")
         parser.add_argument("account_id", type=str, location="json")
         parser.add_argument("account_name", type=str, location="json")
+        parser.add_argument("user_keyword", type=str, location="json")
         parser.add_argument("keyword", type=str, location="json")
         parser.add_argument("start_date", type=str, location="json")
         parser.add_argument("end_date", type=str, location="json")
@@ -312,51 +344,14 @@ class OperationLogExportApi(Resource):
         args = parser.parse_args()
 
         with Session(db.engine) as session:
-            query = (
-                session.query(OperationLog, Account)
-                .join(Account, OperationLog.account_id == Account.id)
-                .filter(OperationLog.tenant_id == current_user.current_tenant_id)
-            )
+            tenant_id = _resolve_current_tenant_id(session)
+            if not has_any_workspace_capability(current_user, ["desktop_audit_view"], tenant_id):
+                logger.error("[EXPORT] Permission denied for current user")
+                return {"error": "Permission denied"}, 403
 
-            if args.get("action"):
-                query = query.filter(OperationLog.action == args["action"])
-
-            if args.get("account_id"):
-                query = query.filter(OperationLog.account_id == args["account_id"])
-
-            if args.get("account_name"):
-                query = query.filter(Account.name.ilike(f"%{args['account_name']}%"))
-
-            if args.get("keyword"):
-                keyword = f"%{args['keyword']}%"
-                query = query.filter(
-                    or_(
-                        Account.name.ilike(keyword),
-                        Account.email.ilike(keyword),
-                        OperationLog.action.ilike(keyword),
-                    )
-                )
-
-            if args.get("start_date") and args["start_date"]:
-                try:
-                    start = datetime.strptime(args["start_date"], "%Y-%m-%d")
-                    query = query.filter(OperationLog.created_at >= start)
-                except (ValueError, TypeError):
-                    pass
-
-            if args.get("end_date") and args["end_date"]:
-                try:
-                    end = datetime.strptime(args["end_date"], "%Y-%m-%d")
-                    end = end.replace(hour=23, minute=59, second=59)
-                    query = query.filter(OperationLog.created_at <= end)
-                except (ValueError, TypeError):
-                    pass
-
-            if args.get("operation_type"):
-                query = query.filter(OperationLog.operation_type == args["operation_type"])
-
-            if args.get("sync_status"):
-                query = query.filter(OperationLog.sync_status == args["sync_status"])
+            query, _tenant_id, _can_view_system, _can_view_team = _build_operation_log_query(session, args)
+            if query is None:
+                return {"error": "No accessible audit scope"}, 403
 
             results = query.order_by(desc(OperationLog.created_at)).all()
 
@@ -380,7 +375,8 @@ class OperationLogExportApi(Resource):
                 "Time",
                 "Operation Type",
                 "Action",
-                "Account Name",
+                "User",
+                "User Email",
                 "IP Address",
                 "Device Info",
                 "Duration (ms)",
@@ -396,12 +392,13 @@ class OperationLogExportApi(Resource):
                 worksheet.write(row, 1, log.operation_type or "")
                 worksheet.write(row, 2, log.action or "")
                 worksheet.write(row, 3, log.account_name or account.name if account else "")
-                worksheet.write(row, 4, log.created_ip or "")
-                worksheet.write(row, 5, log.device_info or "")
-                worksheet.write(row, 6, log.duration or 0)
-                worksheet.write(row, 7, log.desensitize_status or "")
-                worksheet.write(row, 8, log.sync_status or "")
-                worksheet.write(row, 9, log.error_message or "")
+                worksheet.write(row, 4, account.email if account else "")
+                worksheet.write(row, 5, log.created_ip or "")
+                worksheet.write(row, 6, log.device_info or "")
+                worksheet.write(row, 7, log.duration or 0)
+                worksheet.write(row, 8, log.desensitize_status or "")
+                worksheet.write(row, 9, log.sync_status or "")
+                worksheet.write(row, 10, log.error_message or "")
 
             workbook.close()
             output.seek(0)

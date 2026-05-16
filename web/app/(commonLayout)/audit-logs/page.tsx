@@ -47,6 +47,7 @@ const AuditLogsPage = () => {
   
   const [filters, setFilters] = useState({
     action: '',
+    user_keyword: '',
     keyword: '',
     start_date: getToday(),
     end_date: getToday(),
@@ -289,7 +290,7 @@ const AuditLogsPage = () => {
 
         {/* Filters */}
         <div className="bg-components-panel-bg border border-divider-regular rounded-lg p-4">
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
             <div>
               <label className="block text-xs font-medium text-text-secondary mb-1.5">操作类型</label>
               <select
@@ -313,11 +314,21 @@ const AuditLogsPage = () => {
               </select>
             </div>
             <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">用户</label>
+              <input
+                type="text"
+                className="w-full border border-divider-regular rounded-lg px-3 py-2 text-sm text-text-primary bg-components-input-bg-normal placeholder:text-text-quaternary focus:outline-none focus:ring-2 focus:ring-components-button-primary-bg"
+                placeholder="姓名 / 邮箱"
+                value={filters.user_keyword}
+                onChange={(e) => setFilters({ ...filters, user_keyword: e.target.value })}
+              />
+            </div>
+            <div>
               <label className="block text-xs font-medium text-text-secondary mb-1.5">搜索</label>
               <input
                 type="text"
                 className="w-full border border-divider-regular rounded-lg px-3 py-2 text-sm text-text-primary bg-components-input-bg-normal placeholder:text-text-quaternary focus:outline-none focus:ring-2 focus:ring-components-button-primary-bg"
-                placeholder="搜索日志..."
+                placeholder="操作 / IP / 错误信息"
                 value={filters.keyword}
                 onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
               />
@@ -359,6 +370,7 @@ const AuditLogsPage = () => {
                 <thead className="bg-background-section-burn border-b border-divider-regular">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">时间</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">用户</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">操作</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">文件名</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary">大小</th>
@@ -377,6 +389,10 @@ const AuditLogsPage = () => {
                           minute: '2-digit',
                           second: '2-digit',
                         }) : 'Invalid Date'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-text-secondary whitespace-nowrap">
+                        <div className="font-medium text-text-primary">{log.account_name || '-'}</div>
+                        <div className="text-xs text-text-tertiary">{log.account_email || '-'}</div>
                       </td>
                       <td className="px-4 py-3 text-sm text-text-primary whitespace-nowrap">
                         {getActionDisplayName(log.action, log.content)}

@@ -47,7 +47,7 @@ const MenuDialog = ({
                 className,
               )}
               >
-                <div className="absolute right-0 top-0 h-full w-1/2 bg-components-panel-bg" />
+                <div className="pointer-events-none absolute right-0 top-0 h-full w-1/2 bg-components-panel-bg" aria-hidden />
                 {children}
               </DialogPanel>
             </TransitionChild>

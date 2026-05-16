@@ -12,6 +12,10 @@ from werkzeug.exceptions import Forbidden
 from configs import dify_config
 from controllers.common.schema import register_schema_models
 from controllers.console import console_ns
+from controllers.console.workspace import (
+    require_api_extension_manage_capability,
+    require_plugin_manage_capability,
+)
 from controllers.console.wraps import (
     account_initialization_required,
     enterprise_license_required,
@@ -304,6 +308,7 @@ class ToolBuiltinProviderDeleteApi(Resource):
     @login_required
     @is_admin_or_owner_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def post(self, provider):
         _, tenant_id = current_account_with_tenant()
 
@@ -321,7 +326,9 @@ class ToolBuiltinProviderAddApi(Resource):
     @console_ns.expect(console_ns.models[BuiltinToolAddPayload.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def post(self, provider):
         user, tenant_id = current_account_with_tenant()
 
@@ -346,6 +353,7 @@ class ToolBuiltinProviderUpdateApi(Resource):
     @login_required
     @is_admin_or_owner_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def post(self, provider):
         user, tenant_id = current_account_with_tenant()
         user_id = user.id
@@ -367,7 +375,9 @@ class ToolBuiltinProviderUpdateApi(Resource):
 class ToolBuiltinProviderGetCredentialsApi(Resource):
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def get(self, provider):
         _, tenant_id = current_account_with_tenant()
 
@@ -395,6 +405,7 @@ class ToolApiProviderAddApi(Resource):
     @login_required
     @is_admin_or_owner_required
     @account_initialization_required
+    @require_api_extension_manage_capability
     def post(self):
         user, tenant_id = current_account_with_tenant()
 
@@ -421,6 +432,7 @@ class ToolApiProviderGetRemoteSchemaApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_api_extension_manage_capability
     def get(self):
         user, tenant_id = current_account_with_tenant()
 
@@ -441,6 +453,7 @@ class ToolApiProviderListToolsApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_api_extension_manage_capability
     def get(self):
         user, tenant_id = current_account_with_tenant()
 
@@ -465,6 +478,7 @@ class ToolApiProviderUpdateApi(Resource):
     @login_required
     @is_admin_or_owner_required
     @account_initialization_required
+    @require_api_extension_manage_capability
     def post(self):
         user, tenant_id = current_account_with_tenant()
 
@@ -494,6 +508,7 @@ class ToolApiProviderDeleteApi(Resource):
     @login_required
     @is_admin_or_owner_required
     @account_initialization_required
+    @require_api_extension_manage_capability
     def post(self):
         user, tenant_id = current_account_with_tenant()
 
@@ -513,6 +528,7 @@ class ToolApiProviderGetApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_api_extension_manage_capability
     def get(self):
         user, tenant_id = current_account_with_tenant()
 
@@ -533,6 +549,7 @@ class ToolBuiltinProviderCredentialsSchemaApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def get(self, provider, credential_type):
         _, tenant_id = current_account_with_tenant()
 
@@ -549,6 +566,7 @@ class ToolApiProviderSchemaApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_api_extension_manage_capability
     def post(self):
         payload = ApiToolSchemaPayload.model_validate(console_ns.payload or {})
 
@@ -563,6 +581,7 @@ class ToolApiProviderPreviousTestApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
+    @require_api_extension_manage_capability
     def post(self):
         payload = ApiToolTestPayload.model_validate(console_ns.payload or {})
         _, current_tenant_id = current_account_with_tenant()
@@ -584,6 +603,7 @@ class ToolWorkflowProviderCreateApi(Resource):
     @login_required
     @is_admin_or_owner_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def post(self):
         user, tenant_id = current_account_with_tenant()
 
@@ -612,6 +632,7 @@ class ToolWorkflowProviderUpdateApi(Resource):
     @login_required
     @is_admin_or_owner_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def post(self):
         user, tenant_id = current_account_with_tenant()
         user_id = user.id
@@ -639,6 +660,7 @@ class ToolWorkflowProviderDeleteApi(Resource):
     @login_required
     @is_admin_or_owner_required
     @account_initialization_required
+    @require_plugin_manage_capability
     def post(self):
         user, tenant_id = current_account_with_tenant()
 
@@ -873,6 +895,7 @@ class ToolBuiltinProviderSetDefaultApi(Resource):
     @console_ns.expect(console_ns.models[BuiltinProviderDefaultCredentialPayload.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
     def post(self, provider):
         current_user, current_tenant_id = current_account_with_tenant()
@@ -905,6 +928,7 @@ class ToolOAuthCustomClient(Resource):
 
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
     def get(self, provider):
         _, current_tenant_id = current_account_with_tenant()
@@ -914,6 +938,7 @@ class ToolOAuthCustomClient(Resource):
 
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
     def delete(self, provider):
         _, current_tenant_id = current_account_with_tenant()
@@ -940,6 +965,7 @@ class ToolBuiltinProviderGetOauthClientSchemaApi(Resource):
 class ToolBuiltinProviderGetCredentialInfoApi(Resource):
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
     def get(self, provider):
         _, tenant_id = current_account_with_tenant()
@@ -957,6 +983,7 @@ class ToolProviderMCPApi(Resource):
     @console_ns.expect(console_ns.models[MCPProviderCreatePayload.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
     def post(self):
         payload = MCPProviderCreatePayload.model_validate(console_ns.payload or {})
@@ -1009,6 +1036,7 @@ class ToolProviderMCPApi(Resource):
     @console_ns.expect(console_ns.models[MCPProviderUpdatePayload.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
     def put(self):
         payload = MCPProviderUpdatePayload.model_validate(console_ns.payload or {})
@@ -1055,6 +1083,7 @@ class ToolProviderMCPApi(Resource):
     @console_ns.expect(console_ns.models[MCPProviderDeletePayload.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
     def delete(self):
         payload = MCPProviderDeletePayload.model_validate(console_ns.payload or {})
@@ -1072,6 +1101,7 @@ class ToolMCPAuthApi(Resource):
     @console_ns.expect(console_ns.models[MCPAuthPayload.__name__])
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
     def post(self):
         payload = MCPAuthPayload.model_validate(console_ns.payload or {})
@@ -1137,6 +1167,7 @@ class ToolMCPAuthApi(Resource):
 class ToolMCPDetailApi(Resource):
     @setup_required
     @login_required
+    @is_admin_or_owner_required
     @account_initialization_required
     def get(self, provider_id):
         _, tenant_id = current_account_with_tenant()

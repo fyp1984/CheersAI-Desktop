@@ -100,6 +100,8 @@ export type OperationLogFilters = {
 
   account_name?: string
 
+  user_keyword?: string
+
   keyword?: string
 
   start_date?: string
@@ -136,6 +138,10 @@ export const fetchOperationLogs = (filters: OperationLogFilters): Promise<Operat
   if (filters.account_name)
 
     params.append('account_name', filters.account_name)
+
+  if (filters.user_keyword)
+
+    params.append('user_keyword', filters.user_keyword)
 
   if (filters.keyword)
 

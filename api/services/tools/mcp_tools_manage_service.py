@@ -690,6 +690,8 @@ class MCPToolManageService:
         )
         response["tools"] = ToolTransformService.mcp_tool_to_user_tool(db_provider, tools)
         response["plugin_unique_identifier"] = provider_entity.provider_id
+        response["is_shared_installation"] = False
+        response["is_tenant_configured"] = db_provider.authed
         return ToolProviderApiEntity(**response)
 
     def _handle_integrity_error(
