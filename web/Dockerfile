@@ -22,25 +22,25 @@ FROM base AS packages
 WORKDIR /app/web
 
 COPY package.json pnpm-lock.yaml /app/web/
+COPY .corepack/pnpm/10.27.0 /opt/pnpm/10.27.0
 
-# Use packageManager from package.json
-RUN corepack install
+# Reuse the host-cached pnpm bundle so Docker builds don't depend on external network access.
+RUN ln -sf /opt/pnpm/10.27.0/bin/pnpm.cjs /usr/local/bin/pnpm \
+    && ln -sf /opt/pnpm/10.27.0/bin/pnpx.cjs /usr/local/bin/pnpx
 
 RUN pnpm install --frozen-lockfile
 
 # build resources
-FROM base AS builder
+FROM packages AS builder
 WORKDIR /app/web
-COPY --from=packages /app/web/ .
 COPY . .
 
 ARG NEXT_BUILD_NODE_OPTIONS="--max-old-space-size=4096"
 ENV NODE_OPTIONS="${NEXT_BUILD_NODE_OPTIONS}"
 RUN pnpm build:docker
 
-FROM base AS dev
+FROM packages AS dev
 WORKDIR /app/web
-COPY --from=packages /app/web/ .
 COPY . .
 ENV NODE_ENV=development
 ENV PORT=3000
@@ -66,8 +66,8 @@ ENV TZ=UTC
 RUN ln -s /usr/share/zoneinfo/${TZ} /etc/localtime \
     && echo ${TZ} > /etc/timezone
 
-# global runtime packages - skip pm2 installation for now
-RUN echo "Skipping pm2 installation"
+# global runtime packages
+RUN npm install -g pm2
 
 
 # Create non-root user

@@ -735,13 +735,13 @@ services:
 
   # API service
   api:
-    image: cheersai-desktop-api:local
+    image: ${BACKEND_IMAGE:-cheersai-desktop-api:local}
     build:
       context: ../api
       dockerfile: Dockerfile.local
     restart: always
     ports:
-      - "15001:5001"
+      - "5001:5001"
     environment:
       # Use the shared environment variables.
       <<: *shared-api-worker-env
@@ -756,6 +756,8 @@ services:
       PLUGIN_MAX_PACKAGE_SIZE: ${PLUGIN_MAX_PACKAGE_SIZE:-52428800}
       PLUGIN_DAEMON_TIMEOUT: ${PLUGIN_DAEMON_TIMEOUT:-600.0}
       INNER_API_KEY_FOR_PLUGIN: ${PLUGIN_DIFY_INNER_API_KEY:-QaHbTe77CtuXmsfyhR7+vRjI/+XbV1AaFy691iy+kGDv2Jvy0/eAh8Y1}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      PLUGIN_DIR: ${PLUGIN_DIR:-/app/plugins}
     depends_on:
       init_permissions:
         condition: service_completed_successfully
@@ -783,7 +785,7 @@ services:
   # worker service
   # The Celery worker for processing all queues (dataset, workflow, mail, etc.)
   worker:
-    image: cheersai-desktop-api:local
+    image: ${BACKEND_IMAGE:-cheersai-desktop-api:local}
     restart: always
     environment:
       # Use the shared environment variables.
@@ -796,6 +798,8 @@ services:
       SENTRY_PROFILES_SAMPLE_RATE: ${API_SENTRY_PROFILES_SAMPLE_RATE:-1.0}
       PLUGIN_MAX_PACKAGE_SIZE: ${PLUGIN_MAX_PACKAGE_SIZE:-52428800}
       INNER_API_KEY_FOR_PLUGIN: ${PLUGIN_DIFY_INNER_API_KEY:-QaHbTe77CtuXmsfyhR7+vRjI/+XbV1AaFy691iy+kGDv2Jvy0/eAh8Y1}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      PLUGIN_DIR: ${PLUGIN_DIR:-/app/plugins}
     depends_on:
       init_permissions:
         condition: service_completed_successfully
@@ -823,7 +827,7 @@ services:
   # worker_beat service
   # Celery beat for scheduling periodic tasks.
   worker_beat:
-    image: cheersai-desktop-api:local
+    image: ${BACKEND_IMAGE:-cheersai-desktop-api:local}
     restart: always
     environment:
       # Use the shared environment variables.
@@ -831,6 +835,8 @@ services:
       # Startup mode, 'worker_beat' starts the Celery beat for scheduling periodic tasks.
       MODE: beat
       MIGRATION_ENABLED: ${WORKER_BEAT_MIGRATION_ENABLED:-false}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      PLUGIN_DIR: ${PLUGIN_DIR:-/app/plugins}
     depends_on:
       init_permissions:
         condition: service_completed_successfully
@@ -854,7 +860,7 @@ services:
 
   # Frontend web application.
   web:
-    image: cheersai-desktop-web:local
+    image: ${WEB_IMAGE:-cheersai-desktop-web:local}
     build:
       context: ../web
       dockerfile: Dockerfile
@@ -1019,6 +1025,7 @@ services:
       DIFY_INNER_API_KEY: ${PLUGIN_DIFY_INNER_API_KEY:-QaHbTe77CtuXmsfyhR7+vRjI/+XbV1AaFy691iy+kGDv2Jvy0/eAh8Y1}
       PLUGIN_REMOTE_INSTALLING_HOST: ${PLUGIN_DEBUGGING_HOST:-0.0.0.0}
       PLUGIN_REMOTE_INSTALLING_PORT: ${PLUGIN_DEBUGGING_PORT:-5003}
+      PLUGIN_DIR: ${PLUGIN_DIR:-/app/plugins}
       PLUGIN_WORKING_PATH: ${PLUGIN_WORKING_PATH:-/app/storage/cwd}
       FORCE_VERIFYING_SIGNATURE: ${FORCE_VERIFYING_SIGNATURE:-true}
       PYTHON_ENV_INIT_TIMEOUT: ${PLUGIN_PYTHON_ENV_INIT_TIMEOUT:-120}
