@@ -806,7 +806,14 @@ class ParameterExtractorNode(Node[ParameterExtractorNodeData]):
         """
         if not self._model_instance or not self._model_config:
             self._model_instance, self._model_config = llm_utils.fetch_model_config(
-                tenant_id=self.tenant_id, node_data_model=node_data_model
+                tenant_id=self.tenant_id,
+                node_data_model=node_data_model,
+                usage_metadata={
+                    "source": "workflow",
+                    "app_id": self.app_id,
+                    "workflow_id": self.workflow_id,
+                    "workflow_app_id": self.app_id,
+                },
             )
 
         return self._model_instance, self._model_config

@@ -1,8 +1,8 @@
 import json
 import logging
-import sys
+import string
 from collections.abc import Sequence
-from typing import cast
+from typing import Any
 
 from core.model_runtime.callbacks.base_callback import Callback
 from core.model_runtime.entities.llm_entities import LLMResult, LLMResultChunk
@@ -10,6 +10,34 @@ from core.model_runtime.entities.message_entities import PromptMessage, PromptMe
 from core.model_runtime.model_providers.__base.ai_model import AIModel
 
 logger = logging.getLogger(__name__)
+_PREVIEW_LIMIT = 120
+
+
+def _preview_text(value: str, max_chars: int = _PREVIEW_LIMIT) -> str:
+    sanitized = value.replace("\r", "\\r").replace("\n", "\\n")
+    if any(char not in string.printable and char not in "\t" for char in value):
+        return f"<str {len(value)} chars, non-printable omitted>"
+    if len(sanitized) > max_chars:
+        return f"{sanitized[:max_chars]}... ({len(value)} chars)"
+    return f"{sanitized} ({len(value)} chars)"
+
+
+def _summarize_content(value: Any) -> str:
+    if value is None:
+        return "<none>"
+    if isinstance(value, str):
+        return _preview_text(value)
+    if isinstance(value, bytes):
+        return f"<bytes {len(value)} bytes>"
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return f"<{type(value).__name__} {len(value)} items>"
+
+    try:
+        serialized = json.dumps(value, ensure_ascii=False, default=str)
+    except TypeError:
+        return f"<{type(value).__name__}>"
+
+    return _preview_text(serialized)
 
 
 class LoggingCallback(Callback):
@@ -58,15 +86,16 @@ class LoggingCallback(Callback):
             self.print_text(f"User: {user}\n", color="blue")
 
         self.print_text("Prompt messages:\n", color="blue")
-        for prompt_message in prompt_messages:
+        for index, prompt_message in enumerate(prompt_messages, start=1):
+            self.print_text(f"\tmessage[{index}]\n", color="blue")
             if prompt_message.name:
                 self.print_text(f"\tname: {prompt_message.name}\n", color="blue")
 
             self.print_text(f"\trole: {prompt_message.role.value}\n", color="blue")
-            self.print_text(f"\tcontent: {prompt_message.content}\n", color="blue")
+            self.print_text(f"\tcontent: {_summarize_content(prompt_message.content)}\n", color="blue")
 
         if stream:
-            self.print_text("\n[on_llm_new_chunk]")
+            self.print_text("\n[on_llm_new_chunk] output omitted in logs\n")
 
     def on_new_chunk(
         self,
@@ -95,8 +124,7 @@ class LoggingCallback(Callback):
         :param stream: is stream response
         :param user: unique user id
         """
-        sys.stdout.write(cast(str, chunk.delta.message.content))
-        sys.stdout.flush()
+        return
 
     def on_after_invoke(
         self,
@@ -126,7 +154,7 @@ class LoggingCallback(Callback):
         :param user: unique user id
         """
         self.print_text("\n[on_llm_after_invoke]\n", color="yellow")
-        self.print_text(f"Content: {result.message.content}\n", color="yellow")
+        self.print_text(f"Content: {_summarize_content(result.message.content)}\n", color="yellow")
 
         if result.message.tool_calls:
             self.print_text("Tool calls:\n", color="yellow")
@@ -167,4 +195,4 @@ class LoggingCallback(Callback):
         :param user: unique user id
         """
         self.print_text("\n[on_llm_invoke_error]\n", color="red")
-        logger.exception(ex)
+        logger.exception("LLM invoke failed: %s", type(ex).__name__)

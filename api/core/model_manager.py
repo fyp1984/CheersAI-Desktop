@@ -34,12 +34,18 @@ class ModelInstance:
     Model instance class
     """
 
-    def __init__(self, provider_model_bundle: ProviderModelBundle, model: str):
+    def __init__(
+        self,
+        provider_model_bundle: ProviderModelBundle,
+        model: str,
+        usage_metadata: dict[str, Any] | None = None,
+    ):
         self.provider_model_bundle = provider_model_bundle
         self.model = model
         self.provider = provider_model_bundle.configuration.provider.provider
         self.credentials = self._fetch_credentials_from_bundle(provider_model_bundle, model)
         self.model_type_instance = self.provider_model_bundle.model_type_instance
+        self.usage_metadata = self._normalize_usage_metadata(usage_metadata)
         self.load_balancing_manager = self._get_load_balancing_manager(
             configuration=provider_model_bundle.configuration,
             model_type=provider_model_bundle.model_type_instance.model_type,
@@ -490,7 +496,11 @@ class ModelInstance:
             model_instance=self,
             usage=result.usage,
             user_id=user,
-            metadata={"stream": stream, "resolved_model": result.model},
+            metadata={
+                **self.usage_metadata,
+                "stream": stream,
+                "resolved_model": result.model,
+            },
         )
 
     def _record_embedding_usage(self, result: EmbeddingResult, user: str | None) -> None:
@@ -498,8 +508,26 @@ class ModelInstance:
             model_instance=self,
             usage=result.usage,
             user_id=user,
-            metadata={"resolved_model": result.model},
+            metadata={
+                **self.usage_metadata,
+                "resolved_model": result.model,
+            },
         )
+
+    @staticmethod
+    def _normalize_usage_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
+        if not isinstance(metadata, dict):
+            return {}
+
+        normalized_metadata: dict[str, Any] = {}
+        for key, value in metadata.items():
+            if not isinstance(key, str) or not key:
+                continue
+            if value is None:
+                continue
+            if isinstance(value, (str, int, float, bool)):
+                normalized_metadata[key] = value
+        return normalized_metadata
 
     def get_tts_voices(self, language: str | None = None):
         """
@@ -519,7 +547,14 @@ class ModelManager:
     def __init__(self):
         self._provider_manager = ProviderManager()
 
-    def get_model_instance(self, tenant_id: str, provider: str, model_type: ModelType, model: str) -> ModelInstance:
+    def get_model_instance(
+        self,
+        tenant_id: str,
+        provider: str,
+        model_type: ModelType,
+        model: str,
+        usage_metadata: dict[str, Any] | None = None,
+    ) -> ModelInstance:
         """
         Get model instance
         :param tenant_id: tenant id
@@ -535,7 +570,7 @@ class ModelManager:
             tenant_id=tenant_id, provider=provider, model_type=model_type
         )
 
-        return ModelInstance(provider_model_bundle, model)
+        return ModelInstance(provider_model_bundle, model, usage_metadata=usage_metadata)
 
     def get_default_provider_model_name(self, tenant_id: str, model_type: ModelType) -> tuple[str | None, str | None]:
         """
@@ -546,7 +581,12 @@ class ModelManager:
         """
         return self._provider_manager.get_first_provider_first_model(tenant_id, model_type)
 
-    def get_default_model_instance(self, tenant_id: str, model_type: ModelType) -> ModelInstance:
+    def get_default_model_instance(
+        self,
+        tenant_id: str,
+        model_type: ModelType,
+        usage_metadata: dict[str, Any] | None = None,
+    ) -> ModelInstance:
         """
         Get default model instance
         :param tenant_id: tenant id
@@ -563,6 +603,7 @@ class ModelManager:
             provider=default_model_entity.provider.provider,
             model_type=model_type,
             model=default_model_entity.model,
+            usage_metadata=usage_metadata,
         )
 
     def check_model_support_vision(self, tenant_id: str, provider: str, model: str, model_type: ModelType) -> bool:

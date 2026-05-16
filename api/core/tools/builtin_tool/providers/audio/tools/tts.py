@@ -30,6 +30,12 @@ class TTSTool(BuiltinTool):
             provider=provider,
             model_type=ModelType.TTS,
             model=model,
+            usage_metadata={
+                "source": "audio_tts_tool",
+                **({"app_id": app_id} if app_id else {}),
+                **({"message_id": message_id} if message_id else {}),
+                **({"conversation_id": conversation_id} if conversation_id else {}),
+            },
         )
         if not voice:
             voices = model_instance.get_tts_voices()

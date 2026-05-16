@@ -15,6 +15,16 @@ class ProviderNotInitializeError(BaseHTTPException):
     )
     code = 400
 
+    def __init__(self, description=None, response=None):
+        if description is not None:
+            custom_error_code = getattr(description, "error_code", None)
+            custom_status = getattr(description, "http_status", None)
+            if custom_error_code:
+                self.error_code = custom_error_code
+            if custom_status:
+                self.code = custom_status
+        super().__init__(description, response)
+
 
 class ProviderQuotaExceededError(BaseHTTPException):
     error_code = "provider_quota_exceeded"

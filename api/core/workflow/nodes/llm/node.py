@@ -202,6 +202,8 @@ class LLMNode(Node[LLMNodeData]):
             model_instance, model_config = LLMNode._fetch_model_config(
                 node_data_model=self.node_data.model,
                 tenant_id=self.tenant_id,
+                app_id=self.app_id,
+                workflow_id=self.workflow_id,
             )
 
             # fetch memory
@@ -760,9 +762,18 @@ class LLMNode(Node[LLMNodeData]):
         *,
         node_data_model: ModelConfig,
         tenant_id: str,
+        app_id: str,
+        workflow_id: str,
     ) -> tuple[ModelInstance, ModelConfigWithCredentialsEntity]:
         model, model_config_with_cred = llm_utils.fetch_model_config(
-            tenant_id=tenant_id, node_data_model=node_data_model
+            tenant_id=tenant_id,
+            node_data_model=node_data_model,
+            usage_metadata={
+                "source": "workflow",
+                "app_id": app_id,
+                "workflow_id": workflow_id,
+                "workflow_app_id": app_id,
+            },
         )
         completion_params = model_config_with_cred.parameters
 

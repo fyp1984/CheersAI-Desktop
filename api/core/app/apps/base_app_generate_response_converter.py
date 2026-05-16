@@ -121,6 +121,12 @@ class AppGenerateResponseConverter(ABC):
                 data = v
 
         if data:
+            custom_error_code = getattr(e, "error_code", None)
+            custom_status = getattr(e, "http_status", None)
+            if custom_error_code:
+                data["code"] = custom_error_code
+            if custom_status:
+                data["status"] = custom_status
             data.setdefault("message", getattr(e, "description", str(e)))
         else:
             logger.error(e)
