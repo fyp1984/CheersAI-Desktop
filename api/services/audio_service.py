@@ -62,7 +62,12 @@ class AudioService:
 
         model_manager = ModelManager()
         model_instance = model_manager.get_default_model_instance(
-            tenant_id=app_model.tenant_id, model_type=ModelType.SPEECH2TEXT
+            tenant_id=app_model.tenant_id,
+            model_type=ModelType.SPEECH2TEXT,
+            usage_metadata={
+                "source": "speech_to_text",
+                "app_id": app_model.id,
+            },
         )
         if model_instance is None:
             raise ProviderNotSupportSpeechToTextServiceError()
@@ -110,7 +115,12 @@ class AudioService:
 
             model_manager = ModelManager()
             model_instance = model_manager.get_default_model_instance(
-                tenant_id=app_model.tenant_id, model_type=ModelType.TTS
+                tenant_id=app_model.tenant_id,
+                model_type=ModelType.TTS,
+                usage_metadata={
+                    "source": "text_to_speech",
+                    "app_id": app_model.id,
+                },
             )
             try:
                 if not voice:

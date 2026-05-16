@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import Any
 from typing import cast
 
 from sqlalchemy import select, update
@@ -28,7 +29,7 @@ from .exc import InvalidVariableTypeError, LLMModeRequiredError, ModelNotExistEr
 
 
 def fetch_model_config(
-    tenant_id: str, node_data_model: ModelConfig
+    tenant_id: str, node_data_model: ModelConfig, usage_metadata: dict[str, Any] | None = None
 ) -> tuple[ModelInstance, ModelConfigWithCredentialsEntity]:
     if not node_data_model.mode:
         raise LLMModeRequiredError("LLM mode is required.")
@@ -38,6 +39,7 @@ def fetch_model_config(
         model_type=ModelType.LLM,
         provider=node_data_model.provider,
         model=node_data_model.name,
+        usage_metadata=usage_metadata,
     )
 
     model.model_type_instance = cast(LargeLanguageModel, model.model_type_instance)

@@ -61,6 +61,10 @@ class AgentChatAppRunner(AppRunner):
             model_instance = ModelInstance(
                 provider_model_bundle=application_generate_entity.model_conf.provider_model_bundle,
                 model=application_generate_entity.model_conf.model,
+                usage_metadata={
+                    "source": "agent",
+                    "app_id": app_record.id,
+                },
             )
 
             memory = TokenBufferMemory(conversation=conversation, model_instance=model_instance)
@@ -165,6 +169,10 @@ class AgentChatAppRunner(AppRunner):
         model_instance = ModelInstance(
             provider_model_bundle=application_generate_entity.model_conf.provider_model_bundle,
             model=application_generate_entity.model_conf.model,
+            usage_metadata={
+                "source": "agent",
+                "app_id": app_record.id,
+            },
         )
         prompt_message, _ = self.organize_prompt_messages(
             app_record=app_record,

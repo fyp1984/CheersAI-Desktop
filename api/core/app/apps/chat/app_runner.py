@@ -70,6 +70,10 @@ class ChatAppRunner(AppRunner):
             model_instance = ModelInstance(
                 provider_model_bundle=application_generate_entity.model_conf.provider_model_bundle,
                 model=application_generate_entity.model_conf.model,
+                usage_metadata={
+                    "source": "app",
+                    "app_id": app_record.id,
+                },
             )
 
             memory = TokenBufferMemory(conversation=conversation, model_instance=model_instance)
@@ -212,6 +216,10 @@ class ChatAppRunner(AppRunner):
         model_instance = ModelInstance(
             provider_model_bundle=application_generate_entity.model_conf.provider_model_bundle,
             model=application_generate_entity.model_conf.model,
+            usage_metadata={
+                "source": "app",
+                "app_id": app_record.id,
+            },
         )
 
         db.session.close()

@@ -35,6 +35,12 @@ class ASRTool(BuiltinTool):
             provider=provider,
             model_type=ModelType.SPEECH2TEXT,
             model=model,
+            usage_metadata={
+                "source": "audio_asr_tool",
+                **({"app_id": app_id} if app_id else {}),
+                **({"message_id": message_id} if message_id else {}),
+                **({"conversation_id": conversation_id} if conversation_id else {}),
+            },
         )
         text = model_instance.invoke_speech2text(
             file=audio_binary,

@@ -49,6 +49,13 @@ class WorkflowServiceInterface(Protocol):
 
 
 class LLMGenerator:
+    @staticmethod
+    def _build_usage_metadata(source: str, app_id: str | None = None) -> dict[str, str]:
+        metadata = {"source": source}
+        if app_id:
+            metadata["app_id"] = app_id
+        return metadata
+
     @classmethod
     def generate_conversation_name(
         cls, tenant_id: str, query, conversation_id: str | None = None, app_id: str | None = None
@@ -66,6 +73,7 @@ class LLMGenerator:
         model_instance = model_manager.get_default_model_instance(
             tenant_id=tenant_id,
             model_type=ModelType.LLM,
+            usage_metadata=cls._build_usage_metadata("conversation_name", app_id),
         )
         prompts = [UserPromptMessage(content=prompt)]
 
@@ -111,7 +119,12 @@ class LLMGenerator:
         return name
 
     @classmethod
-    def generate_suggested_questions_after_answer(cls, tenant_id: str, histories: str) -> Sequence[str]:
+    def generate_suggested_questions_after_answer(
+        cls,
+        tenant_id: str,
+        histories: str,
+        app_id: str | None = None,
+    ) -> Sequence[str]:
         output_parser = SuggestedQuestionsAfterAnswerOutputParser()
         format_instructions = output_parser.get_format_instructions()
 
@@ -124,6 +137,7 @@ class LLMGenerator:
             model_instance = model_manager.get_default_model_instance(
                 tenant_id=tenant_id,
                 model_type=ModelType.LLM,
+                usage_metadata=cls._build_usage_metadata("suggested_questions", app_id),
             )
         except InvokeAuthorizationError:
             return []
@@ -179,6 +193,7 @@ class LLMGenerator:
                 model_type=ModelType.LLM,
                 provider=args.model_config_data.provider,
                 model=args.model_config_data.name,
+                usage_metadata=cls._build_usage_metadata("rule_config_generator"),
             )
 
             try:
@@ -224,6 +239,7 @@ class LLMGenerator:
             model_type=ModelType.LLM,
             provider=args.model_config_data.provider,
             model=args.model_config_data.name,
+            usage_metadata=cls._build_usage_metadata("rule_config_generator"),
         )
 
         try:
@@ -310,6 +326,7 @@ class LLMGenerator:
             model_type=ModelType.LLM,
             provider=args.model_config_data.provider,
             model=args.model_config_data.name,
+            usage_metadata=cls._build_usage_metadata("code_generator"),
         )
 
         prompt_messages = [UserPromptMessage(content=prompt)]
@@ -339,6 +356,7 @@ class LLMGenerator:
         model_instance = model_manager.get_default_model_instance(
             tenant_id=tenant_id,
             model_type=ModelType.LLM,
+            usage_metadata=cls._build_usage_metadata("qa_document_generator"),
         )
 
         prompt_messages: list[PromptMessage] = [SystemPromptMessage(content=prompt), UserPromptMessage(content=query)]
@@ -366,6 +384,7 @@ class LLMGenerator:
             model_type=ModelType.LLM,
             provider=args.model_config_data.provider,
             model=args.model_config_data.name,
+            usage_metadata=cls._build_usage_metadata("structured_output_generator"),
         )
 
         prompt_messages = [
@@ -539,6 +558,7 @@ class LLMGenerator:
             model_type=ModelType.LLM,
             provider=model_config.provider,
             model=model_config.name,
+            usage_metadata=cls._build_usage_metadata("workflow_instruction_modify"),
         )
         match node_type:
             case "llm" | "agent":

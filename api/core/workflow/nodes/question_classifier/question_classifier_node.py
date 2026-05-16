@@ -91,6 +91,12 @@ class QuestionClassifierNode(Node[QuestionClassifierNodeData]):
         model_instance, model_config = llm_utils.fetch_model_config(
             tenant_id=self.tenant_id,
             node_data_model=node_data.model,
+            usage_metadata={
+                "source": "workflow",
+                "app_id": self.app_id,
+                "workflow_id": self.workflow_id,
+                "workflow_app_id": self.app_id,
+            },
         )
         # fetch memory
         memory = llm_utils.fetch_memory(

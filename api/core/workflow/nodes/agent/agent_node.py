@@ -444,6 +444,12 @@ class AgentNode(Node[AgentNodeData]):
             provider=provider_name,
             model_type=ModelType(value.get("model_type", "")),
             model=model_name,
+            usage_metadata={
+                "source": "workflow",
+                "app_id": self.app_id,
+                "workflow_id": self.workflow_id,
+                "workflow_app_id": self.app_id,
+            },
         )
         model_schema = model_type_instance.get_model_schema(model_name, model_credentials)
         return model_instance, model_schema

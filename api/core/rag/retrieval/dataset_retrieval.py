@@ -1273,7 +1273,9 @@ class DatasetRetrieval:
         return filters
 
     def _fetch_model_config(
-        self, tenant_id: str, model: ModelConfig
+        self,
+        tenant_id: str,
+        model: ModelConfig,
     ) -> tuple[ModelInstance, ModelConfigWithCredentialsEntity]:
         """
         Fetch model config
@@ -1285,7 +1287,13 @@ class DatasetRetrieval:
 
         model_manager = ModelManager()
         model_instance = model_manager.get_model_instance(
-            tenant_id=tenant_id, model_type=ModelType.LLM, provider=provider_name, model=model_name
+            tenant_id=tenant_id,
+            model_type=ModelType.LLM,
+            provider=provider_name,
+            model=model_name,
+            usage_metadata={
+                "source": "dataset_retrieval",
+            },
         )
 
         provider_model_bundle = model_instance.provider_model_bundle

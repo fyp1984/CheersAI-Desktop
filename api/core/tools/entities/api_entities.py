@@ -42,6 +42,14 @@ class ToolProviderApiEntity(BaseModel):
     plugin_unique_identifier: str | None = Field(default="", description="The unique identifier of the tool")
     tools: list[ToolApiEntity] = Field(default_factory=list[ToolApiEntity])
     labels: list[str] = Field(default_factory=list)
+    is_shared_installation: bool = Field(
+        default=False,
+        description="Whether the provider runtime is installed once and shared",
+    )
+    is_tenant_configured: bool = Field(
+        default=False,
+        description="Whether the current tenant has completed its own configuration for this provider",
+    )
     # MCP
     server_url: str | None = Field(default="", description="The server url of the tool")
     updated_at: int = Field(default_factory=lambda: int(datetime.now().timestamp()))
@@ -107,6 +115,8 @@ class ToolProviderApiEntity(BaseModel):
             "allow_delete": self.allow_delete,
             "tools": tools,
             "labels": self.labels,
+            "is_shared_installation": self.is_shared_installation,
+            "is_tenant_configured": self.is_tenant_configured,
             **optional_fields,
         }
 

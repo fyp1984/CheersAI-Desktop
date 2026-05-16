@@ -648,7 +648,16 @@ class KnowledgeRetrievalNode(LLMUsageTrackingMixin, Node[KnowledgeRetrievalNodeD
 
         model_manager = ModelManager()
         model_instance = model_manager.get_model_instance(
-            tenant_id=self.tenant_id, model_type=ModelType.LLM, provider=provider_name, model=model_name
+            tenant_id=self.tenant_id,
+            model_type=ModelType.LLM,
+            provider=provider_name,
+            model=model_name,
+            usage_metadata={
+                "source": "workflow_knowledge_retrieval",
+                "app_id": self.app_id,
+                "workflow_id": self.workflow_id,
+                "workflow_app_id": self.app_id,
+            },
         )
 
         provider_model_bundle = model_instance.provider_model_bundle
