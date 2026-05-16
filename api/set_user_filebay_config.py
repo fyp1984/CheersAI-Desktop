@@ -1,8 +1,9 @@
 """为用户设置 FileBay 配置"""
 import json
+
+from app import create_app
 from extensions.ext_database import db
 from models.account import Account
-from app import create_app
 
 app = create_app()
 
@@ -37,8 +38,8 @@ with app.app_context():
         account.custom_config = json.dumps(custom_config, ensure_ascii=False)
         db.session.commit()
         
-        print(f'\n✅ 成功保存 FileBay 配置到 custom_config!')
-        print(f'\n配置内容:')
+        print('\n✅ 成功保存 FileBay 配置到 custom_config!')
+        print('\n配置内容:')
         print(json.dumps(filebay_config, indent=2, ensure_ascii=False))
     else:
         print(f'\n❌ 未找到用户: {email}')

@@ -29,8 +29,8 @@ from libs.token import (
 )
 from services.account_service import AccountService
 from services.app_service import AppService
-from services.webapp_auth_service import WebAppAuthService
 from services.audit_service import write_log
+from services.webapp_auth_service import WebAppAuthService
 
 
 class LoginPayload(BaseModel):
@@ -187,6 +187,7 @@ class LogoutApi(Resource):
         # 记录 web app 登出审计日志
         try:
             from flask_login import current_user
+
             from extensions.ext_database import db
             from models.account import TenantAccountJoin
 

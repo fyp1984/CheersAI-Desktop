@@ -4,7 +4,6 @@ from pydantic import BaseModel, Field
 from controllers.console.workspace import require_data_source_manage_capability
 from libs.login import current_account_with_tenant, login_required
 from services.auth.api_key_auth_service import ApiKeyAuthService
-from controllers.console.workspace import require_data_source_manage_capability
 
 from .. import console_ns
 from ..auth.error import ApiKeyAuthFailedError

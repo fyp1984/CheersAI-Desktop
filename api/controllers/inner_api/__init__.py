@@ -20,16 +20,15 @@ from . import gitea as _gitea
 from . import mail as _mail
 from .plugin import plugin as _plugin
 from .workspace import workspace as _workspace
-from . import gitea as _gitea
 
 api.add_namespace(inner_api_ns)
 
 __all__ = [
     "_beta_notification",
+    "_gitea",
     "_mail",
     "_plugin",
     "_workspace",
-    "_gitea",
     "api",
     "bp",
     "inner_api_ns",

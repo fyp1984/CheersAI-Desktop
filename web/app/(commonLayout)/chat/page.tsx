@@ -1,6 +1,6 @@
 'use client'
 
-import { RiAddLine, RiArrowDownSLine, RiArrowLeftSLine, RiArrowRightSLine, RiAttachmentLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiDownloadLine, RiFileCopyLine, RiMicFill, RiMicLine, RiMoreLine, RiRefreshLine, RiSearchLine } from '@remixicon/react'
+import { RiAddLine, RiArrowDownSLine, RiArrowLeftSLine, RiArrowRightSLine, RiAttachmentLine, RiCheckLine, RiCloseLine, RiDatabase2Line, RiDeleteBinLine, RiDownloadLine, RiFileCopyLine, RiMicFill, RiMicLine, RiMoreLine, RiRefreshLine, RiSearchLine } from '@remixicon/react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import Checkbox from '@/app/components/base/checkbox'
@@ -13,6 +13,7 @@ import { useDefaultModel, useModelList } from '@/app/components/header/account-s
 import { useAppContext } from '@/context/app-context'
 import useDocumentTitle from '@/hooks/use-document-title'
 import { sendSimpleChatMessage } from '@/service/chat'
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '@/config'
 import { cn } from '@/utils/classnames'
 import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 
@@ -690,6 +691,50 @@ const ChatPage = () => {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+  }
+
+  // 同步AI回复到FileBay
+  const handleSyncToFileBay = async (content: string, messageId: string) => {
+    const fileName = `reply-${messageId.slice(0, 8)}.md`
+    try {
+      // 获取 CSRF token
+      const csrfToken = Cookies.get(CSRF_COOKIE_NAME())
+
+      if (!csrfToken) {
+        Toast.notify({ type: 'error', message: '无法获取认证信息' })
+        return
+      }
+
+      // 准备请求头
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      headers[CSRF_HEADER_NAME] = csrfToken
+
+      // 直接上传到 FileBay（使用相对路径，通过 Next.js 代理）
+      const response = await fetch('/console/api/filebay/sync-reply', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          file_name: fileName,
+          content,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        Toast.notify({ type: 'success', message: `已同步到 FileBay: ${fileName}` })
+      }
+      else {
+        Toast.notify({ type: 'error', message: data.message || '同步失败' })
+      }
+    }
+    catch (error) {
+      console.error('Sync to FileBay failed:', error)
+      Toast.notify({ type: 'error', message: '同步失败，请检查 FileBay 配置' })
+    }
   }
 
   // 重新生成AI回复
@@ -1499,6 +1544,13 @@ const ChatPage = () => {
                                   title="下载"
                                 >
                                   <RiDownloadLine className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleSyncToFileBay(message.content, message.id)}
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600"
+                                  title="同步到 FileBay"
+                                >
+                                  <RiDatabase2Line className="h-3.5 w-3.5" />
                                 </button>
                                 <button
                                   onClick={() => {

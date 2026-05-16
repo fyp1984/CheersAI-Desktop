@@ -34,9 +34,9 @@ from libs.helper import UUIDStrOrEmpty
 from models.model import App, AppMode, EndUser
 from services.app_generate_service import AppGenerateService
 from services.app_task_service import AppTaskService
+from services.audit_service import log_operation
 from services.errors.app import IsDraftWorkflowError, WorkflowIdFormatError, WorkflowNotFoundError
 from services.errors.llm import InvokeRateLimitError
-from services.audit_service import log_operation
 
 logger = logging.getLogger(__name__)
 

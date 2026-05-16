@@ -3,6 +3,7 @@ import type { FileUpload } from '@/app/components/base/features/types'
 import {
   RiLink,
   RiUploadCloud2Line,
+  RiDatabase2Line,
 } from '@remixicon/react'
 import {
   useCallback,
@@ -46,6 +47,11 @@ const FileUploaderInAttachment = ({
       icon: <RiUploadCloud2Line className="h-4 w-4" />,
     },
     {
+      value: 'filebay' as const,
+      label: '从 FileBay 选择',
+      icon: <RiDatabase2Line className="h-4 w-4" />,
+    },
+    {
       value: TransferMethod.remote_url,
       label: t('fileUploader.pasteFileLink', { ns: 'common' }),
       icon: <RiLink className="h-4 w-4" />,
@@ -76,6 +82,19 @@ const FileUploaderInAttachment = ({
   const renderOption = useCallback((option: Option) => {
     if (option.value === TransferMethod.local_file && fileConfig?.allowed_file_upload_methods?.includes(TransferMethod.local_file))
       return renderButton(option)
+
+    if (option.value === 'filebay') {
+      return (
+        <FileFromLinkOrLocal
+          key={option.value}
+          showFromLocal={false}
+          showFromLink={false}
+          showFromFileBay={true}
+          trigger={renderTrigger(option)}
+          fileConfig={fileConfig}
+        />
+      )
+    }
 
     if (option.value === TransferMethod.remote_url && fileConfig?.allowed_file_upload_methods?.includes(TransferMethod.remote_url)) {
       return (

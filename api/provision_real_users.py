@@ -6,7 +6,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 import logging
+
 from flask import Flask
+
 from extensions.ext_database import db
 from models.account import Account
 from services.filebay_auto_provision_service import FileBayAutoProvisionService
@@ -30,14 +32,14 @@ def provision_user(email):
     
     with app.app_context():
         logger.info("=" * 80)
-        logger.info(f"为用户配置 FileBay: {email}")
+        logger.info("为用户配置 FileBay: %s", email)
         logger.info("=" * 80)
         
         # 查询账号
         account = db.session.query(Account).filter_by(email=email).first()
         
         if not account:
-            logger.error(f"✗ 未找到账号: {email}")
+            logger.error("✗ 未找到账号: %s", email)
             return False
         
         logger.info(f"✓ 找到账号: {account.id}")
@@ -46,7 +48,7 @@ def provision_user(email):
         
         # 检查是否已有配置
         if account.custom_config_dict and account.custom_config_dict.get('gitea_url'):
-            logger.info(f"✓ 账号已有 FileBay 配置")
+            logger.info("✓ 账号已有 FileBay 配置")
             config = account.custom_config_dict
             logger.info(f"  URL:   {config.get('gitea_url')}")
             logger.info(f"  Owner: {config.get('gitea_owner')}")
@@ -54,20 +56,20 @@ def provision_user(email):
             return True
         
         # 执行自动配置
-        logger.info(f"\n开始自动配置...")
+        logger.info("\n开始自动配置...")
         
         try:
             service = FileBayAutoProvisionService()
             config = service.auto_provision(email)
             
-            logger.info(f"\n✓ 自动配置成功!")
+            logger.info("\n✓ 自动配置成功!")
             logger.info(f"  URL:   {config['gitea_url']}")
             logger.info(f"  Owner: {config['gitea_owner']}")
             logger.info(f"  Repo:  {config['gitea_repo']}")
             logger.info(f"  Token: {config['gitea_token'][:20]}...")
             
             # 保存到数据库
-            logger.info(f"\n保存配置到数据库...")
+            logger.info("\n保存配置到数据库...")
             account.custom_config_dict = config
             db.session.commit()
             
@@ -76,14 +78,14 @@ def provision_user(email):
             saved_config = account.custom_config_dict
             
             if saved_config.get('gitea_url') == config['gitea_url']:
-                logger.info(f"✓ 配置已保存到数据库")
+                logger.info("✓ 配置已保存到数据库")
                 return True
             else:
-                logger.error(f"✗ 配置保存失败")
+                logger.error("✗ 配置保存失败")
                 return False
             
         except Exception as e:
-            logger.error(f"✗ 自动配置失败: {e}", exc_info=True)
+            logger.error("✗ 自动配置失败: %s", e, exc_info=True)
             return False
 
 

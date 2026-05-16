@@ -1,0 +1,48 @@
+identity:
+  name: read_file
+  author: CheersAI
+  label:
+    en_US: Read File from FileBay
+    zh_Hans: 从 FileBay 读取文件
+description:
+  human:
+    en_US: Read a file from FileBay repository
+    zh_Hans: 从 FileBay 仓库读取文件
+  llm: A tool to read file content from FileBay repository. Input the file path and get the file content.
+parameters:
+  - name: file_path
+    type: string
+    required: true
+    label:
+      en_US: File Path
+      zh_Hans: 文件路径
+    human_description:
+      en_US: The path to the file in the repository (e.g., documents/example.txt)
+      zh_Hans: 仓库中的文件路径（例如：documents/example.txt）
+    llm_description: The relative path to the file in the FileBay repository
+    form: llm
+  - name: encoding
+    type: select
+    required: false
+    default: utf-8
+    label:
+      en_US: File Encoding
+      zh_Hans: 文件编码
+    human_description:
+      en_US: The encoding of the file
+      zh_Hans: 文件的编码格式
+    llm_description: The encoding format of the file (default: utf-8)
+    form: form
+    options:
+      - value: utf-8
+        label:
+          en_US: UTF-8
+          zh_Hans: UTF-8
+      - value: gbk
+        label:
+          en_US: GBK
+          zh_Hans: GBK
+      - value: gb2312
+        label:
+          en_US: GB2312
+          zh_Hans: GB2312

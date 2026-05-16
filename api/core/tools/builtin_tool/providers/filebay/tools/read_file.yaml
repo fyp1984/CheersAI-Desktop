@@ -1,0 +1,23 @@
+identity:
+  name: read_file
+  author: CheersAI
+  label:
+    en_US: Read File
+    zh_Hans: 读取文件
+description:
+  human:
+    en_US: Read file content from FileBay repository
+    zh_Hans: 从FileBay仓库读取文件内容
+  llm: A tool to read file content from FileBay repository. Input the file path to get its content.
+parameters:
+  - name: file_path
+    type: string
+    required: true
+    label:
+      en_US: File Path
+      zh_Hans: 文件路径
+    human_description:
+      en_US: The path of the file to read (e.g., "masked/config.json")
+      zh_Hans: 要读取的文件路径（例如："masked/config.json"）
+    llm_description: The path of the file to read in the repository
+    form: llm

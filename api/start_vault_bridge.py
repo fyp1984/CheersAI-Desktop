@@ -70,7 +70,7 @@ def main():
     except KeyboardInterrupt:
         logger.info('Vault Bridge service stopped by user')
     except Exception as e:
-        logger.error(f'Vault Bridge service failed: {e}', exc_info=True)
+        logger.error('Vault Bridge service failed: %s', e, exc_info=True)
         sys.exit(1)
 
 

@@ -59,7 +59,7 @@ class GiteaConfigApi(Resource):
         """
         # Get current user's email
         user_email = current_user.email
-        logger.info(f'[Gitea Config] Getting config for user: {user_email}')
+        logger.info('[Gitea Config] Getting config for user: %s', user_email)
 
         account = db.session.query(Account).filter_by(id=current_user.id).first()
         config_data = resolve_user_filebay_config(
@@ -285,7 +285,6 @@ class GiteaConfigTestApi(Resource):
                     del os.environ[key]
 
 
-
 @console_ns.route('/gitea/config/download')
 class GiteaConfigDownloadApi(Resource):
     """Gitea configuration download API for Desktop App."""
@@ -306,7 +305,7 @@ class GiteaConfigDownloadApi(Resource):
         """
         # Get current user's email
         user_email = current_user.email
-        logger.info(f'[Gitea Config Download] Getting config for user: {user_email}')
+        logger.info('[Gitea Config Download] Getting config for user: %s', user_email)
 
         account = db.session.query(Account).filter_by(id=current_user.id).first()
         config_data = resolve_user_filebay_config(

@@ -2,7 +2,11 @@ from flask_login import current_user
 
 from configs import dify_config
 from extensions.ext_database import db
-from libs.desktop_auth import get_account_allowed_workspace_tenant_ids, get_role_capabilities, load_desktop_sso_projection
+from libs.desktop_auth import (
+    get_account_allowed_workspace_tenant_ids,
+    get_role_capabilities,
+    load_desktop_sso_projection,
+)
 from models.account import Tenant, TenantAccountJoin, TenantAccountRole
 from services.account_service import TenantService
 from services.feature_service import FeatureService

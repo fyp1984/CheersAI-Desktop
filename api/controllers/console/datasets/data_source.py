@@ -28,13 +28,13 @@ from fields.data_source_fields import (
 from libs.datetime_utils import naive_utc_now
 from libs.login import current_account_with_tenant, login_required
 from models import DataSourceOauthBinding, Document
-from services.dataset_service import DatasetService, DocumentService
+from services.dataset_service import DocumentService
 from services.datasource_provider_service import DatasourceProviderService
 from tasks.document_indexing_sync_task import document_indexing_sync_task
 
 from .. import console_ns
-from ..wraps import account_initialization_required, setup_required
 from ..workspace import require_data_source_manage_capability
+from ..wraps import account_initialization_required, setup_required
 from .visibility import get_visible_dataset
 
 

@@ -1,0 +1,84 @@
+identity:
+  author: cheersai
+  name: filebay
+  label:
+    en_US: FileBay
+    zh_Hans: FileBay
+  description:
+    en_US: FileBay file storage and synchronization service
+    zh_Hans: FileBay file storage service
+  icon: icon.svg
+  tags:
+    - utilities
+    - productivity
+
+credentials_for_provider:
+  filebay_url:
+    type: text-input
+    required: true
+    label:
+      en_US: FileBay URL
+      zh_Hans: FileBay URL
+    placeholder:
+      en_US: https://filebay.example.com
+      zh_Hans: https://filebay.example.com
+    help:
+      en_US: The base URL of your FileBay instance
+      zh_Hans: FileBay instance URL
+  filebay_token:
+    type: secret-input
+    required: true
+    label:
+      en_US: Access Token
+      zh_Hans: Access Token
+    placeholder:
+      en_US: Your FileBay access token
+      zh_Hans: FileBay access token
+    help:
+      en_US: Generate an access token from FileBay settings
+      zh_Hans: Generate token from FileBay settings
+  filebay_owner:
+    type: text-input
+    required: true
+    label:
+      en_US: Repository Owner
+      zh_Hans: Repository Owner
+    placeholder:
+      en_US: username
+      zh_Hans: username
+    help:
+      en_US: The owner of the repository
+      zh_Hans: Repository owner username
+  filebay_repo:
+    type: text-input
+    required: true
+    label:
+      en_US: Repository Name
+      zh_Hans: Repository Name
+    placeholder:
+      en_US: workspace
+      zh_Hans: workspace
+    help:
+      en_US: The name of the repository
+      zh_Hans: Repository name
+  filebay_branch:
+    type: text-input
+    required: false
+    label:
+      en_US: Branch Name
+      zh_Hans: Branch Name
+    placeholder:
+      en_US: main
+      zh_Hans: main
+    help:
+      en_US: The branch to use (default main)
+      zh_Hans: Branch name (default main)
+
+tools:
+  - tools/read_file.yaml
+  - tools/write_file.yaml
+  - tools/list_files.yaml
+
+extra:
+  python:
+    source: provider/filebay.py

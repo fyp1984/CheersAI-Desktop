@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """使用 urllib3 直接测试，完全禁用 SNI"""
-import ssl
-import urllib3
-from urllib3.util.ssl_ import create_urllib3_context, resolve_cert_reqs, resolve_ssl_version
 import os
+import ssl
+
+import urllib3
 from dotenv import load_dotenv
 
 load_dotenv()

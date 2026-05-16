@@ -115,7 +115,7 @@ class GiteaFileApi(Resource):
             finally:
                 _restore_env(original_env)
         except FileNotFoundError:
-            logger.error(f'[Gitea File Download] File not found: {file_path}')
+            logger.error('[Gitea File Download] File not found: %s', file_path)
             return {'error': 'File not found in Gitea repository'}, 404
         except Exception as e:
             logger.error(f'[Gitea File Download] Failed to retrieve file: {str(e)}', exc_info=True)

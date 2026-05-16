@@ -5,9 +5,10 @@ This solves the SSL/network connectivity issue between Docker and SSO server
 """
 import logging
 import sys
-from flask import Flask, request, jsonify
+
 import requests
 import urllib3
+from flask import Flask, jsonify, request
 
 # Disable SSL warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -22,10 +23,12 @@ app = Flask(__name__)
 
 SSO_BASE_URL = "https://uat-sso.cheersai.cloud"
 
+
 @app.route('/health', methods=['GET'])
 def health():
     """Health check endpoint"""
     return jsonify({"status": "ok"}), 200
+
 
 @app.route('/api/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
 def proxy_api(path):
@@ -61,12 +64,13 @@ def proxy_api(path):
         logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         return jsonify({"error": "Internal proxy error", "details": str(e)}), 500
 
+
 @app.route('/login/<path:path>', methods=['GET'])
 def proxy_login(path):
     """Proxy login page requests"""
     try:
         target_url = f"{SSO_BASE_URL}/login/{path}"
-        logger.info(f"Proxying login request to: {target_url}")
+        logger.info("Proxying login request to: %s", target_url)
         
         headers = {k: v for k, v in request.headers if k.lower() != 'host'}
         
@@ -85,8 +89,9 @@ def proxy_login(path):
         logger.error(f"Login proxy failed: {str(e)}", exc_info=True)
         return jsonify({"error": "Failed to proxy login", "details": str(e)}), 502
 
+
 if __name__ == '__main__':
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 5555
-    logger.info(f"Starting SSO Proxy Server on port {port}")
-    logger.info(f"Proxying requests to: {SSO_BASE_URL}")
+    logger.info("Starting SSO Proxy Server on port %s", port)
+    logger.info("Proxying requests to: %s", SSO_BASE_URL)
     app.run(host='0.0.0.0', port=port, debug=False)

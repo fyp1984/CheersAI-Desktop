@@ -29,13 +29,11 @@ from controllers.console.wraps import (
 from core.file import helpers as file_helpers
 from core.ops.ops_trace_manager import OpsTraceManager
 from core.rag.retrieval.retrieval_methods import RetrievalMethod
-from core.workflow.enums import NodeType, WorkflowExecutionStatus
+from core.workflow.enums import WorkflowExecutionStatus
 from extensions.ext_database import db
-from libs.desktop_auth import get_account_sso_tags
 from libs.login import current_account_with_tenant, login_required
-from models import App, DatasetPermissionEnum, Workflow
+from models import App, DatasetPermissionEnum
 from models.model import IconType
-from services.audit_service import log_operation
 from services.app_dsl_service import AppDslService, ImportMode
 from services.app_service import AppService
 from services.audit_service import log_operation
@@ -56,7 +54,6 @@ from services.entities.knowledge_entities.knowledge_entities import (
     WeightVectorSetting,
 )
 from services.feature_service import FeatureService
-from services.tag_service import TagService
 
 from .visibility import get_current_user_app_tags, get_visible_app_model, is_app_visible_for_user
 
@@ -766,7 +763,7 @@ class AppApi(Resource):
                     resource_id=app_id,
                     operation_type="workflow",
                 )
-                logger.info(f"[AUDIT] delete_app log recorded successfully for app: {app_name}")
+                logger.info("[AUDIT] delete_app log recorded successfully for app: %s", app_name)
             else:
                 logger.warning(
                     f"[AUDIT] delete_app skipped - missing tenant_id: {current_tenant_id} or account_id: {current_user.id if current_user else None}"
@@ -984,11 +981,13 @@ class AppTraceApi(Resource):
         return {"result": "success"}
 
 
-from werkzeug.exceptions import Conflict, Forbidden, NotFound
+from werkzeug.exceptions import Conflict, NotFound
+
 from models import AppLifecycleEvent
 from services.app_lifecycle_service import AppLifecycleService, AppLifecycleValidationException
 
 # --- Lifecycle Endpoints ---
+
 
 @console_ns.route("/apps/<uuid:app_id>/lifecycle")
 class AppLifecycleStatusApi(Resource):
@@ -1001,6 +1000,7 @@ class AppLifecycleStatusApi(Resource):
         if not app_model:
             raise NotFound("App not found")
         return AppLifecycleService.get_lifecycle_status(app_model, current_user)
+
 
 @console_ns.route("/apps/<uuid:app_id>/stash")
 class AppLifecycleStashApi(Resource):
@@ -1021,6 +1021,7 @@ class AppLifecycleStashApi(Resource):
             return AppLifecycleService.stash_app(app_model, expected_row_version)
         except Conflict as e:
             raise Conflict(str(e))
+
 
 @console_ns.route("/apps/<uuid:app_id>/publish")
 class AppLifecyclePublishApi(Resource):
@@ -1045,6 +1046,7 @@ class AppLifecyclePublishApi(Resource):
         except Conflict as e:
             raise Conflict(str(e))
 
+
 @console_ns.route("/apps/<uuid:app_id>/recall")
 class AppLifecycleRecallApi(Resource):
     @setup_required
@@ -1068,6 +1070,7 @@ class AppLifecycleRecallApi(Resource):
             return AppLifecycleService.recall_app(app_model, expected_row_version, reason)
         except Conflict as e:
             raise Conflict(str(e))
+
 
 @console_ns.route("/apps/<uuid:app_id>/lifecycle-events")
 class AppLifecycleEventsApi(Resource):

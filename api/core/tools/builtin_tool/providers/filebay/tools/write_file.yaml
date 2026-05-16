@@ -1,0 +1,46 @@
+identity:
+  name: write_file
+  author: CheersAI
+  label:
+    en_US: Write File
+    zh_Hans: 写入文件
+description:
+  human:
+    en_US: Write or update file content in FileBay repository
+    zh_Hans: 在FileBay仓库中写入或更新文件内容
+  llm: A tool to write or update file content in FileBay repository. Input the file path and content to save.
+parameters:
+  - name: file_path
+    type: string
+    required: true
+    label:
+      en_US: File Path
+      zh_Hans: 文件路径
+    human_description:
+      en_US: The path where the file will be saved (e.g., "uploads/document.pdf")
+      zh_Hans: 文件保存的路径（例如："uploads/document.pdf"）
+    llm_description: The path where the file will be saved in the repository
+    form: llm
+  - name: content
+    type: string
+    required: true
+    label:
+      en_US: File Content
+      zh_Hans: 文件内容
+    human_description:
+      en_US: The content to write to the file (will be base64 encoded automatically)
+      zh_Hans: 要写入文件的内容（将自动进行base64编码）
+    llm_description: The content to write to the file
+    form: llm
+  - name: commit_message
+    type: string
+    required: false
+    label:
+      en_US: Commit Message
+      zh_Hans: 提交信息
+    human_description:
+      en_US: The commit message for this change (optional)
+      zh_Hans: 此次更改的提交信息（可选）
+    llm_description: The commit message for this change
+    form: llm
+    default: "Update file via Dify"

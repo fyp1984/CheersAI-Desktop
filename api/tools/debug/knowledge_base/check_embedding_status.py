@@ -8,6 +8,7 @@ if str(API_ROOT) not in sys.path:
     sys.path.insert(0, str(API_ROOT))
 
 import os
+
 from sqlalchemy import create_engine, text
 
 # Get database URL from environment
@@ -52,6 +53,6 @@ with engine.connect() as conn:
             if row[7]:
                 print(f"    错误: {row[7]}")
         else:
-            print(f"  ⚠ 没有分段")
+            print("  ⚠ 没有分段")
     
     print("=" * 120)

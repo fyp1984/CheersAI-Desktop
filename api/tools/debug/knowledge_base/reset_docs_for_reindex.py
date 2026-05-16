@@ -7,9 +7,10 @@ API_ROOT = Path(__file__).resolve().parents[3]
 if str(API_ROOT) not in sys.path:
     sys.path.insert(0, str(API_ROOT))
 
-import os
-import psycopg2
 import json
+import os
+
+import psycopg2
 
 # Database connection
 db_url = os.getenv('DB_URI', 'postgresql://postgres:difyai123456@localhost:5432/dify')

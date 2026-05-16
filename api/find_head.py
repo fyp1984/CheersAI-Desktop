@@ -1,4 +1,6 @@
-import glob, re
+import glob
+import re
+
 revs = set()
 downs = set()
 for f in glob.glob("migrations/versions/*.py"):
@@ -15,7 +17,7 @@ for f in glob.glob("migrations/versions/*.py"):
             if isinstance(parsed, str):
                 downs.add(parsed)
             else:
-                for x in parsed: downs.add(x)
+                downs.update(parsed)
         except:
             pass
 print("Heads:", revs - downs)

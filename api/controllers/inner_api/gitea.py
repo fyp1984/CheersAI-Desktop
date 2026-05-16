@@ -54,10 +54,10 @@ class EnterpriseGiteaConfigApi(Resource):
         try:
             config = resolve_filebay_config(identifier, allow_global_fallback=False, mask_token=False)
         except LookupError as exc:
-            logger.warning(f"[Enterprise Gitea Config] Lookup failed for {identifier}: {exc}")
+            logger.warning("[Enterprise Gitea Config] Lookup failed for %s: %s", identifier, exc)
             return {"message": str(exc)}, 404
         except Exception as exc:
-            logger.error(f"[Enterprise Gitea Config] Error for {identifier}: {exc}", exc_info=True)
+            logger.error("[Enterprise Gitea Config] Error for %s: %s", identifier, exc, exc_info=True)
             return {"message": f"Failed to resolve FileBay config: {str(exc)}"}, 500
 
         return Response(json.dumps(config.__dict__, ensure_ascii=False), mimetype="application/json")

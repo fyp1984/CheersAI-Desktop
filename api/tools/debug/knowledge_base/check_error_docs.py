@@ -8,6 +8,7 @@ if str(API_ROOT) not in sys.path:
     sys.path.insert(0, str(API_ROOT))
 
 import os
+
 from sqlalchemy import create_engine, text
 
 # Get database URL from environment
@@ -39,6 +40,6 @@ with engine.connect() as conn:
             print(f"状态: {row[2]}")
             print(f"数据源类型: {row[3]}")
             print(f"数据源信息: {row[4]}")
-            print(f"\n错误信息:")
+            print("\n错误信息:")
             print(row[5])
             print("=" * 120)
