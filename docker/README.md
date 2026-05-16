@@ -23,6 +23,8 @@ Welcome to the new `docker` directory for deploying Dify using Docker Compose. T
    - Navigate to the `docker` directory.
    - Copy the `.env.example` file to a new file named `.env` by running `cp .env.example .env`.
    - Customize the `.env` file as needed. Refer to the `.env.example` file for detailed configuration options.
+   - Set `ENCRYPTION_KEY` before enabling team-level model credential management. Keep it outside version control and prefer runtime secret injection in shared environments.
+   - Keep `PLUGIN_DIR=/app/plugins` unless you also update the plugin volume strategy.
    - **Optional (Recommended for upgrades)**:
      You may use the environment synchronization tool to help keep your `.env` file aligned with the latest `.env.example` updates, while preserving your custom settings.
      This is especially useful when upgrading Dify or managing a large, customized `.env` file.
@@ -30,6 +32,7 @@ Welcome to the new `docker` directory for deploying Dify using Docker Compose. T
 1. **Running the Services**:
    - Execute `docker compose up` from the `docker` directory to start the services.
    - To specify a vector database, set the `VECTOR_STORE` variable in your `.env` file to your desired vector database service, such as `milvus`, `weaviate`, or `opensearch`.
+   - For versioned image deployment or Docker Swarm rollout, use [deployment.md](../deployment.md) and `scripts/deploy-local.sh`.
 1. **SSL Certificate Setup**:
    - Refer `docker/certbot/README.md` to set up SSL certificates using Certbot.
 1. **OpenTelemetry Collector Setup**:
