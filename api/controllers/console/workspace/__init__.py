@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from werkzeug.exceptions import Forbidden
 
 from extensions.ext_database import db
-from libs.desktop_auth import DESKTOP_AGENT_MANAGE_CAPABILITY, DESKTOP_PLUGIN_MANAGE_CAPABILITY, DESKTOP_SYSTEM_ADMIN_CAPABILITY, has_any_workspace_capability
+from libs.desktop_auth import DESKTOP_AGENT_MANAGE_CAPABILITY, DESKTOP_PLUGIN_MANAGE_CAPABILITY, DESKTOP_SYSTEM_ADMIN_CAPABILITY
 from libs.login import current_account_with_tenant
 from models.account import TenantPluginPermission
 
@@ -27,8 +27,12 @@ def require_plugin_manage_capability(view: Callable[P, R]):
 def require_system_admin_plugin_install_capability(view: Callable[P, R]):
     @wraps(view)
     def decorated(*args: P.args, **kwargs: P.kwargs):
-        user, tenant_id = current_account_with_tenant()
-        if not has_any_workspace_capability(user, [DESKTOP_SYSTEM_ADMIN_CAPABILITY], tenant_id):
+        user, _ = current_account_with_tenant()
+        owner = ""
+        custom_config = getattr(user, "custom_config_dict", None)
+        if isinstance(custom_config, dict):
+            owner = (custom_config.get("desktop_sso_owner") or "").strip().lower()
+        if owner != "built-in":
             raise Forbidden("请联系系统管理员进行安装")
 
         return view(*args, **kwargs)

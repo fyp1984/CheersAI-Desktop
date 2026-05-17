@@ -90,6 +90,12 @@ class TagService:
 
     @staticmethod
     def is_target_visible_by_tag_names(tag_names: list[str] | None, user_tags: list[str] | None) -> bool:
+        try:
+            if getattr(current_user, "is_admin_or_owner", False):
+                return True
+        except Exception:
+            pass
+
         if has_admin_tag_override(user_tags):
             return True
 
@@ -139,6 +145,12 @@ class TagService:
     @staticmethod
     def build_visibility_filter(target_column: sa.ColumnElement, tag_type: str, current_tenant_id: str, user_tags: list[str] | None):
         normalized_user_tags = TagService._normalize_user_tags(user_tags)
+        try:
+            if getattr(current_user, "is_admin_or_owner", False):
+                return sa.true()
+        except Exception:
+            pass
+
         if has_admin_tag_override(normalized_user_tags):
             return sa.true()
 

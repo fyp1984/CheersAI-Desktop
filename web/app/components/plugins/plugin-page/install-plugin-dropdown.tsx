@@ -2,7 +2,7 @@
 
 import { RiAddLine, RiArrowDownSLine } from '@remixicon/react'
 import { noop } from 'es-toolkit/function'
-import { useEffect, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Button from '@/app/components/base/button'
 import { FileZip } from '@/app/components/base/icons/src/vender/solid/files'
@@ -16,8 +16,10 @@ import {
 import InstallFromGitHub from '@/app/components/plugins/install-plugin/install-from-github'
 import InstallFromLocalPackage from '@/app/components/plugins/install-plugin/install-from-local-package'
 import { SUPPORT_INSTALL_LOCAL_FILE_EXTENSIONS } from '@/config'
+import { useAppContext } from '@/context/app-context'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 import { cn } from '@/utils/classnames'
+import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 
 type Props = {
   onSwitchToMarketplaceTab: () => void
@@ -38,6 +40,8 @@ const InstallPluginDropdown = ({
   const [selectedAction, setSelectedAction] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const { enable_marketplace, plugin_installation_permission } = useGlobalPublicStore(s => s.systemFeatures)
+  const { currentWorkspace } = useAppContext()
+  const isSystemAdmin = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.systemAdmin)
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -61,21 +65,24 @@ const InstallPluginDropdown = ({
   //   console.log(res)
   // }
 
-  const [installMethods, setInstallMethods] = useState<InstallMethod[]>([])
-  useEffect(() => {
-    const methods = []
+  const installMethods = useMemo(() => {
+    if (currentWorkspace && !isSystemAdmin)
+      return []
+
+    const methods: InstallMethod[] = []
     if (enable_marketplace)
       methods.push({ icon: MagicBox, text: t('source.marketplace', { ns: 'plugin' }), action: 'marketplace' })
 
-    if (plugin_installation_permission.restrict_to_marketplace_only) {
-      setInstallMethods(methods)
-    }
-    else {
+    if (!plugin_installation_permission.restrict_to_marketplace_only) {
       methods.push({ icon: Github, text: t('source.github', { ns: 'plugin' }), action: 'github' })
       methods.push({ icon: FileZip, text: t('source.local', { ns: 'plugin' }), action: 'local' })
-      setInstallMethods(methods)
     }
-  }, [plugin_installation_permission, enable_marketplace, t])
+
+    return methods
+  }, [currentWorkspace, enable_marketplace, isSystemAdmin, plugin_installation_permission.restrict_to_marketplace_only, t])
+
+  if (currentWorkspace && !isSystemAdmin)
+    return null
 
   return (
     <PortalToFollowElem
