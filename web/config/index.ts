@@ -84,7 +84,7 @@ const resolveMarketplaceApiPrefix = () => {
   try {
     const targetUrl = new URL(configuredPrefix, origin)
     if (/^https?:$/i.test(targetUrl.protocol) && targetUrl.origin !== origin)
-      return new URL('/api/proxy-marketplace/api/v1', origin).toString()
+      return new URL('/proxy-marketplace/api/v1', origin).toString()
   }
   catch {
     return configuredPrefix
