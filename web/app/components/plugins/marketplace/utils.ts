@@ -9,7 +9,7 @@ import { PluginCategoryEnum } from '@/app/components/plugins/types'
 import {
   MARKETPLACE_API_PREFIX,
 } from '@/config'
-import { marketplaceClient } from '@/service/client'
+import { getMarketplace, postMarketplace } from '@/service/base'
 import { getMarketplaceUrl } from '@/utils/var'
 import { PLUGIN_TYPE_SEARCH_MAP } from './constants'
 
@@ -68,14 +68,13 @@ export const getMarketplacePluginsByCollectionId = async (
   let plugins: Plugin[] = []
 
   try {
-    const marketplaceCollectionPluginsDataJson = await marketplaceClient.collectionPlugins({
-      params: {
-        collectionId,
+    const marketplaceCollectionPluginsDataJson = await postMarketplace<{ data?: { plugins?: Plugin[] } }>(
+      `/collections/${collectionId}/plugins`,
+      {
+        body: query,
+        signal: options?.signal,
       },
-      body: query,
-    }, {
-      signal: options?.signal,
-    })
+    )
     plugins = (marketplaceCollectionPluginsDataJson.data?.plugins || []).map(plugin => getFormattedPlugin(plugin))
   }
   // eslint-disable-next-line unused-imports/no-unused-vars
@@ -94,15 +93,17 @@ export const getMarketplaceCollectionsAndPlugins = async (
   let marketplaceCollections: MarketplaceCollection[] = []
   let marketplaceCollectionPluginsMap: Record<string, Plugin[]> = {}
   try {
-    const marketplaceCollectionsDataJson = await marketplaceClient.collections({
-      query: {
+    const marketplaceCollectionsDataJson = await getMarketplace<{ data?: { collections?: MarketplaceCollection[] } }>(
+      '/collections',
+      {
+        params: {
         ...query,
         page: 1,
         page_size: 100,
+        },
+        signal: options?.signal,
       },
-    }, {
-      signal: options?.signal,
-    })
+    )
     marketplaceCollections = marketplaceCollectionsDataJson.data?.collections || []
     await Promise.all(marketplaceCollections.map(async (collection: MarketplaceCollection) => {
       const plugins = await getMarketplacePluginsByCollectionId(collection.name, query, options)
@@ -147,11 +148,10 @@ export const getMarketplacePlugins = async (
   } = queryParams
 
   try {
-    const res = await marketplaceClient.searchAdvanced({
-      params: {
-        kind: type === 'bundle' ? 'bundles' : 'plugins',
-      },
-      body: {
+    const res = await postMarketplace<{ data: { bundles?: Plugin[], plugins?: Plugin[], total: number } }>(
+      `/${type === 'bundle' ? 'bundles' : 'plugins'}/search/advanced`,
+      {
+        body: {
         page: pageParam,
         page_size,
         query,
@@ -159,8 +159,10 @@ export const getMarketplacePlugins = async (
         sort_order,
         category: category !== 'all' ? category : '',
         tags,
+        },
+        signal,
       },
-    }, { signal })
+    )
     const resPlugins = res.data.bundles || res.data.plugins || []
 
     return {
