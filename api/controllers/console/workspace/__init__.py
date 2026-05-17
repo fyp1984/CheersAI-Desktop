@@ -21,7 +21,11 @@ def _require_workspace_capabilities(*capabilities: str):
 
 
 def require_plugin_manage_capability(view: Callable[P, R]):
-    return _require_workspace_capabilities(DESKTOP_PLUGIN_MANAGE_CAPABILITY, "desktop_api_extension_manage")(view)
+    return _require_workspace_capabilities(
+        DESKTOP_SYSTEM_ADMIN_CAPABILITY,
+        DESKTOP_PLUGIN_MANAGE_CAPABILITY,
+        "desktop_api_extension_manage",
+    )(view)
 
 
 def require_system_admin_plugin_install_capability(view: Callable[P, R]):
@@ -133,7 +137,6 @@ def plugin_permission_required(
                 )
 
                 if not permission:
-                    # no permission set, allow access for everyone
                     return view(*args, **kwargs)
 
                 if install_required:
