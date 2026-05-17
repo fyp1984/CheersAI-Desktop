@@ -5,7 +5,7 @@ import { base } from './base'
 
 export const collectionsContract = base
   .route({
-    path: '/collections',
+    path: '/collections/',
     method: 'GET',
   })
   .input(
@@ -23,7 +23,7 @@ export const collectionsContract = base
 
 export const collectionPluginsContract = base
   .route({
-    path: '/collections/{collectionId}/plugins',
+    path: '/collections/{collectionId}/plugins/',
     method: 'POST',
   })
   .input(
@@ -44,7 +44,7 @@ export const collectionPluginsContract = base
 
 export const searchAdvancedContract = base
   .route({
-    path: '/{kind}/search/advanced',
+    path: '/{kind}/search/advanced/',
     method: 'POST',
   })
   .input(type<{
