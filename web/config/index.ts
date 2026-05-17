@@ -67,6 +67,32 @@ const normalizeUrlPrefix = (value: string) => {
   return trimmed
 }
 
+const resolveMarketplaceApiPrefix = () => {
+  const configuredPrefix = normalizeUrlPrefix(getStringConfig(
+    process.env.NEXT_PUBLIC_MARKETPLACE_API_PREFIX,
+    DatasetAttr.DATA_MARKETPLACE_API_PREFIX,
+    'http://localhost:5002/api',
+  ))
+
+  if (!configuredPrefix)
+    return configuredPrefix
+
+  const origin = globalThis.location?.origin
+  if (!origin)
+    return configuredPrefix
+
+  try {
+    const targetUrl = new URL(configuredPrefix, origin)
+    if (/^https?:$/i.test(targetUrl.protocol) && targetUrl.origin !== origin)
+      return new URL('/api/proxy-marketplace/api/v1', origin).toString()
+  }
+  catch {
+    return configuredPrefix
+  }
+
+  return configuredPrefix
+}
+
 export const API_PREFIX = normalizeUrlPrefix(getStringConfig(
   process.env.NEXT_PUBLIC_API_PREFIX,
   DatasetAttr.DATA_API_PREFIX,
@@ -77,11 +103,7 @@ export const PUBLIC_API_PREFIX = normalizeUrlPrefix(getStringConfig(
   DatasetAttr.DATA_PUBLIC_API_PREFIX,
   'http://localhost:5001/api',
 ))
-export const MARKETPLACE_API_PREFIX = normalizeUrlPrefix(getStringConfig(
-  process.env.NEXT_PUBLIC_MARKETPLACE_API_PREFIX,
-  DatasetAttr.DATA_MARKETPLACE_API_PREFIX,
-  'http://localhost:5002/api',
-))
+export const MARKETPLACE_API_PREFIX = resolveMarketplaceApiPrefix()
 export const MARKETPLACE_URL_PREFIX = getStringConfig(
   process.env.NEXT_PUBLIC_MARKETPLACE_URL_PREFIX,
   DatasetAttr.DATA_MARKETPLACE_URL_PREFIX,
