@@ -153,7 +153,7 @@ const MemberTagOperation = ({
     }
   }, [currentTags, selectedTagIds, selectedTagMap])
 
-  const loadMemberTagContext = async () => {
+  const loadMemberTagContext = useCallback(async () => {
     setIsBootstrapping(true)
     setLoadError('')
     setSubmitError('')
@@ -218,11 +218,20 @@ const MemberTagOperation = ({
     finally {
       setIsBootstrapping(false)
     }
-  }
+  }, [member.id, orgId, resetSelectedTagIds, ssoIdentity])
+
+  useEffect(() => {
+    if (initialized)
+      return
+    if (isBootstrapping)
+      return
+
+    void loadMemberTagContext()
+  }, [initialized, isBootstrapping, loadMemberTagContext])
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen)
-    if (nextOpen && !initialized && !isBootstrapping)
+    if (nextOpen && (!initialized || !!loadError) && !isBootstrapping)
       void loadMemberTagContext()
     if (!nextOpen)
       setSubmitError('')
