@@ -19,6 +19,7 @@ import {
   ModelTypeEnum,
 } from '@/app/components/header/account-setting/model-provider-page/declarations'
 import { ZENDESK_FIELD_IDS } from '@/config'
+import { useGlobalPublicStore } from '@/context/global-public-context'
 import { fetchCurrentPlanInfo } from '@/service/billing'
 import {
   useModelListByType,
@@ -28,7 +29,7 @@ import {
 import {
   useEducationStatus,
 } from '@/service/use-education'
-import { hasAnyWorkspaceCapability, hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
+import { hasAnyWorkspaceCapability, hasBuiltInAdminAccess, hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import { useSelector as useAppContextSelector } from './app-context'
 
 export type ProviderContextState = {
@@ -117,7 +118,9 @@ export const ProviderContextProvider = ({
 }: ProviderContextProviderProps) => {
   const queryClient = useQueryClient()
   const currentWorkspace = useAppContextSelector(state => state.currentWorkspace)
-  const canManageModelProviders = hasAnyWorkspaceCapability(currentWorkspace, [
+  const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
+  const hasBuiltInAdmin = hasBuiltInAdminAccess(currentWorkspace, systemFeatures)
+  const canManageModelProviders = hasBuiltInAdmin || hasAnyWorkspaceCapability(currentWorkspace, [
     WORKSPACE_CAPABILITIES.modelProviderManage,
     WORKSPACE_CAPABILITIES.modelManage,
   ])

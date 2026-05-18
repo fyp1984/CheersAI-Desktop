@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAppContext } from '@/context/app-context'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 import { useInvalidateReferenceSettings, useMutationReferenceSettings, useReferenceSettings } from '@/service/use-plugins'
-import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
+import { hasBuiltInAdminAccess, hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import Toast from '../../base/toast'
 import { PermissionType } from '../types'
 
@@ -23,8 +23,9 @@ const hasPermission = (permission: PermissionType | undefined, isAdmin: boolean)
 const useReferenceSetting = () => {
   const { t } = useTranslation()
   const { currentWorkspace } = useAppContext()
-  const { data } = useReferenceSettings()
-  // console.log(data)
+  const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
+  const hasBuiltInAdmin = hasBuiltInAdminAccess(currentWorkspace, systemFeatures)
+  const { data } = useReferenceSettings(hasBuiltInAdmin)
   const { permission: permissions } = data || {}
   const invalidateReferenceSettings = useInvalidateReferenceSettings()
   const { mutate: updateReferenceSetting, isPending: isUpdatePending } = useMutationReferenceSettings({
@@ -36,14 +37,13 @@ const useReferenceSetting = () => {
       })
     },
   })
-  const isSystemAdmin = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.systemAdmin)
 
   return {
     referenceSetting: data,
     setReferenceSettings: updateReferenceSetting,
-    canManagement: isSystemAdmin && hasPermission(permissions?.install_permission, true),
-    canDebugger: isSystemAdmin && hasPermission(permissions?.debug_permission, true),
-    canSetPermissions: isSystemAdmin,
+    canManagement: hasBuiltInAdmin && hasPermission(permissions?.install_permission, true),
+    canDebugger: hasBuiltInAdmin && hasPermission(permissions?.debug_permission, true),
+    canSetPermissions: hasBuiltInAdmin,
     isUpdatePending,
   }
 }

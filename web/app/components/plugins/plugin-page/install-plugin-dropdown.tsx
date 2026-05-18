@@ -19,7 +19,7 @@ import { SUPPORT_INSTALL_LOCAL_FILE_EXTENSIONS } from '@/config'
 import { useAppContext } from '@/context/app-context'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 import { cn } from '@/utils/classnames'
-import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
+import { hasBuiltInAdminAccess } from '@/utils/workspace-capabilities'
 
 type Props = {
   onSwitchToMarketplaceTab: () => void
@@ -39,9 +39,10 @@ const InstallPluginDropdown = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [selectedAction, setSelectedAction] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const { enable_marketplace, plugin_installation_permission } = useGlobalPublicStore(s => s.systemFeatures)
+  const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
+  const { enable_marketplace, plugin_installation_permission } = systemFeatures
   const { currentWorkspace } = useAppContext()
-  const isSystemAdmin = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.systemAdmin)
+  const hasBuiltInAdmin = hasBuiltInAdminAccess(currentWorkspace, systemFeatures)
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -66,7 +67,7 @@ const InstallPluginDropdown = ({
   // }
 
   const installMethods = useMemo(() => {
-    if (currentWorkspace && !isSystemAdmin)
+    if (currentWorkspace && !hasBuiltInAdmin)
       return []
 
     const methods: InstallMethod[] = []
@@ -79,9 +80,9 @@ const InstallPluginDropdown = ({
     }
 
     return methods
-  }, [currentWorkspace, enable_marketplace, isSystemAdmin, plugin_installation_permission.restrict_to_marketplace_only, t])
+  }, [currentWorkspace, enable_marketplace, hasBuiltInAdmin, plugin_installation_permission.restrict_to_marketplace_only, t])
 
-  if (currentWorkspace && !isSystemAdmin)
+  if (currentWorkspace && !hasBuiltInAdmin)
     return null
 
   return (

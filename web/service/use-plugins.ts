@@ -444,8 +444,9 @@ export const useDebugKey = () => {
 }
 
 const useReferenceSettingKey = [NAME_SPACE, 'referenceSettings']
-export const useReferenceSettings = () => {
+export const useReferenceSettings = (enabled = true) => {
   return useQuery({
+    enabled,
     queryKey: useReferenceSettingKey,
     queryFn: () => get<ReferenceSetting>('/workspaces/current/plugin/preferences/fetch'),
   })

@@ -15,6 +15,7 @@ import useDocumentTitle from '@/hooks/use-document-title'
 import { sendSimpleChatMessage } from '@/service/chat'
 import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '@/config'
 import { cn } from '@/utils/classnames'
+import { parsePluginErrorMessage } from '@/utils/error-parser'
 import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 
 const SENSITIVE_SEND_WARNING_KEY = 'sensitive_send_warning'
@@ -852,10 +853,21 @@ const ChatPage = () => {
     catch (error) {
       setStreamingMessageId(null)
 
+      const parsedErrorMessage = await parsePluginErrorMessage(error)
+      const lowerParsedErrorMessage = parsedErrorMessage.toLowerCase()
+      const isFreeTierExhausted = lowerParsedErrorMessage.includes('free tier') && lowerParsedErrorMessage.includes('exhausted')
+      const hintMessage = isFreeTierExhausted
+        ? (canManageModels
+            ? '模型免费额度已用尽。请在模型供应商控制台关闭“仅使用免费额度”模式或为该模型开通付费额度后重试。'
+            : '模型免费额度已用尽。请联系系统管理员调整模型配置或切换到其他可用模型。')
+        : (canManageModels
+            ? '请检查右上角模型选择与模型供应商配置是否正确。'
+            : '请联系系统管理员检查模型配置或切换到其他可用模型。')
+
       const errorMessage: Message = {
         id: Date.now().toString(),
         type: 'assistant',
-        content: `调用模型失败: ${error instanceof Error ? error.message : '未知错误'}。请确保已在设置中配置模型。`,
+        content: `调用模型失败: ${parsedErrorMessage || (error instanceof Error ? error.message : '未知错误')}。${hintMessage}`,
         timestamp: new Date(),
       }
 
@@ -1018,10 +1030,21 @@ const ChatPage = () => {
     catch (error) {
       setStreamingMessageId(null)
 
+      const parsedErrorMessage = await parsePluginErrorMessage(error)
+      const lowerParsedErrorMessage = parsedErrorMessage.toLowerCase()
+      const isFreeTierExhausted = lowerParsedErrorMessage.includes('free tier') && lowerParsedErrorMessage.includes('exhausted')
+      const hintMessage = isFreeTierExhausted
+        ? (canManageModels
+            ? '模型免费额度已用尽。请在模型供应商控制台关闭“仅使用免费额度”模式或为该模型开通付费额度后重试。'
+            : '模型免费额度已用尽。请联系系统管理员调整模型配置或切换到其他可用模型。')
+        : (canManageModels
+            ? '请检查右上角模型选择与模型供应商配置是否正确。'
+            : '请联系系统管理员检查模型配置或切换到其他可用模型。')
+
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: `调用模型失败: ${error instanceof Error ? error.message : '未知错误'}。请确保已在设置中配置模型。`,
+        content: `调用模型失败: ${parsedErrorMessage || (error instanceof Error ? error.message : '未知错误')}。${hintMessage}`,
         timestamp: new Date(),
       }
 

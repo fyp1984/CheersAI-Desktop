@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from functools import wraps
-from typing import ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar
 
 from sqlalchemy.orm import Session
 from werkzeug.exceptions import Forbidden
@@ -21,22 +21,33 @@ def _require_workspace_capabilities(*capabilities: str):
 
 
 def require_plugin_manage_capability(view: Callable[P, R]):
-    return _require_workspace_capabilities(
-        DESKTOP_SYSTEM_ADMIN_CAPABILITY,
-        DESKTOP_PLUGIN_MANAGE_CAPABILITY,
-        "desktop_api_extension_manage",
-    )(view)
+    @wraps(view)
+    def decorated(*args: P.args, **kwargs: P.kwargs):
+        user, _ = current_account_with_tenant()
+        if _get_desktop_sso_owner(user) == "built-in":
+            return view(*args, **kwargs)
+        return _require_workspace_capabilities(
+            DESKTOP_SYSTEM_ADMIN_CAPABILITY,
+            DESKTOP_PLUGIN_MANAGE_CAPABILITY,
+            "desktop_api_extension_manage",
+        )(view)(*args, **kwargs)
+
+    return decorated
+
+
+def _get_desktop_sso_owner(user: Any) -> str:
+    owner = ""
+    custom_config = getattr(user, "custom_config_dict", None)
+    if isinstance(custom_config, dict):
+        owner = (custom_config.get("desktop_sso_owner") or "").strip().lower()
+    return owner
 
 
 def require_system_admin_plugin_install_capability(view: Callable[P, R]):
     @wraps(view)
     def decorated(*args: P.args, **kwargs: P.kwargs):
         user, _ = current_account_with_tenant()
-        owner = ""
-        custom_config = getattr(user, "custom_config_dict", None)
-        if isinstance(custom_config, dict):
-            owner = (custom_config.get("desktop_sso_owner") or "").strip().lower()
-        if owner != "built-in":
+        if _get_desktop_sso_owner(user) != "built-in":
             raise Forbidden("请联系系统管理员进行安装")
 
         return view(*args, **kwargs)
@@ -58,6 +69,29 @@ def require_workspace_settings_capability(view: Callable[P, R]):
 
 def require_model_provider_manage_capability(view: Callable[P, R]):
     return _require_workspace_capabilities("desktop_model_provider_manage", "desktop_model_manage")(view)
+
+
+def require_model_provider_read_capability(view: Callable[P, R]):
+    @wraps(view)
+    def decorated(*args: P.args, **kwargs: P.kwargs):
+        user, _ = current_account_with_tenant()
+        if _get_desktop_sso_owner(user) == "built-in":
+            return view(*args, **kwargs)
+        return require_model_provider_manage_capability(view)(*args, **kwargs)
+
+    return decorated
+
+
+def require_team_model_provider_manage_capability(view: Callable[P, R]):
+    @wraps(view)
+    def decorated(*args: P.args, **kwargs: P.kwargs):
+        user, _ = current_account_with_tenant()
+        if _get_desktop_sso_owner(user) == "built-in":
+            raise Forbidden("团队模型配置仅对团队管理员开放")
+
+        return view(*args, **kwargs)
+
+    return require_model_provider_manage_capability(decorated)
 
 
 def require_data_source_manage_capability(view: Callable[P, R]):
@@ -137,6 +171,7 @@ def plugin_permission_required(
                 )
 
                 if not permission:
+                    # no permission set, allow access for everyone
                     return view(*args, **kwargs)
 
                 if install_required:

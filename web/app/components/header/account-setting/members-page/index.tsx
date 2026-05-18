@@ -19,7 +19,7 @@ import { useFormatTimeFromNow } from '@/hooks/use-format-time-from-now'
 import { LanguagesSupported } from '@/i18n-config/language'
 import { useMembers } from '@/service/use-common'
 import { useInstalledPluginList } from '@/service/use-plugins'
-import { hasAnyWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
+import { hasAnyWorkspaceCapability, hasBuiltInAdminAccess, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import { ACCOUNT_SETTING_TAB } from '../constants'
 import EditWorkspaceModal from './edit-workspace-modal'
 import InviteButton from './invite-button'
@@ -70,10 +70,8 @@ const MembersPage = () => {
     WORKSPACE_CAPABILITIES.pluginManage,
     WORKSPACE_CAPABILITIES.apiExtensionManage,
   ])
-  const isSystemAdmin = hasAnyWorkspaceCapability(currentWorkspace, [
-    WORKSPACE_CAPABILITIES.systemAdmin,
-  ])
-  const showInstallWorkbench = isSystemAdmin && (canManageModelProviders || canManagePlugins)
+  const hasBuiltInAdmin = hasBuiltInAdminAccess(currentWorkspace, systemFeatures)
+  const showInstallWorkbench = hasBuiltInAdmin && (canManageModelProviders || canManagePlugins)
   const { data: installedPluginList, isLoading: isInstalledPluginListLoading } = useInstalledPluginList(!canManagePlugins, 20)
   const configuredProviderCount = useMemo(() => {
     return modelProviders.filter(provider =>
@@ -244,11 +242,16 @@ const MembersPage = () => {
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <div className="system-xs-medium rounded-full bg-[#eef2ff] px-3 py-1 text-[#4338ca]">
-                      {t('members.pluginInstallCount', {
-                        ns: 'common',
-                        defaultValue: '已安装 {{count}} 个插件',
-                        count: isInstalledPluginListLoading ? '--' : (installedPluginList?.total || 0),
-                      })}
+                      {isInstalledPluginListLoading
+                        ? '--'
+                        : t(
+                            'members.pluginInstallCount',
+                            '已安装 {{count}} 个插件',
+                            {
+                              ns: 'common',
+                              count: installedPluginList?.total || 0,
+                            },
+                          )}
                     </div>
                     <div className="system-xs-medium rounded-full bg-components-badge-bg-dimm px-3 py-1 text-text-secondary">
                       {t('members.pluginInstallScope', {

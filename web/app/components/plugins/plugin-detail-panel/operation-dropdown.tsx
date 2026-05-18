@@ -16,6 +16,7 @@ import { cn } from '@/utils/classnames'
 import { PluginSource } from '../types'
 
 type Props = {
+  canManage: boolean
   source: PluginSource
   onInfo: () => void
   onCheckVersion: () => void
@@ -24,6 +25,7 @@ type Props = {
 }
 
 const OperationDropdown: FC<Props> = ({
+  canManage,
   source,
   detailUrl,
   onInfo,
@@ -74,7 +76,7 @@ const OperationDropdown: FC<Props> = ({
               {t('detailPanel.operation.info', { ns: 'plugin' })}
             </div>
           )}
-          {source === PluginSource.github && (
+          {source === PluginSource.github && canManage && (
             <div
               onClick={() => {
                 onCheckVersion()
@@ -91,18 +93,20 @@ const OperationDropdown: FC<Props> = ({
               <RiArrowRightUpLine className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
             </a>
           )}
-          {(source === PluginSource.marketplace || source === PluginSource.github) && enable_marketplace && (
+          {(source === PluginSource.marketplace || source === PluginSource.github) && enable_marketplace && canManage && (
             <div className="my-1 h-px bg-divider-subtle"></div>
           )}
-          <div
-            onClick={() => {
-              onRemove()
-              handleTrigger()
-            }}
-            className="system-md-regular cursor-pointer rounded-lg px-3 py-1.5 text-text-secondary hover:bg-state-destructive-hover hover:text-text-destructive"
-          >
-            {t('detailPanel.operation.remove', { ns: 'plugin' })}
-          </div>
+          {canManage && (
+            <div
+              onClick={() => {
+                onRemove()
+                handleTrigger()
+              }}
+              className="system-md-regular cursor-pointer rounded-lg px-3 py-1.5 text-text-secondary hover:bg-state-destructive-hover hover:text-text-destructive"
+            >
+              {t('detailPanel.operation.remove', { ns: 'plugin' })}
+            </div>
+          )}
         </div>
       </PortalToFollowElemContent>
     </PortalToFollowElem>

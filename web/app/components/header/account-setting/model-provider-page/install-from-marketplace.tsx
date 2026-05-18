@@ -5,11 +5,9 @@ import {
   RiArrowRightUpLine,
   RiInformation2Fill,
 } from '@remixicon/react'
-import { useTheme } from 'next-themes'
 import Link from 'next/link'
 import { useTranslation } from 'react-i18next'
 import Divider from '@/app/components/base/divider'
-import { getMarketplaceUrl } from '@/utils/var'
 
 type InstallFromMarketplaceProps = {
   providers: ModelProvider[]
@@ -20,7 +18,6 @@ const InstallFromMarketplace = ({
   searchText: _searchText,
 }: InstallFromMarketplaceProps) => {
   const { t } = useTranslation()
-  const { theme } = useTheme()
 
   return (
     <div className="mb-2">
@@ -36,7 +33,7 @@ const InstallFromMarketplace = ({
               <div className="system-xs-regular mt-1 text-text-secondary">{t('modelProvider.discoverMore', { ns: 'common' })}</div>
             </div>
           </div>
-          <Link target="_blank" href={getMarketplaceUrl('', { theme })} className="system-sm-medium inline-flex shrink-0 items-center text-text-accent">
+          <Link href="/plugins?tab=discover" className="system-sm-medium inline-flex shrink-0 items-center text-text-accent">
             {t('marketplace.difyMarketplace', { ns: 'plugin' })}
             <RiArrowRightUpLine className="h-4 w-4" />
           </Link>

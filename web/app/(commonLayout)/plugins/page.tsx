@@ -7,28 +7,29 @@ import Marketplace from '@/app/components/plugins/marketplace'
 import PluginPage from '@/app/components/plugins/plugin-page'
 import PluginsPanel from '@/app/components/plugins/plugin-page/plugins-panel'
 import { useAppContext } from '@/context/app-context'
-import { hasPluginManageWorkspaceCapability } from '@/utils/workspace-capabilities'
+import { hasPluginManageWorkspaceCapability, hasPluginReadWorkspaceCapability } from '@/utils/workspace-capabilities'
 
 const PluginList = () => {
   const router = useRouter()
   const { currentWorkspace, isLoadingCurrentWorkspace } = useAppContext()
+  const canReadPlugin = hasPluginReadWorkspaceCapability(currentWorkspace)
   const canManagePlugin = hasPluginManageWorkspaceCapability(currentWorkspace)
 
   useEffect(() => {
     if (isLoadingCurrentWorkspace || !currentWorkspace.id)
       return
 
-    if (!canManagePlugin)
+    if (!canReadPlugin)
       router.replace('/apps')
-  }, [canManagePlugin, currentWorkspace.id, isLoadingCurrentWorkspace, router])
+  }, [canReadPlugin, currentWorkspace.id, isLoadingCurrentWorkspace, router])
 
-  if (isLoadingCurrentWorkspace || !canManagePlugin)
+  if (isLoadingCurrentWorkspace || !canReadPlugin)
     return <Loading type="app" />
 
   return (
     <PluginPage
       plugins={<PluginsPanel />}
-      marketplace={<Marketplace pluginTypeSwitchClassName="top-[60px]" />}
+      marketplace={<Marketplace showInstallButton={canManagePlugin} pluginTypeSwitchClassName="top-[60px]" />}
     />
   )
 }

@@ -1,4 +1,6 @@
 import type { ICurrentWorkspace } from '@/models/common'
+import type { SystemFeatures } from '@/types/feature'
+import { InstallationScope } from '@/types/feature'
 
 export const WORKSPACE_CAPABILITIES = {
   desktopAccess: 'desktop_access',
@@ -189,3 +191,22 @@ export const hasPluginManageWorkspaceCapability = (
   WORKSPACE_CAPABILITIES.pluginManage,
   WORKSPACE_CAPABILITIES.apiExtensionManage,
 ])
+
+export const hasPluginReadWorkspaceCapability = (
+  workspace: Pick<ICurrentWorkspace, 'role' | 'capabilities'> | null | undefined,
+) => hasAnyWorkspaceCapability(workspace, [
+  WORKSPACE_CAPABILITIES.desktopAccess,
+  WORKSPACE_CAPABILITIES.pluginManage,
+  WORKSPACE_CAPABILITIES.apiExtensionManage,
+])
+
+export const hasBuiltInAdminAccess = (
+  workspace: Pick<ICurrentWorkspace, 'role' | 'capabilities'> | null | undefined,
+  systemFeatures?: Pick<SystemFeatures, 'plugin_installation_permission'> | null,
+) => {
+  if (hasWorkspaceCapability(workspace, WORKSPACE_CAPABILITIES.systemAdmin))
+    return true
+
+  const installationScope = systemFeatures?.plugin_installation_permission?.plugin_installation_scope
+  return installationScope !== undefined && installationScope !== InstallationScope.NONE
+}

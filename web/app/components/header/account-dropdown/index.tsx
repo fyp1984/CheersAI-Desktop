@@ -31,7 +31,7 @@ import { useModalContext } from '@/context/modal-context'
 import { useProviderContext } from '@/context/provider-context'
 import { useLogout } from '@/service/use-common'
 import { cn } from '@/utils/classnames'
-import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
+import { hasBuiltInAdminAccess } from '@/utils/workspace-capabilities'
 import AccountAbout from '../account-about'
 import GithubStar from '../github-star'
 import Indicator from '../indicator'
@@ -59,7 +59,7 @@ export default function AppSelector({ placement = 'side', showLabel = false }: A
   const { isEducationAccount } = useProviderContext()
   const { setShowAccountSettingModal } = useModalContext()
   const canViewAdminOnlyLinks = isCurrentWorkspaceOwner || isCurrentWorkspaceManager
-  const isSystemAdmin = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.systemAdmin)
+  const hasBuiltInAdmin = hasBuiltInAdminAccess(currentWorkspace, systemFeatures)
 
   const { mutateAsync: logout } = useLogout()
   const handleLogout = async () => {
@@ -154,7 +154,7 @@ export default function AppSelector({ placement = 'side', showLabel = false }: A
                       <div
                         className={cn(itemClassName, 'data-[active]:bg-state-base-hover')}
                         onClick={() => setShowAccountSettingModal({
-                          payload: isSystemAdmin ? ACCOUNT_SETTING_TAB.PROVIDER : ACCOUNT_SETTING_TAB.MEMBERS,
+                          payload: hasBuiltInAdmin ? ACCOUNT_SETTING_TAB.PROVIDER : ACCOUNT_SETTING_TAB.MEMBERS,
                         })}
                       >
                         <RiSettings3Line className="size-4 shrink-0 text-text-tertiary" />
