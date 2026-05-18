@@ -6,15 +6,16 @@ from pydantic import BaseModel, Field
 
 from controllers.common.schema import register_schema_models
 from controllers.console import console_ns
-from controllers.console.workspace import require_model_provider_manage_capability
+from controllers.console.workspace import (
+    require_system_admin_plugin_install_capability,
+    require_team_model_provider_manage_capability,
+)
 from controllers.console.wraps import (
     account_initialization_required,
-    require_workspace_capabilities,
     setup_required,
 )
 from core.model_runtime.entities.model_entities import ModelType
 from core.model_runtime.utils.encoders import jsonable_encoder
-from libs.desktop_auth import DESKTOP_SYSTEM_ADMIN_CAPABILITY
 from libs.login import current_account_with_tenant, login_required
 from services.model_provider_service import ModelProviderService
 from services.plugin.plugin_service import PluginService
@@ -45,7 +46,7 @@ class GlobalPluginInstallApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
-    @require_workspace_capabilities(DESKTOP_SYSTEM_ADMIN_CAPABILITY)
+    @require_system_admin_plugin_install_capability
     def post(self):
         current_account, tenant_id = current_account_with_tenant()
         file = request.files.get("pkg") or request.files.get("jar")
@@ -77,7 +78,7 @@ class TeamModelConfigApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
-    @require_model_provider_manage_capability
+    @require_team_model_provider_manage_capability
     def get(self):
         _, tenant_id = current_account_with_tenant()
         return jsonable_encoder({"data": TeamModelConfigService.list_team_model_configs(tenant_id)})
@@ -85,7 +86,7 @@ class TeamModelConfigApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
-    @require_model_provider_manage_capability
+    @require_team_model_provider_manage_capability
     def post(self):
         current_account, tenant_id = current_account_with_tenant()
         payload = TeamModelConfigPayload.model_validate(console_ns.payload or {})

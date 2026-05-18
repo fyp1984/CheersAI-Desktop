@@ -6,7 +6,7 @@ from flask_restx import Resource
 from pydantic import BaseModel, Field, field_validator
 
 from controllers.console import console_ns
-from controllers.console.workspace import require_model_provider_manage_capability
+from controllers.console.workspace import require_model_provider_read_capability, require_team_model_provider_manage_capability
 from controllers.console.wraps import (
     account_initialization_required,
     is_admin_or_owner_required,
@@ -100,7 +100,7 @@ class ModelProviderListApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
-    @require_model_provider_manage_capability
+    @require_model_provider_read_capability
     def get(self):
         _, current_tenant_id = current_account_with_tenant()
         tenant_id = current_tenant_id
@@ -121,7 +121,7 @@ class ModelProviderCredentialApi(Resource):
     @login_required
     @is_admin_or_owner_required
     @account_initialization_required
-    @require_model_provider_manage_capability
+    @require_team_model_provider_manage_capability
     def get(self, provider: str):
         _, current_tenant_id = current_account_with_tenant()
         tenant_id = current_tenant_id
@@ -141,7 +141,7 @@ class ModelProviderCredentialApi(Resource):
     @login_required
     @is_admin_or_owner_required
     @account_initialization_required
-    @require_model_provider_manage_capability
+    @require_team_model_provider_manage_capability
     def post(self, provider: str):
         _, current_tenant_id = current_account_with_tenant()
         payload = console_ns.payload or {}
@@ -166,7 +166,7 @@ class ModelProviderCredentialApi(Resource):
     @login_required
     @is_admin_or_owner_required
     @account_initialization_required
-    @require_model_provider_manage_capability
+    @require_team_model_provider_manage_capability
     def put(self, provider: str):
         _, current_tenant_id = current_account_with_tenant()
 
@@ -193,7 +193,7 @@ class ModelProviderCredentialApi(Resource):
     @login_required
     @is_admin_or_owner_required
     @account_initialization_required
-    @require_model_provider_manage_capability
+    @require_team_model_provider_manage_capability
     def delete(self, provider: str):
         _, current_tenant_id = current_account_with_tenant()
         payload = console_ns.payload or {}
@@ -214,7 +214,7 @@ class ModelProviderCredentialSwitchApi(Resource):
     @login_required
     @is_admin_or_owner_required
     @account_initialization_required
-    @require_model_provider_manage_capability
+    @require_team_model_provider_manage_capability
     def post(self, provider: str):
         _, current_tenant_id = current_account_with_tenant()
         payload = console_ns.payload or {}
@@ -236,7 +236,7 @@ class ModelProviderValidateApi(Resource):
     @login_required
     @is_admin_or_owner_required
     @account_initialization_required
-    @require_model_provider_manage_capability
+    @require_team_model_provider_manage_capability
     def post(self, provider: str):
         _, current_tenant_id = current_account_with_tenant()
         payload = console_ns.payload or {}
@@ -291,7 +291,7 @@ class PreferredProviderTypeUpdateApi(Resource):
     @login_required
     @is_admin_or_owner_required
     @account_initialization_required
-    @require_model_provider_manage_capability
+    @require_team_model_provider_manage_capability
     def post(self, provider: str):
         _, current_tenant_id = current_account_with_tenant()
 

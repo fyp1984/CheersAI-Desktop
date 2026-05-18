@@ -209,7 +209,6 @@ class PluginListApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
-    @require_plugin_manage_capability
     def get(self):
         _, tenant_id = current_account_with_tenant()
         args = ParserList.model_validate(request.args.to_dict(flat=True))  # type: ignore
@@ -227,7 +226,6 @@ class PluginListLatestVersionsApi(Resource):
     @setup_required
     @login_required
     @account_initialization_required
-    @require_plugin_manage_capability
     def post(self):
         args = ParserLatest.model_validate(console_ns.payload)
 

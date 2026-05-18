@@ -21,7 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAppContext } from '@/context/app-context'
 import { isTauriRuntime } from '@/service/sso-desktop-auth'
 import { cn } from '@/utils/classnames'
-import { hasPluginManageWorkspaceCapability, hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
+import { hasPluginReadWorkspaceCapability, hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import AccountDropdown from './account-dropdown'
 import EnvNav from './env-nav'
 
@@ -50,7 +50,7 @@ const DesktopPrimaryTabs = () => {
   const canUseAgent = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.agentUse), [currentWorkspace])
   const canUseChat = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.chatUse), [currentWorkspace])
   const canViewKnowledge = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.knowledgeView), [currentWorkspace])
-  const canManagePlugin = useMemo(() => hasPluginManageWorkspaceCapability(currentWorkspace), [currentWorkspace])
+  const canReadPlugin = useMemo(() => hasPluginReadWorkspaceCapability(currentWorkspace), [currentWorkspace])
   const canViewWorkflow = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.workflowView), [currentWorkspace])
   const canViewAppCenter = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.appView), [currentWorkspace])
   const canViewExplore = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.exploreView), [currentWorkspace])
@@ -91,7 +91,7 @@ const DesktopPrimaryTabs = () => {
     })
   }
 
-  if (canManagePlugin) {
+  if (canReadPlugin) {
     navItems.push({
       id: 'plugins',
       href: '/plugins',

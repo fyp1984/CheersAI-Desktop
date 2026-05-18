@@ -122,14 +122,14 @@ const DetailHeader = ({
     if (isFromMarketplace)
       return getMarketplaceUrl(`/plugins/${author}/${name}`, { language: currentLocale, theme })
     return ''
-  }, [author, isFromGitHub, isFromMarketplace, meta, name, theme])
+  }, [author, currentLocale, isFromGitHub, isFromMarketplace, meta, name, theme])
 
   const [isShowUpdateModal, {
     setTrue: showUpdateModal,
     setFalse: hideUpdateModal,
   }] = useBoolean(false)
 
-  const { referenceSetting } = useReferenceSetting()
+  const { referenceSetting, canManagement } = useReferenceSetting()
   const { auto_upgrade: autoUpgradeInfo } = referenceSetting || {}
   const isAutoUpgradeEnabled = useMemo(() => {
     if (!enable_marketplace)
@@ -145,7 +145,7 @@ const DetailHeader = ({
     if (autoUpgradeInfo.upgrade_mode === AUTO_UPDATE_MODE.exclude && !autoUpgradeInfo.exclude_plugins.includes(plugin_id))
       return true
     return false
-  }, [autoUpgradeInfo, plugin_id, isFromMarketplace])
+  }, [autoUpgradeInfo, enable_marketplace, plugin_id, isFromMarketplace])
 
   const [isDowngrade, setIsDowngrade] = useState(false)
   const handleUpdate = async (isDowngrade?: boolean) => {
@@ -231,7 +231,7 @@ const DetailHeader = ({
             {verified && !isReadmeView && <Verified className="ml-0.5 h-4 w-4" text={t('marketplace.verifiedTip', { ns: 'plugin' })} />}
             {!!version && (
               <PluginVersionPicker
-                disabled={!isFromMarketplace || isReadmeView}
+                disabled={!isFromMarketplace || isReadmeView || !canManagement}
                 isShow={isShow}
                 onShowChange={setIsShow}
                 pluginID={plugin_id}
@@ -271,7 +271,7 @@ const DetailHeader = ({
               </Tooltip>
             )}
 
-            {(hasNewVersion || isFromGitHub) && (
+            {canManagement && (hasNewVersion || isFromGitHub) && (
               <Button
                 variant="secondary-accent"
                 size="small"
@@ -328,6 +328,7 @@ const DetailHeader = ({
         {!isReadmeView && (
           <div className="flex gap-1">
             <OperationDropdown
+              canManage={canManagement}
               source={source}
               onInfo={showPluginInfo}
               onCheckVersion={handleUpdate}

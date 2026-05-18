@@ -21,7 +21,6 @@ import { useRenderI18nObject } from '@/hooks/use-i18n'
 import useTheme from '@/hooks/use-theme'
 import { cn } from '@/utils/classnames'
 import { getMarketplaceUrl } from '@/utils/var'
-import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import Badge from '../../base/badge'
 import { Github } from '../../base/icons/src/public/common'
 import Verified from '../base/badges/verified'
@@ -31,6 +30,7 @@ import OrgInfo from '../card/base/org-info'
 import Title from '../card/base/title'
 import { useCategories } from '../hooks'
 import { usePluginPageContext } from '../plugin-page/context'
+import useReferenceSetting from '../plugin-page/use-reference-setting'
 import { PluginCategoryEnum, PluginSource } from '../types'
 import Action from './action'
 
@@ -69,8 +69,7 @@ const PluginItem: FC<Props> = ({
   }, [source, author])
 
   const { langGeniusVersionInfo } = useAppContext()
-  const { currentWorkspace } = useAppContext()
-  const isSystemAdmin = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.systemAdmin)
+  const { canManagement } = useReferenceSetting()
 
   const isDifyVersionCompatible = useMemo(() => {
     if (!langGeniusVersionInfo.current_version)
@@ -146,9 +145,9 @@ const PluginItem: FC<Props> = ({
                   author={author}
                   pluginName={name}
                   usedInApps={5}
-                  isShowFetchNewVersion={source === PluginSource.github}
+                  isShowFetchNewVersion={source === PluginSource.github && canManagement}
                   isShowInfo={source === PluginSource.github}
-                  isShowDelete={isSystemAdmin}
+                  isShowDelete={canManagement}
                   meta={meta}
                   onDelete={handleDelete}
                   category={category}

@@ -28,10 +28,11 @@ import CustomPage from '@/app/components/custom/custom-page'
 import { ACCOUNT_SETTING_TAB } from '@/app/components/header/account-setting/constants'
 import MenuDialog from '@/app/components/header/account-setting/menu-dialog'
 import { useAppContext } from '@/context/app-context'
+import { useGlobalPublicStore } from '@/context/global-public-context'
 import { useProviderContext } from '@/context/provider-context'
 import useBreakpoints, { MediaType } from '@/hooks/use-breakpoints'
 import { cn } from '@/utils/classnames'
-import { hasPluginManageWorkspaceCapability, hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
+import { hasAnyWorkspaceCapability, hasBuiltInAdminAccess, hasPluginManageWorkspaceCapability, hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import Button from '../../base/button'
 import ApiBasedExtensionPage from './api-based-extension-page'
 import DataSourcePage from './data-source-page-new'
@@ -68,12 +69,16 @@ export default function AccountSetting({
   const { t } = useTranslation()
   const { enableBilling, enableReplaceWebAppLogo } = useProviderContext()
   const { currentWorkspace } = useAppContext()
-  const canManageModelProviders = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.modelProviderManage)
+  const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
+  const hasBuiltInAdmin = hasBuiltInAdminAccess(currentWorkspace, systemFeatures)
+  const canManageModelProviders = hasBuiltInAdmin || hasAnyWorkspaceCapability(currentWorkspace, [
+    WORKSPACE_CAPABILITIES.modelProviderManage,
+    WORKSPACE_CAPABILITIES.modelManage,
+  ])
   const canManageMembers = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.memberManage)
   const canManageDataSource = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.dataSourceManage)
   const canManagePlugin = hasPluginManageWorkspaceCapability(currentWorkspace)
   const canManageWorkspaceSettings = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.settingsTeam)
-  const isSystemAdmin = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.systemAdmin)
   const isNormalMember = currentWorkspace?.role === 'normal'
 
   const systemGroupItems: GroupItem[] = (() => {
@@ -88,7 +93,7 @@ export default function AccountSetting({
       })
     }
 
-    if (!isSystemAdmin && enableBilling && canManageWorkspaceSettings) {
+    if (!hasBuiltInAdmin && enableBilling && canManageWorkspaceSettings) {
       items.push({
         key: ACCOUNT_SETTING_TAB.BILLING,
         name: t('settings.billing', { ns: 'common' }),
@@ -102,7 +107,7 @@ export default function AccountSetting({
       items.push({
         key: ACCOUNT_SETTING_TAB.TOKEN_BILLING,
         name: t('settings.tokenBilling', { ns: 'common' }),
-        description: isSystemAdmin
+        description: hasBuiltInAdmin
           ? t('tokenBilling.systemSubtitle', { ns: 'common' })
           : t('tokenBilling.pageDescription', { ns: 'common' }),
         icon: <RiReceiptLine className={iconClassName} />,
@@ -110,7 +115,7 @@ export default function AccountSetting({
       })
     }
 
-    if (!isSystemAdmin && canManagePlugin) {
+    if (!hasBuiltInAdmin && canManagePlugin) {
       items.push({
         key: ACCOUNT_SETTING_TAB.API_BASED_EXTENSION,
         name: t('settings.apiBasedExtension', { ns: 'common' }),
@@ -122,7 +127,7 @@ export default function AccountSetting({
   })()
 
   const workplaceGroupItems: GroupItem[] = (() => {
-    if (isSystemAdmin)
+    if (hasBuiltInAdmin)
       return []
 
     const items: GroupItem[] = []
@@ -172,12 +177,12 @@ export default function AccountSetting({
     {
       key: 'system-group',
       name: t('settings.systemGroup', { ns: 'common' }),
-      items: isSystemAdmin ? systemGroupItems : [],
+      items: hasBuiltInAdmin ? systemGroupItems : [],
     },
     {
       key: 'workspace-group',
       name: t('settings.workplaceGroup', { ns: 'common' }),
-      items: isSystemAdmin ? workplaceGroupItems : [...systemGroupItems, ...workplaceGroupItems],
+      items: hasBuiltInAdmin ? workplaceGroupItems : [...systemGroupItems, ...workplaceGroupItems],
     },
     {
       key: 'account-group',

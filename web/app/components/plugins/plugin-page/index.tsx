@@ -13,8 +13,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Button from '@/app/components/base/button'
 import TabSlider from '@/app/components/base/tab-slider'
-import Tooltip from '@/app/components/base/tooltip'
 import Toast from '@/app/components/base/toast'
+import Tooltip from '@/app/components/base/tooltip'
 import ReferenceSettingModal from '@/app/components/plugins/reference-setting-modal'
 import { MARKETPLACE_API_PREFIX, SUPPORT_INSTALL_LOCAL_FILE_EXTENSIONS } from '@/config'
 import { useAppContext } from '@/context/app-context'
@@ -25,7 +25,7 @@ import { usePluginInstallation } from '@/hooks/use-query-params'
 import { fetchBundleInfoFromMarketPlace, fetchManifestFromMarketPlace } from '@/service/plugins'
 import { sleep } from '@/utils'
 import { cn } from '@/utils/classnames'
-import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
+import { hasBuiltInAdminAccess } from '@/utils/workspace-capabilities'
 import { PLUGIN_PAGE_TABS_MAP } from '../hooks'
 import InstallFromLocalPackage from '../install-plugin/install-from-local-package'
 import InstallFromMarketplace from '../install-plugin/install-from-marketplace'
@@ -69,8 +69,9 @@ const PluginPage = ({
   }
 
   const [manifest, setManifest] = useState<PluginDeclaration | PluginManifestInMarket | null>(null)
-  var currentWorkspace = useAppContext().currentWorkspace
-  var isSystemAdmin = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.systemAdmin)
+  const currentWorkspace = useAppContext().currentWorkspace
+  const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
+  const hasBuiltInAdmin = hasBuiltInAdminAccess(currentWorkspace, systemFeatures)
 
   useEffect(() => {
     let isCancelled = false
@@ -79,7 +80,7 @@ const PluginPage = ({
       setUniqueIdentifier(null)
       setManifest(null)
       await sleep(100)
-      if ((packageId || bundleInfo) && currentWorkspace && !isSystemAdmin) {
+      if ((packageId || bundleInfo) && currentWorkspace && !hasBuiltInAdmin) {
         Toast.notify({
           type: 'warning',
           message: '请联系系统管理员进行安装',
@@ -131,7 +132,7 @@ const PluginPage = ({
     return () => {
       isCancelled = true
     }
-  }, [bundleInfo, currentWorkspace, isSystemAdmin, packageId, setInstallState, showInstallFromMarketplace])
+  }, [bundleInfo, currentWorkspace, hasBuiltInAdmin, packageId, setInstallState, showInstallFromMarketplace])
 
   const {
     referenceSetting,
@@ -149,7 +150,7 @@ const PluginPage = ({
   const options = usePluginPageContext(v => v.options)
   const activeTab = usePluginPageContext(v => v.activeTab)
   const setActiveTab = usePluginPageContext(v => v.setActiveTab)
-  const { enable_marketplace } = useGlobalPublicStore(s => s.systemFeatures)
+  const { enable_marketplace } = systemFeatures
 
   const isPluginsTab = useMemo(() => activeTab === PLUGIN_PAGE_TABS_MAP.plugins, [activeTab])
   const isExploringMarketplace = useMemo(() => {
@@ -197,7 +198,7 @@ const PluginPage = ({
           </div>
           <div className="flex shrink-0 items-center gap-1">
             {
-              isExploringMarketplace && isSystemAdmin && (
+              isExploringMarketplace && hasBuiltInAdmin && (
                 <>
                   <Link
                     href="https://github.com/langgenius/dify-plugins/issues/new?template=plugin_request.yaml"

@@ -7,8 +7,9 @@ import { useTranslation } from 'react-i18next'
 import Modal from '@/app/components/base/modal'
 import { useToastContext } from '@/app/components/base/toast'
 import { useAppContext } from '@/context/app-context'
+import { useGlobalPublicStore } from '@/context/global-public-context'
 import { cn } from '@/utils/classnames'
-import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
+import { hasBuiltInAdminAccess } from '@/utils/workspace-capabilities'
 import { InstallStep } from '../../types'
 import Installed from '../base/installed'
 import useHideLogic from '../hooks/use-hide-logic'
@@ -37,8 +38,9 @@ const InstallFromMarketplace: React.FC<InstallFromMarketplaceProps> = ({
 }) => {
   const { t } = useTranslation()
   const { notify } = useToastContext()
-  var currentWorkspace = useAppContext().currentWorkspace
-  var isSystemAdmin = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.systemAdmin)
+  const currentWorkspace = useAppContext().currentWorkspace
+  const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
+  const hasBuiltInAdmin = hasBuiltInAdminAccess(currentWorkspace, systemFeatures)
   // readyToInstall -> check installed -> installed/failed
   const [step, setStep] = useState<InstallStep>(InstallStep.readyToInstall)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -78,14 +80,14 @@ const InstallFromMarketplace: React.FC<InstallFromMarketplaceProps> = ({
   }, [setIsInstalling, notify, t])
 
   useEffect(() => {
-    if (!currentWorkspace || isSystemAdmin)
+    if (!currentWorkspace || hasBuiltInAdmin)
       return
 
     notify({ type: 'warning', message: '请联系系统管理员进行安装' })
     onClose()
-  }, [currentWorkspace, isSystemAdmin, notify, onClose])
+  }, [currentWorkspace, hasBuiltInAdmin, notify, onClose])
 
-  if (currentWorkspace && !isSystemAdmin)
+  if (currentWorkspace && !hasBuiltInAdmin)
     return null
 
   return (

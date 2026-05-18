@@ -46,6 +46,7 @@ describe('OperationDropdown', () => {
   const defaultProps = {
     source: PluginSource.github,
     detailUrl: 'https://github.com/test/repo',
+    canManage: true,
     onInfo: mockOnInfo,
     onCheckVersion: mockOnCheckVersion,
     onRemove: mockOnRemove,

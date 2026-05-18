@@ -13,7 +13,7 @@ import { useAppContext } from '@/context/app-context'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 import { useProviderContext } from '@/context/provider-context'
 import { cn } from '@/utils/classnames'
-import { hasPluginManageWorkspaceCapability, hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
+import { hasBuiltInAdminAccess } from '@/utils/workspace-capabilities'
 import {
   CustomConfigurationStatusEnum,
   ModelTypeEnum,
@@ -42,8 +42,9 @@ const ModelProviderPage = ({ searchText }: Props) => {
   const { data: speech2textDefaultModel, isLoading: isSpeech2textDefaultModelLoading } = useDefaultModel(ModelTypeEnum.speech2text)
   const { data: ttsDefaultModel, isLoading: isTTSDefaultModelLoading } = useDefaultModel(ModelTypeEnum.tts)
   const { modelProviders: providers } = useProviderContext()
-  const { enable_marketplace } = useGlobalPublicStore(s => s.systemFeatures)
-  const canManagePlugins = hasPluginManageWorkspaceCapability(currentWorkspace)
+  const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
+  const { enable_marketplace } = systemFeatures
+  const hasBuiltInAdmin = hasBuiltInAdminAccess(currentWorkspace, systemFeatures)
   const isDefaultModelLoading = isTextGenerationDefaultModelLoading
     || isEmbeddingsDefaultModelLoading
     || isRerankDefaultModelLoading
@@ -103,7 +104,6 @@ const ModelProviderPage = ({ searchText }: Props) => {
       <div className={cn('mb-2 flex items-center')}>
         <div className="system-md-semibold grow text-text-primary">{t('modelProvider.models', { ns: 'common' })}</div>
         <div className="flex shrink-0 items-center justify-end gap-2">
-          {canManagePlugins && <div className="flex items-center gap-2" />}
           <SystemModelSelector
             notConfigured={defaultModelNotConfigured}
             textGenerationDefaultModel={textGenerationDefaultModel}
@@ -149,7 +149,7 @@ const ModelProviderPage = ({ searchText }: Props) => {
         </>
       )}
       {
-        enable_marketplace && (
+        enable_marketplace && hasBuiltInAdmin && (
           <InstallFromMarketplace
             providers={providers}
             searchText={searchText}

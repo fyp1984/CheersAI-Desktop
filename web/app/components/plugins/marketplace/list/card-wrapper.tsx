@@ -13,7 +13,8 @@ import CardMoreInfo from '@/app/components/plugins/card/card-more-info'
 import { useTags } from '@/app/components/plugins/hooks'
 import InstallFromMarketplace from '@/app/components/plugins/install-plugin/install-from-marketplace'
 import { useAppContext } from '@/context/app-context'
-import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
+import { useGlobalPublicStore } from '@/context/global-public-context'
+import { hasBuiltInAdminAccess } from '@/utils/workspace-capabilities'
 import { getPluginDetailLinkInMarketplace, getPluginLinkInMarketplace } from '../utils'
 
 type CardWrapperProps = {
@@ -33,7 +34,8 @@ const CardWrapperComponent = ({
   const locale = useLocale()
   const { getTagLabel } = useTags()
   const { currentWorkspace } = useAppContext()
-  const isSystemAdmin = hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.systemAdmin)
+  const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
+  const hasBuiltInAdmin = hasBuiltInAdminAccess(currentWorkspace, systemFeatures)
   const notifyInstallRestricted = () => {
     Toast.notify({
       type: 'warning',
@@ -41,7 +43,7 @@ const CardWrapperComponent = ({
     })
   }
   const handleInstallClick = () => {
-    if (!isSystemAdmin) {
+    if (!hasBuiltInAdmin) {
       notifyInstallRestricted()
       return
     }
