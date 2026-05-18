@@ -46,6 +46,14 @@ git rev-parse --short HEAD
 PLUGIN_DAEMON_UPLOAD=no bash "/Users/FYP/Documents/WorkSpace/CheersAI/CheersAI - docs/技术/scripts/desktop-uat/00-deploy-all.sh"
 ```
 
+Environment note:
+
+```text
+PIP_MIRROR_URL defaults to https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+This speeds up plugin dependency installation for `plugin_daemon` and sandbox Python environments. Override by setting `PIP_MIRROR_URL` explicitly in the deployment environment when needed.
+
 5. Verify runtime after deployment:
 
 ```bash
