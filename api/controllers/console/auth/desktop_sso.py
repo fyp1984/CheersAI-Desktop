@@ -76,6 +76,38 @@ def _get_sso_group_tenant_cache_key(group_name: str) -> str:
     return f"{SSO_GROUP_TENANT_CACHE_PREFIX}{group_hash}"
 
 
+def _get_persisted_sso_identity(account: Account | None) -> tuple[str | None, str | None]:
+    """Reuse the last linked SSO owner/username when the current payload is partial.
+
+    Casdoor `/api/userinfo` may omit the owner even for the built-in admin. Falling
+    back to the account's stored Desktop SSO identity prevents a valid built-in
+    admin from being downgraded to the default tenant owner on subsequent logins.
+    """
+
+    if not account:
+        return None, None
+
+    custom_config = account.custom_config_dict
+    owner = (custom_config.get("desktop_sso_owner") or "").strip() or None
+    username = (
+        custom_config.get("desktop_sso_username")
+        or custom_config.get("desktop_sso_preferred_username")
+        or ""
+    ).strip() or None
+    return owner, username
+
+
+def _merge_sso_identity(payload: dict, *, owner: str | None, username: str | None) -> dict:
+    """Return a payload copy with stable owner/username claims restored."""
+
+    normalized_payload = dict(payload)
+    if owner and not normalized_payload.get("owner"):
+        normalized_payload["owner"] = owner
+    if username and not normalized_payload.get("preferred_username"):
+        normalized_payload["preferred_username"] = username
+    return normalized_payload
+
+
 def _get_preferred_tenant_join(account: Account) -> TenantAccountJoin | None:
     return (
         db.session.query(TenantAccountJoin)
@@ -208,21 +240,23 @@ class DesktopSSOLoginApi(Resource):
                 return {"result": "fail", "message": "Desktop access denied"}, 403
 
             normalized_email = email.lower()
-            resolved_sso_role, system_role = resolve_workspace_role(data)
-            sso_owner = get_sso_subject_owner(data) or (dify_config.SSO_PROVISION_OWNER or "CheersAI")
+            account = AccountService.get_user_through_email(normalized_email)
+            persisted_sso_owner, persisted_sso_username = _get_persisted_sso_identity(account)
+            sso_owner = get_sso_subject_owner(data) or persisted_sso_owner or (dify_config.SSO_PROVISION_OWNER or "CheersAI")
             sso_username = (
                 get_sso_subject_username(data)
                 or (data.get("preferred_username") or "")
+                or persisted_sso_username
                 or name
             ).strip()
+            normalized_sso_payload = _merge_sso_identity(data, owner=sso_owner, username=sso_username)
+            resolved_sso_role, system_role = resolve_workspace_role(normalized_sso_payload)
             logger.info(
                 "Resolved Desktop SSO subject %s with identifier '%s' to workspace role '%s'",
                 subject_id,
                 resolved_sso_role,
                 system_role,
             )
-
-            account = AccountService.get_user_through_email(normalized_email)
 
             if not account:
                 logger.info("Creating new account for SSO user: %s with role: %s", normalized_email, system_role)
@@ -310,7 +344,7 @@ class DesktopSSOLoginApi(Resource):
                         tenant_join.role = system_role
                         db.session.commit()
                         logger.info("Updated role from '%s' to '%s'", old_role, system_role)
-            tenant_join = _ensure_desktop_sso_tenant_join(account, system_role, data)
+            tenant_join = _ensure_desktop_sso_tenant_join(account, system_role, normalized_sso_payload)
             logger.info("Using tenant %s with workspace role '%s'", tenant_join.tenant_id, tenant_join.role)
 
             custom_config = account.custom_config_dict
@@ -337,7 +371,7 @@ class DesktopSSOLoginApi(Resource):
 
             if tenant_join:
                 projection = build_desktop_sso_projection(
-                    data,
+                    normalized_sso_payload,
                     workspace_role=tenant_join.role,
                     mapped_role=resolved_sso_role,
                     sso_tags=sso_tags,

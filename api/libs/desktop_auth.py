@@ -256,7 +256,7 @@ def get_sso_subject_owner(payload: Mapping[str, Any] | None) -> str | None:
         return explicit_owner
 
     subject = payload.get("sub") if payload else None
-    if not isinstance(subject, str):
+    if not isinstance(subject, str) or "/" not in subject:
         return None
 
     owner = subject.split("/", 1)[0]
@@ -498,6 +498,42 @@ def get_current_workspace_role(account: Any) -> str | None:
     return None
 
 
+def _build_persisted_sso_payload(account: Any) -> dict[str, Any] | None:
+    custom_config = getattr(account, "custom_config_dict", None)
+    if not isinstance(custom_config, dict):
+        return None
+
+    owner = normalize_sso_identifier(custom_config.get("desktop_sso_owner"))
+    username = normalize_sso_identifier(
+        custom_config.get("desktop_sso_username") or custom_config.get("desktop_sso_preferred_username")
+    )
+    subject = custom_config.get("desktop_sso_subject")
+    email = custom_config.get("desktop_sso_email") or getattr(account, "email", None)
+
+    if not owner and isinstance(subject, str) and "/" in subject:
+        owner = normalize_sso_identifier(subject.split("/", 1)[0])
+    if not username and isinstance(subject, str) and "/" in subject:
+        username = normalize_sso_identifier(subject.split("/", 1)[1])
+    if not subject and owner and username:
+        subject = f"{owner}/{username}"
+
+    if not owner and not username and not subject:
+        return None
+
+    payload: dict[str, Any] = {
+        "owner": owner,
+        "preferred_username": username,
+        "sub": subject,
+        "email": email,
+        "roles": [],
+        "permissions": [],
+    }
+    groups = custom_config.get("desktop_sso_groups")
+    if isinstance(groups, list):
+        payload["groups"] = [group for group in groups if isinstance(group, str)]
+    return payload
+
+
 def get_account_workspace_capabilities(account: Any, tenant_id: str | None = None) -> list[str]:
     capabilities: set[str] = set()
     account_id = getattr(account, "id", None)
@@ -509,6 +545,17 @@ def get_account_workspace_capabilities(account: Any, tenant_id: str | None = Non
             projection_capabilities = projection.get("capabilities")
             if isinstance(projection_capabilities, list):
                 capabilities.update(capability for capability in projection_capabilities if isinstance(capability, str))
+
+    if not capabilities:
+        persisted_payload = _build_persisted_sso_payload(account)
+        if persisted_payload:
+            capabilities.update(
+                resolve_workspace_capabilities(
+                    persisted_payload,
+                    get_current_workspace_role(account),
+                    get_account_sso_tags(account, resolved_tenant_id),
+                )
+            )
 
     capabilities.update(get_role_capabilities(get_current_workspace_role(account)))
     capabilities.update(get_admin_override_capabilities(get_account_sso_tags(account, resolved_tenant_id)))
