@@ -4,7 +4,7 @@ from configs import dify_config
 from extensions.ext_database import db
 from libs.desktop_auth import (
     get_account_allowed_workspace_tenant_ids,
-    get_role_capabilities,
+    get_account_workspace_capabilities,
     load_desktop_sso_projection,
 )
 from models.account import Tenant, TenantAccountJoin, TenantAccountRole
@@ -63,7 +63,7 @@ class WorkspaceService:
         )
         assert tenant_account_join is not None, "TenantAccountJoin not found"
         tenant_info["role"] = tenant_account_join.role
-        tenant_info["capabilities"] = get_role_capabilities(tenant_account_join.role)
+        tenant_info["capabilities"] = get_account_workspace_capabilities(current_user, tenant.id)
 
         sso_projection = load_desktop_sso_projection(current_user.id, tenant.id)
         if sso_projection:

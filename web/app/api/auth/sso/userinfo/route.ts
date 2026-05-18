@@ -18,6 +18,13 @@ type RawSSOUserInfo = {
   aud?: string | string[]
 }
 
+type RawSSOAccountResponse = {
+  data?: {
+    owner?: string
+    name?: string
+  }
+}
+
 const getSSOConfig = () => {
   const ssoBaseUrl = process.env.NEXT_PUBLIC_DESKTOP_SSO_LOGIN_URL?.trim() || ''
   const clientId = process.env.NEXT_PUBLIC_DESKTOP_SSO_CLIENT_ID?.trim() || ''
@@ -99,6 +106,38 @@ const validateUserInfo = (userInfo: ReturnType<typeof normalizeUserInfo>) => {
 }
 
 const canFallbackToTokenClaims = (status: number) => [400, 414, 431].includes(status)
+
+const fetchAccountIdentity = async (ssoBaseUrl: string, accessToken: string) => {
+  const accountUrl = new URL('/api/get-account', ssoBaseUrl)
+  accountUrl.searchParams.set('access_token', accessToken)
+
+  try {
+    const response = await fetch(accountUrl.toString(), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    })
+
+    if (!response.ok)
+      return null
+
+    const payload = await response.json() as RawSSOAccountResponse
+    const owner = payload?.data?.owner?.trim()
+    const preferredUsername = payload?.data?.name?.trim()
+    if (!owner && !preferredUsername)
+      return null
+
+    return {
+      owner: owner || '',
+      preferred_username: preferredUsername || '',
+    } satisfies Pick<RawSSOUserInfo, 'owner' | 'preferred_username'>
+  }
+  catch {
+    return null
+  }
+}
 
 const refreshAccessToken = async (sessionId: string, refreshToken: string) => {
   const { ssoBaseUrl, clientId } = getSSOConfig()
@@ -216,10 +255,19 @@ export async function POST() {
     }
 
     const rawUserInfo = await userinfoResponse.json()
+    const accountIdentity = (!rawUserInfo?.owner && !tokenClaims?.owner)
+      ? await fetchAccountIdentity(ssoBaseUrl, accessToken)
+      : null
     const userInfo = normalizeUserInfo({
       ...tokenClaims,
       ...rawUserInfo,
-      owner: rawUserInfo?.owner || tokenClaims?.owner,
+      owner: rawUserInfo?.owner || tokenClaims?.owner || accountIdentity?.owner,
+      preferred_username:
+        rawUserInfo?.preferred_username
+        || rawUserInfo?.preferredUsername
+        || tokenClaims?.preferred_username
+        || tokenClaims?.preferredUsername
+        || accountIdentity?.preferred_username,
     })
     const validationError = validateUserInfo(userInfo)
 
