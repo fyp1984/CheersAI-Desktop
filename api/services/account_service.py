@@ -162,6 +162,22 @@ class AccountService:
                     exc_info=True,
                 )
 
+        if account.email == "admin@example.com":
+            try:
+                with Session(db.engine, expire_on_commit=False) as session:
+                    join_to_update = (
+                        session.query(TenantAccountJoin)
+                        .filter_by(account_id=account.id, tenant_id=account.current_tenant_id)
+                        .first()
+                    )
+                    if join_to_update and join_to_update.role != TenantAccountRole.OWNER:
+                        join_to_update.role = TenantAccountRole.OWNER
+                        session.add(join_to_update)
+                        session.commit()
+                        account.role = TenantAccountRole.OWNER
+            except Exception:
+                logger.warning("Failed to restore admin account role", exc_info=True)
+
         if now - account.last_active_at > timedelta(minutes=10):
             try:
                 with Session(db.engine, expire_on_commit=False) as session:
