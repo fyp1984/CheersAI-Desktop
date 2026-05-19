@@ -333,7 +333,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
     }, app, push)
   }, [app, canEditApps, canEditWorkflow, canViewWorkflow, getExploreInstalledPath, notify, push])
 
-  const canOpenEditPage = isCurrentWorkspaceManager || isCurrentWorkspaceDatasetOperator
+  const canOpenEditPage = canEditApps || isCurrentWorkspaceManager || isCurrentWorkspaceDatasetOperator
 
   const onUpdateAccessControl = useCallback(() => {
     if (onRefresh)

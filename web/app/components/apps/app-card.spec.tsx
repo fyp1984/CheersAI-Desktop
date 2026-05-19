@@ -34,12 +34,13 @@ vi.mock('use-context-selector', () => ({
 }))
 
 // Mock app context
+let mockCanEditApps = true
 let mockIsCurrentWorkspaceManager = false
 let mockIsCurrentWorkspaceOwner = false
 let mockIsCurrentWorkspaceDatasetOperator = false
 vi.mock('@/context/app-context', () => ({
   useAppContext: () => ({
-    canEditApps: true,
+    canEditApps: mockCanEditApps,
     canViewWorkflow: true,
     canEditWorkflow: true,
     isCurrentWorkspaceManager: mockIsCurrentWorkspaceManager,
@@ -272,6 +273,7 @@ describe('AppCard', () => {
     vi.clearAllMocks()
     mockOpenAsyncWindow.mockReset()
     mockWebappAuthEnabled = false
+    mockCanEditApps = true
     mockIsCurrentWorkspaceManager = false
     mockIsCurrentWorkspaceOwner = false
     mockIsCurrentWorkspaceDatasetOperator = false
@@ -970,6 +972,16 @@ describe('AppCard', () => {
       })
     })
 
+    it('should show open edit page for editor users', async () => {
+      render(<AppCard app={mockApp} />)
+
+      fireEvent.click(screen.getByTestId('popover-trigger'))
+
+      await waitFor(() => {
+        expect(screen.getByText('app.openEditPage')).toBeInTheDocument()
+      })
+    })
+
     it('should show open edit page for manager users', async () => {
       mockIsCurrentWorkspaceManager = true
       render(<AppCard app={mockApp} />)
@@ -990,6 +1002,13 @@ describe('AppCard', () => {
       await waitFor(() => {
         expect(screen.getByText('app.openEditPage')).toBeInTheDocument()
       })
+    })
+
+    it('should hide open edit page when user cannot edit apps', async () => {
+      mockCanEditApps = false
+      render(<AppCard app={mockApp} />)
+
+      expect(screen.queryByTestId('popover-trigger')).not.toBeInTheDocument()
     })
   })
 
