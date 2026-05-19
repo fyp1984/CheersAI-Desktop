@@ -34,6 +34,7 @@ x-shared-env: &shared-api-worker-env
   FILEBAY_DEFAULT_REPO: ${FILEBAY_DEFAULT_REPO:-workspace}
   FILEBAY_DEFAULT_BRANCH: ${FILEBAY_DEFAULT_BRANCH:-main}
   FILEBAY_DEFAULT_MASKED_DIR: ${FILEBAY_DEFAULT_MASKED_DIR:-masked}
+  TAVILY_API_KEY: ${TAVILY_API_KEY:-}
   BETA_NOTIFICATION_ENABLED: ${BETA_NOTIFICATION_ENABLED:-true}
   BETA_NOTIFICATION_DESKTOP_URL: ${BETA_NOTIFICATION_DESKTOP_URL:-https://uat-desktop.cheersai.cloud/signin}
   BETA_NOTIFICATION_SSO_LOGIN_URL: ${BETA_NOTIFICATION_SSO_LOGIN_URL:-https://uat-sso.cheersai.cloud/login/CheersAI}
@@ -741,7 +742,7 @@ services:
       dockerfile: Dockerfile.local
     restart: always
     ports:
-      - "5001:5001"
+      - "15001:5001"
     environment:
       # Use the shared environment variables.
       <<: *shared-api-worker-env

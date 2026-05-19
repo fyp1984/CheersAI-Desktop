@@ -1,6 +1,7 @@
 'use client'
 
 import { RiAddLine, RiArrowDownSLine, RiArrowLeftSLine, RiArrowRightSLine, RiAttachmentLine, RiCheckLine, RiCloseLine, RiDatabase2Line, RiDeleteBinLine, RiDownloadLine, RiFileCopyLine, RiMicFill, RiMicLine, RiMoreLine, RiRefreshLine, RiSearchLine } from '@remixicon/react'
+import Cookies from 'js-cookie'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import Checkbox from '@/app/components/base/checkbox'
@@ -10,15 +11,20 @@ import { SandboxFilePicker } from '@/app/components/base/sandbox-file-picker'
 import Toast from '@/app/components/base/toast'
 import { ModelTypeEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
 import { useDefaultModel, useModelList } from '@/app/components/header/account-setting/model-provider-page/hooks'
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '@/config'
 import { useAppContext } from '@/context/app-context'
 import useDocumentTitle from '@/hooks/use-document-title'
 import { sendSimpleChatMessage } from '@/service/chat'
-import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '@/config'
 import { cn } from '@/utils/classnames'
 import { parsePluginErrorMessage } from '@/utils/error-parser'
 import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 
 const SENSITIVE_SEND_WARNING_KEY = 'sensitive_send_warning'
+const MAX_HISTORY_MESSAGES = 12
+const MAX_HISTORY_MESSAGE_CHARS = 3000
+const MAX_HISTORY_PROMPT_CHARS = 8000
+const MAX_FILE_PROMPT_CHARS = 16000
+const MAX_SINGLE_FILE_PROMPT_CHARS = 8000
 
 type Message = {
   id: string
@@ -38,12 +44,21 @@ type UploadedFile = {
   content?: string
 }
 
+const truncateForPrompt = (text: string, maxChars: number, label: string) => {
+  if (text.length <= maxChars)
+    return text
+
+  return `${text.slice(0, maxChars)}\n\n[${label}已截断：原始长度 ${text.length} 字符，仅发送前 ${maxChars} 字符。请让用户缩小文件范围或分段提问以获得更完整分析。]`
+}
+
 type Conversation = {
   id: string
   title: string
   lastMessage: string
   timestamp: Date
   messages: Message[]
+  modelConfig?: SelectedModel | null
+  enableWebSearch?: boolean
 }
 
 type SelectedModel = {
@@ -245,6 +260,7 @@ const ChatPage = () => {
   const [autoFilledText, setAutoFilledText] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [showConversationActions, setShowConversationActions] = useState(false)
+  const isResponsePending = isLoading || Boolean(streamingMessageId)
   const [isVoiceSupported] = useState(() => {
     if (typeof window === 'undefined')
       return false
@@ -262,6 +278,7 @@ const ChatPage = () => {
   const [renameDraft, setRenameDraft] = useState('')
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const inputValueRef = useRef('')
+  const chatAbortControllerRef = useRef<AbortController | null>(null)
   const [showSensitiveConfirm, setShowSensitiveConfirm] = useState(false)
   const [skipSensitiveConfirm, setSkipSensitiveConfirm] = useState(false)
   const [isInputCollapsed, setIsInputCollapsed] = useState(false)
@@ -483,6 +500,8 @@ const ChatPage = () => {
       lastMessage: '',
       timestamp: new Date(),
       messages: [],
+      modelConfig: selectedModel,
+      enableWebSearch,
     }
     setConversations(prev => [newConversation, ...prev])
     setCurrentConversationId(newConversation.id)
@@ -509,11 +528,32 @@ const ChatPage = () => {
     const conversation = conversations.find(item => item.id === id)
     setCurrentConversationId(id)
     setMessages(conversation?.messages || [])
+    setSelectedModel(conversation?.modelConfig || null)
+    setEnableWebSearch(Boolean(conversation?.enableWebSearch))
   }
 
   const handleSelectModel = (provider: string, model: string, label: string) => {
-    setSelectedModel({ provider, model, label })
+    const nextModel = { provider, model, label }
+    setSelectedModel(nextModel)
+    if (currentConversationId) {
+      setConversations(prev => prev.map(conv =>
+        conv.id === currentConversationId
+          ? { ...conv, modelConfig: nextModel, timestamp: new Date() }
+          : conv,
+      ))
+    }
     setShowModelSelector(false)
+  }
+
+  const handleToggleWebSearch = (enabled: boolean) => {
+    setEnableWebSearch(enabled)
+    if (currentConversationId) {
+      setConversations(prev => prev.map(conv =>
+        conv.id === currentConversationId
+          ? { ...conv, enableWebSearch: enabled, timestamp: new Date() }
+          : conv,
+      ))
+    }
   }
 
   const handleRemoveFile = (fileId: string) => {
@@ -546,6 +586,56 @@ const ChatPage = () => {
     catch {
       return `[无法读取文件: ${file.name}]`
     }
+  }
+
+  const buildChatHistory = (sourceMessages: Message[]) => {
+    let remainingChars = MAX_HISTORY_PROMPT_CHARS
+    return sourceMessages
+      .slice(-MAX_HISTORY_MESSAGES)
+      .reverse()
+      .map((msg) => {
+        const allowedChars = Math.max(0, Math.min(MAX_HISTORY_MESSAGE_CHARS, remainingChars))
+        const content = truncateForPrompt(msg.content, allowedChars, '历史消息')
+        remainingChars -= Math.min(msg.content.length, allowedChars)
+        return {
+          type: msg.type,
+          content,
+        }
+      })
+      .reverse()
+  }
+
+  const buildQueryWithFileContents = async (baseContent: string, files?: UploadedFile[]) => {
+    if (!files?.length)
+      return baseContent
+
+    let remainingChars = MAX_FILE_PROMPT_CHARS
+    let hasTruncatedFile = false
+    const fileContents = await Promise.all(
+      files.map(async (file) => {
+        const content = await readFileContent(file)
+        const allowedChars = Math.max(0, Math.min(MAX_SINGLE_FILE_PROMPT_CHARS, remainingChars))
+        const clippedContent = truncateForPrompt(content, allowedChars, `文件 ${file.name}`)
+        if (content.length > allowedChars)
+          hasTruncatedFile = true
+        remainingChars -= Math.min(content.length, allowedChars)
+
+        return [
+          '',
+          `--- 文件: ${file.name} ---`,
+          `大小: ${formatFileSize(file.size)}`,
+          `类型: ${file.type || 'unknown'}`,
+          clippedContent,
+          '--- 文件结束 ---',
+        ].join('\n')
+      }),
+    )
+
+    const truncationHint = hasTruncatedFile
+      ? '\n\n注意：部分文件内容过长，已自动截断以避免超过模型上下文限制。'
+      : ''
+
+    return `${baseContent}\n\n以下是用户上传的文件内容：${fileContents.join('')}${truncationHint}`
   }
 
   // 处理沙箱文件选择
@@ -740,7 +830,7 @@ const ChatPage = () => {
 
   // 重新生成AI回复
   const handleRegenerateMessage = async (messageIndex: number) => {
-    if (isLoading)
+    if (isResponsePending)
       return
 
     if (!resolvedSelectedModel?.provider || !resolvedSelectedModel?.model) {
@@ -787,29 +877,17 @@ const ChatPage = () => {
     setMessages(prev => [...prev, assistantMessage])
     setStreamingMessageId(assistantMessageId)
 
+    let fullResponse = ''
+    const abortController = new AbortController()
+    chatAbortControllerRef.current = abortController
+
     try {
       // 构建对话历史
       const recentMessages = newMessages.slice(-20)
-      const history = recentMessages.map(msg => ({
-        type: msg.type,
-        content: msg.content,
-      }))
+      const history = buildChatHistory(recentMessages)
 
       // 添加文件内容到查询
-      let queryWithFiles = lastUserMessage.content
-      if (lastUserMessage.files && lastUserMessage.files.length > 0) {
-        const fileContents = await Promise.all(
-          lastUserMessage.files.map(async (file) => {
-            const content = await readFileContent(file)
-            return `\n\n--- 文件: ${file.name} ---\n${content}\n--- 文件结束 ---`
-          }),
-        )
-        queryWithFiles += `\n\n以下是用户上传的文件内容：${fileContents.join('')}`
-      }
-
-      let fullResponse = ''
-
-      console.log('[Chat Page - Regenerate] Calling sendSimpleChatMessage with webSearch:', enableWebSearch)
+      const queryWithFiles = await buildQueryWithFileContents(lastUserMessage.content, lastUserMessage.files)
 
       await sendSimpleChatMessage(
         queryWithFiles,
@@ -827,10 +905,8 @@ const ChatPage = () => {
         (error) => {
           throw new Error(error)
         },
-        { webSearch: enableWebSearch },
+        { signal: abortController.signal, webSearch: enableWebSearch },
       )
-
-      console.log('[Chat Page - Regenerate] sendSimpleChatMessage completed')
 
       // 流式输出完成，清除流式状态
       setStreamingMessageId(null)
@@ -844,6 +920,8 @@ const ChatPage = () => {
               lastMessage: fullResponse.slice(0, 50),
               timestamp: new Date(),
               messages: [...conv.messages, { ...assistantMessage, content: fullResponse }],
+              modelConfig: selectedModel || resolvedSelectedModel,
+              enableWebSearch,
             }
           }
           return conv
@@ -852,6 +930,28 @@ const ChatPage = () => {
     }
     catch (error) {
       setStreamingMessageId(null)
+
+      if (abortController.signal.aborted) {
+        if (!fullResponse) {
+          setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId))
+        }
+        else if (currentConversationId) {
+          setConversations(prev => prev.map((conv) => {
+            if (conv.id === currentConversationId) {
+              return {
+                ...conv,
+                lastMessage: fullResponse.slice(0, 50),
+                timestamp: new Date(),
+                messages: [...newMessages, { ...assistantMessage, content: fullResponse }],
+                modelConfig: selectedModel || resolvedSelectedModel,
+                enableWebSearch,
+              }
+            }
+            return conv
+          }))
+        }
+        return
+      }
 
       const parsedErrorMessage = await parsePluginErrorMessage(error)
       const lowerParsedErrorMessage = parsedErrorMessage.toLowerCase()
@@ -883,6 +983,8 @@ const ChatPage = () => {
               lastMessage: errorMessage.content.slice(0, 50),
               timestamp: new Date(),
               messages: [...conv.messages, errorMessage],
+              modelConfig: selectedModel || resolvedSelectedModel,
+              enableWebSearch,
             }
           }
           return conv
@@ -892,11 +994,13 @@ const ChatPage = () => {
     finally {
       setIsLoading(false)
       setStreamingMessageId(null)
+      if (chatAbortControllerRef.current === abortController)
+        chatAbortControllerRef.current = null
     }
   }
 
   const performSend = async () => {
-    if (!inputValue.trim() || isLoading)
+    if (!inputValue.trim() || isResponsePending)
       return
 
     if (!resolvedSelectedModel?.provider || !resolvedSelectedModel?.model) {
@@ -922,6 +1026,8 @@ const ChatPage = () => {
         lastMessage: userMessage.content,
         timestamp: new Date(),
         messages: [userMessage],
+        modelConfig: selectedModel || resolvedSelectedModel,
+        enableWebSearch,
       }
       conversationId = newConversation.id
       setConversations(prev => [newConversation, ...prev])
@@ -942,6 +1048,8 @@ const ChatPage = () => {
             lastMessage: userMessage.content,
             timestamp: new Date(),
             messages: updatedMessages,
+            modelConfig: selectedModel || resolvedSelectedModel,
+            enableWebSearch,
           }
         }
         return conv
@@ -965,30 +1073,18 @@ const ChatPage = () => {
     setMessages(prev => [...prev, assistantMessage])
     setStreamingMessageId(assistantMessageId)
 
+    let fullResponse = ''
+    const abortController = new AbortController()
+    chatAbortControllerRef.current = abortController
+
     try {
       // 构建对话历史
       const currentMessages = messages.length > 0 ? messages : []
       const recentMessages = currentMessages.slice(-20)
-      const history = recentMessages.map(msg => ({
-        type: msg.type,
-        content: msg.content,
-      }))
+      const history = buildChatHistory(recentMessages)
 
       // 添加文件内容到查询
-      let queryWithFiles = userMessage.content
-      if (uploadedFiles.length > 0) {
-        const fileContents = await Promise.all(
-          uploadedFiles.map(async (file) => {
-            const content = await readFileContent(file)
-            return `\n\n--- 文件: ${file.name} ---\n${content}\n--- 文件结束 ---`
-          }),
-        )
-        queryWithFiles += `\n\n以下是用户上传的文件内容：${fileContents.join('')}`
-      }
-
-      let fullResponse = ''
-
-      console.log('[Chat Page - Send] Calling sendSimpleChatMessage with webSearch:', enableWebSearch)
+      const queryWithFiles = await buildQueryWithFileContents(userMessage.content, uploadedFiles)
 
       await sendSimpleChatMessage(
         queryWithFiles,
@@ -1006,10 +1102,8 @@ const ChatPage = () => {
         (error) => {
           throw new Error(error)
         },
-        { webSearch: enableWebSearch },
+        { signal: abortController.signal, webSearch: enableWebSearch },
       )
-
-      console.log('[Chat Page - Send] sendSimpleChatMessage completed')
 
       // 流式输出完成，清除流式状态
       setStreamingMessageId(null)
@@ -1022,6 +1116,8 @@ const ChatPage = () => {
             lastMessage: fullResponse.slice(0, 50),
             timestamp: new Date(),
             messages: [...conv.messages, { ...assistantMessage, content: fullResponse }],
+            modelConfig: selectedModel || resolvedSelectedModel,
+            enableWebSearch,
           }
         }
         return conv
@@ -1029,6 +1125,28 @@ const ChatPage = () => {
     }
     catch (error) {
       setStreamingMessageId(null)
+
+      if (abortController.signal.aborted) {
+        if (!fullResponse) {
+          setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId))
+        }
+        else {
+          setConversations(prev => prev.map((conv) => {
+            if (conv.id === conversationId) {
+              return {
+                ...conv,
+                lastMessage: fullResponse.slice(0, 50),
+                timestamp: new Date(),
+                messages: [...conv.messages, { ...assistantMessage, content: fullResponse }],
+                modelConfig: selectedModel || resolvedSelectedModel,
+                enableWebSearch,
+              }
+            }
+            return conv
+          }))
+        }
+        return
+      }
 
       const parsedErrorMessage = await parsePluginErrorMessage(error)
       const lowerParsedErrorMessage = parsedErrorMessage.toLowerCase()
@@ -1059,6 +1177,8 @@ const ChatPage = () => {
             lastMessage: errorMessage.content.slice(0, 50),
             timestamp: new Date(),
             messages: [...conv.messages, errorMessage],
+            modelConfig: selectedModel || resolvedSelectedModel,
+            enableWebSearch,
           }
         }
         return conv
@@ -1067,7 +1187,19 @@ const ChatPage = () => {
     finally {
       setIsLoading(false)
       setStreamingMessageId(null)
+      if (chatAbortControllerRef.current === abortController)
+        chatAbortControllerRef.current = null
     }
+  }
+
+  const handleStopSending = () => {
+    if (chatAbortControllerRef.current) {
+      chatAbortControllerRef.current.abort()
+      return
+    }
+
+    setIsLoading(false)
+    setStreamingMessageId(null)
   }
 
   const handleSend = async () => {
@@ -1325,9 +1457,11 @@ const ChatPage = () => {
                                 </div>
                                 <div className="mt-3 border-t border-gray-100 pt-3">
                                   <div className="mb-2 text-xs text-gray-400">
-                                    {canManageModels ? '想要更多模型？' : '模型配置由工作区统一管理'}
+                                    {canManageModels
+                                      ? '想要更多模型？'
+                                      : '模型配置由工作区统一管理'}
                                   </div>
-                                  {canManageModels ? (
+                                  {canManageModels && (
                                     <button
                                       onClick={() => {
                                         window.open('/apps/?action=showSettings&tab=provider', '_blank')
@@ -1336,7 +1470,8 @@ const ChatPage = () => {
                                     >
                                       配置更多提供商
                                     </button>
-                                  ) : (
+                                  )}
+                                  {!canManageModels && (
                                     <div className="text-xs text-gray-500">
                                       如需更多模型，请联系工作区管理员统一配置。
                                     </div>
@@ -1552,7 +1687,7 @@ const ChatPage = () => {
                               })}
                             </div>
 
-                            {message.type === 'assistant' && message.content && !isLoading && (
+                            {message.type === 'assistant' && message.content && !isResponsePending && (
                               <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                                 <button
                                   onClick={() => handleCopyMessage(message.content)}
@@ -1597,7 +1732,7 @@ const ChatPage = () => {
                         )}
                       </div>
                     ))}
-                    {isLoading && (
+                    {isResponsePending && (
                       <div className="mb-6 flex justify-start gap-4">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#3b82f6_0%,#2563eb_100%)] shadow-sm">
                           <span className="text-sm font-semibold text-white">AI</span>
@@ -1685,7 +1820,7 @@ const ChatPage = () => {
                     </svg>
                     <span>{isInputCollapsed ? '展开输入框' : '收缩输入框'}</span>
                   </button>
-                  
+
                   {/* 联网搜索开关 */}
                   <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-[#f3f4f6]">
                     <input
@@ -1693,8 +1828,7 @@ const ChatPage = () => {
                       checked={enableWebSearch}
                       onChange={(e) => {
                         const newValue = e.target.checked
-                        console.log('[Chat Page] Web search toggled:', newValue)
-                        setEnableWebSearch(newValue)
+                        handleToggleWebSearch(newValue)
                       }}
                       className="h-3.5 w-3.5 rounded border-gray-300 text-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6]"
                     />
@@ -1704,7 +1838,7 @@ const ChatPage = () => {
                     <span>联网搜索</span>
                   </label>
                 </div>
-                
+
                 {enableWebSearch && (
                   <div className="flex items-center gap-1 rounded-md bg-[#eff6ff] px-2 py-1 text-xs text-[#2563eb]">
                     <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
@@ -1718,7 +1852,7 @@ const ChatPage = () => {
               {/* 输入区域 - 可收缩 */}
               <div
                 className={cn(
-                  'transition-all duration-300 overflow-hidden',
+                  'overflow-hidden transition-all duration-300',
                   isInputCollapsed ? 'max-h-0 opacity-0' : 'max-h-[400px] opacity-100',
                 )}
               >
@@ -1788,16 +1922,18 @@ const ChatPage = () => {
                         {isVoiceListening ? <RiMicFill className="h-4 w-4" /> : <RiMicLine className="h-4 w-4" />}
                       </button>
                       <button
-                        onClick={handleSend}
-                        disabled={!inputValue.trim() || isLoading}
+                        onClick={isResponsePending ? handleStopSending : handleSend}
+                        disabled={!isResponsePending && !inputValue.trim()}
                         className={cn(
                           'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-                          inputValue.trim() && !isLoading
-                            ? 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'
-                            : 'cursor-not-allowed bg-gray-100 text-gray-400',
+                          isResponsePending
+                            ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                            : inputValue.trim()
+                              ? 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'
+                              : 'cursor-not-allowed bg-gray-100 text-gray-400',
                         )}
                       >
-                        发送回复
+                        {isResponsePending ? '停止发送' : '发送回复'}
                       </button>
                     </div>
                   </div>

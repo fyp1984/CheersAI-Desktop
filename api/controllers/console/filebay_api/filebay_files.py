@@ -3,6 +3,7 @@ import base64
 import http.client
 import json
 import logging
+import socket
 import ssl
 import urllib.parse
 from io import BytesIO
@@ -43,7 +44,9 @@ class NoSNIHTTPSClient:
     def __init__(self, base_url: str, token: str = "", timeout: int = 30):
         parsed = urllib.parse.urlparse(base_url)
         self.scheme = parsed.scheme
-        self.host = parsed.netloc
+        self.host = parsed.hostname or parsed.netloc
+        self.port = parsed.port or (443 if self.scheme == "https" else 80)
+        self.host_header = parsed.netloc
         self.token = token
         self.timeout = timeout
         
@@ -51,21 +54,103 @@ class NoSNIHTTPSClient:
         self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         self.ssl_context.check_hostname = False
         self.ssl_context.verify_mode = ssl.CERT_NONE
+        try:
+            self.ssl_context.set_ciphers('ALL:@SECLEVEL=0')
+        except Exception:
+            logger.debug("[FileBay API] Failed to lower SSL security level", exc_info=True)
+
+    def _create_connection(self):
+        if self.scheme != "https":
+            return http.client.HTTPConnection(self.host, self.port, timeout=self.timeout)
+
+        sock = socket.create_connection((self.host, self.port), timeout=self.timeout)
+        # Intentionally omit server_hostname: UAT FileBay closes TLS handshakes
+        # when clients send SNI.
+        return self.ssl_context.wrap_socket(sock)
+
+    @staticmethod
+    def _decode_chunked(body: bytes) -> bytes:
+        decoded = bytearray()
+        index = 0
+        while True:
+            line_end = body.find(b"\r\n", index)
+            if line_end == -1:
+                return body
+            size_line = body[index:line_end].split(b";", 1)[0]
+            try:
+                chunk_size = int(size_line, 16)
+            except ValueError:
+                return body
+            index = line_end + 2
+            if chunk_size == 0:
+                break
+            decoded.extend(body[index:index + chunk_size])
+            index += chunk_size + 2
+        return bytes(decoded)
+
+    def _make_raw_https_request(self, method: str, path: str, body: dict | None = None) -> tuple[int, dict | list]:
+        body_json = json.dumps(body) if body is not None else None
+        headers = {
+            "Host": self.host_header,
+            "User-Agent": "Dify-FileBay-API/1.0",
+            "Accept": "application/json",
+            "Connection": "close",
+        }
+        if self.token:
+            headers["Authorization"] = f"token {self.token}"
+        if body_json is not None:
+            headers["Content-Type"] = "application/json"
+            headers["Content-Length"] = str(len(body_json.encode("utf-8")))
+
+        request_line = f"{method} {path} HTTP/1.1\r\n"
+        header_lines = "\r\n".join(f"{key}: {value}" for key, value in headers.items())
+        request_bytes = f"{request_line}{header_lines}\r\n\r\n".encode()
+        if body_json is not None:
+            request_bytes += body_json.encode("utf-8")
+
+        with self._create_connection() as sock:
+            sock.sendall(request_bytes)
+            response_data = b""
+            while True:
+                chunk = sock.recv(65536)
+                if not chunk:
+                    break
+                response_data += chunk
+
+        header_data, _, body_data = response_data.partition(b"\r\n\r\n")
+        status_line, *header_lines = header_data.decode("iso-8859-1", errors="ignore").split("\r\n")
+        status_code = int(status_line.split()[1])
+        response_headers = {}
+        for line in header_lines:
+            if ":" in line:
+                key, value = line.split(":", 1)
+                response_headers[key.strip().lower()] = value.strip().lower()
+        if response_headers.get("transfer-encoding") == "chunked":
+            body_data = self._decode_chunked(body_data)
+        try:
+            response_json = json.loads(body_data.decode('utf-8'))
+        except Exception:
+            response_json = {"raw": body_data.decode('utf-8', errors='ignore')}
+        return status_code, response_json
     
     def _make_request(self, method: str, path: str, body: dict | None = None) -> tuple[int, dict | list]:
         """Make HTTP request"""
         try:
             if self.scheme == "https":
+                return self._make_raw_https_request(method, path, body)
+
+            if self.scheme == "https":
                 conn = http.client.HTTPSConnection(
                     self.host,
+                    self.port,
                     timeout=self.timeout,
                     context=self.ssl_context
                 )
             else:
-                conn = http.client.HTTPConnection(self.host, timeout=self.timeout)
+                conn = http.client.HTTPConnection(self.host, self.port, timeout=self.timeout)
             
             headers = {
-                "Host": self.host,
+                "Host": self.host_header,
                 "User-Agent": "Dify-FileBay-API/1.0",
                 "Accept": "application/json",
                 "Connection": "close"

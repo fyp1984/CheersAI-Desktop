@@ -9,6 +9,8 @@ import ImageGallery from '@/app/components/base/image-gallery'
 const Paragraph = (paragraph: any) => {
   const { node }: any = paragraph
   const children_node = node.children
+  const hasImageChild = Array.isArray(children_node)
+    && children_node.some(child => 'tagName' in child && child.tagName === 'img')
   if (children_node && children_node[0] && 'tagName' in children_node[0] && children_node[0].tagName === 'img') {
     return (
       <div className="markdown-img-wrapper">
@@ -21,6 +23,9 @@ const Paragraph = (paragraph: any) => {
       </div>
     )
   }
+  if (hasImageChild)
+    return <div>{paragraph.children}</div>
+
   return <p>{paragraph.children}</p>
 }
 
