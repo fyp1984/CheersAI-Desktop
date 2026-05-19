@@ -21,6 +21,7 @@ export const PluginParagraph: React.FC<PluginParagraphProps> = ({ pluginInfo, no
   const childrenNode = node?.children as Array<any> | undefined
   const firstChild = childrenNode?.[0]
   const isImageParagraph = firstChild?.tagName === 'img'
+  const hasImageChild = childrenNode?.some(child => child?.tagName === 'img')
   const imageSrc = isImageParagraph ? firstChild?.properties?.src : undefined
 
   const { data: assetData } = usePluginReadmeAsset({
@@ -66,5 +67,8 @@ export const PluginParagraph: React.FC<PluginParagraphProps> = ({ pluginInfo, no
       </div>
     )
   }
+  if (hasImageChild)
+    return <div>{children}</div>
+
   return <p>{children}</p>
 }
