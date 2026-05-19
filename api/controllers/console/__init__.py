@@ -87,6 +87,7 @@ from .auth import (
     login,
     oauth,
     oauth_server,
+    sso_proxy,
     sso_token,
 )
 

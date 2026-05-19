@@ -52,6 +52,7 @@ x-shared-env: &shared-api-worker-env
   FLASK_DEBUG: ${FLASK_DEBUG:-false}
   ENABLE_REQUEST_LOGGING: ${ENABLE_REQUEST_LOGGING:-False}
   SECRET_KEY: ${SECRET_KEY:-your-secret-key-here}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
   INIT_PASSWORD: ${INIT_PASSWORD:-}
   DEPLOY_ENV: ${DEPLOY_ENV:-PRODUCTION}
   CHECK_UPDATE_URL: ${CHECK_UPDATE_URL:-https://updates.dify.ai}
@@ -64,6 +65,8 @@ x-shared-env: &shared-api-worker-env
   APP_MAX_ACTIVE_REQUESTS: ${APP_MAX_ACTIVE_REQUESTS:-0}
   APP_MAX_EXECUTION_TIME: ${APP_MAX_EXECUTION_TIME:-1200}
   DIFY_BIND_ADDRESS: ${DIFY_BIND_ADDRESS:-0.0.0.0}
+  BACKEND_IMAGE: ${BACKEND_IMAGE:-cheersai-desktop-api:local}
+  WEB_IMAGE: ${WEB_IMAGE:-cheersai-desktop-web:local}
   DIFY_PORT: ${DIFY_PORT:-5001}
   SERVER_WORKER_AMOUNT: ${SERVER_WORKER_AMOUNT:-1}
   SERVER_WORKER_CLASS: ${SERVER_WORKER_CLASS:-gevent}
@@ -638,6 +641,7 @@ x-shared-env: &shared-api-worker-env
   PLUGIN_DAEMON_TIMEOUT: ${PLUGIN_DAEMON_TIMEOUT:-600.0}
   PIP_MIRROR_URL: ${PIP_MIRROR_URL:-}
   PLUGIN_STORAGE_TYPE: ${PLUGIN_STORAGE_TYPE:-local}
+  PLUGIN_DIR: ${PLUGIN_DIR:-/app/plugins}
   PLUGIN_STORAGE_LOCAL_ROOT: ${PLUGIN_STORAGE_LOCAL_ROOT:-/app/storage}
   PLUGIN_WORKING_PATH: ${PLUGIN_WORKING_PATH:-/app/storage/cwd}
   PLUGIN_INSTALLED_PATH: ${PLUGIN_INSTALLED_PATH:-plugin}
@@ -736,13 +740,13 @@ services:
 
   # API service
   api:
-    image: ${BACKEND_IMAGE:-cheersai-desktop-api:local}
+    image: cheersai-desktop-api:local
     build:
       context: ../api
       dockerfile: Dockerfile.local
     restart: always
     ports:
-      - "15001:5001"
+      - "5001:5001"
     environment:
       # Use the shared environment variables.
       <<: *shared-api-worker-env
@@ -757,8 +761,6 @@ services:
       PLUGIN_MAX_PACKAGE_SIZE: ${PLUGIN_MAX_PACKAGE_SIZE:-52428800}
       PLUGIN_DAEMON_TIMEOUT: ${PLUGIN_DAEMON_TIMEOUT:-600.0}
       INNER_API_KEY_FOR_PLUGIN: ${PLUGIN_DIFY_INNER_API_KEY:-QaHbTe77CtuXmsfyhR7+vRjI/+XbV1AaFy691iy+kGDv2Jvy0/eAh8Y1}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
-      PLUGIN_DIR: ${PLUGIN_DIR:-/app/plugins}
     depends_on:
       init_permissions:
         condition: service_completed_successfully
@@ -786,7 +788,7 @@ services:
   # worker service
   # The Celery worker for processing all queues (dataset, workflow, mail, etc.)
   worker:
-    image: ${BACKEND_IMAGE:-cheersai-desktop-api:local}
+    image: cheersai-desktop-api:local
     restart: always
     environment:
       # Use the shared environment variables.
@@ -799,8 +801,6 @@ services:
       SENTRY_PROFILES_SAMPLE_RATE: ${API_SENTRY_PROFILES_SAMPLE_RATE:-1.0}
       PLUGIN_MAX_PACKAGE_SIZE: ${PLUGIN_MAX_PACKAGE_SIZE:-52428800}
       INNER_API_KEY_FOR_PLUGIN: ${PLUGIN_DIFY_INNER_API_KEY:-QaHbTe77CtuXmsfyhR7+vRjI/+XbV1AaFy691iy+kGDv2Jvy0/eAh8Y1}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
-      PLUGIN_DIR: ${PLUGIN_DIR:-/app/plugins}
     depends_on:
       init_permissions:
         condition: service_completed_successfully
@@ -828,7 +828,7 @@ services:
   # worker_beat service
   # Celery beat for scheduling periodic tasks.
   worker_beat:
-    image: ${BACKEND_IMAGE:-cheersai-desktop-api:local}
+    image: cheersai-desktop-api:local
     restart: always
     environment:
       # Use the shared environment variables.
@@ -836,8 +836,6 @@ services:
       # Startup mode, 'worker_beat' starts the Celery beat for scheduling periodic tasks.
       MODE: beat
       MIGRATION_ENABLED: ${WORKER_BEAT_MIGRATION_ENABLED:-false}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
-      PLUGIN_DIR: ${PLUGIN_DIR:-/app/plugins}
     depends_on:
       init_permissions:
         condition: service_completed_successfully
@@ -861,7 +859,7 @@ services:
 
   # Frontend web application.
   web:
-    image: ${WEB_IMAGE:-cheersai-desktop-web:local}
+    image: cheersai-desktop-web:local
     build:
       context: ../web
       dockerfile: Dockerfile
@@ -871,8 +869,10 @@ services:
       - "3000:3000"
     environment:
       NODE_OPTIONS: --max-old-space-size=4096
-      CONSOLE_API_URL: ${CONSOLE_API_URL:-http://localhost:5001}
-      APP_API_URL: ${APP_API_URL:-http://localhost:5001}
+      CONSOLE_API_URL: ${CONSOLE_API_URL:-http://localhost}
+      APP_API_URL: ${APP_API_URL:-http://localhost}
+      NEXT_PUBLIC_API_PREFIX: ${NEXT_PUBLIC_API_PREFIX:-/console/api}
+      NEXT_PUBLIC_PUBLIC_API_PREFIX: ${NEXT_PUBLIC_PUBLIC_API_PREFIX:-/api}
       AMPLITUDE_API_KEY: ${AMPLITUDE_API_KEY:-}
       NEXT_PUBLIC_COOKIE_DOMAIN: ${NEXT_PUBLIC_COOKIE_DOMAIN:-}
       SENTRY_DSN: ${WEB_SENTRY_DSN:-}
@@ -1001,7 +1001,7 @@ services:
       HTTP_PROXY: ${SANDBOX_HTTP_PROXY:-http://ssrf_proxy:3128}
       HTTPS_PROXY: ${SANDBOX_HTTPS_PROXY:-http://ssrf_proxy:3128}
       SANDBOX_PORT: ${SANDBOX_PORT:-8194}
-      PIP_MIRROR_URL: ${PIP_MIRROR_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
+      PIP_MIRROR_URL: ${PIP_MIRROR_URL:-}
     volumes:
       - ./volumes/sandbox/dependencies:/dependencies
       - ./volumes/sandbox/conf:/conf
@@ -1026,14 +1026,13 @@ services:
       DIFY_INNER_API_KEY: ${PLUGIN_DIFY_INNER_API_KEY:-QaHbTe77CtuXmsfyhR7+vRjI/+XbV1AaFy691iy+kGDv2Jvy0/eAh8Y1}
       PLUGIN_REMOTE_INSTALLING_HOST: ${PLUGIN_DEBUGGING_HOST:-0.0.0.0}
       PLUGIN_REMOTE_INSTALLING_PORT: ${PLUGIN_DEBUGGING_PORT:-5003}
-      PLUGIN_DIR: ${PLUGIN_DIR:-/app/plugins}
       PLUGIN_WORKING_PATH: ${PLUGIN_WORKING_PATH:-/app/storage/cwd}
       FORCE_VERIFYING_SIGNATURE: ${FORCE_VERIFYING_SIGNATURE:-true}
-      PYTHON_ENV_INIT_TIMEOUT: ${PLUGIN_PYTHON_ENV_INIT_TIMEOUT:-600}
+      PYTHON_ENV_INIT_TIMEOUT: ${PLUGIN_PYTHON_ENV_INIT_TIMEOUT:-120}
       PLUGIN_MAX_EXECUTION_TIMEOUT: ${PLUGIN_MAX_EXECUTION_TIMEOUT:-600}
       PLUGIN_STDIO_BUFFER_SIZE: ${PLUGIN_STDIO_BUFFER_SIZE:-1024}
       PLUGIN_STDIO_MAX_BUFFER_SIZE: ${PLUGIN_STDIO_MAX_BUFFER_SIZE:-5242880}
-      PIP_MIRROR_URL: ${PIP_MIRROR_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
+      PIP_MIRROR_URL: ${PIP_MIRROR_URL:-}
       PLUGIN_STORAGE_TYPE: ${PLUGIN_STORAGE_TYPE:-local}
       PLUGIN_STORAGE_LOCAL_ROOT: ${PLUGIN_STORAGE_LOCAL_ROOT:-/app/storage}
       PLUGIN_INSTALLED_PATH: ${PLUGIN_INSTALLED_PATH:-plugin}
