@@ -69,7 +69,9 @@ class WorkspaceService:
         if sso_projection:
             projection_capabilities = sso_projection.get("capabilities")
             if isinstance(projection_capabilities, list):
-                tenant_info["capabilities"] = [capability for capability in projection_capabilities if isinstance(capability, str)]
+                merged_capabilities = set(tenant_info.get("capabilities") or [])
+                merged_capabilities.update(capability for capability in projection_capabilities if isinstance(capability, str))
+                tenant_info["capabilities"] = sorted(merged_capabilities)
             tenant_info["sso_mapped_role"] = sso_projection.get("mapped_role")
             tenant_info["sso_sync_hash"] = sso_projection.get("sync_hash")
 
