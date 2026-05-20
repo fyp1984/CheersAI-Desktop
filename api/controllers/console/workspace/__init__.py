@@ -77,7 +77,11 @@ def require_model_provider_read_capability(view: Callable[P, R]):
         user, _ = current_account_with_tenant()
         if _get_desktop_sso_owner(user) == "built-in":
             return view(*args, **kwargs)
-        return require_model_provider_manage_capability(view)(*args, **kwargs)
+        return _require_workspace_capabilities(
+            "desktop_model_use",
+            "desktop_model_manage",
+            "desktop_model_provider_manage",
+        )(view)(*args, **kwargs)
 
     return decorated
 
