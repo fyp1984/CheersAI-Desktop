@@ -77,6 +77,58 @@ The following file classes should be excluded from version control unless the us
 - Temporary test pages or debug routes such as `test-*.tsx`, `debug-*.tsx`, throwaway admin pages, manual inspection UIs
 - Secrets or secret-like helper files such as hardcoded token scripts, local credential notes, copied `.env` variants, plaintext passwords
 
+### Desktop Recurring Noise Watchlist
+
+For `CheersAI-Desktop`, the following files are a known recurring source of low-value Git churn during commit preparation:
+
+- `api/controllers/console/__init__.py`
+- `api/controllers/console/audit/operation_logs.py`
+- `api/controllers/console/auth/sso_proxy.py`
+- `api/controllers/console/token_quota.py`
+- `api/controllers/console/workspace/__init__.py`
+- `api/controllers/console/workspace/model_providers.py`
+- `api/core/helper/team_model_encrypter.py`
+- `api/core/provider_manager.py`
+- `api/core/workflow/nodes/llm/llm_utils.py`
+- `api/models/__init__.py`
+- `api/services/global_plugin_service.py`
+- `api/services/model_usage_record_service.py`
+- `api/services/plugin/plugin_service.py`
+- `api/test_routes.py`
+
+When these files appear in `git status`, do not assume they belong to the requested delivery. Review them first against the recurring-noise criteria below.
+
+Treat changes in this watchlist as `mechanical-noise` by default when they only contain one or more of the following patterns:
+
+- import grouping, import order, or multi-line wrapping changes
+- `__all__` ordering changes with no symbol addition or removal
+- blank-line-only edits
+- equivalent helper rewrites such as `endswith(...)` plus slicing to `removesuffix(...)`
+- no-op literal rewrites such as `Decimal("0")` to `Decimal(0)` with unchanged behavior
+- removal of unused imports without any related functional change
+
+If a file from this watchlist is not explicitly required by the user's request and only matches the patterns above, revert it before staging instead of re-reviewing it as if it were a new product change.
+
+Recommended cleanup command for this recurring watchlist:
+
+```bash
+git restore \
+  api/controllers/console/__init__.py \
+  api/controllers/console/audit/operation_logs.py \
+  api/controllers/console/auth/sso_proxy.py \
+  api/controllers/console/token_quota.py \
+  api/controllers/console/workspace/__init__.py \
+  api/controllers/console/workspace/model_providers.py \
+  api/core/helper/team_model_encrypter.py \
+  api/core/provider_manager.py \
+  api/core/workflow/nodes/llm/llm_utils.py \
+  api/models/__init__.py \
+  api/services/global_plugin_service.py \
+  api/services/model_usage_record_service.py \
+  api/services/plugin/plugin_service.py \
+  api/test_routes.py
+```
+
 ### What To Keep
 
 Keep files in Git only when they are part of the maintained product surface:
@@ -252,6 +304,12 @@ Then perform a classification pass:
 - `process` - summarize into stable docs if needed, otherwise exclude
 - `temporary` - delete or ignore locally, never stage
 - `mechanical-noise` - revert unless it is strictly required by the requested change or to pass a directly relevant check
+
+For the Desktop recurring-noise watchlist above, do not ask the user to re-confirm every time unless:
+
+- the current user request explicitly mentions one of those files or the related subsystem
+- the diff includes real symbol additions, removals, logic branches, API contract changes, or behavior changes
+- the file is required to support the intended product fix and the change is no longer purely mechanical
 
 ### 5) Stage Intended Files
 
