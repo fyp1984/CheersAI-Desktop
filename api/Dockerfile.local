@@ -7,4 +7,6 @@ WORKDIR /app/api
 COPY --chown=dify:dify . /app/api/
 COPY --chown=dify:dify --chmod=755 docker/entrypoint.sh /entrypoint.sh
 
+RUN uv pip install --python /app/api/.venv/bin/python "curl_cffi==0.13.0"
+
 USER dify
