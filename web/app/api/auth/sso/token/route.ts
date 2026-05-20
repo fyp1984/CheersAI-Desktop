@@ -7,6 +7,13 @@ import { generateSessionId, storeSession } from '@/lib/sso-session'
 const SSO_SESSION_COOKIE = 'sso_session_id'
 const TOKEN_EXCHANGE_RETRY_DELAY = 300
 
+type SsoTokenResponse = {
+  access_token?: string
+  refresh_token?: string
+  expires_in?: number | string
+  scope?: string
+}
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 const fetchTokenWithRetry = async (url: string, init: RequestInit) => {
@@ -18,6 +25,25 @@ const fetchTokenWithRetry = async (url: string, init: RequestInit) => {
     await sleep(TOKEN_EXCHANGE_RETRY_DELAY)
     return fetch(url, init)
   }
+}
+
+const exchangeTokenViaProxy = async (body: Record<string, unknown>) => {
+  const response = await fetch('http://api:5001/console/api/auth/sso-proxy/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('SSO token proxy exchange failed:', {
+      status: response.status,
+      body: errorText,
+    })
+    throw new Error('Token exchange failed')
+  }
+
+  return response.json() as Promise<SsoTokenResponse>
 }
 
 export async function POST(request: NextRequest) {
@@ -65,27 +91,40 @@ export async function POST(request: NextRequest) {
       headers.Authorization = `Basic ${authString}`
     }
 
-    const tokenResponse = await fetchTokenWithRetry(tokenUrl.toString(), {
-      method: 'POST',
-      headers,
-      body: params.toString(),
-    })
-
-    if (!tokenResponse.ok) {
-      const errorText = await tokenResponse.text()
-      console.error('SSO token exchange failed:', {
-        status: tokenResponse.status,
-        tokenUrl: tokenUrl.toString(),
-        body: errorText,
+    let tokenData: SsoTokenResponse | null = null
+    try {
+      const tokenResponse = await fetchTokenWithRetry(tokenUrl.toString(), {
+        method: 'POST',
+        headers,
+        body: params.toString(),
       })
-      return NextResponse.json(
-        { error: 'Token exchange failed' },
-        { status: tokenResponse.status },
-      )
-    }
 
-    const tokenData = await tokenResponse.json()
-    const { access_token, refresh_token, expires_in, scope } = tokenData
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text()
+        console.error('SSO token exchange failed:', {
+          status: tokenResponse.status,
+          tokenUrl: tokenUrl.toString(),
+          body: errorText,
+        })
+        return NextResponse.json(
+          { error: 'Token exchange failed' },
+          { status: tokenResponse.status },
+        )
+      }
+
+      tokenData = await tokenResponse.json()
+    }
+    catch (error) {
+      console.warn('[SSO] Token exchange fetch failed, falling back to proxy:', error)
+      tokenData = await exchangeTokenViaProxy({
+        grantType: 'authorization_code',
+        code,
+        state,
+        redirectUri,
+        codeVerifier,
+      })
+    }
+    const { access_token, refresh_token, expires_in, scope } = tokenData || {}
 
     if (!access_token) {
       return NextResponse.json(

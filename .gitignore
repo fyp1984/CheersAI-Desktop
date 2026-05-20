@@ -248,3 +248,8 @@ docker/volumes/*
 !docker/volumes/plugin_daemon/
 docker/volumes/plugin_daemon/*
 !docker/volumes/plugin_daemon/.gitkeep
+!docker/volumes/sandbox/
+docker/volumes/sandbox/*
+!docker/volumes/sandbox/dependencies/
+docker/volumes/sandbox/dependencies/*
+!docker/volumes/sandbox/dependencies/python-requirements.txt
