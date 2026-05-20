@@ -18,7 +18,7 @@ const PluginPage = () => {
       <div>
         {plugins?.map(plugin => Plugin_MAP[plugin.tool_name](plugin))}
       </div>
-      <div className="fixed bottom-0 flex h-[42px] w-[472px] items-center bg-white text-xs text-gray-500">
+      <div className="fixed bottom-0 flex h-[42px] w-[472px] items-center bg-white text-xs text-gray-500 dark:border-t dark:border-white/10 dark:bg-[#202126] dark:text-gray-400">
         <LockClosedIcon className="mr-1 h-3 w-3" />
         {t('provider.encrypted.front', { ns: 'common' })}
         <Link

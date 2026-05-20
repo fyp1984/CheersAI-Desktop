@@ -111,7 +111,7 @@ export const sendSimpleChatMessage = async (
   history?: Array<{ type: 'user' | 'assistant', content: string }>,
   onData?: (data: string) => void,
   onError?: (error: string) => void,
-  options?: { webSearch?: boolean },
+  options?: { signal?: AbortSignal, webSearch?: boolean },
 ) => {
   const requestBody = {
     query,
@@ -120,13 +120,7 @@ export const sendSimpleChatMessage = async (
     history,
     web_search: options?.webSearch || false,
   }
-  
-  console.log('[Simple Chat] Sending request:', {
-    url: `${API_PREFIX}/simple-chat`,
-    webSearch: options?.webSearch,
-    body: requestBody,
-  })
-  
+
   const response = await fetch(`${API_PREFIX}/simple-chat`, {
     method: 'POST',
     headers: {
@@ -135,9 +129,8 @@ export const sendSimpleChatMessage = async (
     },
     credentials: 'include',
     body: JSON.stringify(requestBody),
+    signal: options?.signal,
   })
-  
-  console.log('[Simple Chat] Response status:', response.status, response.statusText)
 
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`)

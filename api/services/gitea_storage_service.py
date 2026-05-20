@@ -1,16 +1,18 @@
-"""Gitea storage service for file retrieval - 使用 NoSNI 客户端解决 SSL 问题"""
+"""Gitea storage service for file retrieval."""
 import json
 import os
 import socket
 import ssl
+import time
 from typing import Optional
+from urllib.parse import urlparse
 
 
-class NoSNIHTTPSClient:
-    """不使用 SNI 的 HTTPS 客户端
-    
-    根本原因: UAT FileBay 服务器的 SNI 配置有问题
-    解决方案: 使用原始 socket + SSL，不传递 server_hostname
+class GiteaHTTPSClient:
+    """Small HTTPS client with SNI and NoSNI fallback.
+
+    Some FileBay deployments have broken SNI. Try NoSNI first, then fall back
+    to a standard TLS handshake for newer deployments.
     """
     
     def __init__(self, base_url: str, token: str = "", timeout: int = 30):
@@ -18,15 +20,14 @@ class NoSNIHTTPSClient:
         self.token = token
         self.timeout = timeout
         
-        # 解析 URL
-        from urllib.parse import urlparse
         parsed = urlparse(self.base_url)
         self.host = parsed.hostname
         self.port = parsed.port or 443
         self.scheme = parsed.scheme
+        self.host_header = self.host if self.port == 443 else f"{self.host}:{self.port}"
     
-    def _create_ssl_socket(self) -> ssl.SSLSocket:
-        """创建 SSL socket，不使用 SNI"""
+    def _create_ssl_socket(self, use_sni: bool) -> ssl.SSLSocket:
+        """Create an SSL socket, optionally passing server_hostname for SNI."""
         # 创建 TCP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(self.timeout)
@@ -36,14 +37,24 @@ class NoSNIHTTPSClient:
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
+        try:
+            context.minimum_version = ssl.TLSVersion.TLSv1
+        except AttributeError:
+            pass
         
         try:
             context.set_ciphers('ALL:@SECLEVEL=0')
         except:
             context.set_ciphers('DEFAULT')
         
-        # 包装 socket，关键: 不传递 server_hostname（禁用 SNI）
-        ssl_sock = context.wrap_socket(sock)
+        try:
+            if use_sni:
+                ssl_sock = context.wrap_socket(sock, server_hostname=self.host)
+            else:
+                ssl_sock = context.wrap_socket(sock)
+        except Exception:
+            sock.close()
+            raise
         
         return ssl_sock
     
@@ -55,13 +66,38 @@ class NoSNIHTTPSClient:
         body: Optional[bytes] = None
     ) -> tuple[int, dict[str, str], bytes]:
         """发送 HTTP 请求"""
-        ssl_sock = self._create_ssl_socket()
+        last_error: Exception | None = None
+
+        for attempt in range(3):
+            for use_sni in (False, True):
+                try:
+                    return self._send_request_once(method, path, headers, body, use_sni)
+                except (ssl.SSLError, socket.timeout, OSError) as exc:
+                    last_error = exc
+                    continue
+
+            if attempt < 2:
+                time.sleep(0.25 * (attempt + 1))
+
+        if last_error:
+            raise last_error
+        raise RuntimeError("Failed to send request")
+
+    def _send_request_once(
+        self,
+        method: str,
+        path: str,
+        headers: Optional[dict[str, str]] = None,
+        body: Optional[bytes] = None,
+        use_sni: bool = True,
+    ) -> tuple[int, dict[str, str], bytes]:
+        ssl_sock = self._create_ssl_socket(use_sni)
         
         try:
             # 构建请求头
             request_headers = {
-                "Host": self.host,
-                "User-Agent": "Gitea-NoSNI-Client/1.0",
+                "Host": self.host_header,
+                "User-Agent": "Gitea-Storage-Client/1.0",
                 "Accept": "application/json",
                 "Connection": "close"
             }
@@ -165,7 +201,7 @@ class NoSNIHTTPSClient:
 
 
 class GiteaStorageService:
-    """Service for retrieving files from Gitea - 使用 NoSNI 客户端"""
+    """Service for retrieving files from Gitea."""
 
     def __init__(self):
         """Initialize Gitea storage service."""
@@ -179,8 +215,7 @@ class GiteaStorageService:
         # Token is optional for public repositories
         self.use_auth = bool(self.gitea_token)
         
-        # 创建 NoSNI 客户端
-        self.client = NoSNIHTTPSClient(self.request_base_url, self.gitea_token)
+        self.client = GiteaHTTPSClient(self.request_base_url, self.gitea_token)
 
     def get_file(self, file_path: str) -> bytes:
         """

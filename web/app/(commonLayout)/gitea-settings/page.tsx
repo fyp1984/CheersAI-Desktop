@@ -2,8 +2,6 @@
 
 import {
   RiDownloadLine,
-  RiEyeLine,
-  RiEyeOffLine,
   RiLoader4Line,
   RiSave3Line,
 } from '@remixicon/react'
@@ -13,6 +11,7 @@ import Button from '@/app/components/base/button'
 import Toast from '@/app/components/base/toast'
 import { API_PREFIX } from '@/config'
 import { post } from '@/service/base'
+import { fetchFileBayConfig, getCachedFileBayConfig, setCachedFileBayConfig } from '@/service/filebay-config-cache'
 
 type GiteaConfig = {
   gitea_url: string
@@ -58,7 +57,6 @@ export default function GiteaSettingsPage() {
   })
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [showToken, setShowToken] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [saveFeedback, setSaveFeedback] = useState<SaveFeedback | null>(null)
 
@@ -67,21 +65,22 @@ export default function GiteaSettingsPage() {
   }, [])
 
   async function loadConfig() {
-    setLoading(true)
+    const cachedConfig = getCachedFileBayConfig()
+    if (cachedConfig)
+      setConfig(cachedConfig)
+
+    setLoading(!cachedConfig)
     try {
-      const res = await fetch(`${API_PREFIX}/gitea/config`, {
-        credentials: 'include',
-      })
-      if (!res.ok)
-        throw new Error('Failed to load config')
-      const data = await res.json()
+      const data = await fetchFileBayConfig()
       setConfig(data)
     }
     catch {
-      Toast.notify({
-        type: 'error',
-        message: '加载配置失败',
-      })
+      if (!cachedConfig) {
+        Toast.notify({
+          type: 'error',
+          message: '加载配置失败',
+        })
+      }
     }
     finally {
       setLoading(false)
@@ -188,6 +187,7 @@ export default function GiteaSettingsPage() {
     setSaving(true)
     try {
       const data = await post<{ message?: string }>('/gitea/config', { body: config })
+      setCachedFileBayConfig(config)
       setSaveFeedback({
         type: 'success',
         message: data.message || '配置保存成功',
@@ -224,21 +224,21 @@ export default function GiteaSettingsPage() {
   return (
     <div className="mx-auto max-w-4xl p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Gitea 配置</h1>
-        <p className="mt-2 text-sm text-gray-600">
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Gitea 配置</h1>
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
           配置 Gitea 服务器连接信息，用于文件存储和管理
         </p>
       </div>
 
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#24252b] dark:shadow-black/20">
         <div className="space-y-6">
           {saveFeedback && (
             <div
               role="alert"
               className={
                 saveFeedback.type === 'success'
-                  ? 'rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700'
-                  : 'rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'
+                  ? 'rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300'
+                  : 'rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-400/20 dark:bg-red-500/10 dark:text-red-300'
               }
             >
               {saveFeedback.message}
@@ -246,7 +246,7 @@ export default function GiteaSettingsPage() {
           )}
           {/* Gitea URL */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
               Gitea 服务器地址
             </label>
             <input
@@ -257,16 +257,16 @@ export default function GiteaSettingsPage() {
                 setConfig({ ...config, gitea_url: e.target.value })
               }}
               placeholder="http://localhost:3000"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-[#1b1c21] dark:text-gray-100 dark:placeholder:text-gray-500"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Gitea 服务器的完整 URL（包括端口）
             </p>
           </div>
 
           {/* Repository Owner */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
               仓库所有者
             </label>
             <input
@@ -277,16 +277,16 @@ export default function GiteaSettingsPage() {
                 setConfig({ ...config, gitea_owner: e.target.value })
               }}
               placeholder="cheersai"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-[#1b1c21] dark:text-gray-100 dark:placeholder:text-gray-500"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Gitea 用户名或组织名
             </p>
           </div>
 
           {/* Repository Name */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
               仓库名称
             </label>
             <input
@@ -297,55 +297,40 @@ export default function GiteaSettingsPage() {
                 setConfig({ ...config, gitea_repo: e.target.value })
               }}
               placeholder="file-storage"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-[#1b1c21] dark:text-gray-100 dark:placeholder:text-gray-500"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               用于存储文件的仓库名称
             </p>
           </div>
 
           {/* API Token */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
               API Token
             </label>
-            <div className="relative">
-              <input
-                type={showToken ? 'text' : 'password'}
-                value={config.gitea_token}
-                onChange={(e) => {
-                  setSaveFeedback(null)
-                  setConfig({ ...config, gitea_token: e.target.value })
-                }}
-                placeholder="输入新的 Token 或留空保持不变"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                type="button"
-                onClick={() => setShowToken(!showToken)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
-              >
-                {showToken
-                  ? (
-                      <RiEyeOffLine className="h-5 w-5" />
-                    )
-                  : (
-                      <RiEyeLine className="h-5 w-5" />
-                    )}
-              </button>
-            </div>
-            <p className="mt-1 text-xs text-gray-500">
+            <input
+              type="text"
+              value={config.gitea_token}
+              onChange={(e) => {
+                setSaveFeedback(null)
+                setConfig({ ...config, gitea_token: e.target.value })
+              }}
+              placeholder="输入新的 Token 或留空保持不变"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-[#1b1c21] dark:text-gray-100 dark:placeholder:text-gray-500"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               在 Gitea 设置中生成的 API Token（需要 repo 权限）
             </p>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-3 border-t border-gray-200 pt-4">
+          <div className="flex items-center gap-3 border-t border-gray-200 pt-4 dark:border-white/10">
             <Button
               variant="primary"
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10"
             >
               {saving
                 ? (
@@ -375,7 +360,7 @@ export default function GiteaSettingsPage() {
             <Button
               onClick={loadConfig}
               disabled={loading}
-              className="ml-auto"
+              className="ml-auto dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10"
             >
               重置
             </Button>
@@ -385,11 +370,11 @@ export default function GiteaSettingsPage() {
 
       {/* Help Section */}
       <div className="mt-6 space-y-4">
-        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-          <h3 className="mb-2 text-sm font-medium text-green-900">
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-emerald-400/20 dark:bg-emerald-500/10">
+          <h3 className="mb-2 text-sm font-medium text-green-900 dark:text-emerald-200">
             💻 Desktop App 集成
           </h3>
-          <ul className="space-y-1 text-sm text-green-700">
+          <ul className="space-y-1 text-sm text-green-700 dark:text-emerald-300">
             <li>• 点击"下载配置文件"按钮下载 FileBay 配置</li>
             <li>• 打开 Desktop App，进入"沙箱管理"页面</li>
             <li>• 在 FileBay 配置管理区域，点击"导入配置"按钮</li>

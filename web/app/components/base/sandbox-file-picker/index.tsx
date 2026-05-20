@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { API_PREFIX } from '@/config'
 import { useSandboxSecurity } from '@/context/use-sandbox-security'
+import { fetchFileBayConfig, getCachedFileBayConfig } from '@/service/filebay-config-cache'
 
 type SandboxFile = {
   name: string
@@ -128,27 +129,30 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
   useEffect(() => {
     if (open) {
       const loadGiteaConfig = async () => {
+        const applyConfig = (config: { gitea_owner?: string, gitea_repo?: string, gitea_path?: string }) => {
+          if (config.gitea_owner)
+            setGiteaOwner(config.gitea_owner)
+          if (config.gitea_repo)
+            setGiteaRepo(config.gitea_repo)
+          const defaultPath = config.gitea_path || ''
+          setCurrentPath(defaultPath)
+          loadFiles(defaultPath)
+        }
+
+        const cachedConfig = getCachedFileBayConfig()
+        if (cachedConfig)
+          applyConfig(cachedConfig)
+
         try {
-          const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1] || ''
-          const res = await fetch(`${API_PREFIX}/gitea/config`, {
-            credentials: 'include',
-            headers: { 'X-CSRF-Token': csrfToken },
-          })
-          if (res.ok) {
-            const config = await res.json()
-            if (config.gitea_owner)
-              setGiteaOwner(config.gitea_owner)
-            if (config.gitea_repo)
-              setGiteaRepo(config.gitea_repo)
-            const defaultPath = config.gitea_path || ''
-            setCurrentPath(defaultPath)
-            loadFiles(defaultPath)
-          }
+          const config = await fetchFileBayConfig({ endpoint: 'config' })
+          applyConfig(config)
         }
         catch (err) {
           console.error('Failed to load Gitea config:', err)
-          setCurrentPath('')
-          loadFiles('')
+          if (!cachedConfig) {
+            setCurrentPath('')
+            loadFiles('')
+          }
         }
       }
 
@@ -236,42 +240,42 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
     return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
-      <div className="flex max-h-[70vh] w-[560px] flex-col rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 dark:bg-black/70">
+      <div className="flex max-h-[70vh] w-[560px] flex-col rounded-2xl bg-white shadow-2xl dark:border dark:border-white/10 dark:bg-[#202126] dark:shadow-black/40">
+        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-white/10">
           <div className="flex items-center gap-2">
-            <RiShieldCheckLine className="h-5 w-5 text-blue-600" />
-            <h3 className="text-base font-semibold text-gray-900">FileBay 文件选择</h3>
+            <RiShieldCheckLine className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">FileBay 文件选择</h3>
           </div>
-          <button onClick={handleClose} className="rounded-lg p-1 hover:bg-gray-100">
-            <RiCloseLine className="h-5 w-5 text-gray-400" />
+          <button onClick={handleClose} className="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-white/10">
+            <RiCloseLine className="h-5 w-5 text-gray-400 dark:text-gray-500" />
           </button>
         </div>
 
-        <div className="flex items-center gap-2 border-b border-blue-100 bg-blue-50 px-5 py-2">
-          <RiFolder3Line className="h-4 w-4 shrink-0 text-blue-500" />
-          <span className="truncate font-mono text-xs text-blue-700">
+        <div className="flex items-center gap-2 border-b border-blue-100 bg-blue-50 px-5 py-2 dark:border-blue-400/20 dark:bg-blue-500/10">
+          <RiFolder3Line className="h-4 w-4 shrink-0 text-blue-500 dark:text-blue-300" />
+          <span className="truncate font-mono text-xs text-blue-700 dark:text-blue-200">
             {currentPath ? `${giteaOwner}/${giteaRepo}/${currentPath}` : `${giteaOwner}/${giteaRepo}`}
           </span>
           {currentPath && (
-            <button onClick={handleBackClick} className="shrink-0 rounded p-1 hover:bg-blue-100" title="返回上级">
-              <span className="text-xs text-blue-600">↑ 返回</span>
+            <button onClick={handleBackClick} className="shrink-0 rounded p-1 hover:bg-blue-100 dark:hover:bg-blue-400/15" title="返回上级">
+              <span className="text-xs text-blue-600 dark:text-blue-300">↑ 返回</span>
             </button>
           )}
-          <button onClick={() => loadFiles(currentPath)} className="ml-auto shrink-0 rounded p-1 hover:bg-blue-100">
-            <RiRefreshLine className="h-3.5 w-3.5 text-blue-500" />
+          <button onClick={() => loadFiles(currentPath)} className="ml-auto shrink-0 rounded p-1 hover:bg-blue-100 dark:hover:bg-blue-400/15">
+            <RiRefreshLine className="h-3.5 w-3.5 text-blue-500 dark:text-blue-300" />
           </button>
         </div>
 
         <div className="min-h-[200px] flex-1 overflow-y-auto px-3 py-2">
           {loading && (
-            <div className="flex items-center justify-center py-12 text-sm text-gray-400">加载中...</div>
+            <div className="flex items-center justify-center py-12 text-sm text-gray-400 dark:text-gray-500">加载中...</div>
           )}
           {error && (
-            <div className="flex items-center justify-center py-12 text-sm text-red-500">{error}</div>
+            <div className="flex items-center justify-center py-12 text-sm text-red-500 dark:text-red-300">{error}</div>
           )}
           {!loading && !error && files.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-500">
               <RiFile3Line className="mb-2 h-10 w-10" />
               <span className="text-sm">FileBay 仓库中没有文件</span>
               <span className="mt-1 text-xs">请先在 FileBay 仓库中上传文件</span>
@@ -283,33 +287,35 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
               onClick={() => (f.type === 'dir' ? handleFolderClick(f.path || f.name) : toggleSelect(f.name))}
               className={`mb-0.5 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${
                 f.type === 'dir'
-                  ? 'border border-transparent hover:bg-blue-50'
+                  ? 'border border-transparent hover:bg-blue-50 dark:hover:bg-blue-500/10'
                   : selected.has(f.name)
-                    ? 'border border-blue-200 bg-blue-50'
-                    : 'border border-transparent hover:bg-gray-50'
+                    ? 'border border-blue-200 bg-blue-50 dark:border-blue-400/40 dark:bg-blue-500/15'
+                    : 'border border-transparent hover:bg-gray-50 dark:hover:bg-white/5'
               }`}
             >
               {f.type === 'dir'
                 ? (
-                    <RiFolder3Line className="h-4 w-4 shrink-0 text-yellow-500" />
+                    <RiFolder3Line className="h-4 w-4 shrink-0 text-yellow-500 dark:text-yellow-300" />
                   )
                 : (
-                    <RiFile3Line className={`h-4 w-4 shrink-0 ${selected.has(f.name) ? 'text-blue-600' : 'text-gray-400'}`} />
+                    <RiFile3Line className={`h-4 w-4 shrink-0 ${selected.has(f.name) ? 'text-blue-600 dark:text-blue-300' : 'text-gray-400 dark:text-gray-500'}`} />
                   )}
               <div className="min-w-0 flex-1">
                 <div className={`truncate text-sm ${
                   f.type === 'dir'
-                    ? 'font-medium text-gray-700'
-                    : selected.has(f.name) ? 'font-medium text-blue-700' : 'text-gray-700'
+                    ? 'font-medium text-gray-700 dark:text-gray-200'
+                    : selected.has(f.name) ? 'font-medium text-blue-700 dark:text-blue-200' : 'text-gray-700 dark:text-gray-300'
                 }`}
                 >
                   {f.name}
                   {f.type === 'dir' ? '/' : ''}
                 </div>
-                <div className="text-xs text-gray-400">{formatSize(f.size)}</div>
+                {f.type !== 'dir' && (
+                  <div className="text-xs text-gray-400 dark:text-gray-500">{formatSize(f.size)}</div>
+                )}
               </div>
               {selected.has(f.name) && (
-                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 shadow-sm dark:bg-[#3b82f6] dark:shadow-[0_0_0_3px_rgba(59,130,246,0.18)]">
                   <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
@@ -319,16 +325,16 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
           ))}
         </div>
 
-        <div className="flex items-center justify-between rounded-b-2xl border-t border-gray-100 bg-gray-50 px-5 py-3">
-          <p className="text-xs text-gray-500">从 FileBay 仓库选择文件</p>
+        <div className="flex items-center justify-between rounded-b-2xl border-t border-gray-100 bg-gray-50 px-5 py-3 dark:border-white/10 dark:bg-[#18191e]">
+          <p className="text-xs text-gray-500 dark:text-gray-400">从 FileBay 仓库选择文件</p>
           <div className="flex items-center gap-2">
-            <button onClick={handleClose} className="rounded-lg px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-200">
+            <button onClick={handleClose} className="rounded-lg px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-white/10">
               取消
             </button>
             <button
               onClick={handleConfirm}
               disabled={selected.size === 0}
-              className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none dark:bg-[#3b82f6] dark:text-white dark:shadow-[0_8px_18px_rgba(37,99,235,0.28)] dark:hover:bg-[#60a5fa] dark:disabled:bg-white/10 dark:disabled:text-gray-500 dark:disabled:shadow-none"
             >
               确认选择
             </button>

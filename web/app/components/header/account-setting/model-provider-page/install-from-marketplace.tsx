@@ -22,10 +22,10 @@ const InstallFromMarketplace = ({
   return (
     <div className="mb-2">
       <Divider className="!mt-4 h-px" />
-      <div className="mt-4 rounded-xl border border-components-panel-border bg-components-panel-bg p-4">
+      <div className="mt-4 rounded-xl border border-components-panel-border bg-components-panel-bg p-4 dark:border-white/10 dark:bg-[#1f2026]">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-2">
-            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#eff6ff] text-[#2563eb]">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#eff6ff] text-[#2563eb] dark:bg-blue-500/15 dark:text-blue-300">
               <RiInformation2Fill className="h-4 w-4" />
             </div>
             <div>

@@ -14,7 +14,9 @@ import { useDefaultModel, useModelList } from '@/app/components/header/account-s
 import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '@/config'
 import { useAppContext } from '@/context/app-context'
 import useDocumentTitle from '@/hooks/use-document-title'
+import useTheme from '@/hooks/use-theme'
 import { sendSimpleChatMessage } from '@/service/chat'
+import { Theme } from '@/types/app'
 import { cn } from '@/utils/classnames'
 import { parsePluginErrorMessage } from '@/utils/error-parser'
 import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
@@ -217,6 +219,8 @@ function getInitialConversations(storageKey: string): Conversation[] {
 
 const ChatPage = () => {
   useDocumentTitle('对话')
+  const { theme } = useTheme()
+  const isDarkTheme = theme === Theme.dark
   const LEGACY_STORAGE_KEY = 'cheersai_conversations'
   const STORAGE_KEY_PREFIX = 'cheersai_conversations'
   const SIDEBAR_STORAGE_KEY = 'cheersai_sidebar_collapsed'
@@ -277,6 +281,7 @@ const ChatPage = () => {
   const [renameConversationId, setRenameConversationId] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState('')
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
+  const voicePermissionGrantedRef = useRef(false)
   const inputValueRef = useRef('')
   const chatAbortControllerRef = useRef<AbortController | null>(null)
   const [showSensitiveConfirm, setShowSensitiveConfirm] = useState(false)
@@ -464,6 +469,28 @@ const ChatPage = () => {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  const ensureMicrophonePermission = useCallback(async () => {
+    if (voicePermissionGrantedRef.current)
+      return true
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      Toast.notify({ type: 'error', message: '当前环境无法申请麦克风权限，请检查客户端或系统权限设置。' })
+      return false
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      stream.getTracks().forEach(track => track.stop())
+      voicePermissionGrantedRef.current = true
+      return true
+    }
+    catch {
+      voicePermissionGrantedRef.current = false
+      Toast.notify({ type: 'error', message: '麦克风未授权，请在系统设置中允许 CheersAI 访问麦克风。' })
+      return false
+    }
+  }, [])
 
   const currentConversation = useMemo(
     () => conversations.find(conversation => conversation.id === currentConversationId) || null,
@@ -678,7 +705,7 @@ const ChatPage = () => {
     setSidebarCollapsed(prev => !prev)
   }
 
-  const handleVoiceInput = () => {
+  const handleVoiceInput = async () => {
     if (!isVoiceSupported || !recognitionRef.current) {
       Toast.notify({ type: 'error', message: '当前浏览器不支持语音输入。' })
       return
@@ -688,6 +715,10 @@ const ChatPage = () => {
       recognitionRef.current.stop()
       return
     }
+
+    const hasPermission = await ensureMicrophonePermission()
+    if (!hasPermission)
+      return
 
     try {
       recognitionRef.current.start()
@@ -813,7 +844,10 @@ const ChatPage = () => {
         }),
       })
 
-      const data = await response.json()
+      const data = await response.json().catch(async () => {
+        const message = await response.text().catch(() => '')
+        return { success: false, message: message || `同步失败 (${response.status})` }
+      })
 
       if (response.ok && data.success) {
         Toast.notify({ type: 'success', message: `已同步到 FileBay: ${fileName}` })
@@ -1250,13 +1284,23 @@ const ChatPage = () => {
   }
 
   const renderMessageContent = (message: Message) => {
+    const assistantTextClass = isDarkTheme ? 'text-gray-100' : 'text-[#111827]'
+
     if (message.type !== 'assistant')
       return <div className="whitespace-pre-wrap">{message.content}</div>
 
     if (message.id === streamingMessageId)
-      return <div className="whitespace-pre-wrap">{message.content}</div>
+      return <div className={cn('whitespace-pre-wrap', assistantTextClass)}>{message.content}</div>
 
-    return <Markdown content={message.content} />
+    return (
+      <Markdown
+        content={message.content}
+        className={cn(
+          '!bg-transparent',
+          isDarkTheme ? '!text-gray-100' : '!text-[#111827]',
+        )}
+      />
+    )
   }
 
   const promptSuggestions = [
@@ -1273,20 +1317,20 @@ const ChatPage = () => {
     return <Loading type="app" />
 
   return (
-    <div className="flex h-full bg-[#f9fafb] font-sans text-[#111827]">
+    <div className="flex h-full bg-[#f9fafb] font-sans text-[#111827] dark:bg-[#111217] dark:text-gray-100">
       <div className={cn(
-        'flex flex-col border-r border-gray-200 bg-[linear-gradient(180deg,#e5e7eb_0%,#d1d5db_100%)] text-gray-800 transition-all duration-300 ease-in-out',
+        'flex flex-col border-r border-gray-200 bg-[linear-gradient(180deg,#e5e7eb_0%,#d1d5db_100%)] text-gray-800 transition-all duration-300 ease-in-out dark:border-white/10 dark:bg-[linear-gradient(180deg,#202126_0%,#191a1f_100%)] dark:text-gray-200',
         sidebarCollapsed ? 'w-0 overflow-hidden border-r-0' : 'w-64',
       )}
       >
-        <div className="flex min-h-16 items-center justify-between border-b border-gray-300 px-4 py-4">
+        <div className="flex min-h-16 items-center justify-between border-b border-gray-300 px-4 py-4 dark:border-white/10">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#3b82f6_0%,#2563eb_100%)] shadow-md">
               <span className="text-sm font-semibold text-white">AI</span>
             </div>
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-gray-900">CheersAI</div>
-              <div className="truncate text-xs text-gray-600">安全对话</div>
+              <div className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">CheersAI</div>
+              <div className="truncate text-xs text-gray-600 dark:text-gray-400">安全对话</div>
             </div>
           </div>
           <button
@@ -1298,33 +1342,33 @@ const ChatPage = () => {
           </button>
         </div>
 
-        <div className="border-b border-gray-300 px-4 py-3">
+        <div className="border-b border-gray-300 px-4 py-3 dark:border-white/10">
           <div className="relative">
-            <RiSearchLine className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+            <RiSearchLine className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
             <input
               type="text"
               placeholder="搜索对话..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-10 text-sm text-[#111827] placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#3b82f6]"
+              className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-10 text-sm text-[#111827] placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#3b82f6] dark:border-white/10 dark:bg-[#26272d] dark:text-gray-100 dark:placeholder:text-gray-500"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
                 title="清空搜索"
               >
                 <RiCloseLine className="h-4 w-4" />
               </button>
             )}
           </div>
-          <p className="mt-2 text-xs text-gray-600">{searchResultText}</p>
+          <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">{searchResultText}</p>
         </div>
 
         <div className="flex-1 overflow-y-auto py-2">
           {filteredConversations.length === 0
             ? (
-                <div className="px-4 py-10 text-center text-sm text-gray-600">
+                <div className="px-4 py-10 text-center text-sm text-gray-600 dark:text-gray-400">
                   {searchQuery ? '未找到匹配的对话' : '暂无对话记录'}
                 </div>
               )
@@ -1336,19 +1380,19 @@ const ChatPage = () => {
                     className={cn(
                       'group relative mx-2 my-1 cursor-pointer rounded-lg border border-transparent px-3 py-3 transition-all',
                       currentConversationId === conversation.id
-                        ? 'border-[#3b82f6] bg-white/10 shadow-sm'
-                        : 'hover:bg-white/5',
+                        ? 'border-[#3b82f6] bg-white/60 shadow-sm dark:bg-white/10'
+                        : 'hover:bg-white/40 dark:hover:bg-white/5',
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 overflow-hidden">
-                        <h3 className="mb-1 truncate text-sm font-medium text-gray-900">
+                        <h3 className="mb-1 truncate text-sm font-medium text-gray-900 dark:text-gray-100">
                           {conversation.title}
                         </h3>
-                        <p className="mb-1 truncate text-xs text-gray-600">
+                        <p className="mb-1 truncate text-xs text-gray-600 dark:text-gray-400">
                           {conversation.lastMessage || '暂无消息'}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-gray-500">
                           {formatTimestamp(conversation.timestamp)}
                         </p>
                       </div>
@@ -1357,7 +1401,7 @@ const ChatPage = () => {
                           e.stopPropagation()
                           handleDeleteConversation(conversation.id)
                         }}
-                        className="flex h-6 w-6 items-center justify-center rounded text-gray-600 opacity-0 transition-all hover:bg-gray-300 hover:text-gray-900 group-hover:opacity-100"
+                        className="flex h-6 w-6 items-center justify-center rounded text-gray-600 opacity-0 transition-all hover:bg-gray-300 hover:text-gray-900 group-hover:opacity-100 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-gray-100"
                         title="删除对话"
                       >
                         <RiDeleteBinLine className="h-3.5 w-3.5" />
@@ -1370,70 +1414,70 @@ const ChatPage = () => {
       </div>
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex min-h-16 items-center justify-between border-b border-[#e5e7eb] bg-white px-8 py-4">
+        <div className="flex min-h-16 items-center justify-between border-b border-[#e5e7eb] bg-white px-8 py-4 dark:border-white/10 dark:bg-[#1f2025]">
           <div className="flex items-center gap-3">
             <button
               onClick={toggleSidebar}
-              className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-[#f3f4f6] hover:text-gray-700"
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-[#f3f4f6] hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-gray-100"
               title={sidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'}
             >
               {sidebarCollapsed ? <RiArrowRightSLine className="h-4 w-4" /> : <RiArrowLeftSLine className="h-4 w-4" />}
             </button>
             <div>
-              <h1 className="text-lg font-semibold text-[#111827]">
+              <h1 className="text-lg font-semibold text-[#111827] dark:text-gray-100">
                 {currentConversation?.title || '新建对话'}
               </h1>
-              <p className="mt-1 text-xs text-[#4b5563]">已启用安全对话与 FileBay 文件接入</p>
+              <p className="mt-1 text-xs text-[#4b5563] dark:text-gray-400">已启用安全对话与 FileBay 文件接入</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden rounded-full bg-[#d1fae5] px-3 py-1 text-xs font-medium text-[#065f46] md:block">
+            <div className="hidden rounded-full bg-[#d1fae5] px-3 py-1 text-xs font-medium text-[#065f46] md:block dark:bg-emerald-500/15 dark:text-emerald-300">
               隐私保护已开启
             </div>
             <div className="relative" ref={modelSelectorRef}>
               <button
                 onClick={() => setShowModelSelector(!showModelSelector)}
-                className="flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-3 py-2 text-sm transition-colors hover:bg-[#f3f4f6]"
+                className="flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-3 py-2 text-sm transition-colors hover:bg-[#f3f4f6] dark:border-white/10 dark:bg-[#27282e] dark:hover:bg-white/10"
               >
-                <span className="text-gray-700">
+                <span className="text-gray-700 dark:text-gray-200">
                   {resolvedSelectedModel?.label || '选择模型'}
                 </span>
                 <RiArrowDownSLine className={cn(
-                  'h-4 w-4 text-gray-500 transition-transform',
+                  'h-4 w-4 text-gray-500 transition-transform dark:text-gray-400',
                   showModelSelector && 'rotate-180',
                 )}
                 />
               </button>
 
               {showModelSelector && (
-                <div className="absolute right-0 top-full z-50 mt-1 max-h-96 w-80 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-                  <div className="border-b border-gray-100 p-3">
-                    <h3 className="text-sm font-medium text-gray-900">选择模型</h3>
+                <div className="absolute right-0 top-full z-50 mt-1 max-h-96 w-80 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-white/10 dark:bg-[#24252b]">
+                  <div className="border-b border-gray-100 p-3 dark:border-white/10">
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">选择模型</h3>
                   </div>
                   <div className="py-2">
                     {isModelListLoading
                       ? (
-                          <div className="px-3 py-4 text-center text-sm text-gray-500">
+                          <div className="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                             加载模型中...
                           </div>
                         )
                       : !modelListData || modelListData.length === 0
                           ? (
                               <div className="px-3 py-4">
-                                <div className="mb-3 text-sm text-gray-500">
+                                <div className="mb-3 text-sm text-gray-500 dark:text-gray-400">
                                   使用本地Ollama模型
                                 </div>
                                 <div className="space-y-1">
                                   <button
                                     onClick={() => handleSelectModel('ollama', 'qwen2.5:1.5b', 'Qwen2.5 1.5B (Ollama)')}
                                     className={cn(
-                                      'flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50',
-                                      resolvedSelectedModel?.model === 'qwen2.5:1.5b' && 'bg-blue-50 text-blue-700',
+                                      'flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-white/10',
+                                      resolvedSelectedModel?.model === 'qwen2.5:1.5b' && 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
                                     )}
                                   >
                                     <div className="flex flex-col">
                                       <span className="font-medium">Qwen2.5 1.5B</span>
-                                      <span className="text-xs text-gray-500">本地Ollama模型 - 轻量级</span>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">本地Ollama模型 - 轻量级</span>
                                     </div>
                                     {resolvedSelectedModel?.model === 'qwen2.5:1.5b' && (
                                       <RiCheckLine className="h-4 w-4 text-blue-600" />
@@ -1442,21 +1486,21 @@ const ChatPage = () => {
                                   <button
                                     onClick={() => handleSelectModel('ollama', 'qwen3-coder:30b', 'Qwen3 Coder 30B (Ollama)')}
                                     className={cn(
-                                      'flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50',
-                                      resolvedSelectedModel?.model === 'qwen3-coder:30b' && 'bg-blue-50 text-blue-700',
+                                      'flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-white/10',
+                                      resolvedSelectedModel?.model === 'qwen3-coder:30b' && 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
                                     )}
                                   >
                                     <div className="flex flex-col">
                                       <span className="font-medium">Qwen3 Coder 30B</span>
-                                      <span className="text-xs text-gray-500">本地Ollama模型 - 代码专用</span>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">本地Ollama模型 - 代码专用</span>
                                     </div>
                                     {resolvedSelectedModel?.model === 'qwen3-coder:30b' && (
                                       <RiCheckLine className="h-4 w-4 text-blue-600" />
                                     )}
                                   </button>
                                 </div>
-                                <div className="mt-3 border-t border-gray-100 pt-3">
-                                  <div className="mb-2 text-xs text-gray-400">
+                                <div className="mt-3 border-t border-gray-100 pt-3 dark:border-white/10">
+                                  <div className="mb-2 text-xs text-gray-400 dark:text-gray-500">
                                     {canManageModels
                                       ? '想要更多模型？'
                                       : '模型配置由工作区统一管理'}
@@ -1472,7 +1516,7 @@ const ChatPage = () => {
                                     </button>
                                   )}
                                   {!canManageModels && (
-                                    <div className="text-xs text-gray-500">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
                                       如需更多模型，请联系工作区管理员统一配置。
                                     </div>
                                   )}
@@ -1491,7 +1535,7 @@ const ChatPage = () => {
 
                                 return (
                                   <div key={provider.provider} className="mb-2">
-                                    <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-gray-500">
+                                    <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                       {provider.label?.zh_Hans || provider.label?.en_US || provider.provider}
                                     </div>
                                     {activeModels.map((model) => {
@@ -1503,13 +1547,13 @@ const ChatPage = () => {
                                           key={`${provider.provider}-${model.model}`}
                                           onClick={() => handleSelectModel(provider.provider, model.model, modelLabel)}
                                           className={cn(
-                                            'flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50',
-                                            isSelected && 'bg-blue-50 text-blue-700',
+                                            'flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-white/10',
+                                            isSelected && 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
                                           )}
                                         >
                                           <div className="flex flex-col">
                                             <span className="font-medium">{modelLabel}</span>
-                                            <span className="text-xs text-gray-500">{model.model}</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">{model.model}</span>
                                           </div>
                                           {isSelected && (
                                             <RiCheckLine className="h-4 w-4 text-blue-600" />
@@ -1529,13 +1573,13 @@ const ChatPage = () => {
             <div className="relative" ref={actionsMenuRef}>
               <button
                 onClick={() => setShowConversationActions(prev => !prev)}
-                className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e5e7eb] text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600"
+                className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e5e7eb] text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600 dark:border-white/10 dark:hover:bg-white/10 dark:hover:text-gray-100"
                 title="会话工具"
               >
                 <RiMoreLine className="h-4 w-4" />
               </button>
               {showConversationActions && (
-                <div className="absolute right-0 top-full z-50 mt-2 w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+                <div className="absolute right-0 top-full z-50 mt-2 w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-white/10 dark:bg-[#24252b]">
                   <button
                     onClick={() => {
                       if (currentConversationId)
@@ -1543,14 +1587,14 @@ const ChatPage = () => {
                       setShowConversationActions(false)
                     }}
                     disabled={!currentConversationId}
-                    className="w-full px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-300"
+                    className="w-full px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-300 dark:text-gray-200 dark:hover:bg-white/10 dark:disabled:text-gray-600"
                   >
                     重命名对话
                   </button>
                   <button
                     onClick={handleExportConversation}
                     disabled={!currentConversationId}
-                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-300"
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-300 dark:text-gray-200 dark:hover:bg-white/10 dark:disabled:text-gray-600"
                   >
                     <span>导出 Markdown</span>
                     <RiDownloadLine className="h-4 w-4" />
@@ -1558,7 +1602,7 @@ const ChatPage = () => {
                   <button
                     onClick={handleClearCurrentConversation}
                     disabled={!currentConversationId}
-                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:text-gray-300"
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:text-gray-300 dark:text-red-300 dark:hover:bg-red-500/10 dark:disabled:text-gray-600"
                   >
                     <span>清空当前对话</span>
                     <RiDeleteBinLine className="h-4 w-4" />
@@ -1569,19 +1613,19 @@ const ChatPage = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-[#f9fafb]">
+        <div className="flex-1 overflow-y-auto bg-[#f9fafb] dark:bg-[#15161b]">
           <div className="mx-auto max-w-5xl px-8 py-8">
             {messages.length === 0 && !currentConversationId
               ? (
                   <div className="flex h-full items-center justify-center">
-                    <div className="w-full max-w-3xl rounded-2xl border border-[#e5e7eb] bg-white p-10 text-center shadow-sm">
+                    <div className="w-full max-w-3xl rounded-2xl border border-[#e5e7eb] bg-white p-10 text-center shadow-sm dark:border-white/10 dark:bg-[#202126] dark:shadow-black/20">
                       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#3b82f6_0%,#2563eb_100%)] shadow-md">
                         <span className="text-xl font-bold text-white">AI</span>
                       </div>
-                      <h3 className="mb-3 text-2xl font-bold text-[#111827]">
+                      <h3 className="mb-3 text-2xl font-bold text-[#111827] dark:text-gray-100">
                         欢迎使用 CheersAI
                       </h3>
-                      <p className="mx-auto mb-6 max-w-2xl text-sm leading-6 text-[#4b5563]">
+                      <p className="mx-auto mb-6 max-w-2xl text-sm leading-6 text-[#4b5563] dark:text-gray-400">
                         我是您的 AI 助手，可协助完成数据分析、代码编写、问题解答与文件协同。
                         当前页面支持安全输入、语音录入与 FileBay 沙箱文件选择。
                       </p>
@@ -1594,7 +1638,7 @@ const ChatPage = () => {
                               setIsAutoFilled(true)
                               setAutoFilledText(text)
                             }}
-                            className="rounded-full bg-[#f3f4f6] px-4 py-2 text-xs font-medium text-[#4b5563] transition-colors hover:bg-[#e5e7eb]"
+                            className="dark:hover:bg-white/12 rounded-full bg-[#f3f4f6] px-4 py-2 text-xs font-medium text-[#4b5563] transition-colors hover:bg-[#e5e7eb] dark:bg-white/8 dark:text-gray-300"
                           >
                             {text.replace('请帮我', '').replace('我有', '').replace('需要', '')}
                           </button>
@@ -1623,7 +1667,9 @@ const ChatPage = () => {
                             'group max-w-[768px] rounded-2xl px-4 py-3 shadow-sm',
                             message.type === 'user'
                               ? 'bg-[#3b82f6] text-white'
-                              : 'border border-[#e5e7eb] bg-white text-[#111827]',
+                              : isDarkTheme
+                                ? 'border border-white/10 bg-[#24252b] text-gray-100 shadow-black/20'
+                                : 'border border-[#e5e7eb] bg-white text-[#111827]',
                           )}
                         >
                           {message.files && message.files.length > 0 && (
@@ -1635,14 +1681,18 @@ const ChatPage = () => {
                                     'flex items-center gap-2 rounded border p-2',
                                     message.type === 'user'
                                       ? 'border-blue-200 bg-blue-50'
-                                      : 'border-gray-200 bg-white',
+                                      : isDarkTheme
+                                        ? 'border-white/10 bg-white/5'
+                                        : 'border-gray-200 bg-white',
                                   )}
                                 >
                                   <div className={cn(
                                     'flex h-6 w-6 items-center justify-center rounded text-xs font-medium',
                                     message.type === 'user'
                                       ? 'bg-blue-400 text-white'
-                                      : 'bg-blue-100 text-blue-600',
+                                      : isDarkTheme
+                                        ? 'bg-blue-500/15 text-blue-300'
+                                        : 'bg-blue-100 text-blue-600',
                                   )}
                                   >
                                     {file.name.split('.').pop()?.toUpperCase().slice(0, 2)}
@@ -1650,14 +1700,14 @@ const ChatPage = () => {
                                   <div className="min-w-0 flex-1">
                                     <div className={cn(
                                       'truncate text-xs font-medium',
-                                      message.type === 'user' ? 'text-gray-800' : 'text-[#111827]',
+                                      message.type === 'user' ? 'text-gray-800' : isDarkTheme ? 'text-gray-100' : 'text-[#111827]',
                                     )}
                                     >
                                       {file.name}
                                     </div>
                                     <div className={cn(
                                       'text-xs',
-                                      message.type === 'user' ? 'text-gray-600' : 'text-[#4b5563]',
+                                      message.type === 'user' ? 'text-gray-600' : isDarkTheme ? 'text-gray-400' : 'text-[#4b5563]',
                                     )}
                                     >
                                       {formatFileSize(file.size)}
@@ -1678,7 +1728,7 @@ const ChatPage = () => {
                             <div
                               className={cn(
                                 'text-xs',
-                                message.type === 'user' ? 'text-blue-100' : 'text-gray-600',
+                                message.type === 'user' ? 'text-blue-100' : isDarkTheme ? 'text-gray-400' : 'text-gray-600',
                               )}
                             >
                               {message.timestamp.toLocaleTimeString('zh-CN', {
@@ -1691,21 +1741,21 @@ const ChatPage = () => {
                               <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                                 <button
                                   onClick={() => handleCopyMessage(message.content)}
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600"
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-100"
                                   title="复制"
                                 >
                                   <RiFileCopyLine className="h-3.5 w-3.5" />
                                 </button>
                                 <button
                                   onClick={() => handleDownloadMessage(message.content, message.id)}
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600"
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-100"
                                   title="下载"
                                 >
                                   <RiDownloadLine className="h-3.5 w-3.5" />
                                 </button>
                                 <button
                                   onClick={() => handleSyncToFileBay(message.content, message.id)}
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600"
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-100"
                                   title="同步到 FileBay"
                                 >
                                   <RiDatabase2Line className="h-3.5 w-3.5" />
@@ -1716,7 +1766,7 @@ const ChatPage = () => {
                                     if (messageIndex > 0)
                                       handleRegenerateMessage(messageIndex)
                                   }}
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600"
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-100"
                                   title="重新生成"
                                 >
                                   <RiRefreshLine className="h-3.5 w-3.5" />
@@ -1726,7 +1776,7 @@ const ChatPage = () => {
                           </div>
                         </div>
                         {message.type === 'user' && (
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#1f2937] shadow-sm">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#1f2937] shadow-sm dark:bg-[#111827]">
                             <span className="text-sm font-semibold text-white">我</span>
                           </div>
                         )}
@@ -1737,14 +1787,21 @@ const ChatPage = () => {
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#3b82f6_0%,#2563eb_100%)] shadow-sm">
                           <span className="text-sm font-semibold text-white">AI</span>
                         </div>
-                        <div className="max-w-[768px] rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 shadow-sm">
+                        <div
+                          className={cn(
+                            'max-w-[768px] rounded-2xl border px-4 py-3 shadow-sm',
+                            isDarkTheme
+                              ? 'border-white/10 bg-[#24252b] shadow-black/20'
+                              : 'border-[#e5e7eb] bg-white',
+                          )}
+                        >
                           <div className="flex items-center gap-2">
                             <div className="flex space-x-1">
                               <div className="h-2 w-2 animate-bounce rounded-full bg-[#3b82f6] [animation-delay:-0.3s]"></div>
                               <div className="h-2 w-2 animate-bounce rounded-full bg-[#3b82f6] [animation-delay:-0.15s]"></div>
                               <div className="h-2 w-2 animate-bounce rounded-full bg-[#3b82f6]"></div>
                             </div>
-                            <span className="text-sm text-[#4b5563]">正在思考...</span>
+                            <span className={cn('text-sm', isDarkTheme ? 'text-gray-400' : 'text-[#4b5563]')}>正在思考...</span>
                           </div>
                         </div>
                       </div>
@@ -1755,14 +1812,14 @@ const ChatPage = () => {
           </div>
         </div>
 
-        <div className="border-t border-[#e5e7eb] bg-white px-8 py-5">
+        <div className="border-t border-[#e5e7eb] bg-white px-8 py-5 dark:border-white/10 dark:bg-[#1b1c21]">
           <div className="mx-auto max-w-5xl">
             {uploadedFiles.length > 0 && (
-              <div className="mb-3 rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-3">
-                <div className="mb-2 text-sm font-medium text-[#4b5563]">{`已选择文件（${uploadedFiles.length}）`}</div>
+              <div className="mb-3 rounded-xl border border-[#e5e7eb] bg-[#f9fafb] p-3 dark:border-white/10 dark:bg-[#24252b]">
+                <div className="mb-2 text-sm font-medium text-[#4b5563] dark:text-gray-300">{`已选择文件（${uploadedFiles.length}）`}</div>
                 <div className="space-y-2">
                   {uploadedFiles.map(file => (
-                    <div key={file.id} className="flex items-center justify-between rounded-lg border border-[#e5e7eb] bg-white p-2">
+                    <div key={file.id} className="flex items-center justify-between rounded-lg border border-[#e5e7eb] bg-white p-2 dark:border-white/10 dark:bg-white/5">
                       <div className="flex items-center gap-2">
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#dbeafe]">
                           <span className="text-xs font-medium text-blue-600">
@@ -1770,8 +1827,8 @@ const ChatPage = () => {
                           </span>
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{file.name}</div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{file.name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
                             {formatFileSize(file.size)}
                             <span className="ml-2 rounded-full bg-[#d1fae5] px-2 py-0.5 text-xs text-[#065f46]">
                               沙箱文件
@@ -1781,7 +1838,7 @@ const ChatPage = () => {
                       </div>
                       <button
                         onClick={() => handleRemoveFile(file.id)}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#fee2e2] hover:text-[#ef4444]"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#fee2e2] hover:text-[#ef4444] dark:hover:bg-red-500/10 dark:hover:text-red-300"
                         title="移除文件"
                       >
                         <RiCloseLine className="h-4 w-4" />
@@ -1792,21 +1849,21 @@ const ChatPage = () => {
               </div>
             )}
 
-            <div className="mb-4 rounded-xl border border-[#bfdbfe] bg-[#eff6ff] p-4">
-              <p className="text-sm leading-6 text-[#1e40af]">
+            <div className="mb-4 rounded-xl border border-[#bfdbfe] bg-[#eff6ff] p-4 dark:border-blue-400/20 dark:bg-blue-500/10">
+              <p className="text-sm leading-6 text-[#1e40af] dark:text-blue-200">
                 <span className="font-medium">安全模式：</span>
                 仅可选择沙箱内的脱敏文件。系统将自动记录并脱敏输入内容中的个人身份信息。
               </p>
             </div>
 
-            <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-sm transition-all duration-200 focus-within:border-[#3b82f6] focus-within:ring-2 focus-within:ring-[rgba(59,130,246,0.12)]">
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-sm transition-all duration-200 focus-within:border-[#3b82f6] focus-within:ring-2 focus-within:ring-[rgba(59,130,246,0.12)] dark:border-white/10 dark:bg-[#24252b] dark:shadow-black/20">
               {/* 收缩/展开控制栏 */}
-              <div className="flex items-center justify-between border-b border-[#e5e7eb] px-4 py-2.5">
+              <div className="flex items-center justify-between border-b border-[#e5e7eb] px-4 py-2.5 dark:border-white/10">
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
                     onClick={() => setIsInputCollapsed(!isInputCollapsed)}
-                    className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-[#f3f4f6] hover:text-gray-700"
+                    className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-[#f3f4f6] hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-gray-100"
                     title={isInputCollapsed ? '展开输入框' : '收缩输入框'}
                   >
                     <svg
@@ -1822,7 +1879,7 @@ const ChatPage = () => {
                   </button>
 
                   {/* 联网搜索开关 */}
-                  <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-[#f3f4f6]">
+                  <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-[#f3f4f6] dark:text-gray-400 dark:hover:bg-white/10">
                     <input
                       type="checkbox"
                       checked={enableWebSearch}
@@ -1830,7 +1887,7 @@ const ChatPage = () => {
                         const newValue = e.target.checked
                         handleToggleWebSearch(newValue)
                       }}
-                      className="h-3.5 w-3.5 rounded border-gray-300 text-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6]"
+                      className="h-3.5 w-3.5 rounded border-gray-300 text-[#3b82f6] focus:ring-2 focus:ring-[#3b82f6] dark:border-white/20 dark:bg-[#1b1c21]"
                     />
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
@@ -1840,7 +1897,7 @@ const ChatPage = () => {
                 </div>
 
                 {enableWebSearch && (
-                  <div className="flex items-center gap-1 rounded-md bg-[#eff6ff] px-2 py-1 text-xs text-[#2563eb]">
+                  <div className="flex items-center gap-1 rounded-md bg-[#eff6ff] px-2 py-1 text-xs text-[#2563eb] dark:bg-blue-500/15 dark:text-blue-300">
                     <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                     </svg>
@@ -1858,12 +1915,12 @@ const ChatPage = () => {
               >
                 <div className="p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 text-xs text-[#4b5563]">
-                      <span className="rounded-full bg-[#d1fae5] px-2 py-1 font-medium text-[#065f46]">已脱敏保护</span>
+                    <div className="flex items-center gap-2 text-xs text-[#4b5563] dark:text-gray-400">
+                      <span className="rounded-full bg-[#d1fae5] px-2 py-1 font-medium text-[#065f46] dark:bg-emerald-500/15 dark:text-emerald-300">已脱敏保护</span>
                       <span>支持语音输入、搜索历史和 Markdown 导出</span>
                     </div>
                     {voiceDraft && (
-                      <div className="max-w-[280px] truncate rounded-full bg-[#fff3cc] px-3 py-1 text-xs text-[#92400e]">
+                      <div className="max-w-[280px] truncate rounded-full bg-[#fff3cc] px-3 py-1 text-xs text-[#92400e] dark:bg-amber-500/15 dark:text-amber-200">
                         正在识别：
                         {voiceDraft}
                       </div>
@@ -1872,7 +1929,7 @@ const ChatPage = () => {
                   <div className="relative flex items-end gap-3">
                     <button
                       onClick={handleAttachmentClick}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-100"
                       title="从沙箱选择文件"
                     >
                       <RiAttachmentLine className="h-4 w-4" />
@@ -1881,11 +1938,11 @@ const ChatPage = () => {
                     <div className="relative flex min-h-[96px] flex-1 items-start">
                       {isAutoFilled && autoFilledText && (
                         <div className="pointer-events-none absolute inset-0 z-10 flex items-start pt-3">
-                          <span className="rounded-md border border-[#bfdbfe] bg-[#eff6ff] px-2 py-1 text-sm text-[#2563eb]">
+                          <span className="rounded-md border border-[#bfdbfe] bg-[#eff6ff] px-2 py-1 text-sm text-[#2563eb] dark:border-blue-400/20 dark:bg-blue-500/15 dark:text-blue-300">
                             {autoFilledText}
                           </span>
                           {inputValue.length > autoFilledText.length && (
-                            <span className="ml-1 pt-1 text-sm text-[#111827]">
+                            <span className="ml-1 pt-1 text-sm text-[#111827] dark:text-gray-100">
                               {inputValue.slice(autoFilledText.length)}
                             </span>
                           )}
@@ -1899,8 +1956,8 @@ const ChatPage = () => {
                         onKeyDown={handleKeyDown}
                         placeholder="输入消息，Ctrl+Enter 换行"
                         className={cn(
-                          'min-h-[32px] w-full resize-none border-0 bg-transparent py-1.5 text-sm leading-5 placeholder:text-gray-400 focus:outline-none',
-                          isAutoFilled ? 'text-transparent' : 'text-gray-900',
+                          'min-h-[32px] w-full resize-none border-0 bg-transparent py-1.5 text-sm leading-5 placeholder:text-gray-400 focus:outline-none dark:placeholder:text-gray-500',
+                          isAutoFilled ? 'text-transparent' : 'text-gray-900 dark:text-gray-100',
                         )}
                         rows={1}
                         style={{ maxHeight: '80px' }}
@@ -1913,7 +1970,7 @@ const ChatPage = () => {
                           'flex h-10 w-10 items-center justify-center rounded-lg border transition-colors',
                           isVoiceListening
                             ? 'border-red-100 bg-red-50 text-red-500 hover:bg-red-100'
-                            : 'border-[#e5e7eb] text-gray-400 hover:bg-[#f3f4f6] hover:text-gray-600',
+                            : 'border-[#e5e7eb] text-gray-400 hover:bg-[#f3f4f6] hover:text-gray-600 dark:border-white/10 dark:hover:bg-white/10 dark:hover:text-gray-100',
                           !isVoiceSupported && 'cursor-not-allowed opacity-50',
                         )}
                         title={isVoiceSupported ? (isVoiceListening ? '停止语音输入' : '语音输入') : '当前浏览器不支持语音输入'}
@@ -1930,7 +1987,7 @@ const ChatPage = () => {
                             ? 'bg-red-50 text-red-600 hover:bg-red-100'
                             : inputValue.trim()
                               ? 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'
-                              : 'cursor-not-allowed bg-gray-100 text-gray-400',
+                              : 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-white/10 dark:text-gray-500',
                         )}
                       >
                         {isResponsePending ? '停止发送' : '发送回复'}
@@ -1945,10 +2002,10 @@ const ChatPage = () => {
 
         {renameConversationId && (
           <div className="absolute inset-0 z-[60] flex items-center justify-center bg-[rgba(17,24,39,0.35)] px-4">
-            <div className="w-full max-w-md rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-xl">
+            <div className="w-full max-w-md rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-xl dark:border-white/10 dark:bg-[#24252b]">
               <div className="mb-4">
-                <h3 className="text-lg font-semibold text-[#111827]">重命名对话</h3>
-                <p className="mt-1 text-sm text-[#4b5563]">使用更清晰的标题，方便后续搜索与归档。</p>
+                <h3 className="text-lg font-semibold text-[#111827] dark:text-gray-100">重命名对话</h3>
+                <p className="mt-1 text-sm text-[#4b5563] dark:text-gray-400">使用更清晰的标题，方便后续搜索与归档。</p>
               </div>
               <input
                 value={renameDraft}
@@ -1962,7 +2019,7 @@ const ChatPage = () => {
                   }
                 }}
                 placeholder="请输入新的对话标题"
-                className="w-full rounded-lg border border-[#d1d5db] px-4 py-3 text-sm text-[#111827] focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#3b82f6]"
+                className="w-full rounded-lg border border-[#d1d5db] px-4 py-3 text-sm text-[#111827] focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#3b82f6] dark:border-white/10 dark:bg-[#1b1c21] dark:text-gray-100 dark:placeholder:text-gray-500"
                 autoFocus
               />
               <div className="mt-5 flex justify-end gap-3">
@@ -1971,7 +2028,7 @@ const ChatPage = () => {
                     setRenameConversationId(null)
                     setRenameDraft('')
                   }}
-                  className="rounded-lg border border-[#d1d5db] px-4 py-2 text-sm text-[#4b5563] transition-colors hover:bg-[#f3f4f6]"
+                  className="rounded-lg border border-[#d1d5db] px-4 py-2 text-sm text-[#4b5563] transition-colors hover:bg-[#f3f4f6] dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/10"
                 >
                   取消
                 </button>
@@ -1992,23 +2049,23 @@ const ChatPage = () => {
 
         {showSensitiveConfirm && (
           <div className="absolute inset-0 z-[70] flex items-center justify-center bg-[rgba(17,24,39,0.45)] px-4">
-            <div className="w-full max-w-md rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-xl">
+            <div className="w-full max-w-md rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-xl dark:border-white/10 dark:bg-[#24252b]">
               <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#eff6ff] text-[#2563eb] shadow-sm">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#eff6ff] text-[#2563eb] shadow-sm dark:bg-blue-500/15 dark:text-blue-300">
                   <RiCheckLine className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-[#111827]">敏感信息确认</h3>
-                  <p className="mt-1 text-xs text-[#4b5563]">发送前再确认一次，确保内容安全可控。</p>
+                  <h3 className="text-base font-semibold text-[#111827] dark:text-gray-100">敏感信息确认</h3>
+                  <p className="mt-1 text-xs text-[#4b5563] dark:text-gray-400">发送前再确认一次，确保内容安全可控。</p>
                 </div>
               </div>
-              <div className="rounded-xl border border-[#bfdbfe] bg-[#eff6ff] p-4">
-                <p className="text-sm leading-6 text-[#4b5563]">
+              <div className="rounded-xl border border-[#bfdbfe] bg-[#eff6ff] p-4 dark:border-blue-400/20 dark:bg-blue-500/10">
+                <p className="text-sm leading-6 text-[#4b5563] dark:text-gray-300">
                   当前内容即将发送至互联网，请务必确认内容中无敏感信息，例如个人隐私、密码、密钥或内部凭据。
                 </p>
               </div>
               <label
-                className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl border border-[#e5e7eb] bg-[#f9fafb] px-4 py-3 transition-colors duration-200 ease-in-out hover:bg-white"
+                className="mt-4 flex cursor-pointer items-center gap-3 rounded-xl border border-[#e5e7eb] bg-[#f9fafb] px-4 py-3 transition-colors duration-200 ease-in-out hover:bg-white dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
                 onClick={(e) => {
                   e.preventDefault()
                   setSkipSensitiveConfirm(value => !value)
@@ -2025,8 +2082,8 @@ const ChatPage = () => {
                   className="rounded"
                 />
                 <div>
-                  <div className="text-sm font-medium text-[#111827]">下次不用再提醒</div>
-                  <div className="text-xs text-[#4b5563]">勾选后，将默认跳过该确认弹窗。</div>
+                  <div className="text-sm font-medium text-[#111827] dark:text-gray-100">下次不用再提醒</div>
+                  <div className="text-xs text-[#4b5563] dark:text-gray-400">勾选后，将默认跳过该确认弹窗。</div>
                 </div>
               </label>
               <div className="mt-6 flex justify-end gap-3">
@@ -2036,7 +2093,7 @@ const ChatPage = () => {
                     setShowSensitiveConfirm(false)
                     setSkipSensitiveConfirm(false)
                   }}
-                  className="rounded-lg border border-[#d1d5db] px-6 py-2.5 text-sm font-medium text-[#4b5563] transition-colors duration-200 ease-in-out hover:bg-[#f3f4f6]"
+                  className="rounded-lg border border-[#d1d5db] px-6 py-2.5 text-sm font-medium text-[#4b5563] transition-colors duration-200 ease-in-out hover:bg-[#f3f4f6] dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/10"
                 >
                   取消
                 </button>

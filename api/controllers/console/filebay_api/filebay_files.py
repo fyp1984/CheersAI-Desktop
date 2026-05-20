@@ -5,9 +5,12 @@ import json
 import logging
 import socket
 import ssl
+import time
 import urllib.parse
 from io import BytesIO
 
+import requests
+import urllib3
 from flask import request, send_file
 from flask_login import current_user
 from flask_restx import Resource, fields
@@ -18,6 +21,7 @@ from libs.filebay_user_config import resolve_user_filebay_config
 from libs.login import login_required
 
 logger = logging.getLogger(__name__)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Define API models
 filebay_file_list_model = console_ns.model('FileBayFileList', {
@@ -59,14 +63,20 @@ class NoSNIHTTPSClient:
         except Exception:
             logger.debug("[FileBay API] Failed to lower SSL security level", exc_info=True)
 
-    def _create_connection(self):
+    def _create_connection(self, use_sni: bool = False):
         if self.scheme != "https":
             return http.client.HTTPConnection(self.host, self.port, timeout=self.timeout)
 
         sock = socket.create_connection((self.host, self.port), timeout=self.timeout)
-        # Intentionally omit server_hostname: UAT FileBay closes TLS handshakes
-        # when clients send SNI.
-        return self.ssl_context.wrap_socket(sock)
+        try:
+            # Try both NoSNI and SNI. UAT FileBay has historically been picky
+            # about TLS handshakes, and the failure mode is intermittent.
+            if use_sni:
+                return self.ssl_context.wrap_socket(sock, server_hostname=self.host)
+            return self.ssl_context.wrap_socket(sock)
+        except Exception:
+            sock.close()
+            raise
 
     @staticmethod
     def _decode_chunked(body: bytes) -> bytes:
@@ -88,7 +98,14 @@ class NoSNIHTTPSClient:
             index += chunk_size + 2
         return bytes(decoded)
 
-    def _make_raw_https_request(self, method: str, path: str, body: dict | None = None) -> tuple[int, dict | list]:
+    def _make_raw_https_request_once(
+        self,
+        method: str,
+        path: str,
+        body: dict | None = None,
+        *,
+        use_sni: bool = False,
+    ) -> tuple[int, dict | list]:
         body_json = json.dumps(body) if body is not None else None
         headers = {
             "Host": self.host_header,
@@ -108,7 +125,7 @@ class NoSNIHTTPSClient:
         if body_json is not None:
             request_bytes += body_json.encode("utf-8")
 
-        with self._create_connection() as sock:
+        with self._create_connection(use_sni=use_sni) as sock:
             sock.sendall(request_bytes)
             response_data = b""
             while True:
@@ -132,12 +149,98 @@ class NoSNIHTTPSClient:
         except Exception:
             response_json = {"raw": body_data.decode('utf-8', errors='ignore')}
         return status_code, response_json
+
+    def _make_raw_https_request(self, method: str, path: str, body: dict | None = None) -> tuple[int, dict | list]:
+        last_error: Exception | None = None
+
+        for attempt in range(5):
+            for use_sni in (False, True):
+                try:
+                    return self._make_raw_https_request_once(method, path, body, use_sni=use_sni)
+                except (ssl.SSLError, socket.timeout, OSError, ValueError) as exc:
+                    last_error = exc
+                    continue
+
+            if attempt < 4:
+                time.sleep(0.25 * (attempt + 1))
+
+        if last_error:
+            raise last_error
+        raise RuntimeError("FileBay request failed")
+
+    def _make_requests_request(self, method: str, path: str, body: dict | None = None) -> tuple[int, dict | list]:
+        return self._make_requests_request_to_url(f"{self.scheme}://{self.host_header}{path}", method, body)
+
+    def _make_requests_request_to_url(
+        self,
+        url: str,
+        method: str,
+        body: dict | None = None,
+        *,
+        host_header: str | None = None,
+    ) -> tuple[int, dict | list]:
+        headers = {
+            "User-Agent": "Dify-FileBay-API/1.0",
+            "Accept": "application/json",
+        }
+        if host_header:
+            headers["Host"] = host_header
+        if self.token:
+            headers["Authorization"] = f"token {self.token}"
+
+        last_error: Exception | None = None
+        for attempt in range(3):
+            try:
+                response = requests.request(
+                    method,
+                    url,
+                    headers=headers,
+                    json=body,
+                    timeout=self.timeout,
+                    verify=False,
+                )
+                try:
+                    return response.status_code, response.json()
+                except ValueError:
+                    return response.status_code, {"raw": response.text}
+            except requests.RequestException as exc:
+                last_error = exc
+                if attempt < 2:
+                    time.sleep(0.3 * (attempt + 1))
+
+        if last_error:
+            raise last_error
+        raise RuntimeError("FileBay requests fallback failed")
+
+    def _make_ip_https_request(self, method: str, path: str, body: dict | None = None) -> tuple[int, dict | list]:
+        if self.scheme != "https" or not self.host.endswith("filebay.cheersai.cloud"):
+            raise RuntimeError("IP HTTPS fallback is only allowed for CheersAI FileBay")
+
+        ip_address = socket.gethostbyname(self.host)
+        port_suffix = "" if self.port == 443 else f":{self.port}"
+        url = f"https://{ip_address}{port_suffix}{path}"
+        logger.warning("[FileBay API] HTTPS failed, trying IP HTTPS fallback for %s (%s)", self.host, ip_address)
+        return self._make_requests_request_to_url(url, method, body, host_header=self.host_header)
     
     def _make_request(self, method: str, path: str, body: dict | None = None) -> tuple[int, dict | list]:
         """Make HTTP request"""
         try:
             if self.scheme == "https":
-                return self._make_raw_https_request(method, path, body)
+                if method.upper() in {"PUT", "POST", "PATCH", "DELETE"} and self.host.endswith("filebay.cheersai.cloud"):
+                    try:
+                        return self._make_ip_https_request(method, path, body)
+                    except Exception as ip_error:
+                        logger.warning("[FileBay API] IP HTTPS request failed, falling back to raw HTTPS: %s", ip_error)
+
+                try:
+                    return self._make_raw_https_request(method, path, body)
+                except Exception as raw_error:
+                    logger.warning("[FileBay API] Raw HTTPS request failed, trying requests fallback: %s", raw_error)
+                    try:
+                        return self._make_requests_request(method, path, body)
+                    except Exception as requests_error:
+                        logger.warning("[FileBay API] HTTPS requests fallback failed: %s", requests_error)
+                        return self._make_ip_https_request(method, path, body)
 
             if self.scheme == "https":
                 conn = http.client.HTTPSConnection(

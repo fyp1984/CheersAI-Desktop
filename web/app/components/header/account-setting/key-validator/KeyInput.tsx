@@ -51,17 +51,17 @@ const KeyInput = ({
 
   return (
     <div className={className}>
-      <div className="mb-2 text-[13px] font-medium text-gray-800">{name}</div>
+      <div className="mb-2 text-[13px] font-medium text-gray-800 dark:text-gray-200">{name}</div>
       <div className="
         flex items-center rounded-lg bg-white px-3
-        shadow-xs
+        shadow-xs dark:border dark:border-white/10 dark:bg-[#1b1c21]
       "
       >
         <input
           className="
             mr-2 w-full appearance-none
             bg-transparent py-[9px] text-xs font-medium
-            leading-[18px] text-gray-700 outline-none
+            leading-[18px] text-gray-700 outline-none dark:text-gray-100 dark:placeholder:text-gray-500
           "
           value={value}
           placeholder={placeholder}

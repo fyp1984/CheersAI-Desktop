@@ -3,7 +3,6 @@ import type {
   ModelItem,
   ModelProvider,
 } from '../declarations'
-import type { ModelProviderQuotaGetPaid } from '../utils'
 import {
   RiArrowRightSLine,
   RiLoader2Line,
@@ -14,7 +13,6 @@ import {
   AddCustomModel,
   ManageCustomModelCredentials,
 } from '@/app/components/header/account-setting/model-provider-page/model-auth'
-import { IS_CE_EDITION } from '@/config'
 import { useAppContext } from '@/context/app-context'
 import { useEventEmitterContextContext } from '@/context/event-emitter'
 import { fetchModelProviderModelList } from '@/service/common'
@@ -23,7 +21,6 @@ import { ConfigurationMethodEnum } from '../declarations'
 import ModelBadge from '../model-badge'
 import ProviderIcon from '../provider-icon'
 import {
-  MODEL_PROVIDER_QUOTA_GET_PAID,
   modelTypeFormat,
 } from '../utils'
 import CredentialPanel from './credential-panel'
@@ -45,10 +42,8 @@ const ProviderAddedCard: FC<ProviderAddedCardProps> = ({
   const [collapsed, setCollapsed] = useState(true)
   const [modelList, setModelList] = useState<ModelItem[]>([])
   const configurationMethods = provider.configurate_methods.filter(method => method !== ConfigurationMethodEnum.fetchFromRemote)
-  const systemConfig = provider.system_configuration
   const hasModelList = fetched && !!modelList.length
   const { isCurrentWorkspaceManager } = useAppContext()
-  const showModelProvider = systemConfig.enabled && MODEL_PROVIDER_QUOTA_GET_PAID.includes(provider.provider as ModelProviderQuotaGetPaid) && !IS_CE_EDITION
   const showCredential = configurationMethods.includes(ConfigurationMethodEnum.predefinedModel) && isCurrentWorkspaceManager
 
   const getModelList = async (providerName: string) => {
@@ -82,10 +77,10 @@ const ProviderAddedCard: FC<ProviderAddedCardProps> = ({
   return (
     <div
       className={cn(
-        'mb-2 rounded-xl border-[0.5px] border-divider-regular bg-third-party-model-bg-default shadow-xs',
-        notConfigured && 'border-[#bfdbfe] ring-1 ring-inset ring-[#dbeafe]',
-        provider.provider === 'langgenius/openai/openai' && 'bg-third-party-model-bg-openai',
-        provider.provider === 'langgenius/anthropic/anthropic' && 'bg-third-party-model-bg-anthropic',
+        'mb-2 rounded-xl border-[0.5px] border-divider-regular bg-third-party-model-bg-default shadow-xs dark:border-white/10 dark:bg-[#1f2026] dark:shadow-black/20',
+        notConfigured && 'border-[#bfdbfe] ring-1 ring-inset ring-[#dbeafe] dark:border-blue-400/40 dark:ring-blue-400/35',
+        provider.provider === 'langgenius/openai/openai' && 'bg-third-party-model-bg-openai dark:bg-[#20252b]',
+        provider.provider === 'langgenius/anthropic/anthropic' && 'bg-third-party-model-bg-anthropic dark:bg-[#27231f]',
       )}
     >
       <div className="flex rounded-t-xl py-2 pl-3 pr-2">
@@ -114,7 +109,7 @@ const ProviderAddedCard: FC<ProviderAddedCardProps> = ({
       </div>
       {
         collapsed && (
-          <div className="system-xs-medium group flex items-center justify-between border-t border-t-divider-subtle py-1.5 pl-2 pr-[11px] text-text-tertiary">
+          <div className="system-xs-medium group flex items-center justify-between border-t border-t-divider-subtle py-1.5 pl-2 pr-[11px] text-text-tertiary dark:border-t-white/10 dark:text-gray-400">
             <>
               <div className="flex h-6 items-center pl-1 pr-1.5 leading-6 group-hover:hidden">
                 {
@@ -125,7 +120,7 @@ const ProviderAddedCard: FC<ProviderAddedCardProps> = ({
                 {!loading && <RiArrowRightSLine className="h-4 w-4" />}
               </div>
               <div
-                className="hidden h-6 cursor-pointer items-center rounded-lg pl-1 pr-1.5 hover:bg-components-button-ghost-bg-hover group-hover:flex"
+                className="hidden h-6 cursor-pointer items-center rounded-lg pl-1 pr-1.5 hover:bg-components-button-ghost-bg-hover group-hover:flex dark:hover:bg-white/10"
                 onClick={handleOpenModelList}
               >
                 {

@@ -4,6 +4,7 @@ import tailwindThemeVarDefine from './themes/tailwind-theme-var-define.ts'
 import typography from './typography.js'
 
 const config = {
+  darkMode: ['selector', '[data-theme="dark"]'],
   theme: {
     typography,
     extend: {
