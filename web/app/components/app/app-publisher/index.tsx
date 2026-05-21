@@ -1,5 +1,6 @@
 import type { ModelAndParameter } from '../configuration/debug/types'
 import type { InputVar, Variable } from '@/app/components/workflow/types'
+import type { AppLifecycleResponse } from '@/service/apps'
 import type { I18nKeysByPrefix } from '@/types/i18n'
 import type { PublishWorkflowParams } from '@/types/workflow'
 import {
@@ -14,7 +15,7 @@ import {
   RiTerminalBoxLine,
   RiVerifiedBadgeLine,
 } from '@remixicon/react'
-import { useKeyPress } from 'ahooks'
+import { useKeyPress, useRequest } from 'ahooks'
 import {
   memo,
   useCallback,
@@ -35,7 +36,7 @@ import {
 } from '@/app/components/base/portal-to-follow-elem'
 import UpgradeBtn from '@/app/components/billing/upgrade-btn'
 import WorkflowToolConfigureButton from '@/app/components/tools/workflow-tool/configure-button'
-import { appDefaultIconBackground } from '@/config'
+import { appDefaultIconBackground, NEED_REFRESH_APP_LIST_KEY } from '@/config'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 import { useAsyncWindowOpen } from '@/hooks/use-async-window-open'
 import { useFormatTimeFromNow } from '@/hooks/use-format-time-from-now'
@@ -43,7 +44,7 @@ import { AccessMode } from '@/models/access-control'
 import { useAppWhiteListSubjects, useGetUserCanAccessApp } from '@/service/access-control'
 import { fetchAppDetailDirect, fetchAppLifecycle, publishAppLifecycle, recallAppLifecycle, stashAppLifecycle } from '@/service/apps'
 import { fetchInstalledAppList } from '@/service/explore'
-import { useRequest } from 'ahooks'
+import { useInvalidateAppList } from '@/service/use-apps'
 import { AppModeEnum } from '@/types/app'
 import { basePath } from '@/utils/var'
 import Divider from '../../base/divider'
@@ -57,10 +58,25 @@ import { getKeyboardKeyCodeBySystem } from '../../workflow/utils'
 import AccessControl from '../app-access-control'
 import PublishWithMultipleModel from './publish-with-multiple-model'
 import SuggestedAction from './suggested-action'
-import { NEED_REFRESH_APP_LIST_KEY } from '@/config'
-import { useInvalidateAppList } from '@/service/use-apps'
 
 type AccessModeLabel = I18nKeysByPrefix<'app', 'accessControlDialog.accessItems.'>
+type InstalledAppListResponse = {
+  installed_apps?: Array<{ id: string }>
+}
+
+type BivariantHandler<T> = {
+  bivarianceHack(params?: T): Promise<unknown> | unknown
+}['bivarianceHack']
+
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error)
+    return error.message
+
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string')
+    return error.message
+
+  return undefined
+}
 
 const ACCESS_MODE_MAP: Record<AccessMode, { label: AccessModeLabel, icon: React.ElementType }> = {
   [AccessMode.ORGANIZATION]: {
@@ -108,9 +124,9 @@ export type AppPublisherProps = {
   debugWithMultipleModel?: boolean
   multipleModelConfigs?: ModelAndParameter[]
   /** modelAndParameter is passed when debugWithMultipleModel is true */
-  onPublish?: (params?: any) => Promise<any> | any
-  onStash?: () => Promise<any> | any
-  onRestore?: () => Promise<any> | any
+  onPublish?: BivariantHandler<ModelAndParameter | PublishWorkflowParams>
+  onStash?: () => Promise<unknown> | unknown
+  onRestore?: () => Promise<unknown> | unknown
   onToggle?: (state: boolean) => void
   crossAxisOffset?: number
   toolPublished?: boolean
@@ -174,16 +190,16 @@ const AppPublisher = ({
   const { data: appAccessSubjects, isLoading: isGettingAppWhiteListSubjects } = useAppWhiteListSubjects(appDetail?.id, open && systemFeatures.webapp_auth.enabled && appDetail?.access_mode === AccessMode.SPECIFIC_GROUPS_MEMBERS)
   const openAsyncWindow = useAsyncWindowOpen()
 
-  const { data: appLifecycle, mutate: mutateAppLifecycle } = useRequest(
+  const { data: appLifecycle, mutate: mutateAppLifecycle } = useRequest<AppLifecycleResponse | undefined, []>(
     async () => {
       if (appDetail?.id)
         return fetchAppLifecycle(appDetail.id)
       return undefined
     },
-    { refreshDeps: [appDetail?.id] }
+    { refreshDeps: [appDetail?.id] },
   )
 
-  const handleLifecycleChanged = useCallback((nextLifecycle?: any) => {
+  const handleLifecycleChanged = useCallback((nextLifecycle?: AppLifecycleResponse) => {
     if (nextLifecycle)
       mutateAppLifecycle(nextLifecycle)
     localStorage.setItem(NEED_REFRESH_APP_LIST_KEY, '1')
@@ -192,19 +208,22 @@ const AppPublisher = ({
   }, [invalidateAppList, mutateAppLifecycle, onRefreshData])
 
   const handleStash = useCallback(async () => {
-    if (!appDetail?.id || !appLifecycle) return
+    if (!appDetail?.id || !appLifecycle)
+      return
     try {
       await onStash?.()
       const nextLifecycle = await stashAppLifecycle(appDetail.id, appLifecycle.row_version)
       handleLifecycleChanged(nextLifecycle)
       Toast.notify({ type: 'success', message: '暂存成功' })
-    } catch (e: any) {
-      Toast.notify({ type: 'error', message: e.message || '暂存失败' })
+    }
+    catch (e: unknown) {
+      Toast.notify({ type: 'error', message: getErrorMessage(e) || '暂存失败' })
     }
   }, [appDetail?.id, appLifecycle, handleLifecycleChanged, onStash])
 
   const handleRecall = useCallback(async (reason: string) => {
-    if (!appDetail?.id || !appLifecycle) return
+    if (!appDetail?.id || !appLifecycle)
+      return
     const trimmedReason = reason.trim()
     if (!trimmedReason) {
       Toast.notify({ type: 'error', message: '请输入回收原因' })
@@ -218,8 +237,9 @@ const AppPublisher = ({
       setRecallReason('')
       setPublished(false)
       Toast.notify({ type: 'success', message: '回收成功' })
-    } catch (e: any) {
-      Toast.notify({ type: 'error', message: e.message || '回收失败' })
+    }
+    catch (e: unknown) {
+      Toast.notify({ type: 'error', message: getErrorMessage(e) || '回收失败' })
     }
     finally {
       setRecallSubmitting(false)
@@ -236,7 +256,7 @@ const AppPublisher = ({
       return t('noUserInputNode', { ns: 'app' })
     if (noAccessPermission)
       return t('noAccessPermission', { ns: 'app' })
-  }, [missingStartNode, noAccessPermission, publishedAt])
+  }, [missingStartNode, noAccessPermission, publishedAt, t])
 
   useEffect(() => {
     if (systemFeatures.webapp_auth.enabled && open && appDetail)
@@ -266,9 +286,9 @@ const AppPublisher = ({
       setPublished(true)
       trackEvent('app_published_time', { action_mode: 'app', app_id: appDetail?.id, app_name: appDetail?.name })
     }
-    catch (e: any) {
+    catch (e: unknown) {
       setPublished(false)
-      Toast.notify({ type: 'error', message: e?.message || '发布失败' })
+      Toast.notify({ type: 'error', message: getErrorMessage(e) || '发布失败' })
     }
   }, [appDetail, onPublish, appLifecycle, handleLifecycleChanged])
 
@@ -299,13 +319,13 @@ const AppPublisher = ({
     await openAsyncWindow(async () => {
       if (!appDetail?.id)
         throw new Error('App not found')
-      const { installed_apps }: any = await fetchInstalledAppList(appDetail?.id) || {}
-      if (installed_apps?.length > 0)
+      const { installed_apps } = ((await fetchInstalledAppList(appDetail?.id)) as InstalledAppListResponse) || {}
+      if (installed_apps && installed_apps.length > 0)
         return `${basePath}/explore/installed/${installed_apps[0].id}`
       throw new Error('No app found in Explore')
     }, {
-      onError: (err) => {
-        Toast.notify({ type: 'error', message: `${err.message || err}` })
+      onError: (err: unknown) => {
+        Toast.notify({ type: 'error', message: getErrorMessage(err) || `${err}` })
       },
     })
   }, [appDetail?.id, openAsyncWindow])
@@ -314,13 +334,13 @@ const AppPublisher = ({
     await openAsyncWindow(async () => {
       if (!appDetail?.id)
         throw new Error('App not found')
-      const { installed_apps }: any = await fetchInstalledAppList(appDetail.id) || {}
-      if (installed_apps?.length > 0)
+      const { installed_apps } = ((await fetchInstalledAppList(appDetail.id)) as InstalledAppListResponse) || {}
+      if (installed_apps && installed_apps.length > 0)
         return `${basePath}/explore/installed/${installed_apps[0].id}`
       return appURL
     }, {
-      onError: (err) => {
-        Toast.notify({ type: 'error', message: `${err.message || err}` })
+      onError: (err: unknown) => {
+        Toast.notify({ type: 'error', message: getErrorMessage(err) || `${err}` })
       },
     })
   }, [appDetail?.id, appURL, openAsyncWindow])
@@ -337,13 +357,6 @@ const AppPublisher = ({
     }
   }, [appDetail, setAppDetail])
 
-  useKeyPress(`${getKeyboardKeyCodeBySystem('ctrl')}.shift.p`, (e) => {
-    e.preventDefault()
-    if (publishDisabled || published)
-      return
-    handlePublish()
-  }, { exactMatch: true, useCapture: true })
-
   const hasPublishedVersion = !!publishedAt
   const workflowToolDisabled = !hasPublishedVersion || !workflowToolAvailable
   const workflowToolMessage = workflowToolDisabled ? t('common.workflowAsToolDisabledHint', { ns: 'workflow' }) : undefined
@@ -359,6 +372,28 @@ const AppPublisher = ({
 
     return publishDisabled
   }, [appLifecycle, isWorkflowPublishFlow, publishDisabled, published])
+  const publishBlockedMessage = useMemo(() => {
+    if (published)
+      return t('common.published', { ns: 'workflow' })
+    if (missingStartNode)
+      return t('noUserInputNode', { ns: 'app' })
+    if (startNodeLimitExceeded)
+      return t('publishLimit.startNodeDesc', { ns: 'workflow' })
+    if (publishDisabled)
+      return t('panel.checklistTip', { ns: 'workflow' })
+    if (appLifecycle && !appLifecycle.can_publish)
+      return appLifecycle.display_status_description || '当前状态无法发布'
+    return '当前状态无法发布'
+  }, [appLifecycle, missingStartNode, publishDisabled, published, startNodeLimitExceeded, t])
+
+  useKeyPress(`${getKeyboardKeyCodeBySystem('ctrl')}.shift.p`, (e) => {
+    e.preventDefault()
+    if (publishButtonDisabled) {
+      Toast.notify({ type: 'error', message: publishBlockedMessage })
+      return
+    }
+    handlePublish()
+  }, { exactMatch: true, useCapture: true })
   const showStartNodeLimitHint = Boolean(startNodeLimitExceeded)
   const upgradeHighlightStyle = useMemo(() => ({
     background: 'linear-gradient(97deg, var(--components-input-border-active-prompt-1, rgba(11, 165, 236, 0.95)) -3.64%, var(--components-input-border-active-prompt-2, rgba(21, 90, 239, 0.95)) 45.14%)',
@@ -432,7 +467,7 @@ const AppPublisher = ({
                   )
                 : (
                     <>
-                      <div className="flex gap-2 mt-3 w-full">
+                      <div className="mt-3 flex w-full gap-2">
                         <Button
                           className="flex-1"
                           onClick={() => handleStash()}
@@ -442,15 +477,21 @@ const AppPublisher = ({
                         </Button>
                         <Button
                           variant="primary"
-                          className="flex-1"
-                          onClick={() => handlePublish()}
-                          disabled={publishButtonDisabled}
+                          className={`flex-1 ${publishButtonDisabled ? 'btn-disabled' : ''}`}
+                          aria-disabled={publishButtonDisabled}
+                          onClick={() => {
+                            if (publishButtonDisabled) {
+                              Toast.notify({ type: 'error', message: publishBlockedMessage })
+                              return
+                            }
+                            handlePublish()
+                          }}
                         >
                           {
                             published
                               ? t('common.published', { ns: 'workflow' })
                               : (
-                                  <div className="flex gap-1 items-center">
+                                  <div className="flex items-center gap-1">
                                     <span>{t('common.publishUpdate', { ns: 'workflow' })}</span>
                                     <ShortcutsName keys={PUBLISH_SHORTCUT} bgColor="white" />
                                   </div>
