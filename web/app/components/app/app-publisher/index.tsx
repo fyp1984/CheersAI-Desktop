@@ -1,3 +1,4 @@
+import type { ToastHandle } from '../../base/toast'
 import type { ModelAndParameter } from '../configuration/debug/types'
 import type { InputVar, Variable } from '@/app/components/workflow/types'
 import type { AppLifecycleResponse } from '@/service/apps'
@@ -21,6 +22,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -173,6 +175,7 @@ const AppPublisher = ({
   const [recallReason, setRecallReason] = useState('')
   const [recallSubmitting, setRecallSubmitting] = useState(false)
   const [publishSubmitting, setPublishSubmitting] = useState(false)
+  const publishSubmittingToast = useRef<ToastHandle | null>(null)
 
   const appDetail = useAppStore(state => state.appDetail)
   const setAppDetail = useAppStore(s => s.setAppDetail)
@@ -299,9 +302,13 @@ const AppPublisher = ({
 
     try {
       setPublishSubmitting(true)
+      publishSubmittingToast.current?.clear?.()
+      publishSubmittingToast.current = Toast.notify({ type: 'info', message: '正在发布中，请稍候…', duration: 0 })
       await handlePublish(params)
     }
     finally {
+      publishSubmittingToast.current?.clear?.()
+      publishSubmittingToast.current = null
       setPublishSubmitting(false)
     }
   }, [handlePublish, publishSubmitting])
@@ -435,7 +442,8 @@ const AppPublisher = ({
           <Button
             variant="primary"
             className="py-2 pl-3 pr-2"
-            disabled={disabled}
+            disabled={disabled || publishSubmitting}
+            loading={publishSubmitting}
           >
             {t('common.publish', { ns: 'workflow' })}
             <RiArrowDownSLine className="h-4 w-4 text-components-button-primary-text" />
