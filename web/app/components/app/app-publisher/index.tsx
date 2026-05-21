@@ -64,9 +64,9 @@ type InstalledAppListResponse = {
   installed_apps?: Array<{ id: string }>
 }
 
-type BivariantHandler<T> = {
-  bivarianceHack(params?: T): Promise<unknown> | unknown
-}['bivarianceHack']
+type OnPublishHandler
+  = ((params?: ModelAndParameter) => Promise<unknown> | unknown)
+    | ((params?: PublishWorkflowParams) => Promise<unknown> | unknown)
 
 const getErrorMessage = (error: unknown) => {
   if (error instanceof Error)
@@ -124,7 +124,7 @@ export type AppPublisherProps = {
   debugWithMultipleModel?: boolean
   multipleModelConfigs?: ModelAndParameter[]
   /** modelAndParameter is passed when debugWithMultipleModel is true */
-  onPublish?: BivariantHandler<ModelAndParameter | PublishWorkflowParams>
+  onPublish?: OnPublishHandler
   onStash?: () => Promise<unknown> | unknown
   onRestore?: () => Promise<unknown> | unknown
   onToggle?: (state: boolean) => void
@@ -172,6 +172,7 @@ const AppPublisher = ({
   const [recallModalOpen, setRecallModalOpen] = useState(false)
   const [recallReason, setRecallReason] = useState('')
   const [recallSubmitting, setRecallSubmitting] = useState(false)
+  const [publishSubmitting, setPublishSubmitting] = useState(false)
 
   const appDetail = useAppStore(state => state.appDetail)
   const setAppDetail = useAppStore(s => s.setAppDetail)
@@ -277,7 +278,7 @@ const AppPublisher = ({
 
   const handlePublish = useCallback(async (params?: ModelAndParameter | PublishWorkflowParams) => {
     try {
-      await onPublish?.(params)
+      await (onPublish as ((params?: ModelAndParameter | PublishWorkflowParams) => Promise<unknown> | unknown) | undefined)?.(params)
       if (appDetail?.id && appLifecycle) {
         const nextLifecycle = await publishAppLifecycle(appDetail.id, appLifecycle.row_version)
         handleLifecycleChanged(nextLifecycle)
@@ -291,6 +292,19 @@ const AppPublisher = ({
       Toast.notify({ type: 'error', message: getErrorMessage(e) || '发布失败' })
     }
   }, [appDetail, onPublish, appLifecycle, handleLifecycleChanged])
+
+  const handlePublishWithSubmitting = useCallback(async (params?: ModelAndParameter | PublishWorkflowParams) => {
+    if (publishSubmitting)
+      return
+
+    try {
+      setPublishSubmitting(true)
+      await handlePublish(params)
+    }
+    finally {
+      setPublishSubmitting(false)
+    }
+  }, [handlePublish, publishSubmitting])
 
   const handleRestore = useCallback(async () => {
     try {
@@ -388,11 +402,15 @@ const AppPublisher = ({
 
   useKeyPress(`${getKeyboardKeyCodeBySystem('ctrl')}.shift.p`, (e) => {
     e.preventDefault()
+    if (publishSubmitting) {
+      Toast.notify({ type: 'info', message: '正在发布中，请稍候…' })
+      return
+    }
     if (publishButtonDisabled) {
       Toast.notify({ type: 'error', message: publishBlockedMessage })
       return
     }
-    handlePublish()
+    handlePublishWithSubmitting()
   }, { exactMatch: true, useCapture: true })
   const showStartNodeLimitHint = Boolean(startNodeLimitExceeded)
   const upgradeHighlightStyle = useMemo(() => ({
@@ -461,7 +479,7 @@ const AppPublisher = ({
                 ? (
                     <PublishWithMultipleModel
                       multipleModelConfigs={multipleModelConfigs}
-                      onSelect={item => handlePublish(item)}
+                      onSelect={item => handlePublishWithSubmitting(item)}
                       // textGenerationModelList={textGenerationModelList}
                     />
                   )
@@ -471,32 +489,36 @@ const AppPublisher = ({
                         <Button
                           className="flex-1"
                           onClick={() => handleStash()}
-                          disabled={!appLifecycle?.can_stash}
+                          disabled={publishSubmitting || !appLifecycle?.can_stash}
                         >
                           暂存
                         </Button>
                         <Button
                           variant="primary"
-                          className={`flex-1 ${publishButtonDisabled ? 'btn-disabled' : ''}`}
-                          aria-disabled={publishButtonDisabled}
-                          onClick={() => {
+                          className={`flex-1 ${(publishSubmitting || publishButtonDisabled) ? 'btn-disabled' : ''}`}
+                          aria-disabled={publishSubmitting || publishButtonDisabled}
+                          disabled={publishSubmitting}
+                          loading={publishSubmitting}
+                          onClick={async () => {
+                            if (publishSubmitting) {
+                              Toast.notify({ type: 'info', message: '正在发布中，请稍候…' })
+                              return
+                            }
                             if (publishButtonDisabled) {
                               Toast.notify({ type: 'error', message: publishBlockedMessage })
                               return
                             }
-                            handlePublish()
+                            await handlePublishWithSubmitting()
                           }}
                         >
-                          {
-                            published
-                              ? t('common.published', { ns: 'workflow' })
-                              : (
-                                  <div className="flex items-center gap-1">
-                                    <span>{t('common.publishUpdate', { ns: 'workflow' })}</span>
-                                    <ShortcutsName keys={PUBLISH_SHORTCUT} bgColor="white" />
-                                  </div>
-                                )
-                          }
+                          {published && t('common.published', { ns: 'workflow' })}
+                          {!published && publishSubmitting && <span>发布中</span>}
+                          {!published && !publishSubmitting && (
+                            <div className="flex items-center gap-1">
+                              <span>{t('common.publishUpdate', { ns: 'workflow' })}</span>
+                              <ShortcutsName keys={PUBLISH_SHORTCUT} bgColor="white" />
+                            </div>
+                          )}
                         </Button>
                         <Button
                           variant="secondary-accent"
@@ -505,7 +527,7 @@ const AppPublisher = ({
                             setRecallReason('')
                             setRecallModalOpen(true)
                           }}
-                          disabled={!appLifecycle?.can_recall}
+                          disabled={publishSubmitting || !appLifecycle?.can_recall}
                         >
                           回收
                         </Button>
