@@ -6,6 +6,7 @@ import json
 import os
 import socket
 import ssl
+import time
 from dataclasses import dataclass
 from typing import Any, Optional
 from urllib.parse import urlencode
@@ -39,8 +40,8 @@ class NoSNIHTTPSClient:
         credentials = f"{username}:{password}"
         self.auth_header = base64.b64encode(credentials.encode()).decode()
     
-    def _create_ssl_socket(self) -> ssl.SSLSocket:
-        """创建 SSL socket，不使用 SNI"""
+    def _create_ssl_socket(self, use_sni: bool = False) -> ssl.SSLSocket:
+        """创建 SSL socket，默认不使用 SNI"""
         # 创建 TCP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(self.timeout)
@@ -56,10 +57,14 @@ class NoSNIHTTPSClient:
         except:
             context.set_ciphers('DEFAULT')
         
-        # 包装 socket，关键: 不传递 server_hostname（禁用 SNI）
-        ssl_sock = context.wrap_socket(sock)
-        
-        return ssl_sock
+        try:
+            # 优先保持 NoSNI 兼容，同时允许 fallback 到标准 SNI 握手。
+            if use_sni:
+                return context.wrap_socket(sock, server_hostname=self.host)
+            return context.wrap_socket(sock)
+        except Exception:
+            sock.close()
+            raise
     
     def _send_request(
         self,
@@ -69,7 +74,32 @@ class NoSNIHTTPSClient:
         body: Optional[str] = None
     ) -> tuple[int, dict[str, str], bytes]:
         """发送 HTTP 请求"""
-        ssl_sock = self._create_ssl_socket()
+        last_error: Exception | None = None
+
+        for attempt in range(3):
+            for use_sni in (False, True):
+                try:
+                    return self._send_request_once(method, path, headers, body, use_sni)
+                except (ssl.SSLError, socket.timeout, OSError, ValueError) as exc:
+                    last_error = exc
+                    continue
+
+            if attempt < 2:
+                time.sleep(0.25 * (attempt + 1))
+
+        if last_error:
+            raise last_error
+        raise RuntimeError("Request to FileBay failed")
+
+    def _send_request_once(
+        self,
+        method: str,
+        path: str,
+        headers: Optional[dict[str, str]] = None,
+        body: Optional[str] = None,
+        use_sni: bool = False,
+    ) -> tuple[int, dict[str, str], bytes]:
+        ssl_sock = self._create_ssl_socket(use_sni=use_sni)
         
         try:
             # 构建请求头

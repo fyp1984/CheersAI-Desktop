@@ -30,7 +30,7 @@ const Operate = ({
           className="
           mr-[5px] flex
           h-7 cursor-pointer items-center rounded-md px-3
-          text-xs font-medium text-gray-700
+          text-xs font-medium text-gray-700 dark:text-gray-300 dark:hover:bg-white/10
         "
           onClick={onCancel}
         >
@@ -55,7 +55,7 @@ const Operate = ({
       <div
         className={
           `flex h-[28px] cursor-pointer items-center rounded-md border border-gray-200
-        bg-white px-3 text-xs font-medium text-gray-700 ${disabled && 'cursor-default opacity-50'}}`
+        bg-white px-3 text-xs font-medium text-gray-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10 ${disabled && 'cursor-default opacity-50'}}`
         }
         onClick={() => !disabled && onAdd()}
       >
@@ -83,7 +83,7 @@ const Operate = ({
         <div
           className={
             `flex h-[28px] cursor-pointer items-center rounded-md border border-gray-200
-          bg-white px-3 text-xs font-medium text-gray-700 ${disabled && 'cursor-default opacity-50'}}`
+          bg-white px-3 text-xs font-medium text-gray-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10 ${disabled && 'cursor-default opacity-50'}}`
           }
           onClick={() => !disabled && onEdit()}
         >

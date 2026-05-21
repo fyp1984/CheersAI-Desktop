@@ -151,8 +151,8 @@ const MembersPage = () => {
           </div>
         </div>
         {showInstallWorkbench && (
-          <div className="mb-5 rounded-xl border border-[#dbeafe] bg-[#f9fbff] p-4 shadow-sm">
-            <div className="flex flex-col gap-2 border-b border-[#dbeafe] pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mb-5 rounded-xl border border-[#dbeafe] bg-[#f9fbff] p-4 shadow-sm dark:border-blue-400/20 dark:bg-blue-500/10 dark:shadow-black/20">
+            <div className="flex flex-col gap-2 border-b border-[#dbeafe] pb-4 sm:flex-row sm:items-end sm:justify-between dark:border-blue-400/20">
               <div>
                 <div className="system-md-semibold text-text-primary">
                   {t('members.installWorkbenchTitle', { ns: 'common', defaultValue: '系统安装能力' })}
@@ -164,7 +164,7 @@ const MembersPage = () => {
                   })}
                 </div>
               </div>
-              <div className="system-xs-medium rounded-full bg-white px-3 py-1 text-[#2563eb] shadow-sm">
+              <div className="system-xs-medium rounded-full bg-white px-3 py-1 text-[#2563eb] shadow-sm dark:bg-blue-500/15 dark:text-blue-200 dark:shadow-black/20">
                 {t('members.installWorkbenchBadge', {
                   ns: 'common',
                   defaultValue: '系统管理员专属',
@@ -173,9 +173,9 @@ const MembersPage = () => {
             </div>
             <div className="mt-4 grid gap-3 xl:grid-cols-2">
               {canManageModelProviders && (
-                <div className="rounded-xl border border-divider-subtle bg-white p-4 shadow-sm transition-all duration-200 hover:translate-y-[-2px] hover:shadow-md">
+                <div className="rounded-xl border border-divider-subtle bg-white p-4 shadow-sm transition-all duration-200 hover:translate-y-[-2px] hover:shadow-md dark:border-white/10 dark:bg-[#24252b] dark:shadow-black/20">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eff6ff] text-[#2563eb]">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eff6ff] text-[#2563eb] dark:bg-blue-500/15 dark:text-blue-300">
                       <RiBrainLine className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 grow">
@@ -191,7 +191,7 @@ const MembersPage = () => {
                     </div>
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <div className="system-xs-medium rounded-full bg-[#eff6ff] px-3 py-1 text-[#2563eb]">
+                    <div className="system-xs-medium rounded-full bg-[#eff6ff] px-3 py-1 text-[#2563eb] dark:bg-blue-500/15 dark:text-blue-200">
                       {t('members.modelInstallCount', {
                         ns: 'common',
                         defaultValue: '已接入 {{count}} 个模型服务',
@@ -223,9 +223,9 @@ const MembersPage = () => {
                 </div>
               )}
               {canManagePlugins && (
-                <div className="rounded-xl border border-divider-subtle bg-white p-4 shadow-sm transition-all duration-200 hover:translate-y-[-2px] hover:shadow-md">
+                <div className="rounded-xl border border-divider-subtle bg-white p-4 shadow-sm transition-all duration-200 hover:translate-y-[-2px] hover:shadow-md dark:border-white/10 dark:bg-[#24252b] dark:shadow-black/20">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eef2ff] text-[#4f46e5]">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eef2ff] text-[#4f46e5] dark:bg-indigo-500/15 dark:text-indigo-300">
                       <RiPuzzle2Line className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 grow">
@@ -241,7 +241,7 @@ const MembersPage = () => {
                     </div>
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <div className="system-xs-medium rounded-full bg-[#eef2ff] px-3 py-1 text-[#4338ca]">
+                    <div className="system-xs-medium rounded-full bg-[#eef2ff] px-3 py-1 text-[#4338ca] dark:bg-indigo-500/15 dark:text-indigo-200">
                       {isInstalledPluginListLoading
                         ? '--'
                         : t(

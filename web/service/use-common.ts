@@ -23,6 +23,7 @@ import type {
 } from '@/models/common'
 import type { RETRIEVE_METHOD } from '@/types/app'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { hasModelProviderReadWorkspaceCapability } from '@/utils/workspace-capabilities'
 import { get, post } from './base'
 import { useInvalid } from './use-base'
 
@@ -270,13 +271,14 @@ export const useOneMoreStep = () => {
 export const useModelProviders = (enabled = true) => {
   const { data: workspace } = useCurrentWorkspace()
   const { data: userProfile } = useUserProfile()
+  const canReadModelProviders = hasModelProviderReadWorkspaceCapability(workspace)
   return useQuery<{ data: ModelProvider[] }>({
     queryKey: commonQueryKeys.modelProviders(workspace?.id, userProfile?.profile?.id),
     queryFn: () => get<{ data: ModelProvider[] }>('/workspaces/current/model-providers'),
     refetchOnWindowFocus: true,
     refetchOnMount: 'always',
     refetchInterval: 5000,
-    enabled: enabled && !!workspace?.id && !!userProfile?.profile?.id,
+    enabled: enabled && canReadModelProviders && !!workspace?.id && !!userProfile?.profile?.id,
   })
 }
 

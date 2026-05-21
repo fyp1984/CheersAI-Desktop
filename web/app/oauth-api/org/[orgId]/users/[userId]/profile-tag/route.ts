@@ -8,6 +8,9 @@ type JsonObject = Record<string, unknown>
 const MAX_TAG_STRING_LENGTH = 500
 const SSO_TAG_SPLIT_PATTERN = /[，、；;|,]+/
 const DEFAULT_SSO_OWNER = process.env.SSO_PROVISION_OWNER?.trim() || 'CheersAI'
+const SSO_REQUEST_TIMEOUT = 5000
+const SSO_REQUEST_RETRIES = 2
+const SSO_REQUEST_RETRY_DELAY = 300
 
 const buildBasicAuthHeader = (clientId: string, clientSecret: string) => {
   return `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`
@@ -39,6 +42,51 @@ const parseUserTagNames = (rawValue: unknown) => {
 
 const normalizeString = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
 
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+const shouldRetrySSORequest = (response: Response) => response.status >= 500
+
+const fetchSSOWithRetry = async (url: string, init: RequestInit) => {
+  let lastError: unknown
+
+  for (let attempt = 0; attempt <= SSO_REQUEST_RETRIES; attempt += 1) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), SSO_REQUEST_TIMEOUT)
+
+    try {
+      const response = await fetch(url, {
+        ...init,
+        signal: controller.signal,
+        cache: 'no-store',
+      })
+
+      if (!shouldRetrySSORequest(response) || attempt >= SSO_REQUEST_RETRIES)
+        return response
+    }
+    catch (error) {
+      lastError = error
+      if (attempt >= SSO_REQUEST_RETRIES)
+        throw error
+    }
+    finally {
+      clearTimeout(timeoutId)
+    }
+
+    await sleep(SSO_REQUEST_RETRY_DELAY)
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Failed to fetch SSO user.')
+}
+
+const buildUnavailableProfileTagResponse = (userId: string) => {
+  return NextResponse.json({
+    userId,
+    tags: '',
+    tagNames: [],
+    unavailable: true,
+  })
+}
+
 const buildUserLookupUrl = (ssoBaseUrl: string, nextUserId: string, ssoOwner?: string, ssoUsername?: string) => {
   const getUserUrl = new URL('/api/get-user', ssoBaseUrl)
   const normalizedOwner = normalizeString(ssoOwner) || DEFAULT_SSO_OWNER
@@ -53,7 +101,7 @@ const buildUserLookupUrl = (ssoBaseUrl: string, nextUserId: string, ssoOwner?: s
   return getUserUrl
 }
 
-const buildUserLookupResponse = async (nextUserId: string, ssoOwner?: string, ssoUsername?: string) => {
+const buildUserLookupResponse = async (nextUserId: string, ssoOwner?: string, ssoUsername?: string, allowDegraded = false) => {
   const { ssoBaseUrl, clientId } = getSSOConfig()
   const clientSecret = process.env.DESKTOP_SSO_CLIENT_SECRET || ''
   if (!ssoBaseUrl || !clientId || !clientSecret)
@@ -61,16 +109,31 @@ const buildUserLookupResponse = async (nextUserId: string, ssoOwner?: string, ss
 
   const authHeader = buildBasicAuthHeader(clientId, clientSecret)
   const getUserUrl = buildUserLookupUrl(ssoBaseUrl, nextUserId, ssoOwner, ssoUsername)
-  const getUserResponse = await fetch(getUserUrl.toString(), {
-    headers: {
-      Accept: 'application/json',
-      Authorization: authHeader,
-    },
-    cache: 'no-store',
-  })
+  let getUserResponse: Response
+  try {
+    getUserResponse = await fetchSSOWithRetry(getUserUrl.toString(), {
+      headers: {
+        Accept: 'application/json',
+        Authorization: authHeader,
+      },
+    })
+  }
+  catch (error) {
+    if (allowDegraded) {
+      console.warn('SSO profile tag fetch degraded:', error)
+      return buildUnavailableProfileTagResponse(nextUserId)
+    }
+
+    throw error
+  }
 
   const getUserPayload = await getResponsePayload(getUserResponse)
   const ssoUser = getUserPayload.data
+  if (allowDegraded && !getUserResponse.ok && getUserResponse.status >= 500) {
+    console.warn('SSO profile tag fetch degraded:', getUserResponse.status, getUserPayload)
+    return buildUnavailableProfileTagResponse(nextUserId)
+  }
+
   if (!getUserResponse.ok || !isSuccessPayload(getUserPayload) || !ssoUser || typeof ssoUser !== 'object') {
     return NextResponse.json(
       { message: String(getUserPayload?.msg || getUserPayload?.message || 'Failed to fetch SSO user.') },
@@ -96,7 +159,7 @@ export async function GET(
 
     const ssoOwner = request.nextUrl.searchParams.get('ssoOwner')
     const ssoUsername = request.nextUrl.searchParams.get('ssoUsername')
-    const lookupResult = await buildUserLookupResponse(userId, ssoOwner || undefined, ssoUsername || undefined)
+    const lookupResult = await buildUserLookupResponse(userId, ssoOwner || undefined, ssoUsername || undefined, true)
     if (lookupResult instanceof NextResponse)
       return lookupResult
 

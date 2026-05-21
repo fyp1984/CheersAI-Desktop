@@ -75,9 +75,9 @@ const KeyValidator = ({
   }
 
   return (
-    <div className="mb-2 rounded-md border-[0.5px] border-gray-200 bg-gray-50">
+    <div className="mb-2 rounded-md border-[0.5px] border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-[#24252b]">
       <div className={
-        `flex h-[52px] cursor-pointer items-center justify-between px-4 ${isOpen && 'border-b-[0.5px] border-b-gray-200'}`
+        `flex h-[52px] cursor-pointer items-center justify-between px-4 ${isOpen && 'border-b-[0.5px] border-b-gray-200 dark:border-b-white/10'}`
       }
       >
         {title}

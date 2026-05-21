@@ -11,7 +11,6 @@ from controllers.console.wraps import setup_required
 from extensions.ext_database import db
 from libs.filebay_user_config import (
     is_masked_gitea_token,
-    mask_gitea_token,
     merge_account_filebay_config,
     resolve_user_filebay_config,
 )
@@ -26,7 +25,7 @@ gitea_config_model = console_ns.model('GiteaConfig', {
     'gitea_url': fields.String(description='Gitea server URL'),
     'gitea_owner': fields.String(description='Repository owner'),
     'gitea_repo': fields.String(description='Repository name'),
-    'gitea_token': fields.String(description='API token (masked)'),
+    'gitea_token': fields.String(description='API token'),
 })
 
 gitea_config_update_model = console_ns.model('GiteaConfigUpdate', {
@@ -55,7 +54,7 @@ class GiteaConfigApi(Resource):
         Get current Gitea configuration for the logged-in user.
         
         Returns:
-            Current Gitea configuration (token is masked)
+            Current Gitea configuration.
         """
         # Get current user's email
         user_email = current_user.email
@@ -65,7 +64,7 @@ class GiteaConfigApi(Resource):
         config_data = resolve_user_filebay_config(
             user_email,
             account=account,
-            mask_token=True,
+            mask_token=False,
             log_prefix='[Gitea Config]',
         )
         if config_data:
@@ -81,7 +80,7 @@ class GiteaConfigApi(Resource):
             'gitea_url': gitea_url,
             'gitea_owner': gitea_owner,
             'gitea_repo': gitea_repo,
-            'gitea_token': mask_gitea_token(gitea_token),
+            'gitea_token': gitea_token,
         }
 
     @setup_required

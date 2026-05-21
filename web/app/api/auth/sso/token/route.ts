@@ -5,6 +5,27 @@ import { NextResponse } from 'next/server'
 import { generateSessionId, storeSession } from '@/lib/sso-session'
 
 const SSO_SESSION_COOKIE = 'sso_session_id'
+const TOKEN_EXCHANGE_RETRY_DELAY = 300
+
+type SsoTokenResponse = {
+  access_token?: string
+  refresh_token?: string
+  expires_in?: number | string
+  scope?: string
+}
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+const fetchTokenWithRetry = async (url: string, init: RequestInit) => {
+  try {
+    return await fetch(url, init)
+  }
+  catch (error) {
+    console.warn('SSO token exchange fetch failed, retrying once:', error)
+    await sleep(TOKEN_EXCHANGE_RETRY_DELAY)
+    return fetch(url, init)
+  }
+}
 
 const exchangeTokenViaProxy = async (body: Record<string, unknown>) => {
   const response = await fetch('http://api:5001/console/api/auth/sso-proxy/token', {
@@ -22,7 +43,7 @@ const exchangeTokenViaProxy = async (body: Record<string, unknown>) => {
     throw new Error('Token exchange failed')
   }
 
-  return response.json() as Promise<Record<string, any>>
+  return response.json() as Promise<SsoTokenResponse>
 }
 
 export async function POST(request: NextRequest) {
@@ -70,9 +91,9 @@ export async function POST(request: NextRequest) {
       headers.Authorization = `Basic ${authString}`
     }
 
-    let tokenData: any = null
+    let tokenData: SsoTokenResponse | null = null
     try {
-      const tokenResponse = await fetch(tokenUrl.toString(), {
+      const tokenResponse = await fetchTokenWithRetry(tokenUrl.toString(), {
         method: 'POST',
         headers,
         body: params.toString(),

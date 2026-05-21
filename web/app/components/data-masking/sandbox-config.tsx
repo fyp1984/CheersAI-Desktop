@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { API_PREFIX } from '@/config'
 import { useSandboxSecurity } from '@/context/use-sandbox-security'
 import { generatePassphrase } from '@/lib/data-masking/crypto-utils'
+import { fetchFileBayConfig, getCachedFileBayConfig, setCachedFileBayConfig } from '@/service/filebay-config-cache'
 import { useUserProfile } from '@/service/use-common'
 
 type SandboxConfigProps = { onConfigured?: (path: string) => void }
@@ -57,7 +58,6 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
   const [giteaRepo, setGiteaRepo] = useState('')
   const [giteaPath, setGiteaPath] = useState('')
   const [giteaToken, setGiteaToken] = useState('')
-  const [showGiteaToken, setShowGiteaToken] = useState(false)
   const [giteaTestResult, setGiteaTestResult] = useState<{ success: boolean, message: string } | null>(null)
   const [giteaTesting, setGiteaTesting] = useState(false)
   const [giteaSaving, setGiteaSaving] = useState(false)
@@ -113,62 +113,37 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
           saveUserConfig(m)
       }
 
-      // Load Gitea configuration - try enterprise-managed config first
-      const userEmail = userProfileData?.profile?.email
-      let enterpriseConfigLoaded = false
-      
-      console.log('[FileBay Config] Current user email:', userEmail)
-      
-      // Try to get enterprise-managed config through local API
+      const applyFileBayConfig = (data: {
+        gitea_url?: string
+        gitea_owner?: string
+        gitea_repo?: string
+        gitea_path?: string
+        gitea_token?: string
+        is_enterprise_managed?: boolean
+      }) => {
+        setGiteaUrl(data.gitea_url || '')
+        setGiteaOwner(data.gitea_owner || '')
+        setGiteaRepo(data.gitea_repo || '')
+        setGiteaPath(data.gitea_path || '')
+        setGiteaToken(data.gitea_token || '')
+        setIsEnterpriseManaged(Boolean(data.is_enterprise_managed))
+      }
+
+      const cachedFileBayConfig = getCachedFileBayConfig()
+      if (cachedFileBayConfig) {
+        applyFileBayConfig(cachedFileBayConfig)
+        if (!cancelled)
+          setConfigLoaded(true)
+      }
+
       try {
-        const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1] || ''
-        const giteaRes = await fetch(`${API_PREFIX}/gitea/config/enterprise`, {
-          credentials: 'include',
-          headers: { 'X-CSRF-Token': csrfToken },
-        })
-        console.log('[FileBay Config] Enterprise config API response status:', giteaRes.status)
-        
-        if (giteaRes.ok) {
-          const data = await giteaRes.json()
-          console.log('[FileBay Config] Enterprise config data:', data)
-          if (data.is_enterprise_managed) {
-            setGiteaUrl(data.gitea_url || '')
-            setGiteaOwner(data.gitea_owner || '')
-            setGiteaRepo(data.gitea_repo || '')
-            setGiteaPath(data.gitea_path || '')
-            setGiteaToken(data.gitea_token || '')
-            setIsEnterpriseManaged(true)
-            enterpriseConfigLoaded = true
-          }
-        }
-        else {
-          const errorText = await giteaRes.text()
-          console.log('[FileBay Config] Enterprise config API error:', errorText)
-        }
+        const data = await fetchFileBayConfig()
+        if (!cancelled)
+          applyFileBayConfig(data)
       }
       catch (error) {
-        console.error('[FileBay Config] Enterprise config API exception:', error)
-      }
-      
-      // Fall back to regular user config if enterprise config not found
-      if (!enterpriseConfigLoaded) {
-        console.log('[FileBay Config] Loading user config')
-        try {
-          const giteaRes = await fetch(`${API_PREFIX}/gitea/config`, { credentials: 'include' })
-          if (giteaRes.ok) {
-            const data = await giteaRes.json()
-            console.log('[FileBay Config] User config data:', data)
-            setGiteaUrl(data.gitea_url || '')
-            setGiteaOwner(data.gitea_owner || '')
-            setGiteaRepo(data.gitea_repo || '')
-            setGiteaPath(data.gitea_path || '')
-            setGiteaToken(data.gitea_token || '')
-            setIsEnterpriseManaged(false)
-          }
-        }
-        catch (error) {
+        if (!cachedFileBayConfig)
           console.error('[FileBay Config] User config API exception:', error)
-        }
       }
 
       setConfigLoaded(true)
@@ -217,11 +192,20 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
         }),
       })
       if (res.ok) {
+        setCachedFileBayConfig({
+          gitea_url: giteaUrl,
+          gitea_owner: giteaOwner,
+          gitea_repo: giteaRepo,
+          gitea_path: giteaPath,
+          gitea_token: giteaToken,
+          is_enterprise_managed: isEnterpriseManaged,
+        })
         alert('FileBay 配置保存成功')
         // Reload config to get masked token
         const reloadRes = await fetch(`${API_PREFIX}/gitea/config`, { credentials: 'include' })
         if (reloadRes.ok) {
           const data = await reloadRes.json()
+          setCachedFileBayConfig(data)
           setGiteaToken(data.gitea_token || '')
         }
       }
@@ -556,24 +540,14 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-text-secondary">API Token</label>
-            <div className="relative">
-              <input
-                type={showGiteaToken ? 'text' : 'password'}
-                value={giteaToken}
-                onChange={e => setGiteaToken(e.target.value)}
-                placeholder="输入新的 Token 或留空保持不变"
-                disabled={isEnterpriseManaged}
-                className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 pr-10 font-mono text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid disabled:cursor-not-allowed disabled:opacity-60"
-              />
-              <button
-                type="button"
-                onClick={() => setShowGiteaToken(!showGiteaToken)}
-                disabled={isEnterpriseManaged}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {showGiteaToken ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-              </button>
-            </div>
+            <input
+              type="text"
+              value={giteaToken}
+              onChange={e => setGiteaToken(e.target.value)}
+              placeholder="输入新的 Token 或留空保持不变"
+              disabled={isEnterpriseManaged}
+              className="w-full rounded-md border border-components-input-border-active bg-components-input-bg-normal px-3 py-2 font-mono text-sm text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-state-accent-solid disabled:cursor-not-allowed disabled:opacity-60"
+            />
           </div>
           {giteaTestResult && (
             <div className={`rounded-md p-3 ${giteaTestResult.success ? 'border border-state-success-hover-alt bg-state-success-hover' : 'border border-state-destructive-border bg-state-destructive-hover'}`}>
@@ -591,6 +565,14 @@ export function SandboxConfig({ onConfigured }: SandboxConfigProps) {
             </div>
           )}
           <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleGiteaTest}
+              disabled={giteaTesting}
+              className="inline-flex items-center rounded-md border border-components-input-border-active px-4 py-2 text-sm font-medium text-text-secondary hover:bg-components-button-secondary-bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {giteaTesting ? '测试中...' : '测试连接'}
+            </button>
             {!isEnterpriseManaged && (
               <button
                 type="button"

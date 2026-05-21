@@ -7,7 +7,6 @@ import {
 import { useDebounce } from 'ahooks'
 import { useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import Button from '@/app/components/base/button'
 import { IS_CLOUD_EDITION } from '@/config'
 import { useAppContext } from '@/context/app-context'
 import { useGlobalPublicStore } from '@/context/global-public-context'
@@ -117,12 +116,12 @@ const ModelProviderPage = ({ searchText }: Props) => {
       </div>
       {IS_CLOUD_EDITION && <QuotaPanel providers={providers} isLoading={isValidatingCurrentWorkspace} />}
       {!filteredConfiguredProviders?.length && (
-        <div className="mb-2 rounded-xl border border-[#bfdbfe] bg-[#eff6ff] p-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-[#bfdbfe] bg-white shadow-sm">
-            <RiBrainLine className="h-5 w-5 text-[#2563eb]" />
+        <div className="mb-2 rounded-xl border border-[#bfdbfe] bg-[#eff6ff] p-4 dark:border-blue-500/30 dark:bg-blue-500/10">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-[#bfdbfe] bg-white shadow-sm dark:border-blue-400/30 dark:bg-blue-500/15 dark:shadow-black/20">
+            <RiBrainLine className="h-5 w-5 text-[#2563eb] dark:text-blue-300" />
           </div>
-          <div className="system-sm-medium mt-2 text-text-primary">{t('modelProvider.emptyProviderTitle', { ns: 'common' })}</div>
-          <div className="system-xs-regular mt-1 text-text-secondary">{t('modelProvider.emptyProviderTip', { ns: 'common' })}</div>
+          <div className="system-sm-medium mt-2 text-text-primary dark:text-gray-100">{t('modelProvider.emptyProviderTitle', { ns: 'common' })}</div>
+          <div className="system-xs-regular mt-1 text-text-secondary dark:text-gray-400">{t('modelProvider.emptyProviderTip', { ns: 'common' })}</div>
         </div>
       )}
       {!!filteredConfiguredProviders?.length && (

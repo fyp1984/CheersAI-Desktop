@@ -262,7 +262,7 @@ class TokenQuotaService:
             # 没有配额限制
             return {
                 "within_quota": True,
-                "remaining_tokens": float("inf"),
+                "remaining_tokens": 0,
                 "should_use_local": False,
                 "quota_config": None,
                 "current_usage": None,

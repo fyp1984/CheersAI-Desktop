@@ -19,7 +19,6 @@ import {
   ModelTypeEnum,
 } from '@/app/components/header/account-setting/model-provider-page/declarations'
 import { ZENDESK_FIELD_IDS } from '@/config'
-import { useGlobalPublicStore } from '@/context/global-public-context'
 import { fetchCurrentPlanInfo } from '@/service/billing'
 import {
   useModelListByType,
@@ -29,7 +28,7 @@ import {
 import {
   useEducationStatus,
 } from '@/service/use-education'
-import { hasAnyWorkspaceCapability, hasBuiltInAdminAccess, hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
+import { hasAnyWorkspaceCapability, hasModelProviderReadWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspace-capabilities'
 import { useSelector as useAppContextSelector } from './app-context'
 
 export type ProviderContextState = {
@@ -118,18 +117,13 @@ export const ProviderContextProvider = ({
 }: ProviderContextProviderProps) => {
   const queryClient = useQueryClient()
   const currentWorkspace = useAppContextSelector(state => state.currentWorkspace)
-  const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
-  const hasBuiltInAdmin = hasBuiltInAdminAccess(currentWorkspace, systemFeatures)
-  const canManageModelProviders = hasBuiltInAdmin || hasAnyWorkspaceCapability(currentWorkspace, [
-    WORKSPACE_CAPABILITIES.modelProviderManage,
-    WORKSPACE_CAPABILITIES.modelManage,
-  ])
+  const canReadModelProviders = hasModelProviderReadWorkspaceCapability(currentWorkspace)
   const canUseModels = hasAnyWorkspaceCapability(currentWorkspace, [
     WORKSPACE_CAPABILITIES.modelUse,
     WORKSPACE_CAPABILITIES.modelProviderManage,
     WORKSPACE_CAPABILITIES.modelManage,
   ])
-  const { data: providersData } = useModelProviders(canManageModelProviders)
+  const { data: providersData } = useModelProviders(canReadModelProviders)
   const { data: textGenerationModelList } = useModelListByType(ModelTypeEnum.textGeneration, canUseModels)
   const { data: supportRetrievalMethods } = useSupportRetrievalMethods()
 

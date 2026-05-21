@@ -17,8 +17,39 @@ const getCookieValue = (name: string) => {
 const clearDesktopSSOCache = () => {
   sessionStorage.removeItem('desktop-sso-state')
   sessionStorage.removeItem('desktop-sso-code-verifier')
+  sessionStorage.removeItem('desktop-sso-exchange-lock')
   document.cookie = 'desktop-sso-state=; Path=/; Max-Age=0; SameSite=Lax'
   document.cookie = 'desktop-sso-code-verifier=; Path=/; Max-Age=0; SameSite=Lax'
+}
+
+const getExchangeLockValue = (state: string, code: string) => `${state}:${code}`
+
+const hasActiveExchangeLock = (lockValue: string) => {
+  const rawLock = sessionStorage.getItem('desktop-sso-exchange-lock')
+  if (!rawLock)
+    return false
+
+  try {
+    const lock = JSON.parse(rawLock) as { value?: string, createdAt?: number }
+    if (lock.value !== lockValue)
+      return false
+
+    return Date.now() - Number(lock.createdAt || 0) < 60_000
+  }
+  catch {
+    return rawLock === lockValue
+  }
+}
+
+const setExchangeLock = (lockValue: string) => {
+  sessionStorage.setItem('desktop-sso-exchange-lock', JSON.stringify({
+    value: lockValue,
+    createdAt: Date.now(),
+  }))
+}
+
+const clearExchangeLock = () => {
+  sessionStorage.removeItem('desktop-sso-exchange-lock')
 }
 
 export default function OAuthCallbackPage() {
@@ -60,40 +91,45 @@ export default function OAuthCallbackPage() {
       return
     }
 
+    const exchangeLockValue = getExchangeLockValue(state, code)
+    if (hasActiveExchangeLock(exchangeLockValue)) {
+      console.warn('[SSO] Token exchange already locked for this callback, skipping duplicate request')
+      return
+    }
+    setExchangeLock(exchangeLockValue)
+
     const redirectUri = `${window.location.protocol}//${window.location.host}/oauth-callback`
 
     exchangeSSOToken({ code, state, redirectUri, codeVerifier })
       .then(async () => {
         clearDesktopSSOCache()
-        
+
         // 尝试同步 FileBay 配置到 Vault Bridge
         try {
           // 检查 Vault Bridge 是否运行
           const isVaultBridgeRunning = await checkVaultBridgeHealth()
-          
+
           if (isVaultBridgeRunning) {
-            console.log('[Vault Bridge] Service is running, attempting to sync FileBay config')
-            
             // 获取用户信息
             const userResponse = await fetch('/console/api/account/profile', {
               method: 'GET',
               credentials: 'include',
             })
-            
+
             if (userResponse.ok) {
               const userData = await userResponse.json()
               const userId = userData.id
               const userEmail = userData.email
-              
+
               // 获取 FileBay 配置（使用下载专用端点，包含完整 token）
               const configResponse = await fetch('/console/api/gitea/config/download', {
                 method: 'GET',
                 credentials: 'include',
               })
-              
+
               if (configResponse.ok) {
                 const config = await configResponse.json()
-                
+
                 // 检查配置是否完整
                 if (config.gitea_url && config.gitea_owner && config.gitea_repo && config.gitea_token) {
                   // 通知 Vault Bridge
@@ -104,29 +140,28 @@ export default function OAuthCallbackPage() {
                     email: userEmail,
                     token: config.gitea_token,
                   })
-                  
-                  if (syncSuccess) {
-                    console.log('[Vault Bridge] FileBay config synced successfully')
-                  } else {
+
+                  if (!syncSuccess)
                     console.warn('[Vault Bridge] Failed to sync FileBay config')
-                  }
-                } else {
+                }
+                else {
                   console.warn('[Vault Bridge] FileBay config is incomplete, skipping sync')
                 }
-              } else {
+              }
+              else {
                 console.warn('[Vault Bridge] Failed to fetch FileBay config')
               }
-            } else {
+            }
+            else {
               console.warn('[Vault Bridge] Failed to fetch user profile')
             }
-          } else {
-            console.debug('[Vault Bridge] Service is not running, skipping config sync')
           }
-        } catch (vaultError) {
+        }
+        catch (vaultError) {
           // 不影响登录流程，只记录错误
           console.error('[Vault Bridge] Error during config sync:', vaultError)
         }
-        
+
         await new Promise<void>((resolve) => {
           const redirectTimer = window.setTimeout(() => {
             window.clearTimeout(redirectTimer)
@@ -137,6 +172,7 @@ export default function OAuthCallbackPage() {
       })
       .catch((error) => {
         console.error('[SSO] Token exchange failed:', error)
+        clearExchangeLock()
         clearDesktopSSOCache()
         Toast.notify({ type: 'error', message: 'SSO login failed' })
         router.replace('/signin')

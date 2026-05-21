@@ -7,17 +7,17 @@ import { getWorkspaceCapabilities, WORKSPACE_CAPABILITIES } from '@/utils/worksp
 
 const SESSION_TIMEOUT = 5000
 const SSO_SESSION_COOKIE = 'sso_session_id'
+const trimTrailingSlash = (value: string) => value.replace(/\/$/, '')
 const externalConsoleApiUrl = process.env.CONSOLE_API_URL?.trim() || ''
-const normalizedExternalConsoleApiUrl = externalConsoleApiUrl.replace(/\/$/, '')
+const normalizedExternalConsoleApiUrl = trimTrailingSlash(externalConsoleApiUrl)
 const safeExternalConsoleApiUrl = /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/i.test(normalizedExternalConsoleApiUrl)
   ? ''
   : normalizedExternalConsoleApiUrl
-const INTERNAL_CONSOLE_API_BASE = (
-  process.env.INTERNAL_API_BASE_URL?.trim()
-  || safeExternalConsoleApiUrl
-  || 'http://api:5001'
-).replace(/\/$/, '')
-const INTERNAL_CONSOLE_API_PREFIX = `${INTERNAL_CONSOLE_API_BASE}/console/api`
+const INTERNAL_CONSOLE_API_PREFIX = trimTrailingSlash(
+  process.env.INTERNAL_CONSOLE_API_PREFIX?.trim()
+  || process.env.NEXT_PUBLIC_API_PREFIX?.trim()
+  || `${trimTrailingSlash(process.env.INTERNAL_API_BASE_URL?.trim() || safeExternalConsoleApiUrl || 'http://api:5001')}/console/api`,
+)
 
 type AccessTokenResult = {
   accessToken: string

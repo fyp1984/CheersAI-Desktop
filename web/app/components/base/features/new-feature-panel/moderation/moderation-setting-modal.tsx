@@ -14,11 +14,13 @@ import { useToastContext } from '@/app/components/base/toast'
 import ApiBasedExtensionSelector from '@/app/components/header/account-setting/api-based-extension-page/selector'
 import { ACCOUNT_SETTING_TAB } from '@/app/components/header/account-setting/constants'
 import { CustomConfigurationStatusEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
+import { useSelector as useAppContextSelector } from '@/context/app-context'
 import { useDocLink, useLocale } from '@/context/i18n'
 import { useModalContext } from '@/context/modal-context'
 import { LanguagesSupported } from '@/i18n-config/language'
 import { useCodeBasedExtensions, useModelProviders } from '@/service/use-common'
 import { cn } from '@/utils/classnames'
+import { hasModelProviderReadWorkspaceCapability } from '@/utils/workspace-capabilities'
 import FormGeneration from './form-generation'
 import ModerationContent from './moderation-content'
 
@@ -45,7 +47,9 @@ const ModerationSettingModal: FC<ModerationSettingModalProps> = ({
   const docLink = useDocLink()
   const { notify } = useToastContext()
   const locale = useLocale()
-  const { data: modelProviders, isPending: isLoading, refetch: refetchModelProviders } = useModelProviders()
+  const currentWorkspace = useAppContextSelector(state => state.currentWorkspace)
+  const canReadModelProviders = hasModelProviderReadWorkspaceCapability(currentWorkspace)
+  const { data: modelProviders, isPending: isLoading, refetch: refetchModelProviders } = useModelProviders(canReadModelProviders)
   const [localeData, setLocaleData] = useState<ModerationConfig>(data)
   const { setShowAccountSettingModal } = useModalContext()
   const handleOpenSettingsModal = () => {

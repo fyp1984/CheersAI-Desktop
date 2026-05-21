@@ -200,6 +200,13 @@ export const hasPluginReadWorkspaceCapability = (
   WORKSPACE_CAPABILITIES.apiExtensionManage,
 ])
 
+export const hasModelProviderReadWorkspaceCapability = (
+  workspace: Pick<ICurrentWorkspace, 'role' | 'capabilities'> | null | undefined,
+) => hasAnyWorkspaceCapability(workspace, [
+  WORKSPACE_CAPABILITIES.modelProviderManage,
+  WORKSPACE_CAPABILITIES.modelManage,
+])
+
 export const hasBuiltInAdminAccess = (
   workspace: Pick<ICurrentWorkspace, 'role' | 'capabilities'> | null | undefined,
   systemFeatures?: Pick<SystemFeatures, 'plugin_installation_permission'> | null,
