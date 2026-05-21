@@ -453,7 +453,7 @@ def delete_draft_variables_batch(app_id: str, batch_size: int = 1000) -> int:
             batch_deleted: int = int(getattr(deleted_result, "rowcount", 0) or 0)
             total_deleted += batch_deleted
 
-            logger.info(click.style(f"Deleted {batch_deleted} draft variables (batch) for app {app_id}", fg="green"))
+            logger.debug(click.style(f"Deleted {batch_deleted} draft variables (batch) for app {app_id}", fg="green"))
 
     logger.info(
         click.style(
