@@ -113,11 +113,11 @@ function AppCard({
     operationsMap.webapp.push({ opName: '分享海报', opIcon: RiShareForwardLine })
     operationsMap.webapp.push({ opName: t('overview.appInfo.customize.entry', { ns: 'appOverview' }), opIcon: RiPaintBrushLine })
 
-    if (isCurrentWorkspaceEditor)
+    if (isCurrentWorkspaceEditor || isCurrentWorkspaceManager)
       operationsMap.webapp.push({ opName: t('overview.appInfo.settings.entry', { ns: 'appOverview' }), opIcon: RiEqualizer2Line })
 
     return operationsMap
-  }, [isCurrentWorkspaceEditor, appInfo, t])
+  }, [isCurrentWorkspaceEditor, isCurrentWorkspaceManager, appInfo, t])
 
   const isApp = cardType === 'webapp'
   const basicName = isApp

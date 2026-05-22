@@ -6,6 +6,7 @@ import {
 } from '@remixicon/react'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import AppInstructionHelpButton from '@/app/components/app-instruction-help'
 import ActionButton, { ActionButtonState } from '@/app/components/base/action-button'
 import AppIcon from '@/app/components/base/app-icon'
 import ViewFormDropdown from '@/app/components/base/chat/chat-with-history/inputs-form/view-form-dropdown'
@@ -34,6 +35,8 @@ const Header = () => {
     sidebarCollapseState,
     handleSidebarCollapse,
     isResponding,
+    isInstalledApp,
+    appId,
   } = useChatWithHistoryContext()
   const { t } = useTranslation()
   const isSidebarCollapsed = sidebarCollapseState
@@ -125,6 +128,9 @@ const Header = () => {
           )}
         </div>
         <div className="flex items-center gap-1">
+          {isInstalledApp && (
+            <AppInstructionHelpButton appId={appId} source="installed" />
+          )}
           {currentConversationId && (
             <Tooltip
               popupContent={t('chat.resetChat', { ns: 'share' })}

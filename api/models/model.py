@@ -1793,6 +1793,29 @@ class Site(Base):
         return dify_config.APP_WEB_URL or request.url_root.rstrip("/")
 
 
+class AppInstruction(Base):
+    __tablename__ = "app_instructions"
+    __table_args__ = (
+        sa.PrimaryKeyConstraint("id", name="app_instruction_pkey"),
+        sa.Index("app_instruction_app_id_idx", "app_id", unique=True),
+        sa.Index("app_instruction_tenant_id_idx", "tenant_id"),
+    )
+
+    id: Mapped[str] = mapped_column(StringUUID, default=lambda: str(uuid4()))
+    tenant_id: Mapped[str] = mapped_column(StringUUID, nullable=False)
+    app_id: Mapped[str] = mapped_column(StringUUID, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    content: Mapped[str] = mapped_column(LongText, nullable=False, default="")
+    source_file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    source_file_size: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default=sa.text("0"))
+    created_by: Mapped[str | None] = mapped_column(StringUUID, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime, nullable=False, server_default=func.current_timestamp())
+    updated_by: Mapped[str | None] = mapped_column(StringUUID, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime, nullable=False, server_default=func.current_timestamp(), onupdate=func.current_timestamp()
+    )
+
+
 class ApiToken(Base):  # bug: this uses setattr so idk the field.
     __tablename__ = "api_tokens"
     __table_args__ = (

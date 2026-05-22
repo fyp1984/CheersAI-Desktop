@@ -15,7 +15,7 @@ from extensions.ext_database import db
 from fields.installed_app_fields import app_fields, installed_app_fields, installed_app_list_fields
 from libs.datetime_utils import naive_utc_now
 from libs.login import current_account_with_tenant, login_required
-from models import App, InstalledApp, RecommendedApp
+from models import App, AppInstruction, InstalledApp, RecommendedApp
 from services.account_service import TenantService
 from services.enterprise.enterprise_service import EnterpriseService
 from services.feature_service import FeatureService
@@ -272,3 +272,23 @@ class InstalledAppApi(InstalledAppResource):
             db.session.commit()
 
         return {"result": "success", "message": "App info updated successfully"}
+
+
+@console_ns.route("/installed-apps/<uuid:installed_app_id>/instruction")
+class InstalledAppInstructionApi(InstalledAppResource):
+    def get(self, installed_app):
+        instruction = db.session.scalar(select(AppInstruction).where(AppInstruction.app_id == installed_app.app_id))
+        if instruction is None:
+            return {"instruction": None}
+
+        return {
+            "instruction": {
+                "id": instruction.id,
+                "app_id": instruction.app_id,
+                "title": instruction.title,
+                "content": instruction.content,
+                "source_file_name": instruction.source_file_name,
+                "source_file_size": instruction.source_file_size,
+                "updated_at": int(instruction.updated_at.timestamp()) if instruction.updated_at else None,
+            }
+        }

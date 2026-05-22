@@ -3,6 +3,7 @@ from typing import Any, cast
 
 from flask import request
 from flask_restx import Resource, fields, marshal, marshal_with, reqparse
+from sqlalchemy import select
 from werkzeug.exceptions import Forbidden, InternalServerError, NotFound
 
 import services
@@ -63,7 +64,7 @@ from libs.helper import uuid_value
 from libs.login import current_user
 from models import Account
 from models.account import TenantStatus
-from models.model import AppMode, Site
+from models.model import AppInstruction, AppMode, Site
 from models.workflow import Workflow
 from services.app_generate_service import AppGenerateService
 from services.app_service import AppService
@@ -273,6 +274,26 @@ class TrialMessageSuggestedQuestionApi(TrialAppResource):
             raise InternalServerError()
 
         return {"data": questions}
+
+
+class TrialAppInstructionApi(TrialAppResource):
+    @trial_feature_enable
+    def get(self, trial_app):
+        instruction = db.session.scalar(select(AppInstruction).where(AppInstruction.app_id == trial_app.id))
+        if instruction is None:
+            return {"instruction": None}
+
+        return {
+            "instruction": {
+                "id": instruction.id,
+                "app_id": instruction.app_id,
+                "title": instruction.title,
+                "content": instruction.content,
+                "source_file_name": instruction.source_file_name,
+                "source_file_size": instruction.source_file_size,
+                "updated_at": int(instruction.updated_at.timestamp()) if instruction.updated_at else None,
+            }
+        }
 
 
 class TrialChatAudioApi(TrialAppResource):
@@ -547,6 +568,7 @@ api.add_resource(TrialSitApi, "/trial-apps/<uuid:app_id>/site")
 api.add_resource(TrialAppParameterApi, "/trial-apps/<uuid:app_id>/parameters", endpoint="trial_app_parameters")
 
 api.add_resource(AppApi, "/trial-apps/<uuid:app_id>", endpoint="trial_app")
+api.add_resource(TrialAppInstructionApi, "/trial-apps/<uuid:app_id>/instruction", endpoint="trial_app_instruction")
 
 api.add_resource(TrialAppWorkflowRunApi, "/trial-apps/<uuid:app_id>/workflows/run", endpoint="trial_app_workflow_run")
 api.add_resource(TrialAppWorkflowTaskStopApi, "/trial-apps/<uuid:app_id>/workflows/tasks/<string:task_id>/stop")

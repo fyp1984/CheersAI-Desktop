@@ -58,6 +58,7 @@ from .app import (
     conversation,
     conversation_variables,
     generator,
+    instruction,
     mcp_server,
     message,
     model_config,

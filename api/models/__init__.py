@@ -46,6 +46,7 @@ from .model import (
     App,
     AppAnnotationHitHistory,
     AppAnnotationSetting,
+    AppInstruction,
     AppLifecycleEvent,
     AppMCPServer,
     AppMode,

@@ -9,6 +9,7 @@ import { useBoolean } from 'ahooks'
 import * as React from 'react'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import AppInstructionHelpButton from '@/app/components/app-instruction-help'
 import ActionButton from '@/app/components/base/action-button'
 import Alert from '@/app/components/base/alert'
 import AppIcon from '@/app/components/base/app-icon'
@@ -77,6 +78,7 @@ const TryApp: FC<Props> = ({
             <div className="system-md-semibold grow truncate text-text-primary" title={appDetail.name}>{appDetail.name}</div>
           </div>
           <div className="flex items-center gap-1">
+            <AppInstructionHelpButton appId={appId} source="trial" />
             {currentConversationId && (
               <Tooltip
                 popupContent={t('chat.resetChat', { ns: 'share' })}
