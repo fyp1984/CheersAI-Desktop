@@ -99,6 +99,7 @@ export const useUserProfile = () => {
     },
     staleTime: 0,
     gcTime: 0,
+    retry: false,
   })
 }
 
@@ -114,6 +115,7 @@ export const useCurrentWorkspace = () => {
   return useQuery<ICurrentWorkspace>({
     queryKey: commonQueryKeys.currentWorkspace,
     queryFn: () => post<ICurrentWorkspace>('/workspaces/current', { body: {} }),
+    retry: false,
   })
 }
 
@@ -162,9 +164,134 @@ export type MailRegisterResponse = { result: string, data: {} }
 export const useMailRegister = () => {
   return useMutation({
     mutationKey: [NAME_SPACE, 'mail-register'],
-    mutationFn: (body: { token: string, new_password: string, password_confirm: string }) => {
+    mutationFn: (body: { token: string, new_password: string, password_confirm: string, invite_code?: string }) => {
       return post<MailRegisterResponse>('/email-register', { body })
     },
+  })
+}
+
+export type AccountInviteCode = {
+  id: string
+  code: string
+  status: 'unused' | 'used'
+  used_at: number | null
+  used_by_account_id: string | null
+}
+
+export type AccountInviteCodesResponse = {
+  limit: number
+  data: AccountInviteCode[]
+}
+
+export const useAccountInviteCodes = () => {
+  return useQuery<AccountInviteCodesResponse>({
+    queryKey: [NAME_SPACE, 'account-invite-codes'],
+    queryFn: () => get<AccountInviteCodesResponse>('/account/invite-codes'),
+  })
+}
+
+export type AccountPointReward = {
+  id: string
+  name: string
+  description: string
+  points: number
+  benefit_type: 'token' | 'service'
+  benefit_amount: number
+}
+
+export type AccountPointTransaction = {
+  id: string
+  points: number
+  remaining_points: number
+  expires_at: number | null
+  type: 'earn' | 'redeem' | 'expire'
+  source: string
+  description: string
+  created_at: number | null
+}
+
+export type AccountPointRedemption = {
+  id: string
+  reward_id: string
+  reward_name: string
+  points: number
+  status: string
+  created_at: number | null
+}
+
+export type AccountPointCalendarTransaction = {
+  id: string
+  points: number
+  type: 'earn' | 'redeem' | 'expire'
+  source: string
+  description: string
+  created_at: number | null
+}
+
+export type AccountPointCalendarDay = {
+  date: string
+  day: number
+  is_today: boolean
+  is_checked_in: boolean
+  earned_points: number
+  spent_points: number
+  expired_points: number
+  net_points: number
+  transactions: AccountPointCalendarTransaction[]
+}
+
+export type AccountPointsResponse = {
+  balance: number
+  invite_reward_points: number
+  check_in: {
+    checked_today: boolean
+    today_points: number
+    daily_points: number
+    weekly_bonus_points: number
+    streak_days: number
+    monthly_check_in_points: number
+    monthly_check_in_cap: number
+    next_bonus_in_days: number
+    valid_days: number
+  }
+  expiration: {
+    expiring_points_this_month: number
+    nearest_expiration_at: number | null
+  }
+  calendar: {
+    year: number
+    month: number
+    month_start_weekday: number
+    today: string
+    days: AccountPointCalendarDay[]
+  }
+  rewards: AccountPointReward[]
+  transactions: AccountPointTransaction[]
+  redemptions: AccountPointRedemption[]
+}
+
+export const useAccountPoints = () => {
+  return useQuery<AccountPointsResponse>({
+    queryKey: [NAME_SPACE, 'account-points'],
+    queryFn: () => get<AccountPointsResponse>('/account/points'),
+  })
+}
+
+export const useRedeemAccountPoints = () => {
+  const invalidate = useInvalid([NAME_SPACE, 'account-points'])
+  return useMutation({
+    mutationKey: [NAME_SPACE, 'account-points-redeem'],
+    mutationFn: (body: { reward_id: string }) => post<{ result: string }>('/account/points/redeem', { body }),
+    onSuccess: invalidate,
+  })
+}
+
+export const useCheckInAccountPoints = () => {
+  const invalidate = useInvalid([NAME_SPACE, 'account-points'])
+  return useMutation({
+    mutationKey: [NAME_SPACE, 'account-points-check-in'],
+    mutationFn: () => post<AccountPointsResponse>('/account/points/check-in'),
+    onSuccess: invalidate,
   })
 }
 
@@ -224,13 +351,19 @@ export const useIsLogin = () => {
     retry: false, // Don't retry on error to avoid loops
     queryFn: async (): Promise<isLogin> => {
       try {
-        await get('/account/profile', {}, {
-          silent: true,
+        const response = await globalThis.fetch('/internal/auth-status/', {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
         })
-        return { logged_in: true }
+
+        if (!response.ok)
+          return { logged_in: false }
+
+        return await response.json() as isLogin
       }
       catch {
-        // Any error (401, 500, network error, etc.) means not logged in
+        // Login page should render normally even when the probe fails.
         return { logged_in: false }
       }
     },
@@ -350,10 +483,12 @@ export const useDefaultModelByType = (type: ModelTypeEnum, enabled = true) => {
   })
 }
 
-export const useSupportRetrievalMethods = () => {
+export const useSupportRetrievalMethods = (enabled = true) => {
   return useQuery<{ retrieval_method: RETRIEVE_METHOD[] }>({
     queryKey: commonQueryKeys.retrievalMethods,
     queryFn: () => get<{ retrieval_method: RETRIEVE_METHOD[] }>('/datasets/retrieval-setting'),
+    enabled,
+    retry: false,
   })
 }
 

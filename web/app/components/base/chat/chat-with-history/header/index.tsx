@@ -37,6 +37,7 @@ const Header = () => {
     isResponding,
     isInstalledApp,
     appId,
+    instructionManageAppId,
   } = useChatWithHistoryContext()
   const { t } = useTranslation()
   const isSidebarCollapsed = sidebarCollapseState
@@ -129,7 +130,7 @@ const Header = () => {
         </div>
         <div className="flex items-center gap-1">
           {isInstalledApp && (
-            <AppInstructionHelpButton appId={appId} source="installed" />
+            <AppInstructionHelpButton appId={appId} manageAppId={instructionManageAppId} source="installed" />
           )}
           {currentConversationId && (
             <Tooltip

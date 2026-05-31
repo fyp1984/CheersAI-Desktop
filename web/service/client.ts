@@ -51,6 +51,13 @@ const getMarketplaceHeaders = () => new Headers({
   'X-Dify-Version': !IS_MARKETPLACE ? APP_VERSION : '999.0.0',
 })
 
+const shouldLogClientError = (error: unknown) => {
+  if (error instanceof Response)
+    return error.status >= 500
+
+  return true
+}
+
 const marketplaceLink = new OpenAPILink(marketplaceRouterContract, {
   url: MARKETPLACE_API_PREFIX,
   headers: () => (getMarketplaceHeaders()),
@@ -59,7 +66,8 @@ const marketplaceLink = new OpenAPILink(marketplaceRouterContract, {
   },
   interceptors: [
     onError((error) => {
-      console.error(error)
+      if (shouldLogClientError(error))
+        console.error(error)
     }),
   ],
 })
@@ -81,7 +89,8 @@ const consoleLink = new OpenAPILink(consoleRouterContract, {
   },
   interceptors: [
     onError((error) => {
-      console.error(error)
+      if (shouldLogClientError(error))
+        console.error(error)
     }),
   ],
 })

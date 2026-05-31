@@ -27,6 +27,9 @@ from libs.token import generate_csrf_token
 from models.account import (
     Account,
     AccountIntegrate,
+    AccountInviteCode,
+    AccountPointRedemption,
+    AccountPointTransaction,
     AccountStatus,
     Tenant,
     TenantAccountJoin,
@@ -328,6 +331,7 @@ class AccountService:
         )
 
         TenantService.create_owner_tenant_if_not_exist(account=account)
+        AccountInviteCodeService.ensure_invite_codes(account)
 
         return account
 
@@ -1327,6 +1331,559 @@ class TenantService:
         return TenantService.get_user_role(account, tenant) is not None
 
 
+class AccountInviteCodeService:
+    INVITE_CODE_LIMIT = 5
+    INVITE_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+
+    @classmethod
+    def normalize_code(cls, code: str | None) -> str:
+        return (code or "").strip().replace("-", "").upper()
+
+    @classmethod
+    def generate_code(cls) -> str:
+        raw_code = "".join(secrets.choice(cls.INVITE_CODE_ALPHABET) for _ in range(12))
+        return f"{raw_code[:4]}-{raw_code[4:8]}-{raw_code[8:]}"
+
+    @classmethod
+    def ensure_invite_codes(cls, account: Account) -> list[AccountInviteCode]:
+        existing_codes = (
+            db.session.query(AccountInviteCode)
+            .where(AccountInviteCode.owner_account_id == account.id)
+            .order_by(AccountInviteCode.created_at.asc())
+            .all()
+        )
+
+        missing_count = cls.INVITE_CODE_LIMIT - len(existing_codes)
+        for _ in range(max(missing_count, 0)):
+            invite_code = AccountInviteCode(owner_account_id=account.id, code=cls._generate_unique_code())
+            db.session.add(invite_code)
+            existing_codes.append(invite_code)
+
+        if missing_count > 0:
+            db.session.commit()
+
+        return existing_codes
+
+    @classmethod
+    def consume_invite_code(cls, code: str, used_by_account: Account) -> AccountInviteCode:
+        normalized_code = cls.normalize_code(code)
+        if not normalized_code:
+            raise AccountRegisterError("Invitation code is required.")
+
+        invite_code = (
+            db.session.query(AccountInviteCode)
+            .where(
+                func.replace(AccountInviteCode.code, "-", "") == normalized_code,
+                AccountInviteCode.status == "unused",
+            )
+            .with_for_update()
+            .first()
+        )
+        if not invite_code:
+            raise AccountRegisterError("Invitation code is invalid or has already been used.")
+
+        invite_code.status = "used"
+        invite_code.used_at = naive_utc_now()
+        invite_code.used_by_account_id = used_by_account.id
+        db.session.add(invite_code)
+        AccountPointService.award_invite_used_points(invite_code, used_by_account)
+        db.session.commit()
+        return invite_code
+
+    @classmethod
+    def is_invite_code_available(cls, code: str | None) -> bool:
+        normalized_code = cls.normalize_code(code)
+        if not normalized_code:
+            return False
+        return (
+            db.session.query(AccountInviteCode)
+            .where(
+                func.replace(AccountInviteCode.code, "-", "") == normalized_code,
+                AccountInviteCode.status == "unused",
+            )
+            .first()
+            is not None
+        )
+
+    @classmethod
+    def _generate_unique_code(cls) -> str:
+        for _ in range(20):
+            code = cls.generate_code()
+            exists = db.session.query(AccountInviteCode).where(AccountInviteCode.code == code).first()
+            if not exists:
+                return code
+        raise AccountRegisterError("Failed to generate invitation code.")
+
+
+class AccountPointService:
+    INVITE_USED_POINTS = 100
+    DAILY_CHECK_IN_POINTS = 3
+    WEEKLY_CHECK_IN_BONUS_POINTS = 10
+    MONTHLY_CHECK_IN_CAP = 150
+    CHECK_IN_POINTS_VALID_DAYS = 90
+    INVITE_POINTS_VALID_DAYS = 180
+    REWARDS = [
+        {
+            "id": "tokens_10k",
+            "name": "10,000 Tokens",
+            "description": "兑换后可用于模型调用额度发放。",
+            "points": 100,
+            "benefit_type": "token",
+            "benefit_amount": 10000,
+        },
+        {
+            "id": "tokens_50k",
+            "name": "50,000 Tokens",
+            "description": "适合频繁使用对话和智能体的用户。",
+            "points": 450,
+            "benefit_type": "token",
+            "benefit_amount": 50000,
+        },
+        {
+            "id": "priority_support",
+            "name": "优先支持权益",
+            "description": "提交问题时进入优先处理队列。",
+            "points": 300,
+            "benefit_type": "service",
+            "benefit_amount": 1,
+        },
+    ]
+
+    @classmethod
+    def _month_range(cls, now: datetime | None = None) -> tuple[datetime, datetime]:
+        now = now or naive_utc_now()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if month_start.month == 12:
+            next_month = month_start.replace(year=month_start.year + 1, month=1)
+        else:
+            next_month = month_start.replace(month=month_start.month + 1)
+        return month_start, next_month
+
+    @classmethod
+    def _day_range(cls, now: datetime | None = None) -> tuple[datetime, datetime]:
+        now = now or naive_utc_now()
+        day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        return day_start, day_start + timedelta(days=1)
+
+    @classmethod
+    def _get_reward(cls, reward_id: str) -> dict[str, Any] | None:
+        return next((item for item in cls.REWARDS if item["id"] == reward_id), None)
+
+    @classmethod
+    def _add_earn_transaction(
+        cls,
+        *,
+        account_id: str,
+        points: int,
+        source: str,
+        description: str,
+        source_id: str | None = None,
+        valid_days: int,
+    ) -> AccountPointTransaction:
+        expires_at = naive_utc_now() + timedelta(days=valid_days)
+        transaction = AccountPointTransaction(
+            account_id=account_id,
+            points=points,
+            type="earn",
+            source=source,
+            source_id=source_id,
+            description=description,
+            remaining_points=points,
+            expires_at=expires_at,
+        )
+        db.session.add(transaction)
+        return transaction
+
+    @classmethod
+    def award_invite_used_points(cls, invite_code: AccountInviteCode, used_by_account: Account) -> None:
+        if invite_code.owner_account_id == used_by_account.id:
+            return
+
+        existing = (
+            db.session.query(AccountPointTransaction)
+            .where(
+                AccountPointTransaction.account_id == invite_code.owner_account_id,
+                AccountPointTransaction.source == "invite_code",
+                AccountPointTransaction.source_id == invite_code.id,
+            )
+            .first()
+        )
+        if existing:
+            return
+
+        cls._add_earn_transaction(
+            account_id=invite_code.owner_account_id,
+            points=cls.INVITE_USED_POINTS,
+            source="invite_code",
+            source_id=invite_code.id,
+            description="邀请码被成功使用",
+            valid_days=cls.INVITE_POINTS_VALID_DAYS,
+        )
+
+    @classmethod
+    def get_balance(cls, account: Account) -> int:
+        now = naive_utc_now()
+        return (
+            db.session.query(func.coalesce(func.sum(AccountPointTransaction.remaining_points), 0))
+            .where(
+                AccountPointTransaction.account_id == account.id,
+                AccountPointTransaction.type == "earn",
+                AccountPointTransaction.remaining_points > 0,
+                AccountPointTransaction.expires_at > now,
+            )
+            .scalar()
+            or 0
+        )
+
+    @classmethod
+    def _monthly_check_in_points(cls, account: Account, now: datetime | None = None) -> int:
+        month_start, next_month = cls._month_range(now)
+        return (
+            db.session.query(func.coalesce(func.sum(AccountPointTransaction.points), 0))
+            .where(
+                AccountPointTransaction.account_id == account.id,
+                AccountPointTransaction.source == "daily_check_in",
+                AccountPointTransaction.created_at >= month_start,
+                AccountPointTransaction.created_at < next_month,
+            )
+            .scalar()
+            or 0
+        )
+
+    @classmethod
+    def _checked_today(cls, account: Account, now: datetime | None = None) -> bool:
+        day_start, next_day = cls._day_range(now)
+        return (
+            db.session.query(AccountPointTransaction.id)
+            .where(
+                AccountPointTransaction.account_id == account.id,
+                AccountPointTransaction.source == "daily_check_in",
+                AccountPointTransaction.created_at >= day_start,
+                AccountPointTransaction.created_at < next_day,
+            )
+            .first()
+            is not None
+        )
+
+    @classmethod
+    def _check_in_streak_days(cls, account: Account, now: datetime | None = None) -> int:
+        now = now or naive_utc_now()
+        rows = (
+            db.session.query(AccountPointTransaction.created_at)
+            .where(
+                AccountPointTransaction.account_id == account.id,
+                AccountPointTransaction.source == "daily_check_in",
+            )
+            .order_by(AccountPointTransaction.created_at.desc())
+            .limit(60)
+            .all()
+        )
+        checked_dates = {row.created_at.date() for row in rows if row.created_at}
+        cursor = now.date()
+        if cursor not in checked_dates:
+            cursor = cursor - timedelta(days=1)
+
+        streak = 0
+        while cursor in checked_dates:
+            streak += 1
+            cursor = cursor - timedelta(days=1)
+        return streak
+
+    @classmethod
+    def get_check_in_state(cls, account: Account) -> dict[str, Any]:
+        now = naive_utc_now()
+        monthly_points = cls._monthly_check_in_points(account, now)
+        checked_today = cls._checked_today(account, now)
+        streak_days = cls._check_in_streak_days(account, now)
+        next_bonus_in_days = 7 - (streak_days % 7)
+        if next_bonus_in_days == 7 and checked_today:
+            next_bonus_in_days = 7
+        today_points = 0
+        if not checked_today:
+            planned_points = cls.DAILY_CHECK_IN_POINTS
+            if (streak_days + 1) % 7 == 0:
+                planned_points += cls.WEEKLY_CHECK_IN_BONUS_POINTS
+            today_points = max(0, min(planned_points, cls.MONTHLY_CHECK_IN_CAP - monthly_points))
+
+        return {
+            "checked_today": checked_today,
+            "today_points": today_points,
+            "daily_points": cls.DAILY_CHECK_IN_POINTS,
+            "weekly_bonus_points": cls.WEEKLY_CHECK_IN_BONUS_POINTS,
+            "streak_days": streak_days,
+            "monthly_check_in_points": monthly_points,
+            "monthly_check_in_cap": cls.MONTHLY_CHECK_IN_CAP,
+            "next_bonus_in_days": next_bonus_in_days,
+            "valid_days": cls.CHECK_IN_POINTS_VALID_DAYS,
+        }
+
+    @classmethod
+    def get_expiration_state(cls, account: Account) -> dict[str, Any]:
+        now = naive_utc_now()
+        month_start, next_month = cls._month_range(now)
+        expiring_this_month = (
+            db.session.query(func.coalesce(func.sum(AccountPointTransaction.remaining_points), 0))
+            .where(
+                AccountPointTransaction.account_id == account.id,
+                AccountPointTransaction.type == "earn",
+                AccountPointTransaction.remaining_points > 0,
+                AccountPointTransaction.expires_at >= month_start,
+                AccountPointTransaction.expires_at < next_month,
+            )
+            .scalar()
+            or 0
+        )
+        nearest_expiration_at = (
+            db.session.query(func.min(AccountPointTransaction.expires_at))
+            .where(
+                AccountPointTransaction.account_id == account.id,
+                AccountPointTransaction.type == "earn",
+                AccountPointTransaction.remaining_points > 0,
+                AccountPointTransaction.expires_at > now,
+            )
+            .scalar()
+        )
+        return {
+            "expiring_points_this_month": expiring_this_month,
+            "nearest_expiration_at": int(nearest_expiration_at.timestamp()) if nearest_expiration_at else None,
+        }
+
+    @classmethod
+    def get_monthly_calendar(cls, account: Account) -> dict[str, Any]:
+        now = naive_utc_now()
+        month_start, next_month = cls._month_range(now)
+        rows = (
+            db.session.query(AccountPointTransaction)
+            .where(
+                AccountPointTransaction.account_id == account.id,
+                AccountPointTransaction.created_at >= month_start,
+                AccountPointTransaction.created_at < next_month,
+            )
+            .order_by(AccountPointTransaction.created_at.asc())
+            .all()
+        )
+
+        day_count = (next_month - month_start).days
+        days: dict[str, dict[str, Any]] = {}
+        for offset in range(day_count):
+            day = month_start + timedelta(days=offset)
+            date_key = day.strftime("%Y-%m-%d")
+            days[date_key] = {
+                "date": date_key,
+                "day": day.day,
+                "is_today": date_key == now.strftime("%Y-%m-%d"),
+                "is_checked_in": False,
+                "earned_points": 0,
+                "spent_points": 0,
+                "expired_points": 0,
+                "net_points": 0,
+                "transactions": [],
+            }
+
+        for item in rows:
+            date_key = item.created_at.strftime("%Y-%m-%d")
+            day_item = days.get(date_key)
+            if not day_item:
+                continue
+
+            if item.source == "daily_check_in" and item.points > 0:
+                day_item["is_checked_in"] = True
+            if item.points > 0:
+                day_item["earned_points"] += item.points
+            elif item.type == "expire":
+                day_item["expired_points"] += abs(item.points)
+            else:
+                day_item["spent_points"] += abs(item.points)
+            day_item["net_points"] += item.points
+            day_item["transactions"].append(
+                {
+                    "id": item.id,
+                    "points": item.points,
+                    "type": item.type,
+                    "source": item.source,
+                    "description": item.description,
+                    "created_at": int(item.created_at.timestamp()) if item.created_at else None,
+                }
+            )
+
+        return {
+            "year": month_start.year,
+            "month": month_start.month,
+            "month_start_weekday": month_start.weekday(),
+            "today": now.strftime("%Y-%m-%d"),
+            "days": list(days.values()),
+        }
+
+    @classmethod
+    def check_in(cls, account: Account) -> dict[str, Any]:
+        now = naive_utc_now()
+        if cls._checked_today(account, now):
+            raise InvalidActionError("Already checked in today.")
+
+        state = cls.get_check_in_state(account)
+        awarded_points = int(state["today_points"])
+        if awarded_points <= 0:
+            raise InvalidActionError("Monthly check-in point cap reached.")
+
+        source_id = now.strftime("%Y-%m-%d")
+        description = "每日签到"
+        if awarded_points > cls.DAILY_CHECK_IN_POINTS:
+            description = "每日签到（含连续 7 天奖励）"
+
+        cls._add_earn_transaction(
+            account_id=account.id,
+            points=awarded_points,
+            source="daily_check_in",
+            source_id=source_id,
+            description=description,
+            valid_days=cls.CHECK_IN_POINTS_VALID_DAYS,
+        )
+        db.session.commit()
+        return cls.get_summary(account)
+
+    @classmethod
+    def get_summary(cls, account: Account) -> dict[str, Any]:
+        transactions = (
+            db.session.query(AccountPointTransaction)
+            .where(AccountPointTransaction.account_id == account.id)
+            .order_by(AccountPointTransaction.created_at.desc())
+            .limit(50)
+            .all()
+        )
+        redemptions = (
+            db.session.query(AccountPointRedemption)
+            .where(AccountPointRedemption.account_id == account.id)
+            .order_by(AccountPointRedemption.created_at.desc())
+            .limit(20)
+            .all()
+        )
+        return {
+            "balance": cls.get_balance(account),
+            "invite_reward_points": cls.INVITE_USED_POINTS,
+            "rewards": cls.REWARDS,
+            "check_in": cls.get_check_in_state(account),
+            "expiration": cls.get_expiration_state(account),
+            "calendar": cls.get_monthly_calendar(account),
+            "transactions": [
+                {
+                    "id": item.id,
+                    "points": item.points,
+                    "remaining_points": item.remaining_points,
+                    "expires_at": int(item.expires_at.timestamp()) if item.expires_at else None,
+                    "type": item.type,
+                    "source": item.source,
+                    "description": item.description,
+                    "created_at": int(item.created_at.timestamp()) if item.created_at else None,
+                }
+                for item in transactions
+            ],
+            "redemptions": [
+                {
+                    "id": item.id,
+                    "reward_id": item.reward_id,
+                    "reward_name": item.reward_name,
+                    "points": item.points,
+                    "status": item.status,
+                    "created_at": int(item.created_at.timestamp()) if item.created_at else None,
+                }
+                for item in redemptions
+            ],
+        }
+
+    @classmethod
+    def redeem_reward(cls, account: Account, reward_id: str) -> AccountPointRedemption:
+        reward = cls._get_reward(reward_id)
+        if not reward:
+            raise InvalidActionError("Reward is not available.")
+
+        required_points = int(reward["points"])
+        if cls.get_balance(account) < required_points:
+            raise InvalidActionError("Insufficient points.")
+
+        now = naive_utc_now()
+        spendable_transactions = (
+            db.session.query(AccountPointTransaction)
+            .where(
+                AccountPointTransaction.account_id == account.id,
+                AccountPointTransaction.type == "earn",
+                AccountPointTransaction.remaining_points > 0,
+                AccountPointTransaction.expires_at > now,
+            )
+            .order_by(AccountPointTransaction.expires_at.asc(), AccountPointTransaction.created_at.asc())
+            .with_for_update()
+            .all()
+        )
+        remaining_to_spend = required_points
+        for transaction in spendable_transactions:
+            if remaining_to_spend <= 0:
+                break
+            spend = min(transaction.remaining_points, remaining_to_spend)
+            transaction.remaining_points -= spend
+            remaining_to_spend -= spend
+
+        if remaining_to_spend > 0:
+            raise InvalidActionError("Insufficient points.")
+
+        redemption = AccountPointRedemption(
+            account_id=account.id,
+            reward_id=str(reward["id"]),
+            reward_name=str(reward["name"]),
+            points=required_points,
+            status="pending_activation",
+        )
+        db.session.add(redemption)
+        db.session.flush()
+        db.session.add(
+            AccountPointTransaction(
+                account_id=account.id,
+                points=-required_points,
+                type="redeem",
+                source="redemption",
+                source_id=redemption.id,
+                description=f"兑换 {reward['name']}",
+                remaining_points=0,
+            )
+        )
+        db.session.commit()
+        return redemption
+
+    @classmethod
+    def settle_expired_points(cls, now: datetime | None = None) -> dict[str, int]:
+        now = now or naive_utc_now()
+        expired_transactions = (
+            db.session.query(AccountPointTransaction)
+            .where(
+                AccountPointTransaction.type == "earn",
+                AccountPointTransaction.remaining_points > 0,
+                AccountPointTransaction.expires_at <= now,
+            )
+            .order_by(AccountPointTransaction.expires_at.asc(), AccountPointTransaction.created_at.asc())
+            .all()
+        )
+
+        expired_points = 0
+        for transaction in expired_transactions:
+            points = transaction.remaining_points
+            if points <= 0:
+                continue
+            transaction.remaining_points = 0
+            expired_points += points
+            db.session.add(
+                AccountPointTransaction(
+                    account_id=transaction.account_id,
+                    points=-points,
+                    type="expire",
+                    source="expiration",
+                    source_id=transaction.id,
+                    description="积分过期清算",
+                    remaining_points=0,
+                )
+            )
+
+        db.session.commit()
+        return {"transactions": len(expired_transactions), "points": expired_points}
+
+
 class RegisterService:
     @classmethod
     def _get_invitation_token_key(cls, token: str) -> str:
@@ -1356,6 +1913,7 @@ class RegisterService:
             account.initialized_at = naive_utc_now()
 
             TenantService.create_owner_tenant_if_not_exist(account=account, is_setup=True)
+            AccountInviteCodeService.ensure_invite_codes(account)
 
             dify_setup = DifySetup(version=dify_config.project.version)
             db.session.add(dify_setup)

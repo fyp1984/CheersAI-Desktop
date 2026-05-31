@@ -1,0 +1,50 @@
+identity:
+  author: cheersai
+  name: export_to_markdown
+  label:
+    en_US: Export to Markdown
+    zh_Hans: 导出为Markdown文档
+    zh_CN: 导出为Markdown文档
+  icon: icon.svg
+description:
+  human:
+    en_US: Export conversation content to a Markdown file
+    zh_Hans: 将对话内容导出为Markdown文件
+    zh_CN: 将对话内容导出为Markdown文件
+  llm: >
+    A tool that saves markdown text to a .md file. 
+    Use this tool when the user wants to save the conversation 
+    content as a Markdown file for easy editing and version control.
+
+parameters:
+  - name: markdown_content
+    type: string
+    required: true
+    label:
+      en_US: Markdown Content
+      zh_Hans: Markdown内容
+      zh_CN: Markdown内容
+    human_description:
+      en_US: The markdown content to save
+      zh_Hans: 要保存的Markdown内容
+      zh_CN: 要保存的Markdown内容
+    llm_description: The markdown formatted text content that will be saved to a file
+    form: llm
+  - name: document_name
+    type: string
+    required: false
+    label:
+      en_US: Document Name
+      zh_Hans: 文档名称
+      zh_CN: 文档名称
+    human_description:
+      en_US: Name for the exported document (without extension)
+      zh_Hans: 导出文档的名称（无需扩展名）
+      zh_CN: 导出文档的名称（无需扩展名）
+    llm_description: Optional name for the output document file, defaults to "document"
+    form: form
+    default: "document"
+
+extra:
+  python:
+    source: tools/markdown_export.py

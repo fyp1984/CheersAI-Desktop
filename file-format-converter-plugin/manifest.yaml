@@ -1,0 +1,36 @@
+version: 0.0.17
+type: plugin
+name: doc_format_exporter
+author: cheersai
+label:
+  en_US: Document Format Exporter
+  zh_Hans: 文档格式导出器
+  zh_CN: 文档格式导出器
+description:
+  en_US: Export conversation content to various document formats (Word, PDF, HTML, Markdown)
+  zh_Hans: 将对话内容导出为多种文档格式（Word、PDF、HTML、Markdown）
+  zh_CN: 将对话内容导出为多种文档格式（Word、PDF、HTML、Markdown）
+icon: icon.svg
+created_at: "2026-05-24T00:00:00Z"
+
+resource:
+  memory: 268435456  # 256MB
+
+plugins:
+  tools:
+    - provider/doc_exporter.yaml
+
+permissions:
+  - tool.provider
+  - storage.write
+  - storage.read
+  
+meta:
+  version: 0.0.1
+  arch:
+    - amd64
+    - arm64
+  runner:
+    language: python
+    version: "3.12"
+    entrypoint: main

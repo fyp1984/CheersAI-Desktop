@@ -10,6 +10,8 @@ export const ACCOUNT_SETTING_TAB = {
   CUSTOM: 'custom',
   DATA_SECURITY: 'data-security',
   GITEA_SETTINGS: 'gitea-settings',
+  INVITE_CODES: 'invite-codes',
+  POINTS: 'points',
   LANGUAGE: 'language',
 } as const
 

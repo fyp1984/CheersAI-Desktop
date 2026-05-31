@@ -1,0 +1,50 @@
+identity:
+  author: cheersai
+  name: export_to_pdf
+  label:
+    en_US: Export to PDF
+    zh_Hans: 导出为PDF文档
+    zh_CN: 导出为PDF文档
+  icon: icon.svg
+description:
+  human:
+    en_US: Export conversation content to a PDF document
+    zh_Hans: 将对话内容导出为PDF文档
+    zh_CN: 将对话内容导出为PDF文档
+  llm: >
+    A tool that converts markdown text to a PDF document. 
+    Use this tool when the user wants to save or export the conversation 
+    content as a PDF file. The input text should be in markdown format.
+
+parameters:
+  - name: markdown_content
+    type: string
+    required: true
+    label:
+      en_US: Markdown Content
+      zh_Hans: Markdown内容
+      zh_CN: Markdown内容
+    human_description:
+      en_US: The markdown content to convert to PDF format
+      zh_Hans: 要转换为PDF格式的Markdown内容
+      zh_CN: 要转换为PDF格式的Markdown内容
+    llm_description: The markdown formatted text content that will be converted to a PDF document
+    form: llm
+  - name: document_name
+    type: string
+    required: false
+    label:
+      en_US: Document Name
+      zh_Hans: 文档名称
+      zh_CN: 文档名称
+    human_description:
+      en_US: Name for the exported document (without extension)
+      zh_Hans: 导出文档的名称（无需扩展名）
+      zh_CN: 导出文档的名称（无需扩展名）
+    llm_description: Optional name for the output document file, defaults to "document"
+    form: form
+    default: "document"
+
+extra:
+  python:
+    source: tools/pdf_export.py

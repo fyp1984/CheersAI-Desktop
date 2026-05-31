@@ -9,6 +9,7 @@ from controllers.console.wraps import setup_required
 from extensions.ext_database import db
 from libs.helper import email as validate_email
 from models.beta_application import BetaApplication
+from services.account_service import AccountInviteCodeService
 from services.beta_application_notification_service import BetaApplicationNotificationService
 
 DEFAULT_REF_TEMPLATE_SWAGGER_2_0 = "#/definitions/{model}"
@@ -21,6 +22,7 @@ class ApplyBetaPayload(BaseModel):
     company: str | None = Field(default=None, description="Company name")
     use_case: str | None = Field(default=None, description="Use case description")
     language: str | None = Field(default=None, description="Interface language")
+    invite_code: str | None = Field(default=None, description="Account invite code")
 
 
 def reg(cls: type[BaseModel]):
@@ -37,12 +39,16 @@ def submit_beta_application(*, args: ApplyBetaPayload, remote_addr: str | None, 
     company = args.company
     use_case = args.use_case
     language = args.language or "zh-Hans"
+    invite_code = AccountInviteCodeService.normalize_code(args.invite_code)
 
     # Validate email format
     try:
         validate_email(normalized_email)
     except ValueError as e:
         return {"result": "fail", "data": str(e)}, 400
+
+    if invite_code and not AccountInviteCodeService.is_invite_code_available(invite_code):
+        return {"result": "fail", "data": "邀请码无效或已被使用。"}, 400
 
     # Duplicate check for active applications
     try:
@@ -67,6 +73,7 @@ def submit_beta_application(*, args: ApplyBetaPayload, remote_addr: str | None, 
             language=language,
             company=company,
             use_case=use_case,
+            invite_code=args.invite_code.strip().upper() if args.invite_code else None,
             status="pending",
             ip_address=remote_addr,
             user_agent=(user_agent or "")[:500],

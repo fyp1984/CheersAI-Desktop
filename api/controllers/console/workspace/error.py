@@ -35,3 +35,15 @@ class InvalidAccountDeletionCodeError(BaseHTTPException):
     error_code = "invalid_account_deletion_code"
     description = "Invalid account deletion code."
     code = 400
+
+
+class InsufficientAccountPointsError(BaseHTTPException):
+    error_code = "insufficient_account_points"
+    description = "Insufficient points."
+    code = 400
+
+
+class InvalidPointRewardError(BaseHTTPException):
+    error_code = "invalid_point_reward"
+    description = "Reward is not available."
+    code = 400

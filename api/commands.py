@@ -2654,3 +2654,16 @@ def clean_expired_messages(
         raise
 
     click.echo(click.style("messages cleanup completed.", fg="green"))
+
+
+@click.command("settle-account-points", help="Settle expired account points.")
+def settle_account_points():
+    from services.account_service import AccountPointService
+
+    result = AccountPointService.settle_expired_points()
+    click.echo(
+        click.style(
+            f"account_points: settled {result['transactions']} batches, expired {result['points']} points.",
+            fg="green",
+        )
+    )

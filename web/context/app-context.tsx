@@ -99,6 +99,17 @@ const AppContext = createContext<AppContextValue>({
   isValidatingCurrentWorkspace: false,
 })
 
+const getResponseStatus = (error: unknown) => {
+  if (error instanceof Response)
+    return error.status
+
+  const response = (error as { response?: Response })?.response
+  if (response instanceof Response)
+    return response.status
+
+  return (error as { status?: number })?.status
+}
+
 export function useSelector<T>(selector: (value: AppContextValue) => T): T {
   return useContextSelector(AppContext, selector)
 }
@@ -110,8 +121,13 @@ export type AppContextProviderProps = {
 export const AppContextProvider: FC<AppContextProviderProps> = ({ children }) => {
   const queryClient = useQueryClient()
   const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
-  const { data: userProfileResp } = useUserProfile()
-  const { data: currentWorkspaceResp, isPending: isLoadingCurrentWorkspace, isFetching: isValidatingCurrentWorkspace } = useCurrentWorkspace()
+  const { data: userProfileResp, error: userProfileError } = useUserProfile()
+  const {
+    data: currentWorkspaceResp,
+    error: currentWorkspaceError,
+    isPending: isLoadingCurrentWorkspace,
+    isFetching: isValidatingCurrentWorkspace,
+  } = useCurrentWorkspace()
   const langGeniusVersionQuery = useLangGeniusVersion(
     userProfileResp?.meta.currentVersion,
     !systemFeatures.branding.enabled,
@@ -190,6 +206,13 @@ export const AppContextProvider: FC<AppContextProviderProps> = ({ children }) =>
     queryClient.invalidateQueries({ queryKey: ['common', 'current-workspace'] })
   }, [queryClient])
 
+  useEffect(() => {
+    const isUnauthorized = [userProfileError, currentWorkspaceError].some(error => getResponseStatus(error) === 401)
+
+    if (isUnauthorized)
+      globalThis.location.href = `${globalThis.location.origin}/signin`
+  }, [currentWorkspaceError, userProfileError])
+
   // #region Zendesk conversation fields
   useEffect(() => {
     if (ZENDESK_FIELD_IDS.ENVIRONMENT && langGeniusVersionInfo?.current_env) {
@@ -232,7 +255,7 @@ export const AppContextProvider: FC<AppContextProviderProps> = ({ children }) =>
     // Report user and workspace info to Amplitude when loaded
     if (userProfile?.id) {
       setUserId(userProfile.email)
-      const properties: Record<string, any> = {
+      const properties: Record<string, unknown> = {
         email: userProfile.email,
         name: userProfile.name,
         has_password: userProfile.is_password_set,

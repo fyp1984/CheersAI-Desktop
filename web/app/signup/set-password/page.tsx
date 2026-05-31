@@ -31,9 +31,11 @@ const ChangePasswordForm = () => {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = decodeURIComponent(searchParams.get('token') || '')
+  const initialInviteCode = decodeURIComponent(searchParams.get('invite_code') || '').trim().toUpperCase()
 
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [inviteCode, setInviteCode] = useState(initialInviteCode)
   const { mutateAsync: register, isPending } = useMailRegister()
 
   const showErrorMessage = useCallback((message: string) => {
@@ -67,6 +69,7 @@ const ChangePasswordForm = () => {
         token,
         new_password: password,
         password_confirm: confirmPassword,
+        invite_code: inviteCode.trim() || undefined,
       })
       const { result } = res as MailRegisterResponse
       if (result === 'success') {
@@ -92,7 +95,7 @@ const ChangePasswordForm = () => {
     catch (error) {
       console.error(error)
     }
-  }, [password, token, valid, confirmPassword, register])
+  }, [password, token, valid, confirmPassword, inviteCode, register, router, t])
 
   return (
     <div className={
@@ -146,6 +149,20 @@ const ChangePasswordForm = () => {
                   placeholder={t('confirmPasswordPlaceholder', { ns: 'login' }) || ''}
                 />
               </div>
+            </div>
+            <div className="mb-5">
+              <label htmlFor="inviteCode" className="system-md-semibold my-2 text-text-secondary">
+                邀请码（选填）
+              </label>
+              <div className="relative mt-1">
+                <Input
+                  id="inviteCode"
+                  value={inviteCode}
+                  onChange={e => setInviteCode(e.target.value.trim().toUpperCase())}
+                  placeholder="有邀请码可在此填写"
+                />
+              </div>
+              <div className="body-xs-regular mt-1 text-text-secondary">填写有效邀请码后，邀请人可获得积分。</div>
             </div>
             <div>
               <Button

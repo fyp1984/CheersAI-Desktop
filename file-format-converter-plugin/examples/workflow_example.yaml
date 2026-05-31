@@ -1,0 +1,161 @@
+# Dify 工作流示例 - 会议记录导出
+
+name: "会议记录导出工作流"
+description: "将会议内容总结并导出为多种格式"
+
+# 工作流节点
+nodes:
+  # 1. 开始节点 - 接收会议内容
+  - id: start
+    type: start
+    config:
+      variables:
+        - name: meeting_content
+          type: string
+          required: true
+          label: "会议内容"
+        - name: meeting_title
+          type: string
+          required: true
+          label: "会议标题"
+        - name: export_format
+          type: select
+          required: true
+          label: "导出格式"
+          options:
+            - word
+            - pdf
+            - html
+            - markdown
+
+  # 2. LLM 节点 - 总结会议内容
+  - id: summarize
+    type: llm
+    config:
+      model: gpt-4
+      prompt: |
+        请将以下会议内容整理为结构化的会议记录，包括：
+        
+        # {{meeting_title}}
+        
+        ## 会议信息
+        - 时间：{{sys.date}}
+        - 参与人员：[从内容中提取]
+        
+        ## 会议议题
+        [列出主要议题]
+        
+        ## 讨论内容
+        [详细记录讨论内容]
+        
+        ## 决议事项
+        [列出所有决议]
+        
+        ## 待办事项
+        - [ ] 任务1
+        - [ ] 任务2
+        
+        ## 下次会议
+        [如有提及]
+        
+        ---
+        
+        会议原始内容：
+        {{meeting_content}}
+      inputs:
+        - meeting_title: "{{start.meeting_title}}"
+        - meeting_content: "{{start.meeting_content}}"
+
+  # 3. 条件节点 - 根据格式选择导出工具
+  - id: format_router
+    type: if-else
+    config:
+      conditions:
+        - variable: "{{start.export_format}}"
+          operator: "equals"
+          value: "word"
+          target: export_word
+        - variable: "{{start.export_format}}"
+          operator: "equals"
+          value: "pdf"
+          target: export_pdf
+        - variable: "{{start.export_format}}"
+          operator: "equals"
+          value: "html"
+          target: export_html
+        - variable: "{{start.export_format}}"
+          operator: "equals"
+          value: "markdown"
+          target: export_markdown
+
+  # 4a. Word 导出
+  - id: export_word
+    type: tool
+    config:
+      tool: word_export
+      inputs:
+        markdown_content: "{{summarize.output}}"
+        document_name: "{{start.meeting_title}}_会议记录"
+
+  # 4b. PDF 导出
+  - id: export_pdf
+    type: tool
+    config:
+      tool: pdf_export
+      inputs:
+        markdown_content: "{{summarize.output}}"
+        document_name: "{{start.meeting_title}}_会议记录"
+
+  # 4c. HTML 导出
+  - id: export_html
+    type: tool
+    config:
+      tool: html_export
+      inputs:
+        markdown_content: "{{summarize.output}}"
+        document_name: "{{start.meeting_title}}_会议记录"
+        include_css: true
+
+  # 4d. Markdown 导出
+  - id: export_markdown
+    type: tool
+    config:
+      tool: markdown_export
+      inputs:
+        markdown_content: "{{summarize.output}}"
+        document_name: "{{start.meeting_title}}_会议记录"
+
+  # 5. 结束节点
+  - id: end
+    type: end
+    config:
+      outputs:
+        - summary: "{{summarize.output}}"
+        - file: "{{format_router.output}}"
+
+# 工作流连接
+edges:
+  - source: start
+    target: summarize
+  - source: summarize
+    target: format_router
+  - source: format_router
+    target: export_word
+    condition: word
+  - source: format_router
+    target: export_pdf
+    condition: pdf
+  - source: format_router
+    target: export_html
+    condition: html
+  - source: format_router
+    target: export_markdown
+    condition: markdown
+  - source: export_word
+    target: end
+  - source: export_pdf
+    target: end
+  - source: export_html
+    target: end
+  - source: export_markdown
+    target: end

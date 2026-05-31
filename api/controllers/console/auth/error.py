@@ -133,6 +133,12 @@ class EmailAlreadyInUseError(BaseHTTPException):
     code = 400
 
 
+class InvalidAccountInviteCodeError(BaseHTTPException):
+    error_code = "invalid_account_invite_code"
+    description = "Invitation code is invalid or has already been used."
+    code = 400
+
+
 class OwnerTransferLimitError(BaseHTTPException):
     error_code = "owner_transfer_limit"
     description = "Too many failed owner transfer attempts. Please try again in 24 hours."

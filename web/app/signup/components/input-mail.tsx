@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Button from '@/app/components/base/button'
@@ -15,6 +16,8 @@ export default function Form() {
   const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
+  const searchParams = useSearchParams()
+  const [inviteCode, setInviteCode] = useState(() => decodeURIComponent(searchParams.get('invite_code') || '').trim().toUpperCase())
   const [isLoading, setIsLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const locale = useLocale()
@@ -39,10 +42,9 @@ export default function Form() {
       Toast.notify({ type: 'error', message: '请输入您的姓名' })
       return
     }
-
     try {
       setIsLoading(true)
-      const res = await applyForBeta({ email, name, language: locale })
+      const res = await applyForBeta({ email, name, language: locale, invite_code: inviteCode.trim() || undefined })
       if (res.result === 'success') {
         setSubmitted(true)
         Toast.notify({ type: 'success', message: '申请已提交，请等待管理员审核' })
@@ -57,7 +59,7 @@ export default function Form() {
     finally {
       setIsLoading(false)
     }
-  }, [email, name, locale, isLoading, t])
+  }, [email, name, inviteCode, locale, isLoading, t])
 
   if (submitted) {
     return (
@@ -119,9 +121,26 @@ export default function Form() {
           />
         </div>
       </div>
+      <div className="mb-3">
+        <label htmlFor="inviteCode" className="system-md-semibold my-2 text-text-secondary">
+          邀请码（选填）
+        </label>
+        <div className="mt-1">
+          <Input
+            value={inviteCode}
+            onChange={e => setInviteCode(e.target.value.trim().toUpperCase())}
+            id="inviteCode"
+            type="text"
+            autoComplete="off"
+            placeholder="有邀请码可在此填写"
+            tabIndex={3}
+          />
+        </div>
+        <div className="body-xs-regular mt-1 text-text-secondary">通过邀请链接打开时会自动填入，未填写也可以提交申请。</div>
+      </div>
       <div className="mb-2">
         <Button
-          tabIndex={3}
+          tabIndex={4}
           variant="primary"
           type="submit"
           disabled={isLoading || !email || !name}

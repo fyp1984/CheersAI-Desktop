@@ -13,7 +13,7 @@ const buildNexusTargetUrl = () => {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, email, language } = body || {}
+    const { name, email, language, invite_code: inviteCode } = body || {}
 
     if (!name || !email) {
       return NextResponse.json(
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: JSON.stringify({ name, email, language }),
+      body: JSON.stringify({ name, email, language, invite_code: inviteCode }),
       cache: 'no-store',
     })
 
