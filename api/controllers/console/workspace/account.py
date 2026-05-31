@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from uuid import uuid4
 from typing import Literal
 
 import pytz
@@ -25,8 +26,10 @@ from controllers.console.error import AccountInFreezeError, AccountNotFound, Ema
 from controllers.console.workspace.error import (
     AccountAlreadyInitedError,
     CurrentPasswordIncorrectError,
+    InsufficientAccountPointsError,
     InvalidAccountDeletionCodeError,
     InvalidInvitationCodeError,
+    InvalidPointRewardError,
     RepeatPasswordNotMatchError,
 )
 from controllers.console.wraps import (
@@ -42,11 +45,12 @@ from fields.member_fields import Account as AccountResponse
 from libs.datetime_utils import naive_utc_now
 from libs.helper import EmailStr, TimestampField, extract_remote_ip, timezone
 from libs.login import current_account_with_tenant, login_required
-from models import AccountIntegrate, InvitationCode
-from services.account_service import AccountService
+from models import AccountIntegrate, InvitationCode, UserFeedback
+from services.account_service import AccountInviteCodeService, AccountPointService, AccountService
 from services.billing_service import BillingService
 from services.errors.account import AccountPasswordError as ServiceAccountPasswordError
 from services.errors.account import CurrentPasswordIncorrectError as ServiceCurrentPasswordIncorrectError
+from services.errors.account import InvalidActionError as ServiceInvalidActionError
 from services.sso_account_service import SSOAccountService
 
 DEFAULT_REF_TEMPLATE_SWAGGER_2_0 = "#/definitions/{model}"
@@ -120,6 +124,21 @@ class AccountDeletionFeedbackPayload(BaseModel):
     feedback: str
 
 
+class UserFeedbackPayload(BaseModel):
+    content: str = Field(..., min_length=1, max_length=5000)
+    title: str | None = Field(default=None, max_length=255)
+    source: str = Field(default="customer_service", max_length=64)
+    channel: str = Field(default="ai", max_length=32)
+    category: str = Field(default="general", max_length=64)
+    priority: str = Field(default="normal", max_length=16)
+    page_url: str | None = Field(default=None, max_length=2048)
+    app_id: str | None = None
+    conversation_id: str | None = None
+    message_id: str | None = None
+    contact_allowed: bool = True
+    metadata: dict | None = None
+
+
 class EducationActivatePayload(BaseModel):
     token: str
     institution: str
@@ -167,6 +186,7 @@ reg(AccountTimezonePayload)
 reg(AccountPasswordPayload)
 reg(AccountDeletePayload)
 reg(AccountDeletionFeedbackPayload)
+reg(UserFeedbackPayload)
 reg(EducationActivatePayload)
 reg(EducationAutocompleteQuery)
 reg(ChangeEmailSendPayload)
@@ -191,6 +211,18 @@ def _serialize_account(account) -> dict:
     payload = AccountResponse.model_validate(account, from_attributes=True).model_dump(mode="json")
     payload["name"] = _resolve_desktop_sso_display_name(account)
     return payload
+
+
+def _make_feedback_ticket_no() -> str:
+    return f"FB-{naive_utc_now():%Y%m%d}-{uuid4().hex[:8].upper()}"
+
+
+def _make_feedback_title(content: str, title: str | None) -> str:
+    stripped_title = (title or "").strip()
+    if stripped_title:
+        return stripped_title[:255]
+    normalized_content = " ".join(content.strip().split())
+    return (normalized_content[:48] or "用户反馈")[:255]
 
 
 integrate_fields = {
@@ -263,6 +295,132 @@ class AccountProfileApi(Resource):
     def get(self):
         current_user, _ = current_account_with_tenant()
         return _serialize_account(current_user)
+
+
+@console_ns.route("/account/invite-codes")
+class AccountInviteCodesApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self):
+        current_user, _ = current_account_with_tenant()
+        invite_codes = AccountInviteCodeService.ensure_invite_codes(current_user)
+        return {
+            "limit": AccountInviteCodeService.INVITE_CODE_LIMIT,
+            "data": [
+                {
+                    "id": invite_code.id,
+                    "code": invite_code.code,
+                    "status": invite_code.status,
+                    "used_at": int(invite_code.used_at.timestamp()) if invite_code.used_at else None,
+                    "used_by_account_id": invite_code.used_by_account_id,
+                }
+                for invite_code in invite_codes
+            ],
+        }
+
+
+class AccountPointRedeemPayload(BaseModel):
+    reward_id: str = Field(..., min_length=1)
+
+
+@console_ns.route("/account/points")
+class AccountPointsApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def get(self):
+        current_user, _ = current_account_with_tenant()
+        return AccountPointService.get_summary(current_user)
+
+
+@console_ns.route("/account/points/redeem")
+class AccountPointsRedeemApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def post(self):
+        current_user, _ = current_account_with_tenant()
+        args = AccountPointRedeemPayload.model_validate(console_ns.payload or {})
+        try:
+            redemption = AccountPointService.redeem_reward(current_user, args.reward_id)
+        except ServiceInvalidActionError as e:
+            if "Insufficient points" in str(e):
+                raise InsufficientAccountPointsError()
+            raise InvalidPointRewardError()
+
+        return {
+            "result": "success",
+            "data": {
+                "id": redemption.id,
+                "reward_id": redemption.reward_id,
+                "reward_name": redemption.reward_name,
+                "points": redemption.points,
+                "status": redemption.status,
+            },
+        }
+
+
+@console_ns.route("/account/points/check-in")
+class AccountPointsCheckInApi(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def post(self):
+        current_user, _ = current_account_with_tenant()
+        try:
+            return AccountPointService.check_in(current_user)
+        except ServiceInvalidActionError:
+            raise InvalidPointRewardError()
+
+
+@console_ns.route("/feedbacks")
+class UserFeedbacksApi(Resource):
+    @console_ns.expect(console_ns.models[UserFeedbackPayload.__name__])
+    @setup_required
+    @login_required
+    @account_initialization_required
+    def post(self):
+        current_user, current_tenant_id = current_account_with_tenant()
+        args = UserFeedbackPayload.model_validate(console_ns.payload or {})
+
+        request_metadata = dict(args.metadata or {})
+        request_metadata.setdefault("user_agent", request.headers.get("User-Agent"))
+        request_metadata.setdefault("remote_ip", extract_remote_ip(request))
+
+        feedback = UserFeedback(
+            ticket_no=_make_feedback_ticket_no(),
+            tenant_id=current_tenant_id,
+            account_id=current_user.id,
+            user_name=_resolve_desktop_sso_display_name(current_user),
+            user_email=current_user.email,
+            source=args.source,
+            channel=args.channel,
+            category=args.category,
+            title=_make_feedback_title(args.content, args.title),
+            content=args.content.strip(),
+            priority=args.priority,
+            page_url=args.page_url or request.headers.get("Referer"),
+            app_id=args.app_id,
+            conversation_id=args.conversation_id,
+            message_id=args.message_id,
+            contact_allowed=args.contact_allowed,
+            extra_metadata=request_metadata,
+        )
+        db.session.add(feedback)
+        feedback_id = feedback.id
+        ticket_no = feedback.ticket_no
+        status = feedback.status
+        db.session.commit()
+
+        return {
+            "result": "success",
+            "data": {
+                "id": feedback_id,
+                "ticket_no": ticket_no,
+                "status": status,
+            },
+        }
 
 
 @console_ns.route("/account/name")

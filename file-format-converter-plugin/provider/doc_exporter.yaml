@@ -1,0 +1,25 @@
+identity:
+  author: cheersai
+  name: doc_exporter
+  label:
+    en_US: Document Exporter
+    zh_Hans: 文档导出器
+  description:
+    en_US: Export documents to various formats (Word, PDF, HTML, Markdown)
+    zh_Hans: 将文档导出为多种格式（Word、PDF、HTML、Markdown）
+  icon: icon.svg
+  tags:
+    - productivity
+    - utilities
+
+credentials_for_provider: {}
+
+tools:
+  - provider/tools/word_export.yaml
+  - provider/tools/pdf_export.yaml
+  - provider/tools/html_export.yaml
+  - provider/tools/markdown_export.yaml
+
+extra:
+  python:
+    source: provider/doc_exporter.py

@@ -129,6 +129,15 @@ function jumpTo(url: string) {
   globalThis.location.href = url
 }
 
+const getErrorResponse = (error: unknown): Response | undefined => {
+  if (error instanceof Response)
+    return error
+
+  const response = (error as { response?: unknown })?.response
+  if (response instanceof Response)
+    return response
+}
+
 function unicodeToChar(text: string) {
   if (!text)
     return ''
@@ -396,7 +405,7 @@ export const upload = async (options: UploadOptions, isPublicAPI?: boolean, url?
     xhr.responseType = 'json'
     xhr.onreadystatechange = function () {
       if (xhr.readyState === 4) {
-        if (xhr.status === 201)
+        if (xhr.status >= 200 && xhr.status < 300)
           resolve(xhr.response)
         else
           reject(xhr)
@@ -564,8 +573,8 @@ export const request = async<T>(url: string, options = {}, otherOptions?: IOther
     const [err, resp] = await asyncRunSafe<T>(baseFetch(url, options, otherOptionsForBaseFetch))
     if (err === null)
       return resp
-    const errResp: Response = err as any
-    if (errResp.status === 401) {
+    const errResp = getErrorResponse(err)
+    if (errResp?.status === 401) {
       const [parseErr, errRespData] = await asyncRunSafe<ResponseError>(errResp.json())
       const loginUrl = `${globalThis.location.origin}${basePath}/signin`
       if (parseErr) {

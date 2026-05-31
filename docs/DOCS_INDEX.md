@@ -72,6 +72,7 @@
 
 ### 核心功能
 - 🔒 [数据脱敏实现](docs/guides/DATA_MASKING_IMPLEMENTATION.md) - 数据脱敏功能实现说明
+- 📦 [FileBay API 与 Python 示例](FileBay_API_Python_Examples.md) - Markdown 字符串写入、图片流写入和转换插件说明
 
 ---
 

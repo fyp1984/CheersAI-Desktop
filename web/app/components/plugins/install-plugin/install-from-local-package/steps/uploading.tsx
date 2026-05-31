@@ -22,6 +22,18 @@ type Props = {
   onFailed: (errorMsg: string) => void
 }
 
+type PackageUploadResponse = {
+  message?: string
+  unique_identifier?: string
+  manifest?: PluginDeclaration
+}
+
+type UploadResponse = PackageUploadResponse | Dependency[]
+
+const isPackageUploadResponse = (value: UploadResponse | undefined): value is PackageUploadResponse => {
+  return !!value && !Array.isArray(value)
+}
+
 const Uploading: FC<Props> = ({
   isBundle,
   file,
@@ -32,31 +44,51 @@ const Uploading: FC<Props> = ({
 }) => {
   const { t } = useTranslation()
   const fileName = file.name
-  const handleUpload = async () => {
+
+  const handleUpload = React.useCallback(async () => {
     try {
-      await uploadFile(file, isBundle)
+      const res = await uploadFile(file, isBundle) as UploadResponse
+      if (isBundle) {
+        onBundleUploaded(res as Dependency[])
+        return
+      }
+      if (!isPackageUploadResponse(res)) {
+        onFailed(t(`${i18nPrefix}.uploadFailed`, { ns: 'plugin' }))
+        return
+      }
+
+      onPackageUploaded({
+        uniqueIdentifier: res.unique_identifier as string,
+        manifest: res.manifest as PluginDeclaration,
+      })
     }
-    catch (e: any) {
-      if (e.response?.message) {
-        onFailed(e.response?.message)
+    catch (e: unknown) {
+      const res = (e as { response?: UploadResponse })?.response
+      if (isPackageUploadResponse(res) && res.message) {
+        onFailed(res.message)
       }
       else { // Why it would into this branch?
-        const res = e.response
         if (isBundle) {
-          onBundleUploaded(res)
+          onBundleUploaded(res as Dependency[])
           return
         }
+        if (!isPackageUploadResponse(res)) {
+          const statusText = (e as { statusText?: string })?.statusText
+          onFailed(statusText || t(`${i18nPrefix}.uploadFailed`, { ns: 'plugin' }))
+          return
+        }
+
         onPackageUploaded({
-          uniqueIdentifier: res.unique_identifier,
-          manifest: res.manifest,
+          uniqueIdentifier: res.unique_identifier as string,
+          manifest: res.manifest as PluginDeclaration,
         })
       }
     }
-  }
+  }, [file, isBundle, onBundleUploaded, onFailed, onPackageUploaded, t])
 
   React.useEffect(() => {
     handleUpload()
-  }, [])
+  }, [handleUpload])
   return (
     <>
       <div className="flex flex-col items-start justify-center gap-4 self-stretch px-6 py-3">

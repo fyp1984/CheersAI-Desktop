@@ -125,7 +125,7 @@ export const ProviderContextProvider = ({
   ])
   const { data: providersData } = useModelProviders(canReadModelProviders)
   const { data: textGenerationModelList } = useModelListByType(ModelTypeEnum.textGeneration, canUseModels)
-  const { data: supportRetrievalMethods } = useSupportRetrievalMethods()
+  const { data: supportRetrievalMethods } = useSupportRetrievalMethods(!!currentWorkspace?.id)
 
   const [plan, setPlan] = useState(defaultPlan)
   const [isFetchedPlan, setIsFetchedPlan] = useState(false)

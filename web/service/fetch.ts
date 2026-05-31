@@ -20,8 +20,8 @@ export const ContentType = {
 }
 
 export type FetchOptionType = Omit<RequestInit, 'body'> & {
-  params?: Record<string, any>
-  body?: BodyInit | Record<string, any> | null
+  params?: Record<string, unknown>
+  body?: BodyInit | Record<string, unknown> | null
 }
 
 const afterResponse204: AfterResponseHook = async (_request, _options, response) => {
@@ -39,11 +39,43 @@ export type ResponseError = {
   status: number
 }
 
+const readResponseError = async (response: Response): Promise<ResponseError> => {
+  const fallbackMessage = response.statusText || 'Request failed'
+
+  try {
+    const contentType = response.headers.get('content-type') || ''
+    if (contentType.includes(ContentType.json)) {
+      const data = await response.clone().json() as Partial<ResponseError>
+
+      return {
+        code: data.code || '',
+        message: data.message || fallbackMessage,
+        status: data.status || response.status,
+      }
+    }
+
+    const text = await response.clone().text()
+
+    return {
+      code: '',
+      message: text || fallbackMessage,
+      status: response.status,
+    }
+  }
+  catch {
+    return {
+      code: '',
+      message: fallbackMessage,
+      status: response.status,
+    }
+  }
+}
+
 const afterResponseErrorCode = (otherOptions: IOtherOptions): AfterResponseHook => {
   return async (_request, _options, response) => {
     const clonedResponse = response.clone()
     if (!/^([23])\d{2}$/.test(String(clonedResponse.status))) {
-      const bodyJson = clonedResponse.json() as Promise<ResponseError>
+      const bodyJson = readResponseError(clonedResponse)
       switch (clonedResponse.status) {
         case 403:
           bodyJson.then((data: ResponseError) => {
@@ -69,7 +101,8 @@ const afterResponseErrorCode = (otherOptions: IOtherOptions): AfterResponseHook 
 
 const beforeErrorToast = (otherOptions: IOtherOptions): BeforeErrorHook => {
   return (error) => {
-    if (!otherOptions.silent)
+    const status = (error as { response?: Response })?.response?.status
+    if (!otherOptions.silent && status !== 401 && error.message !== 'Request failed')
       Toast.notify({ type: 'error', message: error.message })
     return error
   }

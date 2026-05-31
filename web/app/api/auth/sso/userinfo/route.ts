@@ -107,8 +107,15 @@ const validateUserInfo = (userInfo: ReturnType<typeof normalizeUserInfo>) => {
 
 const canFallbackToTokenClaims = (status: number) => [400, 414, 431].includes(status)
 
+const getConsoleApiUrl = (path: string) => {
+  const apiPrefix = process.env.NEXT_PUBLIC_API_PREFIX?.trim() || 'http://api:5001/console/api'
+  const normalizedPrefix = apiPrefix.replace(/\/$/, '')
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  return `${normalizedPrefix}${normalizedPath}`
+}
+
 const refreshTokenViaProxy = async (refreshToken: string) => {
-  const response = await fetch('http://api:5001/console/api/auth/sso-proxy/token', {
+  const response = await fetch(getConsoleApiUrl('/auth/sso-proxy/token'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -124,7 +131,7 @@ const refreshTokenViaProxy = async (refreshToken: string) => {
 }
 
 const fetchUserInfoViaProxy = async (accessToken: string) => {
-  const response = await fetch('http://api:5001/console/api/auth/sso-proxy/userinfo', {
+  const response = await fetch(getConsoleApiUrl('/auth/sso-proxy/userinfo'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ accessToken }),
@@ -137,7 +144,7 @@ const fetchUserInfoViaProxy = async (accessToken: string) => {
 }
 
 const fetchAccountIdentityViaProxy = async (accessToken: string) => {
-  const response = await fetch('http://api:5001/console/api/auth/sso-proxy/get-account', {
+  const response = await fetch(getConsoleApiUrl('/auth/sso-proxy/get-account'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ accessToken }),

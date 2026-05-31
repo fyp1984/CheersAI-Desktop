@@ -6,12 +6,16 @@ import {
   RiCloseLine,
   RiColorFilterFill,
   RiColorFilterLine,
+  RiCopperCoinFill,
+  RiCopperCoinLine,
   RiDatabase2Fill,
   RiDatabase2Line,
   RiGitRepositoryFill,
   RiGitRepositoryLine,
   RiGroup2Fill,
   RiGroup2Line,
+  RiKey2Fill,
+  RiKey2Line,
   RiMoneyDollarCircleFill,
   RiMoneyDollarCircleLine,
   RiPuzzle2Fill,
@@ -37,9 +41,11 @@ import Button from '../../base/button'
 import ApiBasedExtensionPage from './api-based-extension-page'
 import DataSourcePage from './data-source-page-new'
 import GiteaSettingsPage from './gitea-settings-page'
+import InviteCodesPage from './invite-codes-page'
 import LanguagePage from './language-page'
 import MembersPage from './members-page'
 import ModelProviderPage from './model-provider-page'
+import PointsPage from './points-page'
 import TokenBillingPage from './token-billing-page'
 
 const iconClassName = `
@@ -189,6 +195,18 @@ export default function AccountSetting({
       name: t('settings.generalGroup', { ns: 'common' }),
       items: [
         {
+          key: ACCOUNT_SETTING_TAB.POINTS,
+          name: '积分权益',
+          icon: <RiCopperCoinLine className={iconClassName} />,
+          activeIcon: <RiCopperCoinFill className={iconClassName} />,
+        },
+        {
+          key: ACCOUNT_SETTING_TAB.INVITE_CODES,
+          name: '邀请码',
+          icon: <RiKey2Line className={iconClassName} />,
+          activeIcon: <RiKey2Fill className={iconClassName} />,
+        },
+        {
           key: ACCOUNT_SETTING_TAB.LANGUAGE,
           name: t('settings.language', { ns: 'common' }),
           icon: <RiTranslate2 className={iconClassName} />,
@@ -309,6 +327,8 @@ export default function AccountSetting({
               {effectiveActiveMenu === 'api-based-extension' && <ApiBasedExtensionPage />}
               {effectiveActiveMenu === 'gitea-settings' && <GiteaSettingsPage />}
               {effectiveActiveMenu === 'custom' && <CustomPage />}
+              {effectiveActiveMenu === 'points' && <PointsPage />}
+              {effectiveActiveMenu === 'invite-codes' && <InviteCodesPage />}
               {effectiveActiveMenu === 'language' && <LanguagePage />}
             </div>
           </div>

@@ -399,6 +399,24 @@ export const verifyDeleteAccountCode = (body: { code: string, token: string }): 
 export const submitDeleteAccountFeedback = (body: { feedback: string, email: string }): Promise<CommonResponse> =>
   post<CommonResponse>('/account/delete/feedback', { body })
 
+export type SubmitUserFeedbackBody = {
+  content: string
+  title?: string
+  source?: string
+  channel?: string
+  category?: string
+  priority?: string
+  page_url?: string
+  app_id?: string
+  conversation_id?: string
+  message_id?: string
+  contact_allowed?: boolean
+  metadata?: Record<string, unknown>
+}
+
+export const submitUserFeedback = (body: SubmitUserFeedbackBody): Promise<CommonResponse & { data?: { id: string, ticket_no: string, status: string } }> =>
+  post<CommonResponse & { data?: { id: string, ticket_no: string, status: string } }>('/feedbacks', { body })
+
 export const getDocDownloadUrl = (doc_name: string): Promise<{ url: string }> =>
   get<{ url: string }>('/compliance/download', { params: { doc_name } }, { silent: true })
 
@@ -414,7 +432,7 @@ export const resetEmail = (body: { new_email: string, token: string }): Promise<
 export const checkEmailExisted = (body: { email: string }): Promise<CommonResponse> =>
   post<CommonResponse>('/account/change-email/check-email-unique', { body }, { silent: true })
 
-export const applyForBeta = async (body: { email: string, name: string, language?: string }): Promise<CommonResponse> => {
+export const applyForBeta = async (body: { email: string, name: string, language?: string, invite_code?: string }): Promise<CommonResponse> => {
   const response = await globalThis.fetch('/api/nexus/beta-applications/apply/', {
     method: 'POST',
     headers: {

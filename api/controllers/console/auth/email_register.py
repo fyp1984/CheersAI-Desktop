@@ -10,6 +10,7 @@ from controllers.console.auth.error import (
     EmailAlreadyInUseError,
     EmailCodeError,
     EmailRegisterLimitError,
+    InvalidAccountInviteCodeError,
     InvalidEmailError,
     InvalidTokenError,
     PasswordMismatchError,
@@ -18,7 +19,7 @@ from extensions.ext_database import db
 from libs.helper import EmailStr, extract_remote_ip
 from libs.password import valid_password
 from models import Account
-from services.account_service import AccountService
+from services.account_service import AccountInviteCodeService, AccountService
 from services.billing_service import BillingService
 from services.errors.account import AccountNotFoundError, AccountRegisterError
 
@@ -43,6 +44,7 @@ class EmailRegisterResetPayload(BaseModel):
     token: str = Field(...)
     new_password: str = Field(...)
     password_confirm: str = Field(...)
+    invite_code: str | None = Field(default=None)
 
     @field_validator("new_password", "password_confirm")
     @classmethod
@@ -151,7 +153,7 @@ class EmailRegisterResetApi(Resource):
             if account:
                 raise EmailAlreadyInUseError()
             else:
-                account = self._create_new_account(normalized_email, args.password_confirm)
+                account = self._create_new_account(normalized_email, args.password_confirm, args.invite_code)
                 if not account:
                     raise AccountNotFoundError()
                 token_pair = AccountService.login(account=account, ip_address=extract_remote_ip(request))
@@ -159,9 +161,12 @@ class EmailRegisterResetApi(Resource):
 
         return {"result": "success", "data": token_pair.model_dump()}
 
-    def _create_new_account(self, email: str, password: str) -> Account | None:
+    def _create_new_account(self, email: str, password: str, invite_code: str | None) -> Account | None:
         # Create new account if allowed
         account = None
+        normalized_invite_code = AccountInviteCodeService.normalize_code(invite_code)
+        if normalized_invite_code and not AccountInviteCodeService.is_invite_code_available(normalized_invite_code):
+            raise InvalidAccountInviteCodeError()
         try:
             account = AccountService.create_account_and_tenant(
                 email=email,
@@ -169,6 +174,8 @@ class EmailRegisterResetApi(Resource):
                 password=password,
                 interface_language=languages[0],
             )
+            if normalized_invite_code:
+                AccountInviteCodeService.consume_invite_code(normalized_invite_code, account)
         except AccountRegisterError:
             raise AccountInFreezeError()
 

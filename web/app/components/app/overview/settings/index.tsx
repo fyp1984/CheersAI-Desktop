@@ -2,11 +2,12 @@
 import type { FC } from 'react'
 import type { AppIconSelection } from '@/app/components/base/app-icon-picker'
 import type { AppDetailResponse } from '@/models/app'
+import type { AppInstruction } from '@/service/app-instruction'
 import type { AppIconType, AppSSO, Language } from '@/types/app'
-import { RiArrowRightSLine, RiCloseLine } from '@remixicon/react'
+import { RiArrowRightSLine, RiCloseLine, RiDeleteBinLine, RiFileTextLine, RiUploadCloudLine } from '@remixicon/react'
 import Link from 'next/link'
 import * as React from 'react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import ActionButton from '@/app/components/base/action-button'
 import AppIcon from '@/app/components/base/app-icon'
@@ -26,6 +27,7 @@ import { ACCOUNT_SETTING_TAB } from '@/app/components/header/account-setting/con
 import { useModalContext } from '@/context/modal-context'
 import { useProviderContext } from '@/context/provider-context'
 import { languages } from '@/i18n-config/language'
+import { deleteAppInstruction, fetchAppInstruction, updateAppInstruction } from '@/service/app-instruction'
 import { AppModeEnum } from '@/types/app'
 import { cn } from '@/utils/classnames'
 
@@ -57,6 +59,15 @@ export type ConfigParams = {
 }
 
 const prefixSettings = 'overview.appInfo.settings'
+const MAX_INSTRUCTION_FILE_SIZE = 1024 * 1024
+
+const formatFileSize = (size = 0) => {
+  if (size >= 1024 * 1024)
+    return `${(size / 1024 / 1024).toFixed(1)} MB`
+  if (size >= 1024)
+    return `${(size / 1024).toFixed(1)} KB`
+  return `${size} B`
+}
 
 const SettingsModal: FC<ISettingsModalProps> = ({
   isChat,
@@ -98,6 +109,10 @@ const SettingsModal: FC<ISettingsModalProps> = ({
   })
   const [language, setLanguage] = useState(default_language)
   const [saveLoading, setSaveLoading] = useState(false)
+  const [instruction, setInstruction] = useState<AppInstruction | null>(null)
+  const [instructionLoading, setInstructionLoading] = useState(false)
+  const [instructionSaving, setInstructionSaving] = useState(false)
+  const instructionFileInputRef = useRef<HTMLInputElement>(null)
   const { t } = useTranslation()
 
   const [showAppIconPicker, setShowAppIconPicker] = useState(false)
@@ -136,6 +151,33 @@ const SettingsModal: FC<ISettingsModalProps> = ({
       ? { type: 'image', url: icon_url!, fileId: icon }
       : { type: 'emoji', icon, background: icon_background! })
   }, [appInfo, chat_color_theme, chat_color_theme_inverted, copyright, custom_disclaimer, default_language, description, icon, icon_background, icon_type, icon_url, privacy_policy, show_workflow_steps, title, use_icon_as_answer_icon])
+
+  useEffect(() => {
+    let ignore = false
+    const loadInstruction = async () => {
+      if (!isShow || !appInfo.id)
+        return
+
+      setInstructionLoading(true)
+      try {
+        const res = await fetchAppInstruction(appInfo.id, 'app')
+        if (!ignore)
+          setInstruction(res.instruction)
+      }
+      catch {
+        if (!ignore)
+          setInstruction(null)
+      }
+      finally {
+        if (!ignore)
+          setInstructionLoading(false)
+      }
+    }
+    loadInstruction()
+    return () => {
+      ignore = true
+    }
+  }, [appInfo.id, isShow])
 
   const onHide = () => {
     onClose()
@@ -220,6 +262,87 @@ const SettingsModal: FC<ISettingsModalProps> = ({
     setInputInfo(item => ({ ...item, desc: value }))
   }
 
+  const handleInstructionUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file)
+      return
+
+    const fileName = file.name
+    const lowerName = fileName.toLowerCase()
+    if (!lowerName.endsWith('.md') && !lowerName.endsWith('.markdown') && !lowerName.endsWith('.txt')) {
+      notify({ type: 'error', message: '仅支持 Markdown 或 TXT 使用说明文件' })
+      return
+    }
+    if (file.size > MAX_INSTRUCTION_FILE_SIZE) {
+      notify({ type: 'error', message: '使用说明文件不能超过 1 MB' })
+      return
+    }
+
+    setInstructionSaving(true)
+    try {
+      const content = await file.text()
+      const res = await updateAppInstruction(appInfo.id, {
+        title: fileName.replace(/\.(md|markdown|txt)$/i, ''),
+        content,
+        source_file_name: fileName,
+        source_file_size: file.size,
+      })
+      setInstruction(res.instruction)
+      notify({ type: 'success', message: '使用说明已保存' })
+    }
+    catch {
+      notify({ type: 'error', message: '使用说明保存失败' })
+    }
+    finally {
+      setInstructionSaving(false)
+    }
+  }
+
+  const handleInstructionDelete = async () => {
+    setInstructionSaving(true)
+    try {
+      await deleteAppInstruction(appInfo.id)
+      setInstruction(null)
+      notify({ type: 'success', message: '使用说明已删除' })
+    }
+    catch {
+      notify({ type: 'error', message: '使用说明删除失败' })
+    }
+    finally {
+      setInstructionSaving(false)
+    }
+  }
+
+  const renderInstructionStatus = () => {
+    if (instructionLoading)
+      return <div className="system-xs-regular text-text-tertiary">正在读取使用说明...</div>
+
+    if (!instruction)
+      return <div className="system-xs-regular text-text-tertiary">暂无使用说明文件</div>
+
+    return (
+      <div className="flex items-center gap-3">
+        <RiFileTextLine className="h-5 w-5 shrink-0 text-text-accent" />
+        <div className="min-w-0 grow">
+          <div className="system-sm-medium truncate text-text-primary">
+            {instruction.source_file_name || instruction.title || '使用说明'}
+          </div>
+          <div className="system-xs-regular mt-0.5 text-text-tertiary">
+            {formatFileSize(instruction.source_file_size)}
+          </div>
+        </div>
+        <ActionButton
+          size="l"
+          disabled={instructionSaving}
+          onClick={handleInstructionDelete}
+        >
+          <RiDeleteBinLine className="h-[18px] w-[18px]" />
+        </ActionButton>
+      </div>
+    )
+  }
+
   return (
     <>
       <Modal
@@ -273,6 +396,35 @@ const SettingsModal: FC<ISettingsModalProps> = ({
               placeholder={t(`${prefixSettings}.webDescPlaceholder`, { ns: 'appOverview' }) as string}
             />
             <p className={cn('body-xs-regular pb-0.5 text-text-tertiary')}>{t(`${prefixSettings}.webDescTip`, { ns: 'appOverview' })}</p>
+          </div>
+          <Divider className="my-0 h-px" />
+          <div className="w-full">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className={cn('system-sm-semibold py-1 text-text-secondary')}>使用说明文件</div>
+                <p className="body-xs-regular pb-0.5 text-text-tertiary">
+                  上传 Markdown 或 TXT 文件后，用户可在智能体运行界面点击帮助按钮查看。
+                </p>
+              </div>
+              <input
+                ref={instructionFileInputRef}
+                type="file"
+                accept=".md,.markdown,.txt,text/markdown,text/plain"
+                className="hidden"
+                onChange={handleInstructionUpload}
+              />
+              <Button
+                size="small"
+                onClick={() => instructionFileInputRef.current?.click()}
+                loading={instructionSaving}
+              >
+                <RiUploadCloudLine className="mr-1 h-4 w-4" />
+                {instruction ? '替换文件' : '上传文件'}
+              </Button>
+            </div>
+            <div className="mt-2 rounded-lg border border-components-panel-border bg-background-section-burn p-3">
+              {renderInstructionStatus()}
+            </div>
           </div>
           <Divider className="my-0 h-px" />
           {/* answer icon */}

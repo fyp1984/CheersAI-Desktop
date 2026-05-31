@@ -1,0 +1,135 @@
+# 文件格式转换插件配置示例
+# 复制此文件为 config.yaml 并根据需要修改
+
+# 插件基本配置
+plugin:
+  # 插件名称
+  name: "file-format-converter"
+  
+  # 插件版本
+  version: "0.0.1"
+  
+  # 是否启用调试模式
+  debug: false
+  
+  # 日志级别 (DEBUG, INFO, WARNING, ERROR)
+  log_level: "INFO"
+
+# 资源配置
+resource:
+  # 内存限制（字节）
+  memory_limit: 268435456  # 256MB
+  
+  # 临时文件目录
+  temp_dir: "/tmp"
+  
+  # 最大文件大小（字节）
+  max_file_size: 10485760  # 10MB
+
+# Word 导出配置
+word_export:
+  # 默认字体
+  default_font: "Arial"
+  
+  # 默认字体大小（磅）
+  default_font_size: 11
+  
+  # 页边距（英寸）
+  margins:
+    top: 1.0
+    bottom: 1.0
+    left: 1.0
+    right: 1.0
+  
+  # 是否包含目录
+  include_toc: false
+
+# PDF 导出配置
+pdf_export:
+  # 页面大小 (A4, Letter, Legal)
+  page_size: "A4"
+  
+  # 页边距（厘米）
+  margins:
+    top: 2.0
+    bottom: 2.0
+    left: 2.0
+    right: 2.0
+  
+  # 字体配置
+  fonts:
+    body: "Arial"
+    heading: "Arial"
+    code: "Courier New"
+  
+  # 是否压缩 PDF
+  compress: true
+  
+  # PDF 元数据
+  metadata:
+    author: "Dify Plugin"
+    creator: "File Format Converter"
+
+# HTML 导出配置
+html_export:
+  # 默认包含 CSS
+  include_css: true
+  
+  # CSS 主题 (github, default, custom)
+  theme: "github"
+  
+  # 是否包含语法高亮
+  syntax_highlight: true
+  
+  # 代码高亮主题
+  highlight_theme: "monokai"
+
+# Markdown 导出配置
+markdown_export:
+  # 文件编码
+  encoding: "utf-8"
+  
+  # 换行符 (LF, CRLF)
+  line_ending: "LF"
+  
+  # 是否添加前置元数据
+  add_frontmatter: false
+
+# 安全配置
+security:
+  # 允许的文件名字符
+  allowed_filename_chars: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
+  
+  # 最大文件名长度
+  max_filename_length: 100
+  
+  # 是否清理临时文件
+  cleanup_temp_files: true
+  
+  # 临时文件保留时间（秒）
+  temp_file_retention: 3600  # 1小时
+
+# 性能配置
+performance:
+  # 是否启用缓存
+  enable_cache: false
+  
+  # 缓存大小（MB）
+  cache_size: 100
+  
+  # 并发处理数
+  max_concurrent: 3
+
+# 错误处理
+error_handling:
+  # 是否重试失败的转换
+  retry_on_failure: true
+  
+  # 最大重试次数
+  max_retries: 3
+  
+  # 重试延迟（秒）
+  retry_delay: 1
+  
+  # 是否记录详细错误
+  verbose_errors: true

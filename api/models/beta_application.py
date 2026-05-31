@@ -22,6 +22,7 @@ class BetaApplication(TypeBase):
     language: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, default=None)
     company: Mapped[Optional[str]] = mapped_column(String(200), nullable=True, default=None)
     use_case: Mapped[Optional[str]] = mapped_column(String(500), nullable=True, default=None)
+    invite_code: Mapped[Optional[str]] = mapped_column(String(32), nullable=True, default=None)
     ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True, default=None)
     user_agent: Mapped[Optional[str]] = mapped_column(String(500), nullable=True, default=None)
     status: Mapped[str] = mapped_column(

@@ -44,6 +44,7 @@ export type ChatWithHistoryContextValue = {
   isMobile: boolean
   isInstalledApp: boolean
   appId?: string
+  instructionManageAppId?: string
   handleFeedback: (messageId: string, feedback: Feedback) => void
   currentChatInstanceRef: RefObject<{ handleStop: () => void }>
   themeBuilder?: ThemeBuilder

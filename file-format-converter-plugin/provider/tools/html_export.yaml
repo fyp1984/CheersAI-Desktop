@@ -1,0 +1,64 @@
+identity:
+  author: cheersai
+  name: export_to_html
+  label:
+    en_US: Export to HTML
+    zh_Hans: 导出为HTML文档
+    zh_CN: 导出为HTML文档
+  icon: icon.svg
+description:
+  human:
+    en_US: Export conversation content to an HTML document
+    zh_Hans: 将对话内容导出为HTML文档
+    zh_CN: 将对话内容导出为HTML文档
+  llm: >
+    A tool that converts markdown text to an HTML document. 
+    Use this tool when the user wants to save or export the conversation 
+    content as an HTML file for web viewing.
+
+parameters:
+  - name: markdown_content
+    type: string
+    required: true
+    label:
+      en_US: Markdown Content
+      zh_Hans: Markdown内容
+      zh_CN: Markdown内容
+    human_description:
+      en_US: The markdown content to convert to HTML format
+      zh_Hans: 要转换为HTML格式的Markdown内容
+      zh_CN: 要转换为HTML格式的Markdown内容
+    llm_description: The markdown formatted text content that will be converted to an HTML document
+    form: llm
+  - name: document_name
+    type: string
+    required: false
+    label:
+      en_US: Document Name
+      zh_Hans: 文档名称
+      zh_CN: 文档名称
+    human_description:
+      en_US: Name for the exported document (without extension)
+      zh_Hans: 导出文档的名称（无需扩展名）
+      zh_CN: 导出文档的名称（无需扩展名）
+    llm_description: Optional name for the output document file, defaults to "document"
+    form: form
+    default: "document"
+  - name: include_css
+    type: boolean
+    required: false
+    label:
+      en_US: Include CSS Styling
+      zh_Hans: 包含CSS样式
+      zh_CN: 包含CSS样式
+    human_description:
+      en_US: Whether to include CSS styling in the HTML document
+      zh_Hans: 是否在HTML文档中包含CSS样式
+      zh_CN: 是否在HTML文档中包含CSS样式
+    llm_description: Whether to include CSS styling for better visual presentation
+    form: form
+    default: true
+
+extra:
+  python:
+    source: tools/html_export.py

@@ -33,6 +33,7 @@ def apply_beta_legacy():
                     "name": args.name,
                     "email": args.email,
                     "language": args.language,
+                    "invite_code": args.invite_code,
                 },
                 headers={
                     "Content-Type": "application/json",

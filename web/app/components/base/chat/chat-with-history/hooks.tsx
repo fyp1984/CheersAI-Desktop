@@ -112,6 +112,11 @@ export const useChatWithHistory = (installedAppInfo?: InstalledApp) => {
     return appInfo
   }, [isInstalledApp, installedAppInfo, appInfo])
   const appId = useMemo(() => appData?.app_id, [appData])
+  const instructionManageAppId = useMemo(() => {
+    if (isInstalledApp)
+      return installedAppInfo?.app.id
+    return appId
+  }, [appId, installedAppInfo, isInstalledApp])
 
   const [userId, setUserId] = useState<string>()
   useEffect(() => {
@@ -581,6 +586,7 @@ export const useChatWithHistory = (installedAppInfo?: InstalledApp) => {
   return {
     isInstalledApp,
     appId,
+    instructionManageAppId,
     currentConversationId,
     currentConversationItem,
     handleConversationIdInfoChange,

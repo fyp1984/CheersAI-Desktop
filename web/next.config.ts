@@ -26,7 +26,7 @@ const hasSetWebPrefix = process.env.NEXT_PUBLIC_WEB_PREFIX
 const port = process.env.PORT || 3000
 const locImageURLs = !hasSetWebPrefix ? [new URL(`http://localhost:${port}/**`), new URL(`http://127.0.0.1:${port}/**`)] : []
 const remoteImageURLs = ([hasSetWebPrefix ? new URL(`${process.env.NEXT_PUBLIC_WEB_PREFIX}/**`) : '', ...locImageURLs].filter(item => !!item)) as URL[]
-const consoleApiPrefix = (process.env.NEXT_PUBLIC_API_PREFIX || 'http://localhost:15001/console/api').replace(/\/$/, '')
+const consoleApiPrefix = (process.env.CONSOLE_API_PREFIX || 'http://localhost:5001/console/api').replace(/\/$/, '')
 
 const nextConfig: NextConfig = {
   experimental: {
@@ -39,9 +39,11 @@ const nextConfig: NextConfig = {
   basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
   // 关键配置：强制使用末尾斜杠，避免与 Nginx 子路径部署的重定向死循环
   trailingSlash: true,
+  skipTrailingSlashRedirect: true,
   serverExternalPackages: ['esbuild-wasm'],
   transpilePackages: ['echarts', 'zrender'],
   turbopack: {
+    root: process.cwd(),
     rules: codeInspectorPlugin({
       bundler: 'turbopack',
     }),
