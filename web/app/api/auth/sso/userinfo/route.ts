@@ -107,9 +107,26 @@ const validateUserInfo = (userInfo: ReturnType<typeof normalizeUserInfo>) => {
 
 const canFallbackToTokenClaims = (status: number) => [400, 414, 431].includes(status)
 
+const normalizeInternalApiPrefix = (rawPrefix: string) => {
+  const trimmedPrefix = rawPrefix.trim()
+  if (!trimmedPrefix)
+    return 'http://api:5001/console/api'
+
+  if (/^https?:\/\//i.test(trimmedPrefix))
+    return trimmedPrefix.replace(/\/$/, '')
+
+  if (trimmedPrefix.startsWith('/'))
+    return `http://api:5001${trimmedPrefix}`.replace(/\/$/, '')
+
+  return `http://${trimmedPrefix}`.replace(/\/$/, '')
+}
+
 const getConsoleApiUrl = (path: string) => {
-  const apiPrefix = process.env.NEXT_PUBLIC_API_PREFIX?.trim() || 'http://api:5001/console/api'
-  const normalizedPrefix = apiPrefix.replace(/\/$/, '')
+  const apiPrefix = process.env.INTERNAL_CONSOLE_API_PREFIX?.trim()
+    || process.env.CONSOLE_API_PREFIX?.trim()
+    || process.env.NEXT_PUBLIC_API_PREFIX?.trim()
+    || 'http://api:5001/console/api'
+  const normalizedPrefix = normalizeInternalApiPrefix(apiPrefix)
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
   return `${normalizedPrefix}${normalizedPath}`
 }

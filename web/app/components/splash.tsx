@@ -9,13 +9,17 @@ const Splash: FC<PropsWithChildren> = () => {
   const { isLoading, data: loginData } = useIsLogin()
   const isLoggedIn = loginData?.logged_in
 
-  if (isLoading || !isLoggedIn) {
+  if (isLoading) {
     return (
       <div className="fixed inset-0 z-[9999999] flex h-full items-center justify-center bg-background-body">
         <Loading />
       </div>
     )
   }
+
+  if (!isLoggedIn)
+    return null
+
   return null
 }
 export default React.memo(Splash)
