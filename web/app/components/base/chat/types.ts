@@ -80,8 +80,12 @@ export type ChatItemInTree = {
   children?: ChatItemInTree[]
 } & ChatItem
 
+export type SendOptions = {
+  webSearch?: boolean
+}
+
 export type OnSend = {
-  (message: string, files?: FileEntity[]): void
+  (message: string, files?: FileEntity[], options?: SendOptions): void
   (message: string, files: FileEntity[] | undefined, isRegenerate: boolean, lastAnswer?: ChatItem | null): void
 }
 

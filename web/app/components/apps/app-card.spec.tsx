@@ -683,7 +683,7 @@ describe('AppCard', () => {
   describe('Styling', () => {
     it('should have correct card container styling', () => {
       const { container } = render(<AppCard app={mockApp} />)
-      const card = container.querySelector('[class*="h-[160px]"]')
+      const card = container.querySelector('[class*="h-[190px]"]')
       expect(card).toBeInTheDocument()
     })
 

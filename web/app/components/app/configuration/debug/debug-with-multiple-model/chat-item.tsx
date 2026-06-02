@@ -1,7 +1,7 @@
 import type { FC } from 'react'
 import type { ModelAndParameter } from '../types'
 import type { InputForm } from '@/app/components/base/chat/chat/type'
-import type { ChatConfig, OnSend } from '@/app/components/base/chat/types'
+import type { ChatConfig, OnSend, SendOptions } from '@/app/components/base/chat/types'
 import {
   memo,
   useCallback,
@@ -83,7 +83,8 @@ const ChatItem: FC<ChatItemProps> = ({
   )
   useFormattingChangedSubscription(chatList)
 
-  const doSend: OnSend = useCallback((message, files) => {
+  const doSend: OnSend = useCallback((message, files, options?: SendOptions | boolean) => {
+    const webSearch = typeof options === 'object' ? !!options?.webSearch : false
     const currentProvider = textGenerationModelList.find(item => item.provider === modelAndParameter.provider)
     const currentModel = currentProvider?.models.find(model => model.model === modelAndParameter.model)
     const supportVision = currentModel?.features?.includes(ModelFeatureEnum.vision)
@@ -107,6 +108,8 @@ const ChatItem: FC<ChatItemProps> = ({
 
     if ((config.file_upload as any).enabled && files?.length && supportVision)
       data.files = files
+    if (webSearch)
+      data.web_search = true
 
     handleSend(
       `apps/${appId}/chat-messages`,
@@ -121,7 +124,7 @@ const ChatItem: FC<ChatItemProps> = ({
   const { eventEmitter } = useEventEmitterContextContext()
   eventEmitter?.useSubscription((v: any) => {
     if (v.type === APP_CHAT_WITH_MULTIPLE_MODEL)
-      doSend(v.payload.message, v.payload.files)
+      doSend(v.payload.message, v.payload.files, { webSearch: !!v.payload.webSearch })
     if (v.type === APP_CHAT_WITH_MULTIPLE_MODEL_RESTART)
       handleRestart()
   })

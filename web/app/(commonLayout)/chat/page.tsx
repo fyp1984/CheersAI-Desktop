@@ -1,5 +1,6 @@
 'use client'
 
+import type { Model } from '@/app/components/header/account-setting/model-provider-page/declarations'
 import { RiAddLine, RiArrowDownSLine, RiArrowLeftSLine, RiArrowRightSLine, RiAttachmentLine, RiCheckLine, RiCloseLine, RiDatabase2Line, RiDeleteBinLine, RiDownloadLine, RiFileCopyLine, RiMicFill, RiMicLine, RiMoreLine, RiRefreshLine, RiSearchLine } from '@remixicon/react'
 import Cookies from 'js-cookie'
 import { useRouter } from 'next/navigation'
@@ -10,7 +11,7 @@ import { Markdown } from '@/app/components/base/markdown'
 import { SandboxFilePicker } from '@/app/components/base/sandbox-file-picker'
 import Toast from '@/app/components/base/toast'
 import { ModelTypeEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
-import { useDefaultModel, useModelList } from '@/app/components/header/account-setting/model-provider-page/hooks'
+import { useModelList } from '@/app/components/header/account-setting/model-provider-page/hooks'
 import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '@/config'
 import { useAppContext } from '@/context/app-context'
 import useDocumentTitle from '@/hooks/use-document-title'
@@ -104,6 +105,51 @@ type StoredMessage = Omit<Message, 'timestamp'> & {
 type StoredConversation = Omit<Conversation, 'messages' | 'timestamp'> & {
   messages: StoredMessage[]
   timestamp: string
+}
+
+const getModelLabel = (model: Model['models'][number]) => {
+  return model.label?.zh_Hans || model.label?.en_US || model.model
+}
+
+const getActiveModels = (provider: Model) => {
+  return (provider.models?.filter(model => model.status === 'active') || [])
+    .filter((model, index, models) => index === models.findIndex(item => item.model === model.model))
+}
+
+const findConfiguredModel = (
+  modelList: Model[],
+  providerName?: string,
+  modelName?: string,
+): SelectedModel | null => {
+  if (!providerName || !modelName)
+    return null
+
+  const provider = modelList.find(provider => provider.provider === providerName)
+  const model = provider && getActiveModels(provider).find(model => model.model === modelName)
+
+  if (!provider || !model)
+    return null
+
+  return {
+    provider: provider.provider,
+    model: model.model,
+    label: getModelLabel(model),
+  }
+}
+
+const getFirstConfiguredModel = (modelList: Model[]): SelectedModel | null => {
+  for (const provider of modelList) {
+    const firstModel = getActiveModels(provider)[0]
+    if (firstModel) {
+      return {
+        provider: provider.provider,
+        model: firstModel.model,
+        label: getModelLabel(firstModel),
+      }
+    }
+  }
+
+  return null
 }
 
 type ChatStorageState = {
@@ -250,11 +296,10 @@ const ChatPage = () => {
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const [showModelSelector, setShowModelSelector] = useState(false)
   const modelSelectorRef = useRef<HTMLDivElement>(null)
   const actionsMenuRef = useRef<HTMLDivElement>(null)
 
-  // 选中的模型状态 - 移到前面声明
+  const [showModelSelector, setShowModelSelector] = useState(false)
   const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(null)
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [showSandboxPicker, setShowSandboxPicker] = useState(false)
@@ -345,43 +390,24 @@ const ChatPage = () => {
   }, [inputValue])
 
   // 获取模型列表 - 使用更简单的方法
-  const { data: modelListData, isLoading: isModelListLoading } = useModelList(ModelTypeEnum.textGeneration)
-  const { data: defaultModelData } = useDefaultModel(ModelTypeEnum.textGeneration)
+  const { data: modelListData } = useModelList(ModelTypeEnum.textGeneration)
 
   const resolvedSelectedModel = useMemo(() => {
-    if (selectedModel)
-      return selectedModel
+    if (!modelListData || modelListData.length === 0)
+      return null
 
-    if (defaultModelData && modelListData) {
-      const defaultProvider = modelListData.find(provider => provider.provider === defaultModelData.provider.provider)
-      const defaultModel = defaultProvider?.models.find(model => model.model === defaultModelData.model)
+    const validSelectedModel = findConfiguredModel(modelListData, selectedModel?.provider, selectedModel?.model)
+    if (validSelectedModel)
+      return validSelectedModel
 
-      if (defaultProvider && defaultModel) {
-        return {
-          provider: defaultProvider.provider,
-          model: defaultModel.model,
-          label: defaultModel.label?.zh_Hans || defaultModel.label?.en_US || defaultModel.model,
-        }
-      }
-    }
-
-    if (!isModelListLoading && (!modelListData || modelListData.length === 0)) {
-      return {
-        provider: 'ollama',
-        model: 'qwen2.5:1.5b',
-        label: 'Qwen2.5 1.5B (Ollama)',
-      }
-    }
-
-    return null
-  }, [defaultModelData, isModelListLoading, modelListData, selectedModel])
+    return getFirstConfiguredModel(modelListData)
+  }, [modelListData, selectedModel])
 
   // 点击外部关闭模型选择器
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (modelSelectorRef.current && !modelSelectorRef.current.contains(event.target as Node)) {
+      if (modelSelectorRef.current && !modelSelectorRef.current.contains(event.target as Node))
         setShowModelSelector(false)
-      }
       if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target as Node)) {
         setShowConversationActions(false)
       }
@@ -527,7 +553,7 @@ const ChatPage = () => {
       lastMessage: '',
       timestamp: new Date(),
       messages: [],
-      modelConfig: selectedModel,
+      modelConfig: resolvedSelectedModel,
       enableWebSearch,
     }
     setConversations(prev => [newConversation, ...prev])
@@ -868,7 +894,7 @@ const ChatPage = () => {
       return
 
     if (!resolvedSelectedModel?.provider || !resolvedSelectedModel?.model) {
-      Toast.notify({ type: 'error', message: '请先在右上角选择模型' })
+      Toast.notify({ type: 'error', message: '当前没有可用模型，请先完成模型配置' })
       return
     }
 
@@ -954,7 +980,7 @@ const ChatPage = () => {
               lastMessage: fullResponse.slice(0, 50),
               timestamp: new Date(),
               messages: [...conv.messages, { ...assistantMessage, content: fullResponse }],
-              modelConfig: selectedModel || resolvedSelectedModel,
+              modelConfig: resolvedSelectedModel,
               enableWebSearch,
             }
           }
@@ -977,7 +1003,7 @@ const ChatPage = () => {
                 lastMessage: fullResponse.slice(0, 50),
                 timestamp: new Date(),
                 messages: [...newMessages, { ...assistantMessage, content: fullResponse }],
-                modelConfig: selectedModel || resolvedSelectedModel,
+                modelConfig: resolvedSelectedModel,
                 enableWebSearch,
               }
             }
@@ -1017,7 +1043,7 @@ const ChatPage = () => {
               lastMessage: errorMessage.content.slice(0, 50),
               timestamp: new Date(),
               messages: [...conv.messages, errorMessage],
-              modelConfig: selectedModel || resolvedSelectedModel,
+              modelConfig: resolvedSelectedModel,
               enableWebSearch,
             }
           }
@@ -1038,7 +1064,7 @@ const ChatPage = () => {
       return
 
     if (!resolvedSelectedModel?.provider || !resolvedSelectedModel?.model) {
-      Toast.notify({ type: 'error', message: '请先在右上角选择模型' })
+      Toast.notify({ type: 'error', message: '当前没有可用模型，请先完成模型配置' })
       return
     }
 
@@ -1060,7 +1086,7 @@ const ChatPage = () => {
         lastMessage: userMessage.content,
         timestamp: new Date(),
         messages: [userMessage],
-        modelConfig: selectedModel || resolvedSelectedModel,
+        modelConfig: resolvedSelectedModel,
         enableWebSearch,
       }
       conversationId = newConversation.id
@@ -1082,7 +1108,7 @@ const ChatPage = () => {
             lastMessage: userMessage.content,
             timestamp: new Date(),
             messages: updatedMessages,
-            modelConfig: selectedModel || resolvedSelectedModel,
+            modelConfig: resolvedSelectedModel,
             enableWebSearch,
           }
         }
@@ -1150,7 +1176,7 @@ const ChatPage = () => {
             lastMessage: fullResponse.slice(0, 50),
             timestamp: new Date(),
             messages: [...conv.messages, { ...assistantMessage, content: fullResponse }],
-            modelConfig: selectedModel || resolvedSelectedModel,
+            modelConfig: resolvedSelectedModel,
             enableWebSearch,
           }
         }
@@ -1172,7 +1198,7 @@ const ChatPage = () => {
                 lastMessage: fullResponse.slice(0, 50),
                 timestamp: new Date(),
                 messages: [...conv.messages, { ...assistantMessage, content: fullResponse }],
-                modelConfig: selectedModel || resolvedSelectedModel,
+                modelConfig: resolvedSelectedModel,
                 enableWebSearch,
               }
             }
@@ -1211,7 +1237,7 @@ const ChatPage = () => {
             lastMessage: errorMessage.content.slice(0, 50),
             timestamp: new Date(),
             messages: [...conv.messages, errorMessage],
-            modelConfig: selectedModel || resolvedSelectedModel,
+            modelConfig: resolvedSelectedModel,
             enableWebSearch,
           }
         }
@@ -1439,11 +1465,11 @@ const ChatPage = () => {
                 onClick={() => setShowModelSelector(!showModelSelector)}
                 className="flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-3 py-2 text-sm transition-colors hover:bg-[#f3f4f6] dark:border-white/10 dark:bg-[#27282e] dark:hover:bg-white/10"
               >
-                <span className="text-gray-700 dark:text-gray-200">
-                  {resolvedSelectedModel?.label || '选择模型'}
+                <span className="max-w-48 truncate text-gray-700 dark:text-gray-200">
+                  {resolvedSelectedModel?.label || '暂无可用模型'}
                 </span>
                 <RiArrowDownSLine className={cn(
-                  'h-4 w-4 text-gray-500 transition-transform dark:text-gray-400',
+                  'h-4 w-4 shrink-0 text-gray-500 transition-transform dark:text-gray-400',
                   showModelSelector && 'rotate-180',
                 )}
                 />
@@ -1452,124 +1478,82 @@ const ChatPage = () => {
               {showModelSelector && (
                 <div className="absolute right-0 top-full z-50 mt-1 max-h-96 w-80 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-white/10 dark:bg-[#24252b]">
                   <div className="border-b border-gray-100 p-3 dark:border-white/10">
-                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">选择模型</h3>
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">模型列表</h3>
                   </div>
                   <div className="py-2">
-                    {isModelListLoading
+                    {!modelListData || !getFirstConfiguredModel(modelListData)
                       ? (
-                          <div className="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                            加载模型中...
+                          <div className="px-3 py-4">
+                            <div className="mb-3 text-sm text-gray-500 dark:text-gray-400">
+                              当前没有可用模型
+                            </div>
+                            <div className="mt-3 border-t border-gray-100 pt-3 dark:border-white/10">
+                              <div className="mb-2 text-xs text-gray-400 dark:text-gray-500">
+                                {canManageModels
+                                  ? '想要更多模型？'
+                                  : '模型配置由工作区统一管理'}
+                              </div>
+                              {canManageModels && (
+                                <button
+                                  onClick={() => {
+                                    window.open('/apps/?action=showSettings&tab=provider', '_blank')
+                                  }}
+                                  className="rounded bg-blue-500 px-3 py-1.5 text-xs text-white transition-colors hover:bg-blue-600"
+                                >
+                                  配置更多提供商
+                                </button>
+                              )}
+                              {!canManageModels && (
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  如需更多模型，请联系工作区管理员统一配置。
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )
-                      : !modelListData || modelListData.length === 0
-                          ? (
-                              <div className="px-3 py-4">
-                                <div className="mb-3 text-sm text-gray-500 dark:text-gray-400">
-                                  使用本地Ollama模型
+                      : (
+                          modelListData.map((provider) => {
+                            const activeModels = getActiveModels(provider)
+
+                            if (activeModels.length === 0)
+                              return null
+
+                            return (
+                              <div key={provider.provider} className="mb-2">
+                                <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                  {provider.label?.zh_Hans || provider.label?.en_US || provider.provider}
                                 </div>
-                                <div className="space-y-1">
-                                  <button
-                                    onClick={() => handleSelectModel('ollama', 'qwen2.5:1.5b', 'Qwen2.5 1.5B (Ollama)')}
-                                    className={cn(
-                                      'flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-white/10',
-                                      resolvedSelectedModel?.model === 'qwen2.5:1.5b' && 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
-                                    )}
-                                  >
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">Qwen2.5 1.5B</span>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400">本地Ollama模型 - 轻量级</span>
-                                    </div>
-                                    {resolvedSelectedModel?.model === 'qwen2.5:1.5b' && (
-                                      <RiCheckLine className="h-4 w-4 text-blue-600" />
-                                    )}
-                                  </button>
-                                  <button
-                                    onClick={() => handleSelectModel('ollama', 'qwen3-coder:30b', 'Qwen3 Coder 30B (Ollama)')}
-                                    className={cn(
-                                      'flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-white/10',
-                                      resolvedSelectedModel?.model === 'qwen3-coder:30b' && 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
-                                    )}
-                                  >
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">Qwen3 Coder 30B</span>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400">本地Ollama模型 - 代码专用</span>
-                                    </div>
-                                    {resolvedSelectedModel?.model === 'qwen3-coder:30b' && (
-                                      <RiCheckLine className="h-4 w-4 text-blue-600" />
-                                    )}
-                                  </button>
-                                </div>
-                                <div className="mt-3 border-t border-gray-100 pt-3 dark:border-white/10">
-                                  <div className="mb-2 text-xs text-gray-400 dark:text-gray-500">
-                                    {canManageModels
-                                      ? '想要更多模型？'
-                                      : '模型配置由工作区统一管理'}
-                                  </div>
-                                  {canManageModels && (
+                                {activeModels.map((model) => {
+                                  const isSelected = resolvedSelectedModel?.provider === provider.provider && resolvedSelectedModel?.model === model.model
+                                  const modelLabel = getModelLabel(model)
+
+                                  return (
                                     <button
-                                      onClick={() => {
-                                        window.open('/apps/?action=showSettings&tab=provider', '_blank')
-                                      }}
-                                      className="rounded bg-blue-500 px-3 py-1.5 text-xs text-white transition-colors hover:bg-blue-600"
+                                      key={`${provider.provider}-${model.model}`}
+                                      onClick={() => handleSelectModel(provider.provider, model.model, modelLabel)}
+                                      className={cn(
+                                        'flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-white/10',
+                                        isSelected && 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
+                                      )}
                                     >
-                                      配置更多提供商
+                                      <div className="flex min-w-0 flex-col">
+                                        <span className="truncate font-medium">{modelLabel}</span>
+                                        <span className="truncate text-xs text-gray-500 dark:text-gray-400">{model.model}</span>
+                                      </div>
+                                      {isSelected && (
+                                        <RiCheckLine className="h-4 w-4 shrink-0 text-blue-600" />
+                                      )}
                                     </button>
-                                  )}
-                                  {!canManageModels && (
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      如需更多模型，请联系工作区管理员统一配置。
-                                    </div>
-                                  )}
-                                </div>
+                                  )
+                                })}
                               </div>
                             )
-                          : (
-                              modelListData.map((provider) => {
-                                const activeModels = (provider.models?.filter(model => model.status === 'active') || [])
-                                  .filter((model, index, models) => {
-                                    return index === models.findIndex(item => item.model === model.model)
-                                  })
-
-                                if (activeModels.length === 0)
-                                  return null
-
-                                return (
-                                  <div key={provider.provider} className="mb-2">
-                                    <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                      {provider.label?.zh_Hans || provider.label?.en_US || provider.provider}
-                                    </div>
-                                    {activeModels.map((model) => {
-                                      const isSelected = resolvedSelectedModel?.provider === provider.provider && resolvedSelectedModel?.model === model.model
-                                      const modelLabel = model.label?.zh_Hans || model.label?.en_US || model.model
-
-                                      return (
-                                        <button
-                                          key={`${provider.provider}-${model.model}`}
-                                          onClick={() => handleSelectModel(provider.provider, model.model, modelLabel)}
-                                          className={cn(
-                                            'flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-white/10',
-                                            isSelected && 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
-                                          )}
-                                        >
-                                          <div className="flex flex-col">
-                                            <span className="font-medium">{modelLabel}</span>
-                                            <span className="text-xs text-gray-500 dark:text-gray-400">{model.model}</span>
-                                          </div>
-                                          {isSelected && (
-                                            <RiCheckLine className="h-4 w-4 text-blue-600" />
-                                          )}
-                                        </button>
-                                      )
-                                    })}
-                                  </div>
-                                )
-                              })
-                            )}
+                          })
+                        )}
                   </div>
                 </div>
               )}
             </div>
-
             <div className="relative" ref={actionsMenuRef}>
               <button
                 onClick={() => setShowConversationActions(prev => !prev)}
@@ -1837,6 +1821,7 @@ const ChatPage = () => {
                         </div>
                       </div>
                       <button
+                        type="button"
                         onClick={() => handleRemoveFile(file.id)}
                         className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#fee2e2] hover:text-[#ef4444] dark:hover:bg-red-500/10 dark:hover:text-red-300"
                         title="移除文件"
@@ -1928,6 +1913,7 @@ const ChatPage = () => {
                   </div>
                   <div className="relative flex items-end gap-3">
                     <button
+                      type="button"
                       onClick={handleAttachmentClick}
                       className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-100"
                       title="从沙箱选择文件"
@@ -1965,6 +1951,7 @@ const ChatPage = () => {
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <button
+                        type="button"
                         onClick={handleVoiceInput}
                         className={cn(
                           'flex h-10 w-10 items-center justify-center rounded-lg border transition-colors',
@@ -1979,6 +1966,7 @@ const ChatPage = () => {
                         {isVoiceListening ? <RiMicFill className="h-4 w-4" /> : <RiMicLine className="h-4 w-4" />}
                       </button>
                       <button
+                        type="button"
                         onClick={isResponsePending ? handleStopSending : handleSend}
                         disabled={!isResponsePending && !inputValue.trim()}
                         className={cn(

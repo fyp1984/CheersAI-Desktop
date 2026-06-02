@@ -3,6 +3,7 @@ import type {
   ChatConfig,
   ChatItem,
   OnSend,
+  SendOptions,
 } from '../types'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import AnswerIcon from '@/app/components/base/answer-icon'
@@ -134,7 +135,9 @@ const ChatWrapper = () => {
     setIsResponding(respondingState)
   }, [respondingState, setIsResponding])
 
-  const doSend: OnSend = useCallback((message, files, isRegenerate = false, parentAnswer: ChatItem | null = null) => {
+  const doSend: OnSend = useCallback((message, files, optionsOrIsRegenerate?: SendOptions | boolean, parentAnswer: ChatItem | null = null) => {
+    const isRegenerate = typeof optionsOrIsRegenerate === 'boolean' ? optionsOrIsRegenerate : false
+    const webSearch = typeof optionsOrIsRegenerate === 'object' ? !!optionsOrIsRegenerate?.webSearch : false
     const data: any = {
       query: message,
       files,
@@ -142,6 +145,8 @@ const ChatWrapper = () => {
       conversation_id: currentConversationId,
       parent_message_id: (isRegenerate ? parentAnswer?.id : getLastAnswer(chatList)?.id) || null,
     }
+    if (webSearch)
+      data.web_search = true
 
     handleSend(
       getUrl('chat-messages', appSourceType, appId || ''),

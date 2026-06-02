@@ -34,6 +34,7 @@ from models.model import AppMode
 from services.app_generate_service import AppGenerateService
 from services.app_task_service import AppTaskService
 from services.errors.llm import InvokeRateLimitError
+from services.web_search_service import WebSearchService
 
 from .. import console_ns
 
@@ -55,6 +56,7 @@ class ChatMessagePayload(BaseModel):
     conversation_id: str | None = None
     parent_message_id: str | None = None
     retriever_from: str = Field(default="explore_app")
+    web_search: bool = Field(default=False)
 
     @field_validator("conversation_id", "parent_message_id", mode="before")
     @classmethod
@@ -162,6 +164,13 @@ class ChatApi(InstalledAppResource):
 
         payload = ChatMessagePayload.model_validate(console_ns.payload or {})
         args = payload.model_dump(exclude_none=True)
+        if payload.web_search:
+            args["query"], _, _ = WebSearchService.build_augmented_query(
+                payload.query,
+                tenant_id=app_model.tenant_id,
+                user_id=str(current_user.id),
+            )
+        args.pop("web_search", None)
 
         args["auto_generate_name"] = False
 

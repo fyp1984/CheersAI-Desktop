@@ -2,6 +2,7 @@ import type { WorkflowFinishedResponse } from '@/types/workflow'
 import { produce } from 'immer'
 import { useCallback } from 'react'
 import { getFilesInLogs } from '@/app/components/base/file-uploader/utils'
+import { downloadOutputToolFiles } from '@/app/components/workflow/run/output-panel-utils'
 import { useWorkflowStore } from '@/app/components/workflow/store'
 
 export const useWorkflowFinished = () => {
@@ -15,6 +16,7 @@ export const useWorkflowFinished = () => {
     } = workflowStore.getState()
 
     const isStringOutput = data.outputs && Object.keys(data.outputs).length === 1 && typeof data.outputs[Object.keys(data.outputs)[0]] === 'string'
+    downloadOutputToolFiles(data.outputs)
 
     setWorkflowRunningData(produce(workflowRunningData!, (draft) => {
       draft.result = {

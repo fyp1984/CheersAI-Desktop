@@ -1,6 +1,5 @@
 import json
 import logging
-import re
 
 from flask import Response, stream_with_context
 from flask_restx import Resource
@@ -14,10 +13,10 @@ from core.model_runtime.entities.message_entities import SystemPromptMessage, Us
 from core.model_runtime.entities.model_entities import ModelType
 from core.model_runtime.errors.invoke import InvokeError
 from libs.login import current_account_with_tenant, login_required
+from services.web_search_service import WebSearchService
 
 logger = logging.getLogger(__name__)
 DEFAULT_REF_TEMPLATE_SWAGGER_2_0 = "#/definitions/{model}"
-SEARCH_SNIPPET_MAX_CHARS = 220
 
 
 class SimpleChatPayload(BaseModel):
@@ -39,165 +38,13 @@ reg(SimpleChatPayload)
 class SimpleChatApi(Resource):
     """Simple chat API using configured models."""
 
-    def _perform_web_search(self, query: str) -> tuple[str, bool]:
-        """
-        Perform web search using Tavily AI Search API.
-        Tavily is specifically designed for AI applications with optimized results for LLM consumption.
-        Returns (search_results, success) tuple.
-        """
-        import os
-        import subprocess
-        import urllib.request
-        from datetime import datetime
-        
-        # 添加调试日志
-        logger.info("[Simple Chat] _perform_web_search called with query: %s", query)
-        logger.info(f"[Simple Chat] Current working directory: {os.getcwd()}")
-        logger.info(f"[Simple Chat] TAVILY_API_KEY exists: {bool(os.environ.get('TAVILY_API_KEY'))}")
-        
-        def _format_tavily_response(response: dict) -> tuple[str, bool]:
-            def _clean_search_text(value: str) -> str:
-                cleaned = re.sub(r'!\[[^\]]*]\([^)]+\)', '', value)
-                cleaned = re.sub(r'\[[^\]]*]\([^)]+\)', '', cleaned)
-                cleaned = re.sub(r'#{1,6}\s*', ' ', cleaned)
-                cleaned = re.sub(r'\* Use Alt \+ Down Arrow to expand\.', ' ', cleaned, flags=re.IGNORECASE)
-                cleaned = re.sub(r'Image\s+\d+', ' ', cleaned, flags=re.IGNORECASE)
-                cleaned = re.sub(r'(?:\.\s*){4,}', ' ', cleaned)
-                cleaned = re.sub(r'\s+', ' ', cleaned).strip()
-                if not re.search(r'[\w\u4e00-\u9fff]', cleaned):
-                    return ''
-                if len(cleaned) > SEARCH_SNIPPET_MAX_CHARS:
-                    return f'{cleaned[:SEARCH_SNIPPET_MAX_CHARS].rstrip()}...'
-                return cleaned
-
-            def _format_score(score: object) -> str:
-                try:
-                    return f'{float(score):.2f}'
-                except Exception:
-                    return ''
-            
-            results_list = []
-            results_list.append(f"## 关于「{query}」的联网搜索结果")
-            
-            # 如果有 AI 生成的答案摘要，先显示
-            if response.get('answer'):
-                results_list.append(f"\n**快速摘要**：{_clean_search_text(str(response['answer']))}")
-            
-            # 显示搜索结果
-            if response.get('results') and len(response['results']) > 0:
-                results_list.append("\n**来源**")
-                for idx, result in enumerate(response['results'], 1):
-                    title = _clean_search_text(result.get('title', ''))
-                    content = _clean_search_text(result.get('content', ''))
-                    url = result.get('url', '')
-                    score = _format_score(result.get('score', ''))
-                    
-                    if title:
-                        title_text = f"[{title}]({url})" if url else title
-                        results_list.append(f"\n{idx}. **{title_text}**")
-                        if content:
-                            results_list.append(f"   {content}")
-                        if score:
-                            results_list.append(f"   相关度：{score}")
-                
-                # 添加搜索时间
-                now = datetime.now()
-                results_list.append(
-                    f"\n_搜索时间：{now.strftime('%Y年%m月%d日 %H:%M:%S')}，"
-                    f"星期{['一', '二', '三', '四', '五', '六', '日'][now.weekday()]}，"
-                    "搜索引擎：Tavily AI Search_"
-                )
-                
-                logger.info("[Simple Chat] Successfully got %s results from Tavily", len(response['results']))
-                return "\n".join(results_list), True
-            else:
-                logger.warning("[Simple Chat] No results found for query: %s", query)
-                return "", False
-
-        def _search_with_rest_api(api_key: str) -> dict:
-            payload = json.dumps({
-                "api_key": api_key,
-                "query": query,
-                "search_depth": "basic",
-                "max_results": 5,
-                "include_answer": True,
-                "include_raw_content": False,
-            }).encode("utf-8")
-
-            try:
-                completed = subprocess.run(
-                    [
-                        "curl",
-                        "-sS",
-                        "--fail-with-body",
-                        "--retry",
-                        "2",
-                        "--retry-delay",
-                        "1",
-                        "--connect-timeout",
-                        "10",
-                        "--max-time",
-                        "35",
-                        "-H",
-                        "Content-Type: application/json",
-                        "-H",
-                        "Accept: application/json",
-                        "--data-binary",
-                        "@-",
-                        "https://api.tavily.com/search",
-                    ],
-                    input=payload,
-                    capture_output=True,
-                    check=True,
-                    timeout=45,
-                )
-                return json.loads(completed.stdout.decode("utf-8"))
-            except Exception as e:
-                logger.warning("[Simple Chat] Tavily curl request failed, falling back to urllib: %s", e)
-
-            req = urllib.request.Request(
-                "https://api.tavily.com/search",
-                data=payload,
-                headers={
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                },
-                method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                return json.loads(resp.read().decode("utf-8"))
-
-        try:
-            # 获取 API Key（从环境变量或配置）
-            api_key = os.environ.get('TAVILY_API_KEY')
-            if not api_key:
-                logger.error("[Simple Chat] TAVILY_API_KEY not found in environment variables")
-                logger.error(f"[Simple Chat] Available env vars: {list(os.environ.keys())[:10]}...")
-                return "", False
-            
-            logger.info("[Simple Chat] Using Tavily AI Search for query: %s", query)
-
-            try:
-                from tavily import TavilyClient
-                logger.info("[Simple Chat] tavily-python imported successfully")
-                client = TavilyClient(api_key=api_key)
-                response = client.search(
-                    query=query,
-                    search_depth="basic",
-                    max_results=5,
-                    include_answer=True,
-                    include_raw_content=False,
-                )
-            except ImportError as e:
-                logger.warning("[Simple Chat] tavily-python not installed, using REST API fallback: %s", e)
-                response = _search_with_rest_api(api_key)
-
-            return _format_tavily_response(response)
-                
-        except Exception as e:
-            logger.error("[Simple Chat] Tavily search error: %s", e)
-            # 返回空字符串和失败标志，让 AI 自然地回应
-            return "", False
+    def _perform_web_search(
+        self,
+        query: str,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
+    ) -> tuple[str, bool]:
+        return WebSearchService.perform_web_search(query, tenant_id=tenant_id, user_id=user_id)
 
     @setup_required
     @login_required
@@ -238,7 +85,7 @@ class SimpleChatApi(Resource):
         current_query = args.query
         web_search_context = ""
         if args.web_search:
-            search_results, search_success = self._perform_web_search(args.query)
+            search_results, search_success = self._perform_web_search(args.query, tenant_id, str(account.id))
             if search_success and search_results:
                 web_search_context = search_results
                 current_query = (
@@ -337,7 +184,7 @@ class SimpleChatApi(Resource):
                     except Exception as e:
                         error_str = str(e).lower()
                         if args.web_search and web_search_context and ('content_filter' in error_str or 'high risk' in error_str):
-                            logger.warning("[Simple Chat] Model rejected web search prompt; returning Tavily context directly")
+                            logger.warning("[Simple Chat] Model rejected web search prompt; returning web search context directly")
                             fallback_content = (
                                 "以下为联网搜索结果摘要：\n\n"
                                 f"{web_search_context}"
@@ -402,7 +249,7 @@ class SimpleChatApi(Resource):
                                 search_query = args_dict.get("query", "")
                                 logger.info("[Simple Chat] Executing web search: %s", search_query)
                                 
-                                search_results, success = self._perform_web_search(search_query)
+                                search_results, success = self._perform_web_search(search_query, tenant_id, str(account.id))
                                 
                                 if success and search_results:
                                     # 搜索成功，将结果作为工具响应添加到消息历史

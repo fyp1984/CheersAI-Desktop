@@ -130,18 +130,31 @@ class ToolManager:
             contexts.plugin_tool_providers.set({})
             contexts.plugin_tool_providers_lock.set(Lock())
 
+        cache_key = f"{tenant_id}:{provider}"
         plugin_tool_providers = contexts.plugin_tool_providers.get()
-        if provider in plugin_tool_providers:
-            return plugin_tool_providers[provider]
+        if cache_key in plugin_tool_providers:
+            return plugin_tool_providers[cache_key]
 
         with contexts.plugin_tool_providers_lock.get():
             # double check
             plugin_tool_providers = contexts.plugin_tool_providers.get()
-            if provider in plugin_tool_providers:
-                return plugin_tool_providers[provider]
+            if cache_key in plugin_tool_providers:
+                return plugin_tool_providers[cache_key]
 
             manager = PluginToolManager()
-            provider_entity = manager.fetch_tool_provider(tenant_id, provider)
+            runtime_tenant_id = tenant_id
+            try:
+                provider_entity = manager.fetch_tool_provider(runtime_tenant_id, provider)
+            except Exception:
+                from services.global_plugin_service import GlobalPluginService
+
+                global_plugin = GlobalPluginService.get_enabled_plugin(provider)
+                if not global_plugin:
+                    raise
+
+                runtime_tenant_id = global_plugin.source_tenant_id
+                provider_entity = manager.fetch_tool_provider(runtime_tenant_id, provider)
+
             if not provider_entity:
                 raise ToolProviderNotFoundError(f"plugin provider {provider} not found")
 
@@ -149,10 +162,10 @@ class ToolManager:
                 entity=provider_entity.declaration,
                 plugin_id=provider_entity.plugin_id,
                 plugin_unique_identifier=provider_entity.plugin_unique_identifier,
-                tenant_id=tenant_id,
+                tenant_id=runtime_tenant_id,
             )
 
-            plugin_tool_providers[provider] = controller
+            plugin_tool_providers[cache_key] = controller
             return controller
 
     @classmethod
@@ -521,16 +534,34 @@ class ToolManager:
         """
 
         manager = PluginToolManager()
-        provider_entities = manager.fetch_tool_providers(tenant_id)
-        return [
-            PluginToolProviderController(
-                entity=provider.declaration,
-                plugin_id=provider.plugin_id,
-                plugin_unique_identifier=provider.plugin_unique_identifier,
-                tenant_id=tenant_id,
+        providers: dict[str, PluginToolProviderController] = {}
+
+        def add_provider(runtime_tenant_id: str, provider_entity) -> None:
+            providers.setdefault(
+                provider_entity.declaration.identity.name,
+                PluginToolProviderController(
+                    entity=provider_entity.declaration,
+                    plugin_id=provider_entity.plugin_id,
+                    plugin_unique_identifier=provider_entity.plugin_unique_identifier,
+                    tenant_id=runtime_tenant_id,
+                ),
             )
-            for provider in provider_entities
-        ]
+
+        for provider in manager.fetch_tool_providers(tenant_id):
+            add_provider(tenant_id, provider)
+
+        from services.global_plugin_service import GlobalPluginService
+
+        for global_plugin in GlobalPluginService.list_enabled_plugins():
+            if global_plugin.plugin_code in providers:
+                continue
+            try:
+                provider = manager.fetch_tool_provider(global_plugin.source_tenant_id, global_plugin.plugin_code)
+            except Exception:
+                continue
+            add_provider(global_plugin.source_tenant_id, provider)
+
+        return list(providers.values())
 
     @classmethod
     def list_builtin_providers(
@@ -917,6 +948,19 @@ class ToolManager:
         )
 
     @classmethod
+    def _get_plugin_asset_tenant_id(cls, tenant_id: str, provider_id: str) -> str:
+        try:
+            from services.global_plugin_service import GlobalPluginService
+
+            global_plugin = GlobalPluginService.get_enabled_plugin(provider_id)
+            if global_plugin:
+                return global_plugin.source_tenant_id
+        except Exception:
+            return tenant_id
+
+        return tenant_id
+
+    @classmethod
     def generate_workflow_tool_icon_url(cls, tenant_id: str, provider_id: str) -> Mapping[str, str]:
         try:
             workflow_provider: WorkflowToolProvider | None = (
@@ -986,7 +1030,10 @@ class ToolManager:
             provider = ToolManager.get_builtin_provider(provider_id, tenant_id)
             if isinstance(provider, PluginToolProviderController):
                 try:
-                    return cls.generate_plugin_tool_icon_url(tenant_id, provider.entity.identity.icon)
+                    return cls.generate_plugin_tool_icon_url(
+                        cls._get_plugin_asset_tenant_id(tenant_id, provider_id),
+                        provider.entity.identity.icon,
+                    )
                 except Exception:
                     return {"background": "#252525", "content": "\ud83d\ude01"}
             return cls.generate_builtin_tool_icon_url(provider_id)
@@ -997,7 +1044,10 @@ class ToolManager:
         elif provider_type == ToolProviderType.PLUGIN:
             provider = ToolManager.get_plugin_provider(provider_id, tenant_id)
             try:
-                return cls.generate_plugin_tool_icon_url(tenant_id, provider.entity.identity.icon)
+                return cls.generate_plugin_tool_icon_url(
+                    cls._get_plugin_asset_tenant_id(tenant_id, provider_id),
+                    provider.entity.identity.icon,
+                )
             except Exception:
                 return {"background": "#252525", "content": "\ud83d\ude01"}
             raise ValueError(f"plugin provider {provider_id} not found")

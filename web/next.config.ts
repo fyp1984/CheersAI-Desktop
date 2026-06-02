@@ -27,6 +27,7 @@ const port = process.env.PORT || 3000
 const locImageURLs = !hasSetWebPrefix ? [new URL(`http://localhost:${port}/**`), new URL(`http://127.0.0.1:${port}/**`)] : []
 const remoteImageURLs = ([hasSetWebPrefix ? new URL(`${process.env.NEXT_PUBLIC_WEB_PREFIX}/**`) : '', ...locImageURLs].filter(item => !!item)) as URL[]
 const consoleApiPrefix = (process.env.CONSOLE_API_PREFIX || 'http://localhost:5001/console/api').replace(/\/$/, '')
+const filesApiPrefix = (process.env.INTERNAL_FILES_URL || process.env.INTERNAL_API_BASE_URL || 'http://localhost:5001').replace(/\/$/, '')
 
 const nextConfig: NextConfig = {
   experimental: {
@@ -71,6 +72,14 @@ const nextConfig: NextConfig = {
       {
         source: '/console/api/:path*',
         destination: `${consoleApiPrefix}/:path*`,
+      },
+      {
+        source: '/files/:path*/',
+        destination: `${filesApiPrefix}/files/:path*`,
+      },
+      {
+        source: '/files/:path*',
+        destination: `${filesApiPrefix}/files/:path*`,
       },
     ]
   },

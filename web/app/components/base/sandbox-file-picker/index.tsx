@@ -45,6 +45,7 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
   const [selected, setSelected] = useState<Set<string>>(() => new Set())
   const [giteaOwner, setGiteaOwner] = useState('root')
   const [giteaRepo, setGiteaRepo] = useState('cheersAI')
+  const [isConfirming, setIsConfirming] = useState(false)
 
   const loadFiles = useCallback(async (path: string = '') => {
     setLoading(true)
@@ -187,8 +188,9 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
   }
 
   const handleConfirm = async () => {
-    if (selected.size === 0)
+    if (selected.size === 0 || isConfirming)
       return
+    setIsConfirming(true)
     const csrfToken = document.cookie.match(/csrf_token=([^;]+)/)?.[1] || ''
     const filePromises = Array.from(selected).map(async (name) => {
       const filePath = currentPath ? `${currentPath}/${name}` : name
@@ -221,6 +223,9 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
       setError('从 FileBay 读取文件失败')
       console.error('Failed to read files from Gitea:', err)
     }
+    finally {
+      setIsConfirming(false)
+    }
   }
 
   const formatSize = (bytes: number) => {
@@ -247,7 +252,7 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
             <RiShieldCheckLine className="h-5 w-5 text-blue-600 dark:text-blue-300" />
             <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">FileBay 文件选择</h3>
           </div>
-          <button onClick={handleClose} className="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-white/10">
+          <button type="button" onClick={handleClose} className="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-white/10">
             <RiCloseLine className="h-5 w-5 text-gray-400 dark:text-gray-500" />
           </button>
         </div>
@@ -258,11 +263,11 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
             {currentPath ? `${giteaOwner}/${giteaRepo}/${currentPath}` : `${giteaOwner}/${giteaRepo}`}
           </span>
           {currentPath && (
-            <button onClick={handleBackClick} className="shrink-0 rounded p-1 hover:bg-blue-100 dark:hover:bg-blue-400/15" title="返回上级">
+            <button type="button" onClick={handleBackClick} className="shrink-0 rounded p-1 hover:bg-blue-100 dark:hover:bg-blue-400/15" title="返回上级">
               <span className="text-xs text-blue-600 dark:text-blue-300">↑ 返回</span>
             </button>
           )}
-          <button onClick={() => loadFiles(currentPath)} className="ml-auto shrink-0 rounded p-1 hover:bg-blue-100 dark:hover:bg-blue-400/15">
+          <button type="button" onClick={() => loadFiles(currentPath)} className="ml-auto shrink-0 rounded p-1 hover:bg-blue-100 dark:hover:bg-blue-400/15">
             <RiRefreshLine className="h-3.5 w-3.5 text-blue-500 dark:text-blue-300" />
           </button>
         </div>
@@ -283,6 +288,7 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
           )}
           {!loading && files.map(f => (
             <button
+              type="button"
               key={f.name}
               onClick={() => (f.type === 'dir' ? handleFolderClick(f.path || f.name) : toggleSelect(f.name))}
               className={`mb-0.5 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${
@@ -328,15 +334,16 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
         <div className="flex items-center justify-between rounded-b-2xl border-t border-gray-100 bg-gray-50 px-5 py-3 dark:border-white/10 dark:bg-[#18191e]">
           <p className="text-xs text-gray-500 dark:text-gray-400">从 FileBay 仓库选择文件</p>
           <div className="flex items-center gap-2">
-            <button onClick={handleClose} className="rounded-lg px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-white/10">
+            <button type="button" onClick={handleClose} className="rounded-lg px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-white/10">
               取消
             </button>
             <button
+              type="button"
               onClick={handleConfirm}
-              disabled={selected.size === 0}
+              disabled={selected.size === 0 || isConfirming}
               className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none dark:bg-[#3b82f6] dark:text-white dark:shadow-[0_8px_18px_rgba(37,99,235,0.28)] dark:hover:bg-[#60a5fa] dark:disabled:bg-white/10 dark:disabled:text-gray-500 dark:disabled:shadow-none"
             >
-              确认选择
+              {isConfirming ? '读取中...' : '确认选择'}
             </button>
           </div>
         </div>

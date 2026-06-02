@@ -3,6 +3,7 @@ import { produce } from 'immer'
 import { useCallback } from 'react'
 import { useStoreApi } from 'reactflow'
 import { ErrorHandleTypeEnum } from '@/app/components/workflow/nodes/_base/components/error-handle/types'
+import { downloadOutputToolFiles } from '@/app/components/workflow/run/output-panel-utils'
 import { useWorkflowStore } from '@/app/components/workflow/store'
 import {
   BlockEnum,
@@ -15,6 +16,7 @@ export const useWorkflowNodeFinished = () => {
 
   const handleWorkflowNodeFinished = useCallback((params: NodeFinishedResponse) => {
     const { data } = params
+    downloadOutputToolFiles(data.outputs)
     const {
       workflowRunningData,
       setWorkflowRunningData,

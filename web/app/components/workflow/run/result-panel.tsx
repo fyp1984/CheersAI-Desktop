@@ -4,7 +4,9 @@ import type {
   AgentLogItemWithChildren,
   NodeTracing,
 } from '@/types/workflow'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { FileList } from '@/app/components/base/file-uploader'
 import CodeEditor from '@/app/components/workflow/nodes/_base/components/editor/code-editor'
 import ErrorHandleTip from '@/app/components/workflow/nodes/_base/components/error-handle/error-handle-tip'
 import { CodeLanguage } from '@/app/components/workflow/nodes/code/types'
@@ -16,6 +18,7 @@ import { BlockEnum } from '@/app/components/workflow/types'
 import { hasRetryNode } from '@/app/components/workflow/utils'
 import LargeDataAlert from '../variable-inspect/large-data-alert'
 import MetaData from './meta'
+import { getOutputFiles } from './output-panel-utils'
 import StatusPanel from './status'
 
 export type ResultPanelProps = {
@@ -78,6 +81,7 @@ const ResultPanel: FC<ResultPanelProps> = ({
   const isRetryNode = hasRetryNode(nodeInfo?.node_type) && !!nodeInfo?.retryDetail?.length
   const isAgentNode = nodeInfo?.node_type === BlockEnum.Agent && !!nodeInfo?.agentLog?.length
   const isToolNode = nodeInfo?.node_type === BlockEnum.Tool && !!nodeInfo?.agentLog?.length
+  const outputFiles = useMemo(() => getOutputFiles(outputs), [outputs])
 
   return (
     <div className="bg-components-panel-bg py-2">
@@ -142,6 +146,14 @@ const ResultPanel: FC<ResultPanelProps> = ({
             value={process_data}
             isJSONStringifyBeauty
             footer={process_data_truncated && <LargeDataAlert textHasNoExport className="mx-1 mb-1 mt-2 h-7" />}
+          />
+        )}
+        {!!outputFiles.length && (
+          <FileList
+            files={outputFiles}
+            showDeleteAction={false}
+            showDownloadAction
+            canPreview
           />
         )}
         {(outputs || status === 'running') && (

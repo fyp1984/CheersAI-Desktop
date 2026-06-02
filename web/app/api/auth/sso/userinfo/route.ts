@@ -25,6 +25,13 @@ type RawSSOAccountResponse = {
   }
 }
 
+type SsoTokenResponse = {
+  access_token?: string
+  refresh_token?: string
+  expires_in?: number | string
+  scope?: string
+}
+
 const getSSOConfig = () => {
   const ssoBaseUrl = process.env.NEXT_PUBLIC_DESKTOP_SSO_LOGIN_URL?.trim() || ''
   const clientId = process.env.NEXT_PUBLIC_DESKTOP_SSO_CLIENT_ID?.trim() || ''
@@ -144,7 +151,7 @@ const refreshTokenViaProxy = async (refreshToken: string) => {
   if (!response.ok)
     throw new Error(`SSO refresh proxy failed: ${response.status}`)
 
-  return response.json() as Promise<any>
+  return response.json() as Promise<SsoTokenResponse>
 }
 
 const fetchUserInfoViaProxy = async (accessToken: string) => {
@@ -158,6 +165,23 @@ const fetchUserInfoViaProxy = async (accessToken: string) => {
     throw new Error(`SSO userinfo proxy failed: ${response.status}`)
 
   return response.json() as Promise<RawSSOUserInfo>
+}
+
+const tryTokenClaimsFallback = (accessToken: string, sessionId: string) => {
+  const fallbackUserInfo = decodeJwtPayload(accessToken)
+  if (!fallbackUserInfo)
+    return null
+
+  const normalizedFallbackUserInfo = normalizeUserInfo(fallbackUserInfo)
+  const validationError = validateUserInfo(normalizedFallbackUserInfo)
+  if (validationError)
+    return null
+
+  updateSession(sessionId, {
+    lastSyncedAt: Date.now(),
+  })
+
+  return normalizedFallbackUserInfo
 }
 
 const fetchAccountIdentityViaProxy = async (accessToken: string) => {
@@ -222,7 +246,7 @@ const refreshAccessToken = async (sessionId: string, refreshToken: string) => {
   params.append('refresh_token', refreshToken)
   params.append('client_id', clientId)
 
-  let tokenData: any = null
+  let tokenData: SsoTokenResponse | null = null
   try {
     const response = await fetch(tokenUrl.toString(), {
       method: 'POST',
@@ -243,19 +267,23 @@ const refreshAccessToken = async (sessionId: string, refreshToken: string) => {
     tokenData = await refreshTokenViaProxy(refreshToken)
   }
 
-  const expiresIn = Number.isFinite(Number(tokenData?.expires_in)) && Number(tokenData?.expires_in) > 0
+  if (!tokenData?.access_token)
+    throw new Error('SSO refresh response missing access token')
+
+  const refreshedAccessToken = tokenData.access_token
+  const expiresIn = Number.isFinite(Number(tokenData.expires_in)) && Number(tokenData.expires_in) > 0
     ? Number(tokenData.expires_in)
     : 60 * 60
 
   updateSession(sessionId, {
-    accessToken: tokenData.access_token,
+    accessToken: refreshedAccessToken,
     refreshToken: tokenData.refresh_token || refreshToken,
     scope: tokenData.scope,
     expiresAt: Date.now() + expiresIn * 1000,
     lastSyncedAt: Date.now(),
   })
 
-  return tokenData.access_token
+  return refreshedAccessToken
 }
 
 export async function POST() {
@@ -304,7 +332,6 @@ export async function POST() {
       }
     }
 
-    userinfoUrl.searchParams.set('access_token', accessToken)
     const tokenClaims = decodeJwtPayload(accessToken)
 
     let rawUserInfo: RawSSOUserInfo | null = null
@@ -314,6 +341,7 @@ export async function POST() {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
         },
       })
 
@@ -324,32 +352,25 @@ export async function POST() {
       rawUserInfo = await userinfoResponse.json()
     }
     catch (error) {
+      if (canFallbackToTokenClaims(userinfoStatus)) {
+        const fallbackUserInfo = tryTokenClaimsFallback(accessToken, sessionId)
+        if (fallbackUserInfo)
+          return NextResponse.json(fallbackUserInfo)
+      }
+
       console.warn('[SSO] Userinfo fetch failed, falling back to proxy:', error)
       try {
         rawUserInfo = await fetchUserInfoViaProxy(accessToken)
       }
-      catch (proxyError) {
-        console.warn('[SSO] Userinfo proxy failed:', proxyError)
+      catch {
         rawUserInfo = null
       }
     }
 
     if (!rawUserInfo) {
-      if (canFallbackToTokenClaims(userinfoStatus)) {
-        const fallbackUserInfo = decodeJwtPayload(accessToken)
-        if (fallbackUserInfo) {
-          const normalizedFallbackUserInfo = normalizeUserInfo(fallbackUserInfo)
-          const validationError = validateUserInfo(normalizedFallbackUserInfo)
-
-          if (!validationError) {
-            updateSession(sessionId, {
-              lastSyncedAt: Date.now(),
-            })
-
-            return NextResponse.json(normalizedFallbackUserInfo)
-          }
-        }
-      }
+      const fallbackUserInfo = tryTokenClaimsFallback(accessToken, sessionId)
+      if (fallbackUserInfo)
+        return NextResponse.json(fallbackUserInfo)
 
       return NextResponse.json(
         { error: 'Failed to fetch user info' },
@@ -359,13 +380,13 @@ export async function POST() {
 
     const accountIdentity = (!rawUserInfo?.owner && !tokenClaims?.owner)
       ? await (async () => {
-        try {
-          return await fetchAccountIdentity(ssoBaseUrl, accessToken)
-        }
-        catch {
-          return await fetchAccountIdentityViaProxy(accessToken)
-        }
-      })()
+          try {
+            return await fetchAccountIdentity(ssoBaseUrl, accessToken)
+          }
+          catch {
+            return await fetchAccountIdentityViaProxy(accessToken)
+          }
+        })()
       : null
     const userInfo = normalizeUserInfo({
       ...tokenClaims,

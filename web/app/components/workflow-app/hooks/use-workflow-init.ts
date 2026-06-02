@@ -4,6 +4,7 @@ import type { FetchWorkflowDraftResponse } from '@/types/workflow'
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from 'react'
 import { useStore as useAppStore } from '@/app/components/app/store'
@@ -40,11 +41,12 @@ export const useWorkflowInit = () => {
   } = useWorkflowTemplate()
   const appDetail = useAppStore(state => state.appDetail)!
   const setSyncWorkflowDraftHash = useStore(s => s.setSyncWorkflowDraftHash)
+  const initializedAppIdRef = useRef<string | null>(null)
   const [data, setData] = useState<FetchWorkflowDraftResponse>()
   const [isLoading, setIsLoading] = useState(true)
   useEffect(() => {
     workflowStore.setState({ appId: appDetail.id, appName: appDetail.name })
-  }, [appDetail.id, workflowStore])
+  }, [appDetail.id, appDetail.name, workflowStore])
 
   const handleUpdateWorkflowFileUploadConfig = useCallback((config: FileUploadConfigResponse) => {
     const { setFileUploadConfig } = workflowStore.getState()
@@ -109,8 +111,12 @@ export const useWorkflowInit = () => {
   }, [appDetail, nodesTemplate, edgesTemplate, workflowStore, setSyncWorkflowDraftHash])
 
   useEffect(() => {
+    if (initializedAppIdRef.current === appDetail.id)
+      return
+
+    initializedAppIdRef.current = appDetail.id
     handleGetInitialWorkflowData()
-  }, [])
+  }, [appDetail.id, handleGetInitialWorkflowData])
 
   const handleFetchPreloadData = useCallback(async () => {
     try {

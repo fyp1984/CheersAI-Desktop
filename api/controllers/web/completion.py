@@ -33,6 +33,7 @@ from services.app_generate_service import AppGenerateService
 from services.app_task_service import AppTaskService
 from services.audit_service import log_operation
 from services.errors.llm import InvokeRateLimitError
+from services.web_search_service import WebSearchService
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,7 @@ class ChatMessagePayload(BaseModel):
     conversation_id: str | None = Field(default=None, description="Conversation ID")
     parent_message_id: str | None = Field(default=None, description="Parent message ID")
     retriever_from: str = Field(default="web_app", description="Source of retriever")
+    web_search: bool = Field(default=False, description="Enable web search")
 
     @field_validator("conversation_id", "parent_message_id")
     @classmethod
@@ -211,6 +213,13 @@ class ChatApi(WebApiResource):
 
         payload = ChatMessagePayload.model_validate(web_ns.payload or {})
         args = payload.model_dump(exclude_none=True)
+        if payload.web_search:
+            args["query"], _, _ = WebSearchService.build_augmented_query(
+                payload.query,
+                tenant_id=app_model.tenant_id,
+                user_id=str(end_user.id),
+            )
+        args.pop("web_search", None)
 
         streaming = payload.response_mode == "streaming"
         args["auto_generate_name"] = False
