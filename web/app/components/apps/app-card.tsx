@@ -526,7 +526,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
           e.preventDefault()
           await openApp()
         }}
-        className="group relative col-span-1 inline-flex h-[160px] cursor-pointer flex-col rounded-xl border-[1px] border-solid border-components-card-border bg-components-card-bg shadow-sm transition-all duration-200 ease-in-out hover:shadow-lg"
+        className="group relative col-span-1 inline-flex h-[190px] cursor-pointer flex-col rounded-xl border-[1px] border-solid border-components-card-border bg-components-card-bg shadow-sm transition-all duration-200 ease-in-out hover:shadow-lg"
       >
         <div className="flex min-h-[82px] shrink-0 grow-0 items-start gap-3 px-[14px] pb-3 pt-[14px]">
           <div className="relative shrink-0">
@@ -604,7 +604,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
             </div>
           </div>
         </div>
-        <div className="title-wrapper h-[90px] px-[14px] text-xs leading-normal text-text-tertiary">
+        <div className="title-wrapper h-10 px-[14px] py-1 text-xs leading-normal text-text-tertiary">
           <div
             className="line-clamp-2"
             title={app.description}
@@ -612,7 +612,7 @@ const AppCard = ({ app, onRefresh }: AppCardProps) => {
             {app.description}
           </div>
         </div>
-        <div className="absolute bottom-1 left-0 right-0 flex h-[42px] shrink-0 items-center pb-[6px] pl-[14px] pr-[6px] pt-1">
+        <div className="mt-auto flex h-[38px] shrink-0 items-center pb-[6px] pl-[14px] pr-[6px] pt-1">
           {(showTagSelector || canEditApps) && (
             <>
               {showTagSelector && (

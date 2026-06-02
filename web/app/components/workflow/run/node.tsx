@@ -16,6 +16,7 @@ import {
 } from '@remixicon/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { FileList } from '@/app/components/base/file-uploader'
 import Tooltip from '@/app/components/base/tooltip'
 import CodeEditor from '@/app/components/workflow/nodes/_base/components/editor/code-editor'
 import ErrorHandleTip from '@/app/components/workflow/nodes/_base/components/error-handle/error-handle-tip'
@@ -30,6 +31,7 @@ import LargeDataAlert from '../variable-inspect/large-data-alert'
 import { AgentLogTrigger } from './agent-log'
 import { IterationLogTrigger } from './iteration-log'
 import { LoopLogTrigger } from './loop-log'
+import { getOutputFiles } from './output-panel-utils'
 import { RetryLogTrigger } from './retry-log'
 
 type Props = {
@@ -96,6 +98,7 @@ const NodePanel: FC<Props> = ({
   const isRetryNode = hasRetryNode(nodeInfo.node_type) && !!nodeInfo.retryDetail?.length
   const isAgentNode = nodeInfo.node_type === BlockEnum.Agent && !!nodeInfo.agentLog?.length
   const isToolNode = nodeInfo.node_type === BlockEnum.Tool && !!nodeInfo.agentLog?.length
+  const outputFiles = useMemo(() => getOutputFiles(nodeInfo.outputs), [nodeInfo.outputs])
 
   const inputsTitle = useMemo(() => {
     let text = t('common.input', { ns: 'workflow' })
@@ -255,6 +258,16 @@ const NodePanel: FC<Props> = ({
             )}
             {nodeInfo.outputs && (
               <div>
+                {!!outputFiles.length && (
+                  <div className="mb-1 px-1">
+                    <FileList
+                      files={outputFiles}
+                      showDeleteAction={false}
+                      showDownloadAction
+                      canPreview
+                    />
+                  </div>
+                )}
                 <CodeEditor
                   readOnly
                   title={<div>{outputTitle}</div>}

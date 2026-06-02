@@ -38,6 +38,7 @@ from models.model import AppMode
 from services.app_generate_service import AppGenerateService
 from services.app_task_service import AppTaskService
 from services.errors.llm import InvokeRateLimitError
+from services.web_search_service import WebSearchService
 
 logger = logging.getLogger(__name__)
 DEFAULT_REF_TEMPLATE_SWAGGER_2_0 = "#/definitions/{model}"
@@ -59,6 +60,7 @@ class ChatMessagePayload(BaseMessagePayload):
     query: str = Field(..., description="User query")
     conversation_id: str | None = Field(default=None, description="Conversation ID")
     parent_message_id: str | None = Field(default=None, description="Parent message ID")
+    web_search: bool = Field(default=False, description="Enable web search")
 
     @field_validator("conversation_id", "parent_message_id")
     @classmethod
@@ -205,6 +207,13 @@ class ChatMessageApi(Resource):
     def post(self, app_model):
         args_model = ChatMessagePayload.model_validate(console_ns.payload)
         args = args_model.model_dump(exclude_none=True, by_alias=True)
+        if args_model.web_search:
+            args["query"], _, _ = WebSearchService.build_augmented_query(
+                args_model.query,
+                tenant_id=app_model.tenant_id,
+                user_id=str(current_user.id),
+            )
+        args.pop("web_search", None)
 
         streaming = args_model.response_mode != "blocking"
         args["auto_generate_name"] = False

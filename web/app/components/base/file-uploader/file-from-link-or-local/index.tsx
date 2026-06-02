@@ -1,27 +1,38 @@
 import type { FileUpload } from '@/app/components/base/features/types'
-import { RiUploadCloud2Line, RiDatabase2Line } from '@remixicon/react'
+import { RiDatabase2Line, RiUploadCloud2Line } from '@remixicon/react'
+import Cookies from 'js-cookie'
 import {
   memo,
   useState,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import Cookies from 'js-cookie'
 import Button from '@/app/components/base/button'
 import {
   PortalToFollowElem,
   PortalToFollowElemContent,
   PortalToFollowElemTrigger,
 } from '@/app/components/base/portal-to-follow-elem'
+import { useToastContext } from '@/app/components/base/toast'
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '@/config'
+import { TransferMethod } from '@/types/app'
 import { cn } from '@/utils/classnames'
 import { FILE_URL_REGEX } from '../constants'
 import FileInput from '../file-input'
+import FileBayFilePicker from '../filebay-file-picker'
 import { useFile } from '../hooks'
 import { useStore } from '../store'
-import FileBayFilePicker from '../filebay-file-picker'
-import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '@/config'
-import { TransferMethod } from '@/types/app'
 import { getSupportFileType } from '../utils'
-import { useToastContext } from '@/app/components/base/toast'
+
+type FileBayPickerFile = {
+  path: string
+}
+
+type FileBayUploadedFile = {
+  id: string
+  name: string
+  size: number
+  mime_type: string
+}
 
 type FileFromLinkOrLocalProps = {
   showFromLink?: boolean
@@ -44,7 +55,7 @@ const FileFromLinkOrLocal = ({
   const [url, setUrl] = useState('')
   const [showError, setShowError] = useState(false)
   const [showFileBayPicker, setShowFileBayPicker] = useState(false)
-  const { handleLoadFileFromLink, handleAddFile, handleUpdateFile } = useFile(fileConfig)
+  const { handleLoadFileFromLink, handleAddFile } = useFile(fileConfig)
   const disabled = !!fileConfig.number_limits && files.length >= fileConfig.number_limits
 
   const handleSaveUrl = () => {
@@ -59,32 +70,32 @@ const FileFromLinkOrLocal = ({
     setUrl('')
   }
 
-  const handleSelectFileBayFile = async (file: any) => {
+  const handleSelectFileBayFile = async (file: FileBayPickerFile) => {
     try {
       // 调用 FileBay 上传端点，直接将文件上传到 Dify 存储
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       }
-      
+
       // Add CSRF token for authentication
       const csrfToken = Cookies.get(CSRF_COOKIE_NAME())
       if (csrfToken)
         headers[CSRF_HEADER_NAME] = csrfToken
-      
+
       const response = await fetch('/console/api/filebay/upload-file', {
         method: 'POST',
         headers,
         credentials: 'include',
         body: JSON.stringify({ file_path: file.path }),
       })
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
         throw new Error(errorData.error || `HTTP ${response.status}`)
       }
-      
-      const uploadedFile = await response.json()
-      
+
+      const uploadedFile = await response.json() as FileBayUploadedFile
+
       // 使用上传后的文件信息创建文件对象
       const fileEntity = {
         id: uploadedFile.id,
@@ -92,15 +103,14 @@ const FileFromLinkOrLocal = ({
         size: uploadedFile.size,
         type: uploadedFile.mime_type,
         progress: 100,
-        transferMethod: TransferMethod.remote_url,
+        transferMethod: TransferMethod.local_file,
         supportFileType: getSupportFileType(uploadedFile.name, uploadedFile.mime_type),
         uploadedId: uploadedFile.id,
-        url: uploadedFile.url,
       }
-      
+
       // 使用 handleAddFile 添加到文件列表
       handleAddFile(fileEntity)
-      
+
       notify({
         type: 'success',
         message: `文件 ${uploadedFile.name} 上传成功`,

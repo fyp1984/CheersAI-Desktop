@@ -1,5 +1,5 @@
 import type { InputForm } from '@/app/components/base/chat/chat/type'
-import type { ChatConfig, ChatItem, OnSend } from '@/app/components/base/chat/types'
+import type { ChatConfig, ChatItem, OnSend, SendOptions } from '@/app/components/base/chat/types'
 import type { FileEntity } from '@/app/components/base/file-uploader/types'
 import { memo, useCallback, useImperativeHandle, useMemo } from 'react'
 import { useStore as useAppStore } from '@/app/components/app/store'
@@ -90,9 +90,11 @@ const DebugWithSingleModel = (
   )
   useFormattingChangedSubscription(chatList)
 
-  const doSend: OnSend = useCallback((message, files, isRegenerate = false, parentAnswer: ChatItem | null = null) => {
+  const doSend: OnSend = useCallback((message, files, optionsOrIsRegenerate?: SendOptions | boolean, parentAnswer: ChatItem | null = null) => {
     if (checkCanSend && !checkCanSend())
       return
+    const isRegenerate = typeof optionsOrIsRegenerate === 'boolean' ? optionsOrIsRegenerate : false
+    const webSearch = typeof optionsOrIsRegenerate === 'object' ? !!optionsOrIsRegenerate?.webSearch : false
     const currentProvider = textGenerationModelList.find(item => item.provider === modelConfig.provider)
     const currentModel = currentProvider?.models.find(model => model.model === modelConfig.model_id)
     const supportVision = currentModel?.features?.includes(ModelFeatureEnum.vision)
@@ -116,6 +118,8 @@ const DebugWithSingleModel = (
 
     if ((config.file_upload as any)?.enabled && files?.length && supportVision)
       data.files = files
+    if (webSearch)
+      data.web_search = true
 
     handleSend(
       `apps/${appId}/chat-messages`,

@@ -152,6 +152,8 @@ services:
       NODE_OPTIONS: --max-old-space-size=4096
       CONSOLE_API_URL: ${CONSOLE_API_URL:-http://localhost}
       APP_API_URL: ${APP_API_URL:-http://localhost}
+      INTERNAL_CONSOLE_API_PREFIX: ${INTERNAL_CONSOLE_API_PREFIX:-http://api:5001/console/api}
+      INTERNAL_API_BASE_URL: ${INTERNAL_API_BASE_URL:-http://api:5001}
       NEXT_PUBLIC_API_PREFIX: ${NEXT_PUBLIC_API_PREFIX:-/console/api}
       NEXT_PUBLIC_PUBLIC_API_PREFIX: ${NEXT_PUBLIC_PUBLIC_API_PREFIX:-/api}
       AMPLITUDE_API_KEY: ${AMPLITUDE_API_KEY:-}

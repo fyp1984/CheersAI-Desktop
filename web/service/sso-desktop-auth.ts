@@ -1,6 +1,82 @@
 import { getDesktopSSOLoginUrl } from './sso'
 import { getDesktopSSOClientId, getDesktopSSOProtocol, isDesktopSSOEnabledRuntime } from './sso-desktop-config'
 
+export const DESKTOP_SSO_STATE_KEY = 'desktop-sso-state'
+export const DESKTOP_SSO_CODE_VERIFIER_KEY = 'desktop-sso-code-verifier'
+
+const DESKTOP_SSO_CACHE_MAX_AGE_SECONDS = 600
+
+const getCookieValue = (name: string) => {
+  if (typeof document === 'undefined')
+    return ''
+
+  const prefix = `${name}=`
+  return document.cookie
+    .split(';')
+    .map(item => item.trim())
+    .find(item => item.startsWith(prefix))
+    ?.slice(prefix.length) || ''
+}
+
+const safeSessionStorage = () => {
+  if (typeof window === 'undefined')
+    return null
+
+  try {
+    return window.sessionStorage
+  }
+  catch {
+    return null
+  }
+}
+
+const safeLocalStorage = () => {
+  if (typeof window === 'undefined')
+    return null
+
+  try {
+    return window.localStorage
+  }
+  catch {
+    return null
+  }
+}
+
+const setDesktopSSOAuthValue = (key: string, value?: string) => {
+  if (!value)
+    return
+
+  safeSessionStorage()?.setItem(key, value)
+  safeLocalStorage()?.setItem(key, value)
+
+  if (typeof document !== 'undefined') {
+    document.cookie = `${key}=${encodeURIComponent(value)}; Path=/; Max-Age=${DESKTOP_SSO_CACHE_MAX_AGE_SECONDS}; SameSite=Lax`
+  }
+}
+
+export const storeDesktopSSOAuthParams = (params: { state: string, codeVerifier?: string }) => {
+  setDesktopSSOAuthValue(DESKTOP_SSO_STATE_KEY, params.state)
+  setDesktopSSOAuthValue(DESKTOP_SSO_CODE_VERIFIER_KEY, params.codeVerifier)
+}
+
+export const readDesktopSSOAuthValue = (key: string) => {
+  return safeSessionStorage()?.getItem(key)
+    || safeLocalStorage()?.getItem(key)
+    || decodeURIComponent(getCookieValue(key))
+}
+
+export const clearDesktopSSOAuthParams = () => {
+  safeSessionStorage()?.removeItem(DESKTOP_SSO_STATE_KEY)
+  safeSessionStorage()?.removeItem(DESKTOP_SSO_CODE_VERIFIER_KEY)
+  safeLocalStorage()?.removeItem(DESKTOP_SSO_STATE_KEY)
+  safeLocalStorage()?.removeItem(DESKTOP_SSO_CODE_VERIFIER_KEY)
+
+  if (typeof document !== 'undefined') {
+    document.cookie = `${DESKTOP_SSO_STATE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`
+    document.cookie = `${DESKTOP_SSO_CODE_VERIFIER_KEY}=; Path=/; Max-Age=0; SameSite=Lax`
+  }
+}
+
 export const isTauriRuntime = () => {
   if (typeof window === 'undefined')
     return false
@@ -57,7 +133,7 @@ export const startDesktopSSOLogin = () => {
   const state = generateRandomState()
 
   if (typeof window !== 'undefined') {
-    sessionStorage.setItem('desktop-sso-state', state)
+    storeDesktopSSOAuthParams({ state })
 
     const loginUrl = getDesktopSSOLoginUrl({
       clientId,
@@ -77,7 +153,7 @@ export const isDesktopSSOCallback = () => {
   const params = new URLSearchParams(window.location.search)
   const hasCode = params.has('code')
   const hasState = params.has('state')
-  const storedState = sessionStorage.getItem('desktop-sso-state')
+  const storedState = readDesktopSSOAuthValue(DESKTOP_SSO_STATE_KEY)
 
   return hasCode && hasState && !!storedState
 }
@@ -89,7 +165,7 @@ export const getDesktopSSOCallbackParams = () => {
   const params = new URLSearchParams(window.location.search)
   const code = params.get('code')
   const state = params.get('state')
-  const storedState = sessionStorage.getItem('desktop-sso-state')
+  const storedState = readDesktopSSOAuthValue(DESKTOP_SSO_STATE_KEY)
 
   if (!code || !state)
     return null

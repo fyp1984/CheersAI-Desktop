@@ -1,6 +1,7 @@
 import type { FC } from 'react'
 import type { DebugWithMultipleModelContextType } from './context'
 import type { InputForm } from '@/app/components/base/chat/chat/type'
+import type { SendOptions } from '@/app/components/base/chat/types'
 import type { FileEntity } from '@/app/components/base/file-uploader/types'
 import {
   memo,
@@ -36,15 +37,17 @@ const DebugWithMultipleModel = () => {
   const { eventEmitter } = useEventEmitterContextContext()
   const isChatMode = mode === AppModeEnum.CHAT || mode === AppModeEnum.AGENT_CHAT
 
-  const handleSend = useCallback((message: string, files?: FileEntity[]) => {
+  const handleSend = useCallback((message: string, files?: FileEntity[], options?: SendOptions | boolean) => {
     if (checkCanSend && !checkCanSend())
       return
+    const webSearch = typeof options === 'object' ? !!options?.webSearch : false
 
     eventEmitter?.emit({
       type: APP_CHAT_WITH_MULTIPLE_MODEL,
       payload: {
         message,
         files,
+        webSearch,
       },
     } as any)
   }, [eventEmitter, checkCanSend])

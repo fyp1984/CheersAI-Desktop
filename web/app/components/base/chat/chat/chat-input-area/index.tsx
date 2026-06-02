@@ -15,6 +15,7 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import Textarea from 'react-textarea-autosize'
+import Checkbox from '@/app/components/base/checkbox'
 import FeatureBar from '@/app/components/base/features/new-feature-panel/feature-bar'
 import { FileListInChatInput } from '@/app/components/base/file-uploader'
 import { useFile } from '@/app/components/base/file-uploader/hooks'
@@ -24,7 +25,6 @@ import {
 } from '@/app/components/base/file-uploader/store'
 import { useToastContext } from '@/app/components/base/toast'
 import VoiceInput from '@/app/components/base/voice-input'
-import Checkbox from '@/app/components/base/checkbox'
 import { TransferMethod } from '@/types/app'
 import { cn } from '@/utils/classnames'
 import { useCheckInputsForms } from '../check-input-forms-hooks'
@@ -116,12 +116,12 @@ const ChatInputArea = ({
         return
       }
       if (checkInputsForm(inputs, inputsForm)) {
-        onSend(query, files)
+        onSend(query, files, { webSearch: enableWebSearch })
         handleQueryChange('')
         setFiles([])
       }
     }
-  }, [onSend, filesStore, query, notify, t, checkInputsForm, inputs, inputsForm, handleQueryChange])
+  }, [onSend, filesStore, query, notify, t, checkInputsForm, inputs, inputsForm, handleQueryChange, enableWebSearch])
 
   const handleSend = () => {
     if (isResponding) {
@@ -135,7 +135,8 @@ const ChatInputArea = ({
 
     if (sensitiveWarningEnabled && !pendingSendRef.current) {
       // Validate first before showing dialog
-      if (!onSend) return
+      if (!onSend)
+        return
       const { files } = filesStore.getState()
       if (files.find(item => item.transferMethod === TransferMethod.local_file && !item.uploadedId)) {
         notify({ type: 'info', message: t('errorMessage.waitForFileUpload', { ns: 'appDebug' }) })
@@ -246,13 +247,13 @@ const ChatInputArea = ({
               </svg>
               <span>{isCollapsed ? '展开' : '收缩'}</span>
             </button>
-            
+
             {/* 联网搜索开关 */}
             <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-background-section-burn">
               <input
                 type="checkbox"
                 checked={enableWebSearch}
-                onChange={(e) => setEnableWebSearch(e.target.checked)}
+                onChange={e => setEnableWebSearch(e.target.checked)}
                 className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-2 focus:ring-primary-500"
               />
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -261,7 +262,7 @@ const ChatInputArea = ({
               <span>联网搜索</span>
             </label>
           </div>
-          
+
           {enableWebSearch && (
             <div className="flex items-center gap-1 rounded-md bg-primary-50 px-2 py-1 text-xs text-primary-600">
               <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
@@ -275,7 +276,7 @@ const ChatInputArea = ({
         {/* 输入区域 - 可收缩 */}
         <div
           className={cn(
-            'transition-all duration-300 overflow-hidden',
+            'overflow-hidden transition-all duration-300',
             isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[158px] opacity-100',
           )}
         >
@@ -375,7 +376,7 @@ const ChatInputArea = ({
                   event.stopPropagation()
                   setSkipSensitiveConfirm(value => !value)
                 }}
-                  className="rounded"
+                className="rounded"
               />
               <div>
                 <div className="text-sm font-medium text-[#111827]">下次不用再提醒</div>

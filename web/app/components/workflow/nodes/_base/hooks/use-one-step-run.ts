@@ -34,6 +34,7 @@ import QuestionClassifyDefault from '@/app/components/workflow/nodes/question-cl
 import TemplateTransformDefault from '@/app/components/workflow/nodes/template-transform/default'
 import ToolDefault from '@/app/components/workflow/nodes/tool/default'
 import VariableAssigner from '@/app/components/workflow/nodes/variable-assigner/default'
+import { downloadOutputToolFiles } from '@/app/components/workflow/run/output-panel-utils'
 import { useStore, useWorkflowStore } from '@/app/components/workflow/store'
 import {
   BlockEnum,
@@ -793,6 +794,7 @@ const useOneStepRun = <T>({
               })
               const { data: iterationData } = params
               _runResult.created_by = iterationData.created_by.name
+              downloadOutputToolFiles(_runResult.outputs)
               setRunResult(_runResult)
             },
             onIterationStart: (params) => {
@@ -837,6 +839,7 @@ const useOneStepRun = <T>({
               setIterationRunResult(newIterationRunResult)
             },
             onNodeFinished: (params) => {
+              downloadOutputToolFiles(params.data.outputs)
               const iterationRunResult = _iterationResult
 
               const { data } = params
@@ -896,6 +899,7 @@ const useOneStepRun = <T>({
               })
               const { data: loopData } = params
               _runResult.created_by = loopData.created_by.name
+              downloadOutputToolFiles(_runResult.outputs)
               setRunResult(_runResult)
             },
             onLoopStart: (params) => {
@@ -941,6 +945,7 @@ const useOneStepRun = <T>({
               setLoopRunResult(newLoopRunResult)
             },
             onNodeFinished: (params) => {
+              downloadOutputToolFiles(params.data.outputs)
               const loopRunResult = _loopResult
 
               const { data } = params
@@ -1010,6 +1015,7 @@ const useOneStepRun = <T>({
       if (!isIteration && !isLoop)
         updateNodeInspectRunningState(id, false)
       if (!isPausedRef.current && !isIteration && !isLoop && res) {
+        downloadOutputToolFiles(res.outputs)
         setRunResult({
           ...res,
           total_tokens: res.execution_metadata?.total_tokens || 0,

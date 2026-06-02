@@ -1,6 +1,7 @@
 import type { ToolNodeType, ToolVarInputs } from './types'
 import type { InputVar } from '@/app/components/workflow/types'
 import { useBoolean } from 'ahooks'
+import { isEqual } from 'es-toolkit/predicate'
 import { produce } from 'immer'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -193,6 +194,9 @@ const useConfig = (id: string, payload: ToolNodeType) => {
       return
 
     const inputsWithDefaultValue = formattingParameters()
+    if (isEqual(inputs, inputsWithDefaultValue))
+      return
+
     const { setControlPromptEditorRerenderKey } = workflowStore.getState()
     setInputs(inputsWithDefaultValue)
     const timer = window.setTimeout(() => {
@@ -200,7 +204,7 @@ const useConfig = (id: string, payload: ToolNodeType) => {
     })
 
     return () => window.clearTimeout(timer)
-  }, [currTool, formattingParameters, setInputs, workflowStore])
+  }, [currTool, formattingParameters, inputs, setInputs, workflowStore])
 
   // setting when call
   const setInputVar = useCallback(

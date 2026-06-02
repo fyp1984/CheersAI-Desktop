@@ -25,6 +25,7 @@ import {
   getProcessedFilesFromResponse,
 } from '@/app/components/base/file-uploader/utils'
 import { useToastContext } from '@/app/components/base/toast'
+import { downloadOutputToolFiles, getOutputFiles } from '@/app/components/workflow/run/output-panel-utils'
 import { useInvalidAllLastRun } from '@/service/use-workflow'
 import { TransferMethod } from '@/types/app'
 import { DEFAULT_ITER_TIMES, DEFAULT_LOOP_TIMES } from '../../constants'
@@ -361,6 +362,7 @@ export const useChat = (
         },
         onWorkflowFinished: ({ data }) => {
           responseItem.workflowProcess!.status = data.status as WorkflowRunningStatus
+          downloadOutputToolFiles(data.outputs)
           updateCurrentQAOnTree({
             placeholderQuestionId,
             questionItem,
@@ -445,19 +447,22 @@ export const useChat = (
           })
         },
         onNodeFinished: ({ data }) => {
+          downloadOutputToolFiles(data.outputs)
+          const outputFiles = getOutputFiles(data.outputs)
+          responseItem.allFiles = uniqBy([...(responseItem.allFiles || []), ...outputFiles], 'id')
           const currentTracingIndex = responseItem.workflowProcess!.tracing!.findIndex(item => item.id === data.id)
           if (currentTracingIndex > -1) {
             responseItem.workflowProcess!.tracing[currentTracingIndex] = {
               ...responseItem.workflowProcess!.tracing[currentTracingIndex],
               ...data,
             }
-            updateCurrentQAOnTree({
-              placeholderQuestionId,
-              questionItem,
-              responseItem,
-              parentId: params.parent_message_id,
-            })
           }
+          updateCurrentQAOnTree({
+            placeholderQuestionId,
+            questionItem,
+            responseItem,
+            parentId: params.parent_message_id,
+          })
         },
         onAgentLog: ({ data }) => {
           const currentNodeIndex = responseItem.workflowProcess!.tracing!.findIndex(item => item.node_id === data.node_id)

@@ -1,8 +1,8 @@
-import { useCallback, useState } from 'react'
 import type { FileUpload } from '@/app/components/base/features/types'
+import { useCallback, useState } from 'react'
 import { FILE_EXTS } from '@/app/components/base/prompt-editor/constants'
-import { SupportUploadFileTypes } from '@/app/components/workflow/types'
 import { SandboxFilePicker } from '@/app/components/base/sandbox-file-picker'
+import { SupportUploadFileTypes } from '@/app/components/workflow/types'
 import { useSandboxSecurity } from '@/context/use-sandbox-security'
 import { useFile } from './hooks'
 import { useStore } from './store'
@@ -19,6 +19,8 @@ const FileInput = ({
   const [showPicker, setShowPicker] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
     const targetFiles = e.target.files
     if (targetFiles) {
       if (fileConfig.number_limits) {
@@ -31,6 +33,7 @@ const FileInput = ({
         handleLocalFileUpload(targetFiles[0])
       }
     }
+    e.currentTarget.value = ''
   }
 
   const handleSandboxSelect = useCallback((selectedFiles: File[]) => {
@@ -51,7 +54,11 @@ const FileInput = ({
       <>
         <div
           className="absolute inset-0 block w-full cursor-pointer"
-          onClick={() => setShowPicker(true)}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            setShowPicker(true)
+          }}
         />
         <SandboxFilePicker
           open={showPicker}
@@ -67,7 +74,10 @@ const FileInput = ({
   return (
     <input
       className="absolute inset-0 block w-full cursor-pointer text-[0] opacity-0 disabled:cursor-not-allowed"
-      onClick={e => ((e.target as HTMLInputElement).value = '')}
+      onClick={(e) => {
+        e.stopPropagation()
+        ;(e.target as HTMLInputElement).value = ''
+      }}
       type="file"
       onChange={handleChange}
       accept={accept}

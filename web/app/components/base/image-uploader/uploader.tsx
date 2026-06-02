@@ -27,13 +27,18 @@ const Uploader: FC<UploaderProps> = ({
   })
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
     const file = e.target.files?.[0]
 
-    if (!file)
+    if (!file) {
+      e.currentTarget.value = ''
       return
+    }
 
     handleLocalFileUpload(file)
     closePopover?.()
+    e.currentTarget.value = ''
   }
 
   return (
@@ -45,7 +50,10 @@ const Uploader: FC<UploaderProps> = ({
       {children(hovering)}
       <input
         className="absolute inset-0 block w-full cursor-pointer text-[0] opacity-0 disabled:cursor-not-allowed"
-        onClick={e => ((e.target as HTMLInputElement).value = '')}
+        onClick={(e) => {
+          e.stopPropagation()
+          ;(e.target as HTMLInputElement).value = ''
+        }}
         type="file"
         accept={ALLOW_FILE_EXTENSIONS.map(ext => `.${ext}`).join(',')}
         onChange={handleChange}

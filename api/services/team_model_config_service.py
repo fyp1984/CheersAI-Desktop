@@ -108,6 +108,11 @@ class TeamModelConfigService:
         }
         result = []
         for plugin in GlobalPluginService.list_enabled_plugins():
+            try:
+                ModelProviderFactory(plugin.source_tenant_id).get_provider_schema(plugin.plugin_code)
+            except Exception:
+                continue
+
             row = config_rows.get(plugin.plugin_code)
             result.append(
                 {

@@ -83,11 +83,25 @@ class ToolTransformService:
             )
         elif isinstance(provider, ToolProviderApiEntity):
             if provider.plugin_id:
+                plugin_asset_tenant_id = tenant_id
+                try:
+                    from services.global_plugin_service import GlobalPluginService
+
+                    global_plugin = GlobalPluginService.get_enabled_plugin(provider.name)
+                    if global_plugin:
+                        plugin_asset_tenant_id = global_plugin.source_tenant_id
+                except Exception:
+                    plugin_asset_tenant_id = tenant_id
+
                 if isinstance(provider.icon, str):
-                    provider.icon = PluginService.get_plugin_icon_url(tenant_id=tenant_id, filename=provider.icon)
+                    provider.icon = PluginService.get_plugin_icon_url(
+                        tenant_id=plugin_asset_tenant_id,
+                        filename=provider.icon,
+                    )
                 if isinstance(provider.icon_dark, str) and provider.icon_dark:
                     provider.icon_dark = PluginService.get_plugin_icon_url(
-                        tenant_id=tenant_id, filename=provider.icon_dark
+                        tenant_id=plugin_asset_tenant_id,
+                        filename=provider.icon_dark,
                     )
             else:
                 provider.icon = ToolTransformService.get_tool_provider_icon_url(

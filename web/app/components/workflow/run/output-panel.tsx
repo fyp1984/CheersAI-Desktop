@@ -3,11 +3,11 @@ import type { FC } from 'react'
 import { useMemo } from 'react'
 import LoadingAnim from '@/app/components/base/chat/chat/loading-anim'
 import { FileList } from '@/app/components/base/file-uploader'
-import { getProcessedFilesFromResponse } from '@/app/components/base/file-uploader/utils'
 import { Markdown } from '@/app/components/base/markdown'
 import CodeEditor from '@/app/components/workflow/nodes/_base/components/editor/code-editor'
 import { CodeLanguage } from '@/app/components/workflow/nodes/code/types'
 import StatusContainer from '@/app/components/workflow/run/status-container'
+import { getOutputFiles } from './output-panel-utils'
 
 type OutputPanelProps = {
   isRunning?: boolean
@@ -34,24 +34,7 @@ const OutputPanel: FC<OutputPanelProps> = ({
   }, [outputs])
 
   const fileList = useMemo(() => {
-    const fileList: any[] = []
-    if (!outputs)
-      return fileList
-    if (Object.keys(outputs).length > 1)
-      return fileList
-    for (const key in outputs) {
-      if (Array.isArray(outputs[key])) {
-        outputs[key].map((output: any) => {
-          if (output?.dify_model_identity === '__dify__file__')
-            fileList.push(output)
-          return null
-        })
-      }
-      else if (outputs[key]?.dify_model_identity === '__dify__file__') {
-        fileList.push(outputs[key])
-      }
-    }
-    return getProcessedFilesFromResponse(fileList)
+    return getOutputFiles(outputs)
   }, [outputs])
   return (
     <div className="p-2">

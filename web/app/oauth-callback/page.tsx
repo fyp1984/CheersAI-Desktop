@@ -3,23 +3,12 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 import Toast from '@/app/components/base/toast'
 import { exchangeSSOToken } from '@/service/sso'
+import { clearDesktopSSOAuthParams, DESKTOP_SSO_CODE_VERIFIER_KEY, DESKTOP_SSO_STATE_KEY, readDesktopSSOAuthValue } from '@/service/sso-desktop-auth'
 import { checkVaultBridgeHealth, notifyVaultBridge } from '@/service/vault-bridge'
 
-const getCookieValue = (name: string) => {
-  const prefix = `${name}=`
-  return document.cookie
-    .split(';')
-    .map(item => item.trim())
-    .find(item => item.startsWith(prefix))
-    ?.slice(prefix.length) || ''
-}
-
 const clearDesktopSSOCache = () => {
-  sessionStorage.removeItem('desktop-sso-state')
-  sessionStorage.removeItem('desktop-sso-code-verifier')
   sessionStorage.removeItem('desktop-sso-exchange-lock')
-  document.cookie = 'desktop-sso-state=; Path=/; Max-Age=0; SameSite=Lax'
-  document.cookie = 'desktop-sso-code-verifier=; Path=/; Max-Age=0; SameSite=Lax'
+  clearDesktopSSOAuthParams()
 }
 
 const getExchangeLockValue = (state: string, code: string) => `${state}:${code}`
@@ -75,8 +64,8 @@ export default function OAuthCallbackPage() {
       return
     }
 
-    const storedState = sessionStorage.getItem('desktop-sso-state') || decodeURIComponent(getCookieValue('desktop-sso-state'))
-    const codeVerifier = sessionStorage.getItem('desktop-sso-code-verifier') || decodeURIComponent(getCookieValue('desktop-sso-code-verifier'))
+    const storedState = readDesktopSSOAuthValue(DESKTOP_SSO_STATE_KEY)
+    const codeVerifier = readDesktopSSOAuthValue(DESKTOP_SSO_CODE_VERIFIER_KEY)
     if (state !== storedState) {
       console.error('[SSO] State mismatch - stored:', storedState, 'received:', state)
       Toast.notify({ type: 'error', message: 'SSO login failed: state mismatch' })
