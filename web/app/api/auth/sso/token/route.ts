@@ -6,6 +6,8 @@ import { generateSessionId, storeSession } from '@/lib/sso-session'
 
 const SSO_SESSION_COOKIE = 'sso_session_id'
 const TOKEN_EXCHANGE_RETRY_DELAY = 300
+const DEFAULT_INTERNAL_API_BASE_URL = process.env.INTERNAL_API_BASE_URL?.trim() || 'http://localhost:5001'
+const DEFAULT_INTERNAL_CONSOLE_API_PREFIX = `${DEFAULT_INTERNAL_API_BASE_URL.replace(/\/$/, '')}/console/api`
 
 type SsoTokenResponse = {
   access_token?: string
@@ -27,23 +29,69 @@ const fetchTokenWithRetry = async (url: string, init: RequestInit) => {
   }
 }
 
-const exchangeTokenViaProxy = async (body: Record<string, unknown>) => {
-  const response = await fetch('http://api:5001/console/api/auth/sso-proxy/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
+const normalizeInternalApiPrefix = (rawPrefix: string) => {
+  const trimmedPrefix = rawPrefix.trim()
+  if (!trimmedPrefix)
+    return DEFAULT_INTERNAL_CONSOLE_API_PREFIX
 
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error('SSO token proxy exchange failed:', {
-      status: response.status,
-      body: errorText,
-    })
-    throw new Error('Token exchange failed')
+  if (/^https?:\/\//i.test(trimmedPrefix))
+    return trimmedPrefix.replace(/\/$/, '')
+
+  if (trimmedPrefix.startsWith('/'))
+    return `${DEFAULT_INTERNAL_API_BASE_URL.replace(/\/$/, '')}${trimmedPrefix}`.replace(/\/$/, '')
+
+  return `http://${trimmedPrefix}`.replace(/\/$/, '')
+}
+
+const uniqueValues = (values: string[]) => [...new Set(values.filter(Boolean))]
+
+const getConsoleApiUrls = (path: string) => {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  const configuredPrefixes = [
+    process.env.INTERNAL_CONSOLE_API_PREFIX?.trim(),
+    process.env.CONSOLE_API_PREFIX?.trim(),
+    process.env.NEXT_PUBLIC_API_PREFIX?.trim(),
+  ].filter((prefix): prefix is string => Boolean(prefix))
+
+  const fallbackPrefixes = [
+    DEFAULT_INTERNAL_CONSOLE_API_PREFIX,
+    'http://127.0.0.1:5001/console/api',
+    'http://localhost:5001/console/api',
+    'http://api:5001/console/api',
+  ]
+
+  return uniqueValues([...configuredPrefixes, ...fallbackPrefixes].map(normalizeInternalApiPrefix))
+    .map(prefix => `${prefix}${normalizedPath}`)
+}
+
+const exchangeTokenViaProxy = async (body: Record<string, unknown>) => {
+  let lastError: unknown = null
+  for (const url of getConsoleApiUrls('/auth/sso-proxy/token')) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+
+      if (response.ok)
+        return response.json() as Promise<SsoTokenResponse>
+
+      const errorText = await response.text()
+      lastError = new Error(`SSO token proxy exchange failed: ${response.status}`)
+      console.error('SSO token proxy exchange failed:', {
+        status: response.status,
+        body: errorText,
+      })
+      if (![502, 503, 504].includes(response.status))
+        break
+    }
+    catch (error) {
+      lastError = error
+    }
   }
 
-  return response.json() as Promise<SsoTokenResponse>
+  throw lastError instanceof Error ? lastError : new Error('Token exchange failed')
 }
 
 export async function POST(request: NextRequest) {
