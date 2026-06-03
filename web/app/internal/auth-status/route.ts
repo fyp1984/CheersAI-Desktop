@@ -22,21 +22,33 @@ const normalizeInternalApiPrefix = (rawPrefix: string) => {
     return trimmedPrefix.replace(/\/$/, '')
 
   if (trimmedPrefix.startsWith('/'))
-    return `http://localhost:5001${trimmedPrefix}`.replace(/\/$/, '')
+    return `${DEFAULT_INTERNAL_API_BASE_URL.replace(/\/$/, '')}${trimmedPrefix}`.replace(/\/$/, '')
 
   return `http://${trimmedPrefix}`.replace(/\/$/, '')
 }
 
-const getConsoleApiUrl = (path: string) => {
-  const apiPrefix = process.env.INTERNAL_CONSOLE_API_PREFIX?.trim()
-    || process.env.CONSOLE_API_PREFIX?.trim()
-    || process.env.NEXT_PUBLIC_API_PREFIX?.trim()
-    || DEFAULT_INTERNAL_CONSOLE_API_PREFIX
-  const normalizedPrefix = normalizeInternalApiPrefix(apiPrefix)
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+const uniqueValues = (values: string[]) => [...new Set(values.filter(Boolean))]
 
-  return `${normalizedPrefix}${normalizedPath}`
+const getConsoleApiUrls = (path: string) => {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  const configuredPrefixes = [
+    process.env.INTERNAL_CONSOLE_API_PREFIX?.trim(),
+    process.env.CONSOLE_API_PREFIX?.trim(),
+    process.env.NEXT_PUBLIC_API_PREFIX?.trim(),
+  ].filter((prefix): prefix is string => Boolean(prefix))
+
+  const fallbackPrefixes = [
+    DEFAULT_INTERNAL_CONSOLE_API_PREFIX,
+    'http://127.0.0.1:5001/console/api',
+    'http://localhost:5001/console/api',
+    'http://api:5001/console/api',
+  ]
+
+  return uniqueValues([...configuredPrefixes, ...fallbackPrefixes].map(normalizeInternalApiPrefix))
+    .map(prefix => `${prefix}${normalizedPath}`)
 }
+
+const shouldTryNextInternalApi = (response: Response) => [502, 503, 504].includes(response.status)
 
 const buildCookieHeader = (request: NextRequest) => {
   return request.cookies.getAll()
@@ -61,22 +73,35 @@ const loggedOutResponse = (payload: Record<string, unknown> = {}) => {
   return clearAuthCookies(NextResponse.json({ logged_in: false, ...payload }))
 }
 
-const fetchConsoleApi = (request: NextRequest, path: string, init?: RequestInit) => {
+const fetchConsoleApi = async (request: NextRequest, path: string, init?: RequestInit) => {
   const cookieHeader = buildCookieHeader(request)
   const csrfToken = resolveCsrfToken(request)
+  let lastError: unknown = null
 
-  return fetch(getConsoleApiUrl(path), {
-    method: init?.method || 'GET',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      ...(cookieHeader ? { Cookie: cookieHeader } : {}),
-      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-      ...init?.headers,
-    },
-    body: init?.body,
-    cache: 'no-store',
-  })
+  for (const url of getConsoleApiUrls(path)) {
+    try {
+      const response = await fetch(url, {
+        method: init?.method || 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+          ...init?.headers,
+        },
+        body: init?.body,
+        cache: 'no-store',
+      })
+      if (!shouldTryNextInternalApi(response))
+        return response
+      lastError = new Error(`Internal API returned ${response.status}`)
+    }
+    catch (error) {
+      lastError = error
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Internal API is unavailable')
 }
 
 export async function GET(request: NextRequest) {

@@ -113,33 +113,63 @@ const validateUserInfo = (userInfo: ReturnType<typeof normalizeUserInfo>) => {
 }
 
 const canFallbackToTokenClaims = (status: number) => [400, 414, 431].includes(status)
+const DEFAULT_INTERNAL_API_BASE_URL = process.env.INTERNAL_API_BASE_URL?.trim() || 'http://localhost:5001'
+const DEFAULT_INTERNAL_CONSOLE_API_PREFIX = `${DEFAULT_INTERNAL_API_BASE_URL.replace(/\/$/, '')}/console/api`
 
 const normalizeInternalApiPrefix = (rawPrefix: string) => {
   const trimmedPrefix = rawPrefix.trim()
   if (!trimmedPrefix)
-    return 'http://api:5001/console/api'
+    return DEFAULT_INTERNAL_CONSOLE_API_PREFIX
 
   if (/^https?:\/\//i.test(trimmedPrefix))
     return trimmedPrefix.replace(/\/$/, '')
 
   if (trimmedPrefix.startsWith('/'))
-    return `http://api:5001${trimmedPrefix}`.replace(/\/$/, '')
+    return `${DEFAULT_INTERNAL_API_BASE_URL.replace(/\/$/, '')}${trimmedPrefix}`.replace(/\/$/, '')
 
   return `http://${trimmedPrefix}`.replace(/\/$/, '')
 }
 
-const getConsoleApiUrl = (path: string) => {
-  const apiPrefix = process.env.INTERNAL_CONSOLE_API_PREFIX?.trim()
-    || process.env.CONSOLE_API_PREFIX?.trim()
-    || process.env.NEXT_PUBLIC_API_PREFIX?.trim()
-    || 'http://api:5001/console/api'
-  const normalizedPrefix = normalizeInternalApiPrefix(apiPrefix)
+const uniqueValues = (values: string[]) => [...new Set(values.filter(Boolean))]
+
+const getConsoleApiUrls = (path: string) => {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
-  return `${normalizedPrefix}${normalizedPath}`
+  const configuredPrefixes = [
+    process.env.INTERNAL_CONSOLE_API_PREFIX?.trim(),
+    process.env.CONSOLE_API_PREFIX?.trim(),
+    process.env.NEXT_PUBLIC_API_PREFIX?.trim(),
+  ].filter((prefix): prefix is string => Boolean(prefix))
+
+  const fallbackPrefixes = [
+    DEFAULT_INTERNAL_CONSOLE_API_PREFIX,
+    'http://127.0.0.1:5001/console/api',
+    'http://localhost:5001/console/api',
+    'http://api:5001/console/api',
+  ]
+
+  return uniqueValues([...configuredPrefixes, ...fallbackPrefixes].map(normalizeInternalApiPrefix))
+    .map(prefix => `${prefix}${normalizedPath}`)
+}
+
+const fetchConsoleApiWithFallback = async (path: string, init: RequestInit) => {
+  let lastError: unknown = null
+  for (const url of getConsoleApiUrls(path)) {
+    try {
+      const response = await fetch(url, init)
+      if (response.ok || ![502, 503, 504].includes(response.status))
+        return response
+      lastError = new Error(`Internal API returned ${response.status}`)
+    }
+    catch (error) {
+      lastError = error
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Internal API is unavailable')
 }
 
 const refreshTokenViaProxy = async (refreshToken: string) => {
-  const response = await fetch(getConsoleApiUrl('/auth/sso-proxy/token'), {
+  const response = await fetchConsoleApiWithFallback('/auth/sso-proxy/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -155,7 +185,7 @@ const refreshTokenViaProxy = async (refreshToken: string) => {
 }
 
 const fetchUserInfoViaProxy = async (accessToken: string) => {
-  const response = await fetch(getConsoleApiUrl('/auth/sso-proxy/userinfo'), {
+  const response = await fetchConsoleApiWithFallback('/auth/sso-proxy/userinfo', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ accessToken }),
@@ -185,7 +215,7 @@ const tryTokenClaimsFallback = (accessToken: string, sessionId: string) => {
 }
 
 const fetchAccountIdentityViaProxy = async (accessToken: string) => {
-  const response = await fetch(getConsoleApiUrl('/auth/sso-proxy/get-account'), {
+  const response = await fetchConsoleApiWithFallback('/auth/sso-proxy/get-account', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ accessToken }),
