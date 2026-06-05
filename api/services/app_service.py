@@ -126,12 +126,33 @@ class AppService:
                         "completion_params": {},
                     }
             else:
-                provider, model = model_manager.get_default_provider_model_name(
-                    tenant_id=account.current_tenant_id or "", model_type=ModelType.LLM
-                )
-                default_model_config["model"]["provider"] = provider
-                default_model_config["model"]["name"] = model
+                try:
+                    fallback_model_instance = model_manager.get_first_available_model_instance(
+                        tenant_id=account.current_tenant_id or "", model_type=ModelType.LLM
+                    )
+                except Exception:
+                    logger.exception("Get first available model instance failed, tenant_id: %s", tenant_id)
+                    fallback_model_instance = None
+
                 default_model_dict = default_model_config["model"]
+                if fallback_model_instance:
+                    try:
+                        llm_model = cast(LargeLanguageModel, fallback_model_instance.model_type_instance)
+                        model_schema = llm_model.get_model_schema(
+                            fallback_model_instance.model,
+                            fallback_model_instance.credentials,
+                        )
+                    except Exception:
+                        logger.exception("Get fallback model schema failed, tenant_id: %s", tenant_id)
+                        model_schema = None
+
+                    if model_schema:
+                        default_model_dict = {
+                            "provider": fallback_model_instance.provider,
+                            "name": fallback_model_instance.model,
+                            "mode": model_schema.model_properties.get(ModelPropertyKey.MODE),
+                            "completion_params": {},
+                        }
 
             default_model_config["model"] = json.dumps(default_model_dict)
 

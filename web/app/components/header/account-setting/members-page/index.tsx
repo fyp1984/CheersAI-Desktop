@@ -75,8 +75,8 @@ const MembersPage = () => {
   const { data: installedPluginList, isLoading: isInstalledPluginListLoading } = useInstalledPluginList(!canManagePlugins, 20)
   const configuredProviderCount = useMemo(() => {
     return modelProviders.filter(provider =>
-      provider.custom_configuration.status === 'active'
-      || provider.system_configuration.enabled === true,
+      provider.custom_configuration?.status === 'active'
+      || provider.system_configuration?.enabled === true,
     ).length
   }, [modelProviders])
 

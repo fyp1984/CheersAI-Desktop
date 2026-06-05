@@ -6,11 +6,6 @@
     "auditLog": "E:\\CheersAI-Desktop\\logs\\.76766f8baf42dc6cfe1b5aa77d0fc86b6a4b1fa4-audit.json",
     "files": [
         {
-            "date": 1779294118684,
-            "name": "E:\\CheersAI-Desktop\\logs\\application-2026-05-21.log",
-            "hash": "b88f099f98d82233216ae28e00391335a5e2b02ca1083b41de28835e3c1517ac"
-        },
-        {
             "date": 1779424519204,
             "name": "E:\\CheersAI-Desktop\\logs\\application-2026-05-22.log",
             "hash": "e5cef47ae22498eefb62d5b2e6f35fe19711c024994d11b926805b1e482051ab"
@@ -64,6 +59,16 @@
             "date": 1780473150796,
             "name": "E:\\CheersAI-Desktop\\logs\\application-2026-06-03.log",
             "hash": "1cdb922a77f3e9c264746b77ff577ff833512e3e3c4ce40c91d9f5c1bd22c6e1"
+        },
+        {
+            "date": 1780546895368,
+            "name": "E:\\CheersAI-Desktop\\logs\\application-2026-06-04.log",
+            "hash": "41674af2494d33c3ebf24c64941c7ef47d6f6de0831e81e5139c83bcb8b54b7f"
+        },
+        {
+            "date": 1780598310987,
+            "name": "E:\\CheersAI-Desktop\\logs\\application-2026-06-05.log",
+            "hash": "126c80808ca1ead36f3880542058c1329aa0e04929de81bdc8bc81ddee2cba04"
         }
     ],
     "hashType": "sha256"

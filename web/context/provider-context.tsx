@@ -217,8 +217,8 @@ export const ProviderContextProvider = ({
 
     if (providersData?.data && providersData.data.length > 0) {
       const anthropic = providersData.data.find(provider => provider.provider === 'anthropic')
-      if (anthropic && anthropic.system_configuration.current_quota_type === CurrentSystemQuotaTypeEnum.trial) {
-        const quota = anthropic.system_configuration.quota_configurations.find(item => item.quota_type === anthropic.system_configuration.current_quota_type)
+      if (anthropic?.system_configuration?.current_quota_type === CurrentSystemQuotaTypeEnum.trial) {
+        const quota = anthropic.system_configuration.quota_configurations?.find(item => item.quota_type === anthropic.system_configuration.current_quota_type)
         if (quota && quota.is_valid && quota.quota_used < quota.quota_limit) {
           Toast.notify({
             type: 'info',

@@ -22,20 +22,6 @@ class TagService:
         tenant_id: str,
         created_by: str,
     ) -> bool:
-        existing_bindings = (
-            db.session.query(TagBinding.id)
-            .join(Tag, Tag.id == TagBinding.tag_id)
-            .where(
-                TagBinding.target_id == target_id,
-                TagBinding.tenant_id == tenant_id,
-                Tag.tenant_id == tenant_id,
-                Tag.type == tag_type,
-            )
-            .first()
-        )
-        if existing_bindings:
-            return False
-
         tags_by_name = {
             tag.name: tag
             for tag in db.session.scalars(
@@ -61,8 +47,20 @@ class TagService:
             db.session.flush()
             tags_by_name[tag_name] = tag
 
+        existing_tag_ids = set(
+            db.session.scalars(
+                select(TagBinding.tag_id).where(
+                    TagBinding.target_id == target_id,
+                    TagBinding.tenant_id == tenant_id,
+                    TagBinding.tag_id.in_([tag.id for tag in tags_by_name.values()]),
+                )
+            ).all()
+        )
+        created_binding = False
         for tag_name in DEFAULT_VISIBILITY_TAG_NAMES:
             tag = tags_by_name[tag_name]
+            if tag.id in existing_tag_ids:
+                continue
             db.session.add(
                 TagBinding(
                     tag_id=tag.id,
@@ -71,8 +69,9 @@ class TagService:
                     created_by=created_by,
                 )
             )
+            created_binding = True
 
-        return True
+        return created_binding
 
     @staticmethod
     def _normalize_user_tags(user_tags: list[str] | None) -> list[str]:

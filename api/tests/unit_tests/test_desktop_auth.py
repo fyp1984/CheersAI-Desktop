@@ -150,6 +150,19 @@ def test_get_account_workspace_capabilities_prefers_projection_with_role_fallbac
     assert "desktop_knowledge_view" in capabilities
 
 
+def test_get_account_workspace_capabilities_merges_database_role_when_projection_is_stale():
+    class DummyAccount:
+        id = "account-1"
+        current_tenant_id = "tenant-1"
+        current_role = "owner"
+
+    with patch("libs.desktop_auth.load_desktop_sso_projection", return_value={"capabilities": ["desktop_app_view"]}):
+        capabilities = get_account_workspace_capabilities(DummyAccount())
+
+    assert "desktop_app_view" in capabilities
+    assert "desktop_app_edit" in capabilities
+
+
 def test_has_any_workspace_capability_checks_projection_capabilities():
     class DummyAccount:
         id = "account-1"

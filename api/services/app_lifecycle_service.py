@@ -7,6 +7,7 @@ from extensions.ext_database import db
 from libs.login import current_user
 from models.model import App, AppLifecycleEvent
 from services.audit_service import log_operation
+from services.tag_service import TagService
 
 
 class AppLifecycleValidationException(Exception):
@@ -211,7 +212,8 @@ class AppLifecycleService:
         app.row_version += 1
         app.enable_site = True
         app.enable_api = True
-        
+        TagService.ensure_default_visibility_bindings("app", str(app.id), str(app.tenant_id), str(current_user.id))
+
         # log event
         event = AppLifecycleEvent(
             tenant_id=app.tenant_id,

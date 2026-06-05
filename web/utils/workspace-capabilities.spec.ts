@@ -5,6 +5,7 @@ import {
   getWorkspaceCapabilities,
   hasAnyWorkspaceCapability,
   hasBuiltInAdminAccess,
+  hasModelProviderReadWorkspaceCapability,
   hasPluginManageWorkspaceCapability,
   hasPluginReadWorkspaceCapability,
   hasWorkspaceCapability,
@@ -123,6 +124,23 @@ describe('workspace-capabilities', () => {
     })).toBe(true)
 
     expect(hasPluginReadWorkspaceCapability({
+      role: 'normal',
+      capabilities: [WORKSPACE_CAPABILITIES.settingsPersonal],
+    })).toBe(false)
+  })
+
+  it('allows model users to read model providers without manage permission', () => {
+    expect(hasModelProviderReadWorkspaceCapability({
+      role: 'normal',
+      capabilities: [WORKSPACE_CAPABILITIES.modelUse],
+    })).toBe(true)
+
+    expect(hasModelProviderReadWorkspaceCapability({
+      role: 'normal',
+      capabilities: [WORKSPACE_CAPABILITIES.modelProviderManage],
+    })).toBe(true)
+
+    expect(hasModelProviderReadWorkspaceCapability({
       role: 'normal',
       capabilities: [WORKSPACE_CAPABILITIES.settingsPersonal],
     })).toBe(false)

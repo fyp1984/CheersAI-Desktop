@@ -1077,14 +1077,38 @@ class TenantService:
     @staticmethod
     def create_owner_tenant_if_not_exist(account: Account, name: str | None = None, is_setup: bool | None = False):
         """Check if user have a workspace or not"""
-        available_ta = (
+        personal_workspace_name = name or f"{account.name}'s Workspace"
+        personal_join = (
             db.session.query(TenantAccountJoin)
-            .filter_by(account_id=account.id)
+            .join(Tenant, TenantAccountJoin.tenant_id == Tenant.id)
+            .filter(
+                TenantAccountJoin.account_id == account.id,
+                Tenant.name == personal_workspace_name,
+                Tenant.status == TenantStatus.NORMAL,
+            )
             .order_by(TenantAccountJoin.id.asc())
             .first()
         )
 
-        if available_ta:
+        if personal_join:
+            if personal_join.role != TenantAccountRole.OWNER:
+                personal_join.role = TenantAccountRole.OWNER
+                db.session.commit()
+            return
+
+        owner_join = (
+            db.session.query(TenantAccountJoin)
+            .join(Tenant, TenantAccountJoin.tenant_id == Tenant.id)
+            .filter(
+                TenantAccountJoin.account_id == account.id,
+                TenantAccountJoin.role == TenantAccountRole.OWNER,
+                Tenant.status == TenantStatus.NORMAL,
+            )
+            .order_by(TenantAccountJoin.id.asc())
+            .first()
+        )
+
+        if owner_join:
             return
 
         """Create owner tenant if not exist"""
@@ -1095,10 +1119,7 @@ class TenantService:
         if not workspaces.is_available():
             raise WorkspacesLimitExceededError()
 
-        if name:
-            tenant = TenantService.create_tenant(name=name, is_setup=is_setup)
-        else:
-            tenant = TenantService.create_tenant(name=f"{account.name}'s Workspace", is_setup=is_setup)
+        tenant = TenantService.create_tenant(name=personal_workspace_name, is_setup=is_setup)
         TenantService.create_tenant_member(tenant, account, role="owner")
         account.current_tenant = tenant
         db.session.commit()
