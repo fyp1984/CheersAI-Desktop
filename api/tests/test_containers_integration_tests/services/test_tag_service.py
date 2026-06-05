@@ -219,6 +219,49 @@ class TestTagService:
 
         return tag_bindings
 
+    def test_ensure_default_visibility_bindings_adds_common_tags_alongside_existing_custom_tag(
+        self, db_session_with_containers, mock_external_service_dependencies
+    ):
+        account, tenant = self._create_test_account_and_tenant(
+            db_session_with_containers, mock_external_service_dependencies
+        )
+        app = self._create_test_app(db_session_with_containers, mock_external_service_dependencies, tenant.id)
+        custom_tag = self._create_test_tags(
+            db_session_with_containers,
+            mock_external_service_dependencies,
+            tenant.id,
+            "app",
+            1,
+        )[0]
+        self._create_test_tag_bindings(
+            db_session_with_containers,
+            mock_external_service_dependencies,
+            [custom_tag],
+            app.id,
+            tenant.id,
+        )
+
+        created = TagService.ensure_default_visibility_bindings("app", app.id, tenant.id, account.id)
+        created_again = TagService.ensure_default_visibility_bindings("app", app.id, tenant.id, account.id)
+
+        from extensions.ext_database import db
+
+        tag_names = [
+            tag.name
+            for tag in db.session.scalars(
+                select(Tag)
+                .join(TagBinding, Tag.id == TagBinding.tag_id)
+                .where(TagBinding.target_id == app.id, TagBinding.tenant_id == tenant.id)
+            ).all()
+        ]
+        assert created is True
+        assert created_again is False
+        assert custom_tag.name in tag_names
+        assert "Common" in tag_names
+        assert "通用" in tag_names
+        assert tag_names.count("Common") == 1
+        assert tag_names.count("通用") == 1
+
     def test_get_tags_success(self, db_session_with_containers, mock_external_service_dependencies):
         """
         Test successful retrieval of tags with binding count.

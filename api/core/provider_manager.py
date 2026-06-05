@@ -301,7 +301,7 @@ class ProviderManager:
     ) -> list[ProviderEntity]:
         merged_provider_entities = {provider_entity.provider: provider_entity for provider_entity in provider_entities}
 
-        for global_plugin in GlobalPluginService.list_enabled_plugins():
+        for global_plugin in GlobalPluginService.list_enabled_model_provider_plugins():
             if global_plugin.plugin_code in merged_provider_entities:
                 continue
 

@@ -581,6 +581,30 @@ class ModelManager:
         """
         return self._provider_manager.get_first_provider_first_model(tenant_id, model_type)
 
+    def get_first_available_model_instance(self, tenant_id: str, model_type: ModelType) -> ModelInstance | None:
+        """
+        Return the first active model that can actually be loaded at runtime.
+
+        Provider records can outlive the plugin/provider package that created
+        them. In that state `get_models(..., only_active=True)` may still list a
+        model, but `get_model_instance` raises `Invalid provider`.
+        """
+        provider_configurations = self._provider_manager.get_configurations(tenant_id)
+        active_models = provider_configurations.get_models(model_type=model_type, only_active=True)
+
+        for active_model in active_models:
+            try:
+                return self.get_model_instance(
+                    tenant_id=tenant_id,
+                    provider=active_model.provider.provider,
+                    model_type=model_type,
+                    model=active_model.model,
+                )
+            except Exception:
+                continue
+
+        return None
+
     def get_default_model_instance(
         self,
         tenant_id: str,

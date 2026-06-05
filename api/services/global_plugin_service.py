@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections import defaultdict
 from collections.abc import Sequence
 
 from pydantic import BaseModel
@@ -149,6 +150,31 @@ class GlobalPluginService:
                 redis_client.delete(cls.CACHE_KEY)
 
         return cls.refresh_cache()
+
+    @classmethod
+    def list_enabled_model_provider_plugins(cls) -> list[GlobalPluginCacheItem]:
+        items = cls.list_enabled_plugins()
+        if not items:
+            return []
+
+        identifiers_by_tenant: dict[str, set[str]] = defaultdict(set)
+        for item in items:
+            identifiers_by_tenant[item.source_tenant_id].add(item.plugin_unique_identifier)
+
+        model_provider_codes: set[str] = set()
+        for source_tenant_id, identifiers in identifiers_by_tenant.items():
+            try:
+                plugin_model_providers = ModelProviderFactory(source_tenant_id).get_plugin_model_providers()
+            except Exception:
+                continue
+
+            model_provider_codes.update(
+                plugin_model_provider.declaration.provider
+                for plugin_model_provider in plugin_model_providers
+                if plugin_model_provider.plugin_unique_identifier in identifiers
+            )
+
+        return [item for item in items if item.plugin_code in model_provider_codes]
 
     @classmethod
     def get_enabled_plugin(cls, plugin_code: str) -> GlobalPluginCacheItem | None:

@@ -8,7 +8,7 @@ from werkzeug.exceptions import Unauthorized
 
 from configs import dify_config
 from controllers.console.error import AccountNotFound, NotAllowedCreateWorkspace
-from models import AccountStatus, TenantAccountJoin
+from models import AccountStatus, Tenant, TenantAccountJoin, TenantAccountRole
 from services.account_service import AccountService, RegisterService, TenantService, TokenPair
 from services.errors.account import (
     AccountAlreadyInTenantError,
@@ -392,6 +392,38 @@ class TestAccountService:
         tenant_join = db.session.query(TenantAccountJoin).filter_by(account_id=account.id).first()
         assert tenant_join is not None
         assert tenant_join.role == "owner"
+
+    def test_create_owner_tenant_when_account_already_joined_shared_workspace(
+        self, db_session_with_containers, mock_external_service_dependencies
+    ):
+        fake = Faker()
+        account = AccountService.create_account(
+            email=fake.email(),
+            name=fake.user_name(),
+            interface_language="en-US",
+            password=None,
+            is_setup=True,
+        )
+        shared_tenant = TenantService.create_tenant(name=fake.company(), is_setup=True)
+        TenantService.create_tenant_member(shared_tenant, account, role=TenantAccountRole.NORMAL)
+
+        TenantService.create_owner_tenant_if_not_exist(account, is_setup=True)
+
+        from extensions.ext_database import db
+
+        joins = db.session.query(TenantAccountJoin).filter_by(account_id=account.id).all()
+        personal_join = (
+            db.session.query(TenantAccountJoin)
+            .join(Tenant, TenantAccountJoin.tenant_id == Tenant.id)
+            .filter(
+                TenantAccountJoin.account_id == account.id,
+                Tenant.name == f"{account.name}'s Workspace",
+                TenantAccountJoin.role == TenantAccountRole.OWNER,
+            )
+            .first()
+        )
+        assert len(joins) == 2
+        assert personal_join is not None
 
     def test_create_account_and_tenant_workspace_creation_disabled(
         self, db_session_with_containers, mock_external_service_dependencies

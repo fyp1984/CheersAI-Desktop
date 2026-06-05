@@ -75,6 +75,7 @@ class TestAgentService:
             mock_model_instance = mock_model_manager.return_value
             mock_model_instance.get_default_model_instance.return_value = None
             mock_model_instance.get_default_provider_model_name.return_value = ("openai", "gpt-3.5-turbo")
+            mock_model_instance.get_first_available_model_instance.return_value = None
 
             yield {
                 "plugin_agent_client": mock_plugin_agent_client,

@@ -203,6 +203,7 @@ export const hasPluginReadWorkspaceCapability = (
 export const hasModelProviderReadWorkspaceCapability = (
   workspace: Pick<ICurrentWorkspace, 'role' | 'capabilities'> | null | undefined,
 ) => hasAnyWorkspaceCapability(workspace, [
+  WORKSPACE_CAPABILITIES.modelUse,
   WORKSPACE_CAPABILITIES.modelProviderManage,
   WORKSPACE_CAPABILITIES.modelManage,
 ])

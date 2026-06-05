@@ -24,7 +24,7 @@ from libs.token import (
     set_refresh_token_to_cookie,
 )
 from models import AccountStatus
-from models.account import Account, Tenant, TenantAccountJoin, TenantStatus
+from models.account import Account, Tenant, TenantAccountJoin, TenantAccountRole, TenantStatus
 from services.account_service import AccountService, TenantService
 from services.sso_account_service import SSOAccountService
 
@@ -132,9 +132,26 @@ def _get_current_tenant_join(account: Account) -> TenantAccountJoin | None:
     )
 
 
+def _get_personal_tenant_join(account: Account) -> TenantAccountJoin | None:
+    personal_workspace_name = f"{account.name}'s Workspace"
+    return (
+        db.session.query(TenantAccountJoin)
+        .join(Tenant, TenantAccountJoin.tenant_id == Tenant.id)
+        .filter(
+            TenantAccountJoin.account_id == account.id,
+            Tenant.name == personal_workspace_name,
+            Tenant.status == TenantStatus.NORMAL,
+        )
+        .order_by(TenantAccountJoin.id.asc())
+        .first()
+    )
+
+
 def _get_fallback_tenant(account: Account) -> Tenant | None:
     tenant_join = _get_preferred_tenant_join(account)
-    return db.session.query(Tenant).filter_by(id=tenant_join.tenant_id, status=TenantStatus.NORMAL).first() if tenant_join else None
+    if not tenant_join:
+        return None
+    return db.session.query(Tenant).filter_by(id=tenant_join.tenant_id, status=TenantStatus.NORMAL).first()
 
 
 def _resolve_group_tenant(group_name: str) -> Tenant:
@@ -184,6 +201,12 @@ def _ensure_tenant_join(account: Account, tenant: Tenant, system_role: str) -> T
 
 def _ensure_desktop_sso_tenant_join(account: Account, system_role: str, payload: dict) -> TenantAccountJoin:
     current_tenant_join = _get_current_tenant_join(account)
+    TenantService.create_owner_tenant_if_not_exist(account, is_setup=True)
+    personal_tenant_join = _get_personal_tenant_join(account)
+    if personal_tenant_join and personal_tenant_join.role != TenantAccountRole.OWNER:
+        personal_tenant_join.role = TenantAccountRole.OWNER
+        db.session.commit()
+
     group_names = _get_sso_group_names(payload)
     resolved_group_joins: list[TenantAccountJoin] = []
 
@@ -192,25 +215,19 @@ def _ensure_desktop_sso_tenant_join(account: Account, system_role: str, payload:
         tenant = _resolve_group_tenant(group_name)
         resolved_group_joins.append(_ensure_tenant_join(account, tenant, system_role))
 
-    tenant_join = resolved_group_joins[0] if resolved_group_joins else None
-    tenant = db.session.query(Tenant).filter_by(id=tenant_join.tenant_id, status=TenantStatus.NORMAL).first() if tenant_join else None
-    if not tenant:
-        TenantService.create_owner_tenant_if_not_exist(account, is_setup=True)
-        tenant_join = _get_preferred_tenant_join(account)
-        if not tenant_join:
-            raise Exception("Failed to create tenant membership")
-        if tenant_join.role != system_role:
-            tenant_join.role = system_role
-            db.session.commit()
-        if not current_tenant_join or current_tenant_join.tenant_id != tenant_join.tenant_id:
-            TenantService.switch_tenant(account, tenant_join.tenant_id)
-        return tenant_join
+    target_tenant_join = (
+        current_tenant_join
+        or (resolved_group_joins[0] if resolved_group_joins else None)
+        or personal_tenant_join
+    )
+    if not target_tenant_join:
+        target_tenant_join = _get_preferred_tenant_join(account)
+    if not target_tenant_join:
+        raise Exception("Failed to create tenant membership")
 
-    if not tenant_join:
-        tenant_join = _ensure_tenant_join(account, tenant, system_role)
-    if not current_tenant_join or current_tenant_join.tenant_id != tenant.id:
-        TenantService.switch_tenant(account, tenant.id)
-    return tenant_join
+    if not current_tenant_join or current_tenant_join.tenant_id != target_tenant_join.tenant_id:
+        TenantService.switch_tenant(account, target_tenant_join.tenant_id)
+    return target_tenant_join
 
 
 @console_ns.route("/auth/desktop-sso/login")
@@ -242,7 +259,11 @@ class DesktopSSOLoginApi(Resource):
             normalized_email = email.lower()
             account = AccountService.get_user_through_email(normalized_email)
             persisted_sso_owner, persisted_sso_username = _get_persisted_sso_identity(account)
-            sso_owner = get_sso_subject_owner(data) or persisted_sso_owner or (dify_config.SSO_PROVISION_OWNER or "CheersAI")
+            sso_owner = (
+                get_sso_subject_owner(data)
+                or persisted_sso_owner
+                or (dify_config.SSO_PROVISION_OWNER or "CheersAI")
+            )
             sso_username = (
                 get_sso_subject_username(data)
                 or (data.get("preferred_username") or "")
@@ -271,28 +292,6 @@ class DesktopSSOLoginApi(Resource):
 
                 TenantService.create_owner_tenant_if_not_exist(account, is_setup=True)
 
-                from models.account import TenantAccountJoin
-
-                tenant_join = (
-                    db.session.query(TenantAccountJoin)
-                    .filter_by(account_id=account.id, current=True)
-                    .order_by(TenantAccountJoin.updated_at.desc(), TenantAccountJoin.created_at.desc())
-                    .first()
-                ) or (
-                    db.session.query(TenantAccountJoin)
-                    .filter_by(account_id=account.id)
-                    .order_by(
-                        TenantAccountJoin.current.desc(),
-                        TenantAccountJoin.updated_at.desc(),
-                        TenantAccountJoin.created_at.desc(),
-                    )
-                    .first()
-                )
-                if tenant_join:
-                    tenant_join.role = system_role
-                    db.session.commit()
-                    logger.info("Set workspace role to '%s' for new user", system_role)
-
                 account.status = AccountStatus.ACTIVE
                 account.initialized_at = naive_utc_now()
                 db.session.commit()
@@ -306,44 +305,6 @@ class DesktopSSOLoginApi(Resource):
                     account.initialized_at = naive_utc_now()
                     db.session.commit()
 
-                from models.account import TenantAccountJoin
-
-                tenant_join = (
-                    db.session.query(TenantAccountJoin)
-                    .filter_by(account_id=account.id, current=True)
-                    .order_by(TenantAccountJoin.updated_at.desc(), TenantAccountJoin.created_at.desc())
-                    .first()
-                ) or (
-                    db.session.query(TenantAccountJoin)
-                    .filter_by(account_id=account.id)
-                    .order_by(
-                        TenantAccountJoin.current.desc(),
-                        TenantAccountJoin.updated_at.desc(),
-                        TenantAccountJoin.created_at.desc(),
-                    )
-                    .first()
-                )
-
-                if tenant_join:
-                    old_role = tenant_join.role
-                    logger.info("Attempting to update role from '%s' to '%s'", old_role, system_role)
-
-                    if old_role == "owner":
-                        owner_count = (
-                            db.session.query(TenantAccountJoin)
-                            .filter_by(tenant_id=tenant_join.tenant_id, role="owner")
-                            .count()
-                        )
-                        if owner_count > 1:
-                            tenant_join.role = system_role
-                            db.session.commit()
-                            logger.info("Updated role from 'owner' to '%s' (multiple owners exist)", system_role)
-                        else:
-                            logger.info("Keeping 'owner' role (only owner in workspace)")
-                    elif old_role != system_role:
-                        tenant_join.role = system_role
-                        db.session.commit()
-                        logger.info("Updated role from '%s' to '%s'", old_role, system_role)
             tenant_join = _ensure_desktop_sso_tenant_join(account, system_role, normalized_sso_payload)
             logger.info("Using tenant %s with workspace role '%s'", tenant_join.tenant_id, tenant_join.role)
 

@@ -498,6 +498,27 @@ def get_current_workspace_role(account: Any) -> str | None:
     return None
 
 
+def get_workspace_role_for_tenant(account: Any, tenant_id: str | None = None) -> str | None:
+    account_id = getattr(account, "id", None)
+    resolved_tenant_id = tenant_id or getattr(account, "current_tenant_id", None)
+    if isinstance(account_id, str) and resolved_tenant_id:
+        try:
+            tenant_join = (
+                db.session.query(TenantAccountJoin.role)
+                .filter(
+                    TenantAccountJoin.account_id == account_id,
+                    TenantAccountJoin.tenant_id == str(resolved_tenant_id),
+                )
+                .first()
+            )
+        except RuntimeError:
+            tenant_join = None
+        if tenant_join:
+            return str(tenant_join[0])
+
+    return get_current_workspace_role(account)
+
+
 def _build_persisted_sso_payload(account: Any) -> dict[str, Any] | None:
     custom_config = getattr(account, "custom_config_dict", None)
     if not isinstance(custom_config, dict):
@@ -538,6 +559,7 @@ def get_account_workspace_capabilities(account: Any, tenant_id: str | None = Non
     capabilities: set[str] = set()
     account_id = getattr(account, "id", None)
     resolved_tenant_id = tenant_id or getattr(account, "current_tenant_id", None)
+    workspace_role = get_workspace_role_for_tenant(account, str(resolved_tenant_id) if resolved_tenant_id else None)
 
     if isinstance(account_id, str) and resolved_tenant_id:
         projection = load_desktop_sso_projection(account_id, str(resolved_tenant_id))
@@ -552,12 +574,12 @@ def get_account_workspace_capabilities(account: Any, tenant_id: str | None = Non
             capabilities.update(
                 resolve_workspace_capabilities(
                     persisted_payload,
-                    get_current_workspace_role(account),
+                    workspace_role,
                     get_account_sso_tags(account, resolved_tenant_id),
                 )
             )
 
-    capabilities.update(get_role_capabilities(get_current_workspace_role(account)))
+    capabilities.update(get_role_capabilities(workspace_role))
     capabilities.update(get_admin_override_capabilities(get_account_sso_tags(account, resolved_tenant_id)))
     return sorted(capabilities)
 

@@ -27,6 +27,7 @@ import {
   getProcessedFilesFromResponse,
 } from '@/app/components/base/file-uploader/utils'
 import { useToastContext } from '@/app/components/base/toast'
+import { downloadOutputToolFiles } from '@/app/components/workflow/run/output-panel-utils'
 import { WorkflowRunningStatus } from '@/app/components/workflow/types'
 import useTimestamp from '@/hooks/use-timestamp'
 import { ssePost } from '@/service/base'
@@ -544,6 +545,7 @@ export const useChat = (
           })
         },
         onWorkflowFinished: ({ data: workflowFinishedData }) => {
+          downloadOutputToolFiles(workflowFinishedData.outputs)
           responseItem.workflowProcess!.status = workflowFinishedData.status as WorkflowRunningStatus
           updateCurrentQAOnTree({
             placeholderQuestionId,
@@ -605,6 +607,8 @@ export const useChat = (
 
           if (data.loop_id)
             return
+
+          downloadOutputToolFiles(nodeFinishedData.outputs)
 
           const currentIndex = responseItem.workflowProcess!.tracing!.findIndex((item) => {
             if (!item.execution_metadata?.parallel_id)

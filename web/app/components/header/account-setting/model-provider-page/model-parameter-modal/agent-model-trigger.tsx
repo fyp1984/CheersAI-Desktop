@@ -51,10 +51,10 @@ const AgentModelTrigger: FC<AgentModelTriggerProps> = ({
   const updateModelList = useUpdateModelList()
   const { modelProvider, needsConfiguration } = useMemo(() => {
     const modelProvider = modelProviders.find(item => item.provider === providerName)
-    const needsConfiguration = modelProvider?.custom_configuration.status === CustomConfigurationStatusEnum.noConfigure && !(
-      modelProvider.system_configuration.enabled === true
-      && modelProvider.system_configuration.quota_configurations.find(
-        item => item.quota_type === modelProvider.system_configuration.current_quota_type,
+    const needsConfiguration = modelProvider?.custom_configuration?.status === CustomConfigurationStatusEnum.noConfigure && !(
+      modelProvider.system_configuration?.enabled === true
+      && modelProvider.system_configuration.quota_configurations?.find(
+        item => item.quota_type === modelProvider.system_configuration?.current_quota_type,
       )
     )
     return {
