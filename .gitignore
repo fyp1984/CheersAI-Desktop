@@ -239,6 +239,9 @@ scripts/stress-test/reports/
 
 *.local.md
 *.pid
+.tools/
+plugin-signatures/
+logs/*-audit.json
 
 *.eslintcache
 .eslintcache
