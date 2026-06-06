@@ -115,18 +115,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ logged_in: false, upstream_status: profileResponse.status })
     }
 
-    const workspaceResponse = await fetchConsoleApi(request, '/workspaces/current', {
-      method: 'POST',
-      body: JSON.stringify({}),
-    })
+    // A successful profile probe already proves the browser session is authenticated.
+    // Workspace bootstrap can still fail transiently on CSRF or timing-sensitive paths,
+    // so expose it as metadata instead of turning a valid login into a false negative.
+    try {
+      const workspaceResponse = await fetchConsoleApi(request, '/workspaces/current', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      })
 
-    if (workspaceResponse.ok)
-      return NextResponse.json({ logged_in: true })
+      if (workspaceResponse.ok)
+        return NextResponse.json({ logged_in: true })
 
-    if (workspaceResponse.status === 401 || workspaceResponse.status === 403)
-      return loggedOutResponse({ upstream_status: workspaceResponse.status })
-
-    return NextResponse.json({ logged_in: false, upstream_status: workspaceResponse.status })
+      return NextResponse.json({ logged_in: true, workspace_status: workspaceResponse.status })
+    }
+    catch {
+      return NextResponse.json({ logged_in: true, workspace_status: 'probe_failed' })
+    }
   }
   catch {
     return loggedOutResponse()
