@@ -181,12 +181,10 @@ const hasValidWorkspaceSession = async (request: NextRequest) => {
   if (!profileResponse.ok)
     return false
 
-  const workspaceResponse = await fetchConsoleApi(request, '/workspaces/current', {
-    method: 'POST',
-    body: JSON.stringify({}),
-  })
-
-  return workspaceResponse.ok
+  // Treat a successful profile probe as the source of truth for browser login state.
+  // Workspace bootstrap may still reject this server-side probe transiently, but
+  // that should not bounce an authenticated user back to /signin.
+  return true
 }
 
 export async function proxy(request: NextRequest) {
