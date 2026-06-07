@@ -4,17 +4,13 @@ import { AppInitializer } from '@/app/components/app-initializer'
 import AmplitudeProvider from '@/app/components/base/amplitude'
 import GA, { GaType } from '@/app/components/base/ga'
 import Zendesk from '@/app/components/base/zendesk'
-import { CustomerServiceFloat } from '@/app/components/base/customer-service-float'
-import GotoAnything from '@/app/components/goto-anything'
-import ReadmePanel from '@/app/components/plugins/readme-panel'
 import { AppContextProvider } from '@/context/app-context'
 import { EventEmitterContextProvider } from '@/context/event-emitter'
 import { ModalContextProvider } from '@/context/modal-context'
 import { ProviderContextProvider } from '@/context/provider-context'
 import { WorkspaceProvider } from '@/context/workspace-context'
-import PartnerStack from '../components/billing/partner-stack'
-import Splash from '../components/splash'
 import DesktopPrimaryTabs from '../components/header/desktop-primary-tabs'
+import LazyClientChrome from './lazy-client-chrome'
 
 const Layout = ({ children }: { children: ReactNode }) => {
   return (
@@ -33,11 +29,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
                       {children}
                     </main>
                   </div>
-                  <PartnerStack />
-                  <ReadmePanel />
-                  <GotoAnything />
-                  <Splash />
-                  <CustomerServiceFloat />
+                  <LazyClientChrome />
                 </ModalContextProvider>
               </ProviderContextProvider>
             </EventEmitterContextProvider>

@@ -14,6 +14,8 @@ import { del, get, post } from './base'
 import { useInvalid } from './use-base'
 
 const NAME_SPACE = 'triggers'
+const TRIGGER_CONFIG_STALE_TIME = 60 * 1000
+const TRIGGER_CONFIG_GC_TIME = 5 * 60 * 1000
 
 // Trigger Provider Service - Provider ID Format: plugin_id/provider_name
 
@@ -78,8 +80,9 @@ export const useAllTriggerPlugins = (enabled = true) => {
       return response.map(convertToTriggerWithProvider)
     },
     enabled,
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: TRIGGER_CONFIG_STALE_TIME,
+    gcTime: TRIGGER_CONFIG_GC_TIME,
+    refetchOnWindowFocus: false,
   })
 }
 
@@ -105,8 +108,9 @@ export const useTriggerProviderInfo = (provider: string, enabled = true) => {
     queryKey: [NAME_SPACE, 'provider-info', provider],
     queryFn: () => get<TriggerProviderApiEntity>(`/workspaces/current/trigger-provider/${provider}/info`),
     enabled: enabled && !!provider,
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: TRIGGER_CONFIG_STALE_TIME,
+    gcTime: TRIGGER_CONFIG_GC_TIME,
+    refetchOnWindowFocus: false,
   })
 }
 
@@ -371,8 +375,9 @@ export const useTriggerPluginDynamicOptions = (payload: {
     },
     enabled: enabled && !!payload.plugin_id && !!payload.provider && !!payload.action && !!payload.parameter && !!payload.credential_id,
     retry: 0,
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: 30 * 1000,
+    gcTime: TRIGGER_CONFIG_GC_TIME,
+    refetchOnWindowFocus: false,
   })
 }
 

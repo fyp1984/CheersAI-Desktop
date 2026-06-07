@@ -25,6 +25,7 @@ import { getSupportFileType } from '../utils'
 
 type FileBayPickerFile = {
   path: string
+  sha?: string
 }
 
 type FileBayUploadedFile = {
@@ -32,6 +33,34 @@ type FileBayUploadedFile = {
   name: string
   size: number
   mime_type: string
+}
+
+type FileBayUploadCacheEntry = {
+  file: FileBayUploadedFile
+  savedAt: number
+}
+
+const FILEBAY_UPLOAD_CACHE_TTL = 30 * 60 * 1000
+const fileBayUploadCache = new Map<string, FileBayUploadCacheEntry>()
+
+const getFileBayUploadCacheKey = (file: FileBayPickerFile) => `${file.path}:${file.sha || ''}`
+
+const getCachedFileBayUpload = (file: FileBayPickerFile) => {
+  const cacheEntry = fileBayUploadCache.get(getFileBayUploadCacheKey(file))
+  if (!cacheEntry)
+    return null
+
+  if (Date.now() - cacheEntry.savedAt > FILEBAY_UPLOAD_CACHE_TTL)
+    return null
+
+  return cacheEntry.file
+}
+
+const setCachedFileBayUpload = (file: FileBayPickerFile, uploadedFile: FileBayUploadedFile) => {
+  fileBayUploadCache.set(getFileBayUploadCacheKey(file), {
+    file: uploadedFile,
+    savedAt: Date.now(),
+  })
 }
 
 type FileFromLinkOrLocalProps = {
@@ -72,29 +101,34 @@ const FileFromLinkOrLocal = ({
 
   const handleSelectFileBayFile = async (file: FileBayPickerFile) => {
     try {
-      // 调用 FileBay 上传端点，直接将文件上传到 Dify 存储
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+      let uploadedFile = getCachedFileBayUpload(file)
+
+      if (!uploadedFile) {
+        // 调用 FileBay 上传端点，直接将文件上传到 Dify 存储
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        }
+
+        // Add CSRF token for authentication
+        const csrfToken = Cookies.get(CSRF_COOKIE_NAME())
+        if (csrfToken)
+          headers[CSRF_HEADER_NAME] = csrfToken
+
+        const response = await fetch('/console/api/filebay/upload-file', {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({ file_path: file.path }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+          throw new Error(errorData.error || `HTTP ${response.status}`)
+        }
+
+        uploadedFile = await response.json() as FileBayUploadedFile
+        setCachedFileBayUpload(file, uploadedFile)
       }
-
-      // Add CSRF token for authentication
-      const csrfToken = Cookies.get(CSRF_COOKIE_NAME())
-      if (csrfToken)
-        headers[CSRF_HEADER_NAME] = csrfToken
-
-      const response = await fetch('/console/api/filebay/upload-file', {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify({ file_path: file.path }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-        throw new Error(errorData.error || `HTTP ${response.status}`)
-      }
-
-      const uploadedFile = await response.json() as FileBayUploadedFile
 
       // 使用上传后的文件信息创建文件对象
       const fileEntity = {

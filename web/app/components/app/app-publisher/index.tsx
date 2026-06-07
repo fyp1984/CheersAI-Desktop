@@ -281,7 +281,10 @@ const AppPublisher = ({
 
   const handlePublish = useCallback(async (params?: ModelAndParameter | PublishWorkflowParams) => {
     try {
-      await (onPublish as ((params?: ModelAndParameter | PublishWorkflowParams) => Promise<unknown> | unknown) | undefined)?.(params)
+      const publishConfigResult = await (onPublish as ((params?: ModelAndParameter | PublishWorkflowParams) => Promise<unknown> | unknown) | undefined)?.(params)
+      if (publishConfigResult === false)
+        return
+
       if (appDetail?.id && appLifecycle) {
         const nextLifecycle = await publishAppLifecycle(appDetail.id, appLifecycle.row_version)
         handleLifecycleChanged(nextLifecycle)

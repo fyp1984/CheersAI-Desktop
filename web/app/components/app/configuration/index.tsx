@@ -51,7 +51,7 @@ import Loading from '@/app/components/base/loading'
 import { FILE_EXTS } from '@/app/components/base/prompt-editor/constants'
 import Toast, { ToastContext } from '@/app/components/base/toast'
 import { ACCOUNT_SETTING_TAB } from '@/app/components/header/account-setting/constants'
-import { ModelFeatureEnum, ModelTypeEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
+import { ModelFeatureEnum, ModelStatusEnum, ModelTypeEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
 import {
   useModelListAndDefaultModelAndCurrentProviderAndModel,
   useTextGenerationCurrentProviderAndModelAndModelList,
@@ -379,6 +379,15 @@ const Configuration: FC = () => {
   )
 
   const isFunctionCall = supportFunctionCall(currModel?.features)
+  const getActiveTextGenerationModel = useCallback((provider: string, model: string) => {
+    const providerItem = textGenerationModelList.find(item => item.provider === provider)
+    const modelItem = providerItem?.models.find(item => item.model === model)
+
+    if (!providerItem || !modelItem || modelItem.status !== ModelStatusEnum.active)
+      return null
+
+    return { providerItem, modelItem }
+  }, [textGenerationModelList])
 
   // Fill old app data missing model mode.
   useEffect(() => {
@@ -807,28 +816,33 @@ const Configuration: FC = () => {
   const contextVarEmpty = mode === AppModeEnum.COMPLETION && dataSets.length > 0 && !hasSetContextVar
   const onPublish = async (modelAndParameter?: ModelAndParameter, features?: FeaturesData) => {
     const modelId = modelAndParameter?.model || modelConfig.model_id
+    const provider = modelAndParameter?.provider || modelConfig.provider
     const promptTemplate = modelConfig.configs.prompt_template
     const promptVariables = modelConfig.configs.prompt_variables
 
     if (promptEmpty) {
       notify({ type: 'error', message: t('otherError.promptNoBeEmpty', { ns: 'appDebug' }) })
-      return
+      return false
     }
     if (isAdvancedMode && mode !== AppModeEnum.COMPLETION) {
       if (modelModeType === ModelModeType.completion) {
         if (!hasSetBlockStatus.history) {
           notify({ type: 'error', message: t('otherError.historyNoBeEmpty', { ns: 'appDebug' }) })
-          return
+          return false
         }
         if (!hasSetBlockStatus.query) {
           notify({ type: 'error', message: t('otherError.queryNoBeEmpty', { ns: 'appDebug' }) })
-          return
+          return false
         }
       }
     }
     if (contextVarEmpty) {
       notify({ type: 'error', message: t('feature.dataSet.queryVariable.contextVarNotEmpty', { ns: 'appDebug' }) })
-      return
+      return false
+    }
+    if (!getActiveTextGenerationModel(provider, modelId)) {
+      notify({ type: 'error', message: `模型 ${modelId || '未选择'} 当前不可用，请先切换到可用模型后再发布。` })
+      return false
     }
     const postDatasets = dataSets.map(({ id }) => ({
       dataset: {
@@ -865,7 +879,7 @@ const Configuration: FC = () => {
       },
       external_data_tools: externalDataToolsConfig,
       model: {
-        provider: modelAndParameter?.provider || modelConfig.provider,
+        provider,
         name: modelId,
         mode: modelConfig.mode,
         completion_params: modelAndParameter?.parameters || completionParams as any,

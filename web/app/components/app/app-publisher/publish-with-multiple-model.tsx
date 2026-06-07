@@ -10,6 +10,7 @@ import {
   PortalToFollowElemContent,
   PortalToFollowElemTrigger,
 } from '@/app/components/base/portal-to-follow-elem'
+import { ModelStatusEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
 import { useLanguage } from '@/app/components/header/account-setting/model-provider-page/hooks'
 import { useProviderContext } from '@/context/provider-context'
 import ModelIcon from '../../header/account-setting/model-provider-page/model-icon'
@@ -37,7 +38,7 @@ const PublishWithMultipleModel: FC<PublishWithMultipleModelProps> = ({
     if (provider) {
       const model = provider.models.find(model => model.model === item.model)
 
-      if (model) {
+      if (model?.status === ModelStatusEnum.active) {
         validModelConfigs.push({
           id: item.id,
           model: item.model,

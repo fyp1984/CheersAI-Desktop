@@ -39,6 +39,9 @@ import {
 } from './declarations'
 import { UPDATE_MODEL_PROVIDER_CUSTOM_MODEL_LIST } from './provider-added-card'
 
+const MODEL_SETTINGS_STALE_TIME = 60 * 1000
+const MODEL_SETTINGS_GC_TIME = 5 * 60 * 1000
+
 type UseDefaultModelAndModelList = (
   defaultModel: DefaultModelResponse | undefined,
   modelList: Model[],
@@ -141,9 +144,10 @@ export const useModelList = (type: ModelTypeEnum) => {
   const { data, refetch, isPending } = useQuery({
     queryKey: commonQueryKeys.modelList(type, workspace?.id, userProfile?.profile?.id),
     queryFn: () => fetchModelList(`/workspaces/current/models/model-types/${type}`),
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
-    refetchInterval: 5000,
+    staleTime: MODEL_SETTINGS_STALE_TIME,
+    gcTime: MODEL_SETTINGS_GC_TIME,
+    refetchOnWindowFocus: false,
+    enabled: !!workspace?.id && !!userProfile?.profile?.id,
   })
 
   return {
@@ -159,9 +163,10 @@ export const useDefaultModel = (type: ModelTypeEnum) => {
   const { data, refetch, isPending } = useQuery({
     queryKey: commonQueryKeys.defaultModel(type, workspace?.id, userProfile?.profile?.id),
     queryFn: () => fetchDefaultModal(`/workspaces/current/default-model?model_type=${type}`),
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
-    refetchInterval: 5000,
+    staleTime: MODEL_SETTINGS_STALE_TIME,
+    gcTime: MODEL_SETTINGS_GC_TIME,
+    refetchOnWindowFocus: false,
+    enabled: !!workspace?.id && !!userProfile?.profile?.id,
   })
 
   return {

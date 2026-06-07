@@ -45,8 +45,7 @@ import { useInvalidateAppWorkflow, usePublishWorkflow, useResetWorkflowVersionHi
 import { cn } from '@/utils/classnames'
 
 const FeaturesTrigger = () => {
-  const translation = useTranslation()
-  const t = translation?.t ?? ((key: string) => key)
+  const { t } = useTranslation()
   const { theme } = useTheme()
   const isChatMode = useIsChatMode()
   const workflowStore = useWorkflowStore()
@@ -153,6 +152,17 @@ const FeaturesTrigger = () => {
 
     // Then perform the detailed validation
     if (await handleCheckBeforePublish()) {
+      let draftSyncSucceeded = true
+      await handleSyncWorkflowDraft(true, false, {
+        onError: () => {
+          draftSyncSucceeded = false
+        },
+      })
+      if (!draftSyncSucceeded) {
+        notify({ type: 'error', message: '草稿保存失败，请稍后重试' })
+        throw new Error('Draft workflow sync failed')
+      }
+
       const res = await publishWorkflow({
         url: `/apps/${appID}/workflows/publish`,
         title: params?.title || '',
@@ -172,7 +182,7 @@ const FeaturesTrigger = () => {
     else {
       throw new Error('Checklist failed')
     }
-  }, [needWarningNodes, handleCheckBeforePublish, publishWorkflow, notify, appID, t, updatePublishedWorkflow, updateAppDetail, workflowStore, resetWorkflowVersionHistory, invalidateAppTriggers])
+  }, [needWarningNodes, handleCheckBeforePublish, handleSyncWorkflowDraft, publishWorkflow, notify, appID, t, updatePublishedWorkflow, updateAppDetail, workflowStore, hasUserInputNode, resetWorkflowVersionHistory, invalidateAppTriggers])
 
   const onPublisherToggle = useCallback((state: boolean) => {
     if (state)

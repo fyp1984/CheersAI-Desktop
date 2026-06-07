@@ -28,6 +28,9 @@ import { get, post } from './base'
 import { useInvalid } from './use-base'
 
 const NAME_SPACE = 'common'
+const STATIC_CONFIG_STALE_TIME = 5 * 60 * 1000
+const WORKSPACE_CONFIG_STALE_TIME = 60 * 1000
+const WORKSPACE_CONFIG_GC_TIME = 5 * 60 * 1000
 export type TokenBillingScope = 'workspace' | 'self' | 'system'
 
 export const commonQueryKeys = {
@@ -72,6 +75,9 @@ export const useFileUploadConfig = () => {
   return useQuery<FileUploadConfigResponse>({
     queryKey: commonQueryKeys.fileUploadConfig,
     queryFn: () => get<FileUploadConfigResponse>('/files/upload'),
+    staleTime: STATIC_CONFIG_STALE_TIME,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   })
 }
 
@@ -97,8 +103,9 @@ export const useUserProfile = () => {
         },
       }
     },
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
     retry: false,
   })
 }
@@ -115,6 +122,9 @@ export const useCurrentWorkspace = () => {
   return useQuery<ICurrentWorkspace>({
     queryKey: commonQueryKeys.currentWorkspace,
     queryFn: () => post<ICurrentWorkspace>('/workspaces/current', { body: {} }),
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
     retry: false,
   })
 }
@@ -408,9 +418,9 @@ export const useModelProviders = (enabled = true) => {
   return useQuery<{ data: ModelProvider[] }>({
     queryKey: commonQueryKeys.modelProviders(workspace?.id, userProfile?.profile?.id),
     queryFn: () => get<{ data: ModelProvider[] }>('/workspaces/current/model-providers'),
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
-    refetchInterval: 5000,
+    staleTime: WORKSPACE_CONFIG_STALE_TIME,
+    gcTime: WORKSPACE_CONFIG_GC_TIME,
+    refetchOnWindowFocus: false,
     enabled: enabled && canReadModelProviders && !!workspace?.id && !!userProfile?.profile?.id,
   })
 }
@@ -443,9 +453,9 @@ export const useTeamModelConfigs = (enabled = true) => {
   return useQuery<{ data: TeamModelConfigItem[] }>({
     queryKey: commonQueryKeys.teamModelConfigs(workspace?.id, userProfile?.profile?.id),
     queryFn: () => get<{ data: TeamModelConfigItem[] }>('/team/model-config'),
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
-    refetchInterval: 5000,
+    staleTime: WORKSPACE_CONFIG_STALE_TIME,
+    gcTime: WORKSPACE_CONFIG_GC_TIME,
+    refetchOnWindowFocus: false,
     enabled: enabled && !!workspace?.id && !!userProfile?.profile?.id,
   })
 }
@@ -464,9 +474,9 @@ export const useModelListByType = (type: ModelTypeEnum, enabled = true) => {
     queryKey: commonQueryKeys.modelList(type, workspace?.id, userProfile?.profile?.id),
     queryFn: () => get<{ data: Model[] }>(`/workspaces/current/models/model-types/${type}`),
     enabled: enabled && !!workspace?.id && !!userProfile?.profile?.id,
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
-    refetchInterval: 5000,
+    staleTime: WORKSPACE_CONFIG_STALE_TIME,
+    gcTime: WORKSPACE_CONFIG_GC_TIME,
+    refetchOnWindowFocus: false,
   })
 }
 
@@ -477,9 +487,9 @@ export const useDefaultModelByType = (type: ModelTypeEnum, enabled = true) => {
     queryKey: commonQueryKeys.defaultModel(type, workspace?.id, userProfile?.profile?.id),
     queryFn: () => get(`/workspaces/current/default-model?model_type=${type}`),
     enabled,
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
-    refetchInterval: 5000,
+    staleTime: WORKSPACE_CONFIG_STALE_TIME,
+    gcTime: WORKSPACE_CONFIG_GC_TIME,
+    refetchOnWindowFocus: false,
   })
 }
 
@@ -489,6 +499,9 @@ export const useSupportRetrievalMethods = (enabled = true) => {
     queryFn: () => get<{ retrieval_method: RETRIEVE_METHOD[] }>('/datasets/retrieval-setting'),
     enabled,
     retry: false,
+    staleTime: STATIC_CONFIG_STALE_TIME,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   })
 }
 
