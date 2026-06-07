@@ -17,7 +17,7 @@ import {
 } from '@remixicon/react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useAppContext } from '@/context/app-context'
 import { isTauriRuntime } from '@/service/sso-desktop-auth'
 import { cn } from '@/utils/classnames'
@@ -34,6 +34,25 @@ type NavItemConfig = {
   segments: string[]
 }
 
+const getIsDesktopRuntime = () => {
+  if (typeof window === 'undefined')
+    return false
+
+  return isTauriRuntime()
+}
+
+const getBrowserShowBrand = (searchParams: URLSearchParams) => {
+  if (typeof window === 'undefined')
+    return false
+
+  const source = searchParams.get('source')
+  if (source === 'vault-shell' || source === 'vault')
+    sessionStorage.setItem('cheersai_desktop_embedded', '1')
+
+  const embedded = sessionStorage.getItem('cheersai_desktop_embedded') === '1'
+  return !embedded && !isTauriRuntime()
+}
+
 const DesktopPrimaryTabs = () => {
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -42,10 +61,17 @@ const DesktopPrimaryTabs = () => {
   const pathnameSegments = normalizedPathname.split('/').filter(Boolean)
   const primarySegment = pathnameSegments[0] || ''
   const tabsViewportRef = useRef<HTMLDivElement>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
-  const [showBrand, setShowBrand] = useState(false)
-  const [isDesktopRuntime, setIsDesktopRuntime] = useState(false)
+  const [{ canScrollLeft, canScrollRight }, setScrollState] = useReducer((
+    state: { canScrollLeft: boolean, canScrollRight: boolean },
+    nextState: { canScrollLeft: boolean, canScrollRight: boolean },
+  ) => {
+    if (state.canScrollLeft === nextState.canScrollLeft && state.canScrollRight === nextState.canScrollRight)
+      return state
+
+    return nextState
+  }, { canScrollLeft: false, canScrollRight: false })
+  const [isDesktopRuntime] = useState(getIsDesktopRuntime)
+  const showBrand = useMemo(() => getBrowserShowBrand(searchParams), [searchParams])
 
   const canUseAgent = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.agentUse), [currentWorkspace])
   const canUseChat = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.chatUse), [currentWorkspace])
@@ -56,97 +82,110 @@ const DesktopPrimaryTabs = () => {
   const canViewExplore = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.exploreView), [currentWorkspace])
   const canViewAudit = useMemo(() => hasWorkspaceCapability(currentWorkspace, WORKSPACE_CAPABILITIES.auditView), [currentWorkspace])
 
-  const navItems: NavItemConfig[] = []
+  const navItems = useMemo<NavItemConfig[]>(() => {
+    const items: NavItemConfig[] = []
 
-  if (canUseAgent || canViewAppCenter) {
-    navItems.push({
-      id: 'apps',
-      href: '/apps',
-      icon: <RiRobot3Line className="h-4 w-4" />,
-      activeIcon: <RiRobot3Line className="h-4 w-4" />,
-      label: '我的 Agent',
-      segments: ['apps', 'app'],
-    })
-  }
+    if (canUseAgent || canViewAppCenter) {
+      items.push({
+        id: 'apps',
+        href: '/apps',
+        icon: <RiRobot3Line className="h-4 w-4" />,
+        activeIcon: <RiRobot3Line className="h-4 w-4" />,
+        label: '我的 Agent',
+        segments: ['apps', 'app'],
+      })
+    }
 
-  if (canUseChat) {
-    navItems.push({
-      id: 'chat',
-      href: '/chat',
-      icon: <RiMessage3Line className="h-4 w-4" />,
-      activeIcon: <RiMessage3Line className="h-4 w-4" />,
-      label: '对话',
-      segments: ['chat'],
-    })
-  }
+    if (canUseChat) {
+      items.push({
+        id: 'chat',
+        href: '/chat',
+        icon: <RiMessage3Line className="h-4 w-4" />,
+        activeIcon: <RiMessage3Line className="h-4 w-4" />,
+        label: '对话',
+        segments: ['chat'],
+      })
+    }
 
-  if (canViewKnowledge) {
-    navItems.push({
-      id: 'datasets',
-      href: '/datasets',
-      icon: <RiDatabase2Line className="h-4 w-4" />,
-      activeIcon: <RiDatabase2Fill className="h-4 w-4" />,
-      label: '知识库',
-      segments: ['datasets'],
-    })
-  }
+    if (canViewKnowledge) {
+      items.push({
+        id: 'datasets',
+        href: '/datasets',
+        icon: <RiDatabase2Line className="h-4 w-4" />,
+        activeIcon: <RiDatabase2Fill className="h-4 w-4" />,
+        label: '知识库',
+        segments: ['datasets'],
+      })
+    }
 
-  if (canReadPlugin) {
-    navItems.push({
-      id: 'plugins',
-      href: '/plugins',
-      icon: <RiPuzzle2Line className="h-4 w-4" />,
-      activeIcon: <RiPuzzle2Fill className="h-4 w-4" />,
-      label: '工具插件',
-      segments: ['plugins'],
-    })
-  }
+    if (canReadPlugin) {
+      items.push({
+        id: 'plugins',
+        href: '/plugins',
+        icon: <RiPuzzle2Line className="h-4 w-4" />,
+        activeIcon: <RiPuzzle2Fill className="h-4 w-4" />,
+        label: '工具插件',
+        segments: ['plugins'],
+      })
+    }
 
-  if (canViewWorkflow) {
-    navItems.push({
-      id: 'workflow',
-      href: '/workflows',
-      icon: <RiExchange2Line className="h-4 w-4" />,
-      activeIcon: <RiExchange2Line className="h-4 w-4" />,
-      label: '工作流',
-      segments: ['workflows'],
-    })
-  }
+    if (canViewWorkflow) {
+      items.push({
+        id: 'workflow',
+        href: '/workflows',
+        icon: <RiExchange2Line className="h-4 w-4" />,
+        activeIcon: <RiExchange2Line className="h-4 w-4" />,
+        label: '工作流',
+        segments: ['workflows'],
+      })
+    }
 
-  if (canViewAppCenter) {
-    navItems.push({
-      id: 'tools',
-      href: '/tools',
-      icon: <RiApps2Line className="h-4 w-4" />,
-      activeIcon: <RiApps2Line className="h-4 w-4" />,
-      label: '应用中心',
-      segments: ['tools'],
-    })
-  }
+    if (canViewAppCenter) {
+      items.push({
+        id: 'tools',
+        href: '/tools',
+        icon: <RiApps2Line className="h-4 w-4" />,
+        activeIcon: <RiApps2Line className="h-4 w-4" />,
+        label: '应用中心',
+        segments: ['tools'],
+      })
+    }
 
-  if (canViewExplore) {
-    navItems.push({
-      id: 'explore',
-      href: '/explore/apps',
-      icon: <RiPlanetLine className="h-4 w-4" />,
-      activeIcon: <RiPlanetFill className="h-4 w-4" />,
-      label: '探索',
-      segments: ['explore'],
-    })
-  }
+    if (canViewExplore) {
+      items.push({
+        id: 'explore',
+        href: '/explore/apps',
+        icon: <RiPlanetLine className="h-4 w-4" />,
+        activeIcon: <RiPlanetFill className="h-4 w-4" />,
+        label: '探索',
+        segments: ['explore'],
+      })
+    }
 
-  if (canViewAudit) {
-    navItems.push({
-      id: 'audit-logs',
-      href: '/audit-logs',
-      icon: <RiFileShield2Line className="h-4 w-4" />,
-      activeIcon: <RiFileShield2Line className="h-4 w-4" />,
-      label: '审计日志',
-      segments: ['audit-logs'],
-    })
-  }
+    if (canViewAudit) {
+      items.push({
+        id: 'audit-logs',
+        href: '/audit-logs',
+        icon: <RiFileShield2Line className="h-4 w-4" />,
+        activeIcon: <RiFileShield2Line className="h-4 w-4" />,
+        label: '审计日志',
+        segments: ['audit-logs'],
+      })
+    }
 
-  const activeItem = navItems.find((item) => {
+    return items
+  }, [
+    canReadPlugin,
+    canUseAgent,
+    canUseChat,
+    canViewAppCenter,
+    canViewAudit,
+    canViewExplore,
+    canViewKnowledge,
+    canViewWorkflow,
+  ])
+
+  const activeItem = useMemo(() => navItems.find((item) => {
     if (item.id === 'workflow')
       return normalizedPathname === '/workflows' || (normalizedPathname === '/apps' && searchParams.get('category') === 'workflow')
     if (item.id === 'apps')
@@ -155,31 +194,18 @@ const DesktopPrimaryTabs = () => {
     return normalizedPathname === item.href
       || normalizedPathname.startsWith(`${item.href}/`)
       || item.segments.includes(primarySegment)
-  })
+  }), [navItems, normalizedPathname, primarySegment, searchParams])
 
   const updateScrollState = useCallback(() => {
     const viewport = tabsViewportRef.current
     if (!viewport)
       return
 
-    const nextCanScrollLeft = viewport.scrollLeft > 4
-    const nextCanScrollRight = viewport.scrollLeft + viewport.clientWidth < viewport.scrollWidth - 4
-    setCanScrollLeft(nextCanScrollLeft)
-    setCanScrollRight(nextCanScrollRight)
+    setScrollState({
+      canScrollLeft: viewport.scrollLeft > 4,
+      canScrollRight: viewport.scrollLeft + viewport.clientWidth < viewport.scrollWidth - 4,
+    })
   }, [])
-
-  useEffect(() => {
-    setIsDesktopRuntime(isTauriRuntime())
-  }, [])
-
-  useEffect(() => {
-    const source = searchParams.get('source')
-    if (source === 'vault-shell' || source === 'vault')
-      sessionStorage.setItem('cheersai_desktop_embedded', '1')
-
-    const embedded = sessionStorage.getItem('cheersai_desktop_embedded') === '1'
-    setShowBrand(!embedded && !isTauriRuntime())
-  }, [searchParams])
 
   const isBrowserAccess = showBrand && !isDesktopRuntime
 
@@ -188,13 +214,13 @@ const DesktopPrimaryTabs = () => {
       return
 
     const titleMap: Record<string, string> = {
-      apps: '我的 Agent',
-      chat: '对话',
-      datasets: '知识库',
-      plugins: '工具插件',
-      workflow: '工作流',
-      tools: '应用中心',
-      explore: '探索',
+      'apps': '我的 Agent',
+      'chat': '对话',
+      'datasets': '知识库',
+      'plugins': '工具插件',
+      'workflow': '工作流',
+      'tools': '应用中心',
+      'explore': '探索',
       'audit-logs': '审计日志',
     }
 
@@ -224,7 +250,7 @@ const DesktopPrimaryTabs = () => {
       window.removeEventListener('resize', updateScrollState)
       viewport.removeEventListener('scroll', updateScrollState)
     }
-  }, [activeItem?.id, updateScrollState])
+  }, [activeItem, updateScrollState])
 
   const scrollTabs = (direction: 'left' | 'right') => {
     const viewport = tabsViewportRef.current
@@ -286,34 +312,34 @@ const DesktopPrimaryTabs = () => {
             >
               <div className="flex min-w-max items-center gap-2 pr-2">
                 {navItems.map((item) => {
-            const isWorkflowActive = item.id === 'workflow'
-              && (normalizedPathname === '/workflows' || (normalizedPathname === '/apps' && searchParams.get('category') === 'workflow'))
-            const isWorkflowPage = normalizedPathname === '/workflows' || (normalizedPathname === '/apps' && searchParams.get('category') === 'workflow')
-            const isActive = item.id === 'apps'
-              ? normalizedPathname === '/apps' && !isWorkflowPage
-              : normalizedPathname === item.href
-                || normalizedPathname.startsWith(`${item.href}/`)
-                || item.segments.includes(primarySegment)
-            const shouldHighlight = isActive || isWorkflowActive
+                  const isWorkflowActive = item.id === 'workflow'
+                    && (normalizedPathname === '/workflows' || (normalizedPathname === '/apps' && searchParams.get('category') === 'workflow'))
+                  const isWorkflowPage = normalizedPathname === '/workflows' || (normalizedPathname === '/apps' && searchParams.get('category') === 'workflow')
+                  const isActive = item.id === 'apps'
+                    ? normalizedPathname === '/apps' && !isWorkflowPage
+                    : normalizedPathname === item.href
+                      || normalizedPathname.startsWith(`${item.href}/`)
+                      || item.segments.includes(primarySegment)
+                  const shouldHighlight = isActive || isWorkflowActive
 
-            return (
-              <Link
-                key={item.id}
-                data-tab-id={item.id}
-                href={item.href}
-                className={cn(
-                  'flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-medium transition-colors',
-                  shouldHighlight
-                    ? 'bg-state-accent-hover text-text-accent shadow-sm ring-1 ring-state-accent-solid/15'
-                    : 'text-text-tertiary hover:bg-state-base-hover hover:text-text-primary',
-                )}
-              >
-                <span className="shrink-0">
-                  {shouldHighlight ? item.activeIcon : item.icon}
-                </span>
-                <span className="whitespace-nowrap">{item.label}</span>
-              </Link>
-            )
+                  return (
+                    <Link
+                      key={item.id}
+                      data-tab-id={item.id}
+                      href={item.href}
+                      className={cn(
+                        'flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-medium transition-colors',
+                        shouldHighlight
+                          ? 'bg-state-accent-hover text-text-accent shadow-sm ring-1 ring-state-accent-solid/15'
+                          : 'text-text-tertiary hover:bg-state-base-hover hover:text-text-primary',
+                      )}
+                    >
+                      <span className="shrink-0">
+                        {shouldHighlight ? item.activeIcon : item.icon}
+                      </span>
+                      <span className="whitespace-nowrap">{item.label}</span>
+                    </Link>
+                  )
                 })}
               </div>
             </div>

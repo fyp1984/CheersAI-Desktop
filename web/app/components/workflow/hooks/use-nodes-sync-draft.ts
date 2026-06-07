@@ -21,12 +21,15 @@ export const useNodesSyncDraft = () => {
     callback?: SyncCallback,
   ) => {
     if (getNodesReadOnly())
-      return
+      return Promise.resolve()
 
-    if (sync)
-      doSyncWorkflowDraft(notRefreshWhenSyncError, callback)
-    else
+    if (sync) {
+      return doSyncWorkflowDraft(notRefreshWhenSyncError, callback)
+    }
+    else {
       debouncedSyncWorkflowDraft(doSyncWorkflowDraft)
+      return Promise.resolve()
+    }
   }, [debouncedSyncWorkflowDraft, doSyncWorkflowDraft, getNodesReadOnly])
 
   return {

@@ -6,14 +6,17 @@ import { get, post } from './base'
 import { getUserCanAccess } from './share'
 
 const NAME_SPACE = 'access-control'
+const ACCESS_CONTROL_STALE_TIME = 30 * 1000
+const ACCESS_CONTROL_GC_TIME = 2 * 60 * 1000
 
 export const useAppWhiteListSubjects = (appId: string | undefined, enabled: boolean) => {
   return useQuery({
     queryKey: [NAME_SPACE, 'app-whitelist-subjects', appId],
     queryFn: () => get<{ groups: AccessControlGroup[], members: AccessControlAccount[] }>(`/enterprise/webapp/app/subjects?appId=${appId}`),
     enabled: !!appId && enabled,
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: ACCESS_CONTROL_STALE_TIME,
+    gcTime: ACCESS_CONTROL_GC_TIME,
+    refetchOnWindowFocus: false,
   })
 }
 
@@ -43,8 +46,9 @@ export const useSearchForWhiteListCandidates = (query: { keyword?: string, group
         return lastPage.currPage + 1
       return undefined
     },
-    gcTime: 0,
-    staleTime: 0,
+    gcTime: ACCESS_CONTROL_GC_TIME,
+    staleTime: ACCESS_CONTROL_STALE_TIME,
+    refetchOnWindowFocus: false,
     enabled,
   })
 }
@@ -81,7 +85,8 @@ export const useGetUserCanAccessApp = ({ appId, isInstalledApp = true, enabled }
         return { result: true }
     },
     enabled: enabled !== undefined ? enabled : !!appId,
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: ACCESS_CONTROL_STALE_TIME,
+    gcTime: ACCESS_CONTROL_GC_TIME,
+    refetchOnWindowFocus: false,
   })
 }

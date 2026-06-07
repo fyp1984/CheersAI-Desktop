@@ -14,6 +14,8 @@ const AUTH_COOKIE_NAMES = [
   '__Host-csrf_token',
   'sso_session_id',
 ]
+const AUTH_PROBE_CACHE_COOKIE = 'cheersai_auth_probe_ok'
+const AUTH_PROBE_CACHE_MAX_AGE = 30
 
 const PROTECTED_PATH_PREFIXES = [
   '/account',
@@ -165,6 +167,7 @@ const clearAuthCookies = (response: NextResponse) => {
   AUTH_COOKIE_NAMES.forEach((cookieName) => {
     response.cookies.delete(cookieName)
   })
+  response.cookies.delete(AUTH_PROBE_CACHE_COOKIE)
   return response
 }
 
@@ -177,6 +180,13 @@ const redirectToSignin = (request: NextRequest) => {
 }
 
 const hasValidWorkspaceSession = async (request: NextRequest) => {
+  const hasAuthCookie = AUTH_COOKIE_NAMES.some(cookieName => request.cookies.has(cookieName))
+  if (!hasAuthCookie)
+    return false
+
+  if (request.cookies.has(AUTH_PROBE_CACHE_COOKIE))
+    return true
+
   const profileResponse = await fetchConsoleApi(request, '/account/profile')
   if (!profileResponse.ok)
     return false
@@ -185,6 +195,18 @@ const hasValidWorkspaceSession = async (request: NextRequest) => {
   // Workspace bootstrap may still reject this server-side probe transiently, but
   // that should not bounce an authenticated user back to /signin.
   return true
+}
+
+const markAuthProbeCache = (request: NextRequest, response: NextResponse) => {
+  const hasAuthCookie = AUTH_COOKIE_NAMES.some(cookieName => request.cookies.has(cookieName))
+  if (!hasAuthCookie || request.cookies.has(AUTH_PROBE_CACHE_COOKIE))
+    return
+
+  response.cookies.set(AUTH_PROBE_CACHE_COOKIE, '1', {
+    maxAge: AUTH_PROBE_CACHE_MAX_AGE,
+    sameSite: 'lax',
+    path: '/',
+  })
 }
 
 export async function proxy(request: NextRequest) {
@@ -202,6 +224,9 @@ export async function proxy(request: NextRequest) {
       headers: requestHeaders,
     },
   })
+  if (isProtectedPath(pathname))
+    markAuthProbeCache(request, response)
+
   if (request.cookies.has('sso_refresh_token'))
     response.cookies.delete('sso_refresh_token')
 

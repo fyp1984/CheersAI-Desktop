@@ -45,6 +45,8 @@ import { get, getMarketplace, post, postMarketplace } from './base'
 import { useInvalidateAllBuiltInTools } from './use-tools'
 
 const NAME_SPACE = 'plugins'
+const PLUGIN_LIST_STALE_TIME = 60 * 1000
+const PLUGIN_LIST_GC_TIME = 5 * 60 * 1000
 
 const useInstalledPluginListKey = [NAME_SPACE, 'installedPluginList']
 export const useCheckInstalled = ({
@@ -62,7 +64,9 @@ export const useCheckInstalled = ({
       },
     }),
     enabled,
-    staleTime: 0, // always fresh
+    staleTime: PLUGIN_LIST_STALE_TIME,
+    gcTime: PLUGIN_LIST_GC_TIME,
+    refetchOnWindowFocus: false,
   })
 }
 
@@ -157,6 +161,9 @@ export const useInstalledPluginList = (disable?: boolean, pageSize = 100) => {
       return currentPage + 1
     },
     initialPageParam: 1,
+    staleTime: PLUGIN_LIST_STALE_TIME,
+    gcTime: PLUGIN_LIST_GC_TIME,
+    refetchOnWindowFocus: false,
   })
 
   const plugins = data?.pages.flatMap(page => page.plugins) ?? []
