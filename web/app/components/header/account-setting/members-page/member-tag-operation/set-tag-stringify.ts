@@ -17,10 +17,10 @@ export type GroupedTagSection = {
 
 const DEFAULT_GROUP_LABEL = '默认分组'
 const SSO_TAG_SPLIT_PATTERN = /[，、；;|,]+/
-const DEFAULT_FALLBACK_TAGS: Array<{ id: string, name: string, type: Tag['type'] }> = [
-  { id: 'fallback-agent-default', name: 'Agent:通用 Agent/默认协作', type: 'app' },
-  { id: 'fallback-workflow-default', name: 'Workflow:通用 Workflow/默认流程', type: 'app' },
-  { id: 'fallback-kb-default', name: '知识库/默认知识库', type: 'knowledge' },
+const DEFAULT_FALLBACK_TAGS: Tag[] = [
+  { id: 'fallback-agent-default', name: 'Agent:通用 Agent/默认协作', type: 'app', binding_count: 0 },
+  { id: 'fallback-workflow-default', name: 'Workflow:通用 Workflow/默认流程', type: 'app', binding_count: 0 },
+  { id: 'fallback-kb-default', name: '知识库/默认知识库', type: 'knowledge', binding_count: 0 },
 ]
 const CATEGORY_PREFIX_PATTERNS: Array<{ category: SystemTagCategory, pattern: RegExp }> = [
   { category: 'app', pattern: /^(workflow|工作流)[/:：|｜-]\s*/i },

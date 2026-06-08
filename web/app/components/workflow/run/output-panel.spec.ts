@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { TransferMethod } from '@/types/app'
-import { downloadOutputToolFiles, getOutputFiles } from './output-panel-utils'
+import { downloadOutputToolFiles, downloadResponseToolFiles, getOutputFiles } from './output-panel-utils'
 
 describe('getOutputFiles', () => {
   it('extracts downloadable tool files from multi-field outputs', () => {
@@ -91,5 +91,25 @@ describe('getOutputFiles', () => {
     downloadOutputToolFiles(outputs, options => downloads.push(options))
 
     expect(downloads).toHaveLength(1)
+  })
+
+  it('downloads tool files from streamed file events', () => {
+    const downloads: Array<{ url: string, fileName?: string }> = []
+    const count = downloadResponseToolFiles([{
+      id: 'streamed-tool-file-id',
+      type: 'document',
+      transfer_method: 'tool_file' as TransferMethod,
+      filename: 'export.docx',
+      mime_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      size: 2048,
+      url: '/files/tools/streamed-tool-file-id.docx?sign=signed',
+      upload_file_id: 'streamed-tool-file-id',
+    }], options => downloads.push(options))
+
+    expect(count).toBe(1)
+    expect(downloads).toEqual([{
+      url: '/files/tools/streamed-tool-file-id.docx?sign=signed&as_attachment=true',
+      fileName: 'export.docx',
+    }])
   })
 })

@@ -33,6 +33,13 @@ const Operation: FC<OperationProps> = ({
   onSend,
   theme,
 }) => {
+  const fallbackFileConfig: FileUpload = {
+    enabled: true,
+    allowed_file_types: [],
+    allowed_file_upload_methods: [],
+    number_limits: 10,
+  }
+
   return (
     <div
       className={cn(
@@ -44,15 +51,9 @@ const Operation: FC<OperationProps> = ({
         ref={ref}
       >
         <div className="flex items-center space-x-1">
-          <FileUploaderInChatInput 
-            readonly={readonly} 
-            fileConfig={fileConfig || { 
-              enabled: true, 
-              allowed_file_types: [], 
-              allowed_file_upload_methods: [],
-              number_limits: 10,
-              filesize_limit: 15
-            }} 
+          <FileUploaderInChatInput
+            readonly={readonly}
+            fileConfig={fileConfig || fallbackFileConfig}
           />
           {
             speechToTextConfig?.enabled && (

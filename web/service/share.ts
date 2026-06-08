@@ -2,6 +2,7 @@ import type {
   IOnCompleted,
   IOnData,
   IOnError,
+  IOnFile,
   IOnIterationFinished,
   IOnIterationNext,
   IOnIterationStarted,
@@ -78,11 +79,12 @@ export const stopChatMessageResponding = async (appId: string, taskId: string, a
   return getAction('post', appSourceType)(getUrl(`chat-messages/${taskId}/stop`, appSourceType, installedAppId))
 }
 
-export const sendCompletionMessage = async (body: Record<string, any>, { onData, onCompleted, onError, onMessageReplace, getAbortController }: {
+export const sendCompletionMessage = async (body: Record<string, any>, { onData, onCompleted, onError, onMessageReplace, onFile, getAbortController }: {
   onData: IOnData
   onCompleted: IOnCompleted
   onError: IOnError
   onMessageReplace: IOnMessageReplace
+  onFile?: IOnFile
   getAbortController?: (abortController: AbortController) => void
 }, appSourceType: AppSourceType, installedAppId = '') => {
   return ssePost(getUrl('completion-messages', appSourceType, installedAppId), {
@@ -90,7 +92,7 @@ export const sendCompletionMessage = async (body: Record<string, any>, { onData,
       ...body,
       response_mode: 'streaming',
     },
-  }, { onData, onCompleted, isPublicAPI: getIsPublicAPI(appSourceType), onError, onMessageReplace, getAbortController })
+  }, { onData, onCompleted, isPublicAPI: getIsPublicAPI(appSourceType), onError, onMessageReplace, onFile, getAbortController })
 }
 
 export const sendWorkflowMessage = async (

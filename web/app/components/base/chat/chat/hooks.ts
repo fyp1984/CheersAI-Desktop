@@ -27,7 +27,7 @@ import {
   getProcessedFilesFromResponse,
 } from '@/app/components/base/file-uploader/utils'
 import { useToastContext } from '@/app/components/base/toast'
-import { downloadOutputToolFiles } from '@/app/components/workflow/run/output-panel-utils'
+import { downloadOutputToolFiles, downloadToolFile } from '@/app/components/workflow/run/output-panel-utils'
 import { WorkflowRunningStatus } from '@/app/components/workflow/types'
 import useTimestamp from '@/hooks/use-timestamp'
 import { ssePost } from '@/service/base'
@@ -424,24 +424,41 @@ export const useChat = (
           // Backend sends: { id, type: "image", belongs_to, url }
           // Frontend expects: { id, type: "image/png", transferMethod, url, uploadedId, supportFileType, name, size }
 
+          const rawFile = file as {
+            id: string
+            related_id?: string
+            type?: string
+            mime_type?: string
+            transferMethod?: FileEntity['transferMethod']
+            transfer_method?: FileEntity['transferMethod']
+            upload_file_id?: string
+            filename?: string
+            url?: string
+            remote_url?: string
+            size?: number
+            supportFileType?: string
+          }
+
           // Determine file type for MIME conversion
-          const fileType = (file as { type?: string }).type || 'image'
+          const fileType = rawFile.type || 'image'
+          const transferMethod = rawFile.transferMethod || rawFile.transfer_method
 
           // If file already has transferMethod, use it as base and ensure all required fields exist
           // Otherwise, create a new complete file object
           const baseFile = ('transferMethod' in file) ? (file as Partial<FileEntity>) : null
 
           const convertedFile: FileEntity = {
-            id: baseFile?.id || (file as { id: string }).id,
-            type: baseFile?.type || (fileType === 'image' ? 'image/png' : fileType === 'video' ? 'video/mp4' : fileType === 'audio' ? 'audio/mpeg' : 'application/octet-stream'),
-            transferMethod: (baseFile?.transferMethod as FileEntity['transferMethod']) || (fileType === 'image' ? 'remote_url' : 'local_file'),
-            uploadedId: baseFile?.uploadedId || (file as { id: string }).id,
+            id: baseFile?.id || rawFile.related_id || rawFile.id,
+            type: baseFile?.type || rawFile.mime_type || (fileType === 'image' ? 'image/png' : fileType === 'video' ? 'video/mp4' : fileType === 'audio' ? 'audio/mpeg' : 'application/octet-stream'),
+            transferMethod: transferMethod || (fileType === 'image' ? TransferMethod.remote_url : TransferMethod.local_file),
+            uploadedId: baseFile?.uploadedId || rawFile.upload_file_id || rawFile.related_id || rawFile.id,
             supportFileType: baseFile?.supportFileType || (fileType === 'image' ? 'image' : fileType === 'video' ? 'video' : fileType === 'audio' ? 'audio' : 'document'),
             progress: baseFile?.progress ?? 100,
-            name: baseFile?.name || `generated_${fileType}.${fileType === 'image' ? 'png' : fileType === 'video' ? 'mp4' : fileType === 'audio' ? 'mp3' : 'bin'}`,
-            url: baseFile?.url || (file as { url?: string }).url,
-            size: baseFile?.size ?? 0, // Generated files don't have a known size
+            name: baseFile?.name || rawFile.filename || `generated_${fileType}.${fileType === 'image' ? 'png' : fileType === 'video' ? 'mp4' : fileType === 'audio' ? 'mp3' : 'bin'}`,
+            url: baseFile?.url || rawFile.url || rawFile.remote_url,
+            size: baseFile?.size ?? rawFile.size ?? 0, // Generated files don't have a known size
           }
+          downloadToolFile(convertedFile)
 
           // For agent mode, add files to the last thought
           const lastThought = responseItem.agent_thoughts?.[responseItem.agent_thoughts?.length - 1]
@@ -509,6 +526,7 @@ export const useChat = (
           }
           responseItem.citation = messageEnd.metadata?.retriever_resources || []
           const processedFilesFromResponse = getProcessedFilesFromResponse(messageEnd.files || [])
+          processedFilesFromResponse.forEach(file => downloadToolFile(file))
           responseItem.allFiles = uniqBy([...(responseItem.allFiles || []), ...(processedFilesFromResponse || [])], 'id')
 
           updateCurrentQAOnTree({

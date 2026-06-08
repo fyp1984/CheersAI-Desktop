@@ -2,7 +2,7 @@ import type { FC } from 'react'
 import type { KnowledgeRetrievalNodeType } from '../nodes/knowledge-retrieval/types'
 import type { CommonNodeType, Node } from '../types'
 import { createContext, useCallback, useEffect, useRef } from 'react'
-import { fetchDatasets } from '@/service/datasets'
+import { fetchDatasetsByIds } from '@/service/datasets'
 import { BlockEnum } from '../types'
 import { createDatasetsDetailStore } from './store'
 
@@ -27,7 +27,7 @@ const DatasetsDetailProvider: FC<DatasetsDetailProviderProps> = ({
     storeRef.current = createDatasetsDetailStore()
 
   const updateDatasetsDetail = useCallback(async (datasetIds: string[]) => {
-    const { data: datasetsDetail } = await fetchDatasets({ url: '/datasets', params: { page: 1, ids: datasetIds } })
+    const datasetsDetail = await fetchDatasetsByIds(datasetIds)
     if (datasetsDetail && datasetsDetail.length > 0)
       storeRef.current!.getState().updateDatasetsDetail(datasetsDetail)
   }, [])

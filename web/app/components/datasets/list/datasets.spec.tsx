@@ -1,5 +1,8 @@
+import type { AppContextValue } from '@/context/app-context'
+import type { ICurrentWorkspace } from '@/models/common'
 import type { DataSet } from '@/models/datasets'
 import { render, screen, waitFor } from '@testing-library/react'
+import { noop } from 'es-toolkit/function'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { IndexingType } from '@/app/components/datasets/create/step-two'
 import { ChunkingMode, DatasetPermission, DataSourceType } from '@/models/datasets'
@@ -59,21 +62,58 @@ vi.mock('@/service/knowledge/use-dataset', () => ({
 }))
 
 // Mock app context - will be overridden in tests
-const mockAppContextState = {
-  currentWorkspace: {
-    id: 'workspace-1',
-    name: 'Workspace 1',
-    plan: 'basic',
-    status: 'normal',
-    created_at: 0,
-    role: 'editor' as const,
-    capabilities: [],
-    providers: [],
-    trial_credits: 0,
-    trial_credits_used: 0,
-    next_credit_reset_date: 0,
-  },
+const mockWorkspace: ICurrentWorkspace = {
+  id: 'workspace-1',
+  name: 'Workspace 1',
+  plan: 'basic',
+  status: 'normal',
+  created_at: 0,
+  role: 'editor',
+  capabilities: [],
+  providers: [],
+  trial_credits: 0,
+  trial_credits_used: 0,
+  next_credit_reset_date: 0,
 }
+
+const mockAppContextState = {
+  userProfile: {
+    id: 'user-1',
+    name: 'Test User',
+    email: 'test@example.com',
+    avatar: '',
+    avatar_url: '',
+    is_password_set: false,
+  },
+  mutateUserProfile: noop,
+  currentWorkspace: mockWorkspace,
+  isCurrentWorkspaceManager: false,
+  isCurrentWorkspaceOwner: false,
+  isCurrentWorkspaceEditor: true,
+  canViewApps: true,
+  canEditApps: true,
+  canUseChat: true,
+  canViewAudit: false,
+  canManageWorkspaceSettings: false,
+  canManageDataSecurity: false,
+  canEditKnowledge: true,
+  canViewWorkflow: true,
+  canEditWorkflow: true,
+  isCurrentWorkspaceDatasetOperator: false,
+  mutateCurrentWorkspace: noop,
+  langGeniusVersionInfo: {
+    current_env: '',
+    current_version: '',
+    latest_version: '',
+    release_date: '',
+    release_notes: '',
+    version: '',
+    can_auto_update: false,
+  },
+  useSelector: undefined as unknown as AppContextValue['useSelector'],
+  isLoadingCurrentWorkspace: false,
+  isValidatingCurrentWorkspace: false,
+} satisfies AppContextValue
 
 vi.mock('@/context/app-context', () => ({
   useSelector: vi.fn((selector: (state: typeof mockAppContextState) => unknown) => selector(mockAppContextState)),

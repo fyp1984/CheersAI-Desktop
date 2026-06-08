@@ -108,7 +108,7 @@ vi.mock('@/app/components/app/app-publisher', () => ({
         <button type="button" onClick={() => { Promise.resolve(props.onPublish?.()).catch(() => undefined) }}>
           publisher-publish
         </button>
-        <button type="button" onClick={() => { Promise.resolve(props.onPublish?.({ url: '/apps/test/workflows/publish', title: 'Test title', releaseNotes: 'Test notes' })).catch(() => undefined) }}>
+        <button type="button" onClick={() => { Promise.resolve(props.onPublish?.({ id: 'test-model-config', model: 'test-model', provider: 'test-provider', parameters: {}, url: '/apps/test/workflows/publish', title: 'Test title', releaseNotes: 'Test notes' })).catch(() => undefined) }}>
           publisher-publish-with-params
         </button>
       </div>
