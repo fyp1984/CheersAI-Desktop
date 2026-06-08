@@ -1,13 +1,17 @@
 'use client'
 import type { FC } from 'react'
 import type { ModelAndParameter } from '@/app/components/app/configuration/debug/types'
-import type { Features as FeaturesData, FileUpload } from '@/app/components/base/features/types'
+import type { Features as FeaturesData, FileUpload, OnFeaturesChange } from '@/app/components/base/features/types'
 import type { FormValue } from '@/app/components/header/account-setting/model-provider-page/declarations'
+import type { ModelParameterModalProps } from '@/app/components/header/account-setting/model-provider-page/model-parameter-modal'
 import type { Collection } from '@/app/components/tools/types'
+import type { UploadFileSetting } from '@/app/components/workflow/types'
 import type { ExternalDataTool } from '@/models/common'
 import type { DataSet } from '@/models/datasets'
 import type {
   AnnotationReplyConfig,
+  ChatPromptConfig,
+  CompletionPromptConfig,
   DatasetConfigs,
   Inputs,
   ModelConfig,
@@ -17,7 +21,7 @@ import type {
   PromptVariable,
   TextToSpeechConfig,
 } from '@/models/debug'
-import type { ModelConfig as BackendModelConfig, UserInputFormItem, VisionSettings } from '@/types/app'
+import type { AgentTool, ModelConfig as BackendModelConfig, ToolItem, UserInputFormItem, VisionSettings } from '@/types/app'
 import { CodeBracketIcon } from '@heroicons/react/20/solid'
 import { useBoolean, useGetState } from 'ahooks'
 import { clone } from 'es-toolkit/object'
@@ -72,7 +76,7 @@ import { useProviderContext } from '@/context/provider-context'
 import useBreakpoints, { MediaType } from '@/hooks/use-breakpoints'
 import { PromptMode } from '@/models/debug'
 import { fetchAppDetailDirect, updateAppModelConfig } from '@/service/apps'
-import { fetchDatasets } from '@/service/datasets'
+import { fetchDatasetsByIds } from '@/service/datasets'
 import { fetchCollectionList } from '@/service/tools'
 import { useFileUploadConfig } from '@/service/use-common'
 import { AgentStrategy, AppModeEnum, ModelModeType, Resolution, RETRIEVE_TYPE, TransferMethod } from '@/types/app'
@@ -89,6 +93,36 @@ import { hasWorkspaceCapability, WORKSPACE_CAPABILITIES } from '@/utils/workspac
 type PublishConfig = {
   modelConfig: ModelConfig
   completionParams: FormValue
+}
+
+type DatasetTool = Extract<ToolItem, { dataset: unknown }>
+
+const isDatasetTool = (tool: ToolItem): tool is DatasetTool => 'dataset' in tool
+const isAgentTool = (tool: ToolItem): tool is AgentTool => 'provider_id' in tool
+
+const toEnabledConfig = <T extends { enabled?: boolean }>(config?: T) => ({
+  ...config,
+  enabled: !!config?.enabled,
+})
+
+const toBackendFileUpload = (fileUpload?: FileUpload): BackendModelConfig['file_upload'] => {
+  if (!fileUpload)
+    return undefined
+
+  const uploadSettings = fileUpload as FileUpload & Partial<UploadFileSetting>
+  return {
+    ...fileUpload,
+    allowed_file_upload_methods: fileUpload.allowed_file_upload_methods ?? [TransferMethod.local_file, TransferMethod.remote_url],
+    allowed_file_types: (fileUpload.allowed_file_types ?? []) as SupportUploadFileTypes[],
+    max_length: uploadSettings.max_length ?? fileUpload.number_limits ?? 3,
+    image: {
+      ...fileUpload.image,
+      enabled: !!fileUpload.image?.enabled,
+      number_limits: fileUpload.image?.number_limits ?? 3,
+      detail: fileUpload.image?.detail ?? Resolution.high,
+      transfer_methods: fileUpload.image?.transfer_methods ?? [TransferMethod.local_file, TransferMethod.remote_url],
+    },
+  }
 }
 
 const Configuration: FC = () => {
@@ -181,7 +215,7 @@ const Configuration: FC = () => {
     doSetCompletionParams(params)
   }
 
-  const [modelConfig, doSetModelConfig] = useState<ModelConfig>({
+  const [modelConfig, doSetModelConfig] = useState<ModelConfig>(() => ({
     provider: 'langgenius/openai/openai',
     model_id: 'gpt-3.5-turbo',
     mode: ModelModeType.unset,
@@ -211,7 +245,7 @@ const Configuration: FC = () => {
     },
     dataSets: [],
     agentConfig: DEFAULT_AGENT_SETTING,
-  })
+  }))
   const isAgent = mode === AppModeEnum.AGENT_CHAT
 
   const isOpenAI = modelConfig.provider === 'langgenius/openai/openai'
@@ -456,12 +490,12 @@ const Configuration: FC = () => {
     setCompletionParams,
     setStop: setTempStop,
   })
-  const setModel = async ({
+  const setModel: ModelParameterModalProps['setModel'] = async ({
     modelId,
     provider,
     mode: modeMode,
     features,
-  }: { modelId: string, provider: string, mode: string, features: string[] }) => {
+  }) => {
     if (isAdvancedMode) {
       const appMode = mode
 
@@ -483,11 +517,11 @@ const Configuration: FC = () => {
     const newModelConfig = produce(modelConfig, (draft: ModelConfig) => {
       draft.provider = provider
       draft.model_id = modelId
-      draft.mode = modeMode as ModelModeType
+      draft.mode = (modeMode as ModelModeType | undefined) ?? ModelModeType.unset
     })
 
     setModelConfig(newModelConfig)
-    const supportVision = features && features.includes(ModelFeatureEnum.vision)
+    const supportVision = !!features?.includes(ModelFeatureEnum.vision)
 
     handleSetVisionConfig({
       ...visionConfig,
@@ -546,7 +580,7 @@ const Configuration: FC = () => {
       annotationReply: modelConfig.annotation_reply || { enabled: false },
     }
   }, [fileUploadConfigResponse, modelConfig])
-  const handleFeaturesChange = useCallback((flag: any) => {
+  const handleFeaturesChange: OnFeaturesChange = useCallback((flag) => {
     setShowAppConfigureFeaturesModal(true)
     if (flag)
       formattingChangedDispatcher()
@@ -563,8 +597,8 @@ const Configuration: FC = () => {
     suggested_questions: [],
     pre_prompt: '',
     prompt_type: PromptMode.simple,
-    chat_prompt_config: clone(DEFAULT_CHAT_PROMPT_CONFIG) as any,
-    completion_prompt_config: clone(DEFAULT_COMPLETION_PROMPT_CONFIG) as any,
+    chat_prompt_config: clone(DEFAULT_CHAT_PROMPT_CONFIG) as ChatPromptConfig,
+    completion_prompt_config: clone(DEFAULT_COMPLETION_PROMPT_CONFIG) as CompletionPromptConfig,
     user_input_form: [],
     dataset_query_variable: '',
     more_like_this: { enabled: false },
@@ -573,20 +607,27 @@ const Configuration: FC = () => {
     text_to_speech: { enabled: false, voice: '', language: '' },
     retriever_resource: { enabled: false },
     sensitive_word_avoidance: { enabled: false },
-    annotation_reply: null as any,
-    agent_mode: appMode === AppModeEnum.AGENT_CHAT ? DEFAULT_AGENT_SETTING as any : { enabled: false, tools: [] } as any,
+    agent_mode: appMode === AppModeEnum.AGENT_CHAT
+      ? { ...DEFAULT_AGENT_SETTING }
+      : { enabled: false, tools: [] },
     external_data_tools: [],
     model: {
       provider: 'langgenius/openai/openai',
       name: 'gpt-3.5-turbo',
       mode: ModelModeType.chat,
-      completion_params: {} as any,
+      completion_params: {} as BackendModelConfig['model']['completion_params'],
     },
     dataset_configs: {
       retrieval_model: RETRIEVE_TYPE.multiWay,
       datasets: { datasets: [] },
-    } as any,
-    file_upload: null as any,
+      reranking_model: {
+        reranking_provider_name: '',
+        reranking_model_name: '',
+      },
+      top_k: DATASET_DEFAULT.top_k,
+      score_threshold_enabled: false,
+      score_threshold: DATASET_DEFAULT.score_threshold,
+    },
     system_parameters: {
       audio_file_size_limit: 0,
       file_size_limit: 0,
@@ -617,25 +658,20 @@ const Configuration: FC = () => {
             setChatPromptConfig(modelConfig.chat_prompt_config)
           else
             setChatPromptConfig(clone(DEFAULT_CHAT_PROMPT_CONFIG))
-          setCompletionPromptConfig(modelConfig.completion_prompt_config || clone(DEFAULT_COMPLETION_PROMPT_CONFIG) as any)
+          setCompletionPromptConfig(modelConfig.completion_prompt_config || clone(DEFAULT_COMPLETION_PROMPT_CONFIG))
           setCanReturnToSimpleMode(false)
         }
 
         const model = modelConfig.model
 
-        let datasets: any = null
-        // old dataset struct
-        if (modelConfig.agent_mode?.tools?.find(({ dataset }: any) => dataset?.enabled))
-          datasets = modelConfig.agent_mode?.tools.filter(({ dataset }: any) => dataset?.enabled)
-          // new dataset struct
-        else if (modelConfig.dataset_configs.datasets?.datasets?.length > 0)
-          datasets = modelConfig.dataset_configs?.datasets?.datasets
-
-        if (dataSets && datasets?.length && datasets?.length > 0) {
-          const { data: dataSetsWithDetail } = await fetchDatasets({ url: '/datasets', params: { page: 1, ids: datasets.map(({ dataset }: any) => dataset.id) } })
-          datasets = dataSetsWithDetail
-          setDataSets(datasets)
-        }
+        const legacyDatasetIds = modelConfig.agent_mode?.tools
+          ?.filter(isDatasetTool)
+          .filter(tool => tool.dataset.enabled)
+          .map(tool => tool.dataset.id) ?? []
+        const configuredDatasetIds = modelConfig.dataset_configs.datasets?.datasets?.map(item => item.id) ?? []
+        const datasetIds = legacyDatasetIds.length ? legacyDatasetIds : configuredDatasetIds
+        const datasets = datasetIds.length ? await fetchDatasetsByIds(datasetIds) : []
+        setDataSets(datasets)
 
         setIntroduction(modelConfig.opening_statement)
         setSuggestedQuestions(modelConfig.suggested_questions || [])
@@ -686,7 +722,7 @@ const Configuration: FC = () => {
                   ...modelConfig.user_input_form,
                   ...(
                     modelConfig.external_data_tools?.length
-                      ? modelConfig.external_data_tools.map((item: any) => {
+                      ? modelConfig.external_data_tools.map((item) => {
                           return {
                             external_data_tool: {
                               variable: item.variable as string,
@@ -724,13 +760,11 @@ const Configuration: FC = () => {
               ...modelConfig.agent_mode,
               // remove dataset
               enabled: true, // modelConfig.agent_mode?.enabled is not correct. old app: the value of app with dataset's is always true
-              tools: (modelConfig.agent_mode?.tools ?? []).filter((tool: any) => {
-                return !tool.dataset
-              }).map((tool: any) => {
+              tools: (modelConfig.agent_mode?.tools ?? []).filter(isAgentTool).map((tool) => {
                 const toolInCollectionList = collectionList.find(c => tool.provider_id === c.id)
                 return {
                   ...tool,
-                  isDeleted: res.deleted_tools?.some((deletedTool: any) => deletedTool.provider_id === tool.provider_id && deletedTool.tool_name === tool.tool_name) ?? false,
+                  isDeleted: res.deleted_tools?.some(deletedTool => deletedTool.id === tool.provider_id && deletedTool.tool_name === tool.tool_name) ?? false,
                   notAuthor: toolInCollectionList?.is_team_authorization === false,
                   ...(tool.provider_type === 'builtin'
                     ? {
@@ -781,6 +815,8 @@ const Configuration: FC = () => {
         console.error('Failed to fetch app detail', e)
       }
     })()
+  // This initializes remote app configuration. Depending on local setter callbacks would refetch after each state update.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appId, buildFallbackBackendModelConfig])
 
   const promptEmpty = (() => {
@@ -789,7 +825,7 @@ const Configuration: FC = () => {
 
     if (isAdvancedMode) {
       if (modelModeType === ModelModeType.chat)
-        return chatPromptConfig.prompt.every(({ text }: any) => !text)
+        return chatPromptConfig.prompt.every(({ text }) => !text)
 
       else
         return !completionPromptConfig.prompt?.text
@@ -845,10 +881,8 @@ const Configuration: FC = () => {
       return false
     }
     const postDatasets = dataSets.map(({ id }) => ({
-      dataset: {
-        enabled: true,
-        id,
-      },
+      enabled: true,
+      id,
     }))
 
     const fileUpload = { ...features?.file }
@@ -864,15 +898,15 @@ const Configuration: FC = () => {
       user_input_form: promptVariablesToUserInputsForm(promptVariables),
       dataset_query_variable: contextVar || '',
       //  features
-      more_like_this: features?.moreLikeThis as any,
+      more_like_this: toEnabledConfig(features?.moreLikeThis),
       opening_statement: features?.opening?.enabled ? (features.opening?.opening_statement || '') : '',
       suggested_questions: features?.opening?.enabled ? (features.opening?.suggested_questions || []) : [],
-      sensitive_word_avoidance: features?.moderation as any,
-      speech_to_text: features?.speech2text as any,
-      text_to_speech: features?.text2speech as any,
-      file_upload: fileUpload as any,
-      suggested_questions_after_answer: features?.suggested as any,
-      retriever_resource: features?.citation as any,
+      sensitive_word_avoidance: toEnabledConfig(features?.moderation),
+      speech_to_text: toEnabledConfig(features?.speech2text),
+      text_to_speech: toEnabledConfig(features?.text2speech),
+      file_upload: toBackendFileUpload(fileUpload),
+      suggested_questions_after_answer: toEnabledConfig(features?.suggested),
+      retriever_resource: toEnabledConfig(features?.citation),
       agent_mode: {
         ...modelConfig.agentConfig,
         strategy: isFunctionCall ? AgentStrategy.functionCall : AgentStrategy.react,
@@ -882,19 +916,19 @@ const Configuration: FC = () => {
         provider,
         name: modelId,
         mode: modelConfig.mode,
-        completion_params: modelAndParameter?.parameters || completionParams as any,
+        completion_params: (modelAndParameter?.parameters || completionParams) as BackendModelConfig['model']['completion_params'],
       },
       dataset_configs: {
         ...datasetConfigs,
         datasets: {
           datasets: [...postDatasets],
-        } as any,
+        },
       },
       system_parameters: modelConfig.system_parameters,
     }
 
     await updateAppModelConfig({ url: `/apps/${appId}/model-config`, body: data })
-    const newModelConfig = produce(modelConfig, (draft: any) => {
+    const newModelConfig = produce(modelConfig, (draft: ModelConfig) => {
       draft.opening_statement = introduction
       draft.more_like_this = moreLikeThisConfig
       draft.suggested_questions_after_answer = suggestedQuestionsAfterAnswerConfig
@@ -1055,7 +1089,7 @@ const Configuration: FC = () => {
                           provider={modelConfig.provider}
                           completionParams={completionParams}
                           modelId={modelConfig.model_id}
-                          setModel={setModel as any}
+                          setModel={setModel}
                           onCompletionParamsChange={(newParams: FormValue) => {
                             setCompletionParams(newParams)
                           }}
@@ -1097,7 +1131,7 @@ const Configuration: FC = () => {
                       canManageModels={canManageModels}
                       inputs={inputs}
                       modelParameterParams={{
-                        setModel: setModel as any,
+                        setModel,
                         onCompletionParamsChange: setCompletionParams,
                       }}
                       debugWithMultipleModel={debugWithMultipleModel}
@@ -1151,7 +1185,7 @@ const Configuration: FC = () => {
                 canManageModels={canManageModels}
                 inputs={inputs}
                 modelParameterParams={{
-                  setModel: setModel as any,
+                  setModel,
                   onCompletionParamsChange: setCompletionParams,
                 }}
                 debugWithMultipleModel={debugWithMultipleModel}

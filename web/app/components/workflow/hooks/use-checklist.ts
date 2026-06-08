@@ -28,7 +28,7 @@ import { useModelList } from '@/app/components/header/account-setting/model-prov
 import useNodes from '@/app/components/workflow/store/workflow/use-nodes'
 import { MAX_TREE_DEPTH } from '@/config'
 import { useGetLanguage } from '@/context/i18n'
-import { fetchDatasets } from '@/service/datasets'
+import { fetchDatasetsByIds } from '@/service/datasets'
 import { useStrategyProviders } from '@/service/use-strategy'
 import {
   useAllBuiltInTools,
@@ -326,7 +326,7 @@ export const useChecklistBeforePublish = () => {
     if (allDatasetIds.length > 0) {
       updateTime.current = updateTime.current + 1
       const currUpdateTime = updateTime.current
-      const { data: datasetsDetail } = await fetchDatasets({ url: '/datasets', params: { page: 1, ids: allDatasetIds } })
+      const datasetsDetail = await fetchDatasetsByIds(allDatasetIds)
       if (datasetsDetail && datasetsDetail.length > 0) {
         // avoid old data to overwrite the new data
         if (currUpdateTime < updateTime.current)

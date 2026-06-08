@@ -1,4 +1,4 @@
-import type { AfterResponseHook, BeforeErrorHook, BeforeRequestHook, Hooks } from 'ky'
+import type { AfterResponseHook, BeforeErrorHook, BeforeRequestHook, Hooks, SearchParamsOption } from 'ky'
 import type { IOtherOptions } from './base'
 import Cookies from 'js-cookie'
 import ky from 'ky'
@@ -21,7 +21,7 @@ export const ContentType = {
 }
 
 export type FetchOptionType = Omit<RequestInit, 'body'> & {
-  params?: Record<string, unknown>
+  params?: SearchParamsOption
   body?: BodyInit | Record<string, unknown> | null
 }
 
@@ -55,11 +55,19 @@ const readResponseError = async (response: Response): Promise<ResponseError> => 
       }
     }
 
+    if (contentType.includes('text/html')) {
+      return {
+        code: '',
+        message: fallbackMessage,
+        status: response.status,
+      }
+    }
+
     const text = await response.clone().text()
 
     return {
       code: '',
-      message: text || fallbackMessage,
+      message: text ? text.slice(0, 300) : fallbackMessage,
       status: response.status,
     }
   }

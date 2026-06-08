@@ -81,6 +81,29 @@ export const fetchDatasets = ({ url, params }: FetchDatasetsParams): Promise<Dat
   return get<DataSetListResponse>(`${url}?${urlParams}`)
 }
 
+export const fetchDatasetsByIds = async (datasetIds: string[]): Promise<DataSet[]> => {
+  const uniqueDatasetIds = Array.from(new Set(datasetIds.filter(Boolean)))
+  if (!uniqueDatasetIds.length)
+    return []
+
+  const datasets: DataSet[] = []
+  const failedDatasetIds: string[] = []
+
+  for (const datasetId of uniqueDatasetIds) {
+    try {
+      datasets.push(await fetchDatasetDetail(datasetId))
+    }
+    catch {
+      failedDatasetIds.push(datasetId)
+    }
+  }
+
+  if (failedDatasetIds.length === uniqueDatasetIds.length)
+    throw new Error('Unable to load selected knowledge bases. Please retry or contact the administrator.')
+
+  return datasets
+}
+
 export const createEmptyDataset = ({ name }: { name: string }): Promise<DataSet> => {
   return post<DataSet>('/datasets', { body: { name } })
 }

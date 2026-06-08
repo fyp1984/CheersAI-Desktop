@@ -24,7 +24,7 @@ import { useCurrentProviderAndModel, useModelListAndDefaultModelAndCurrentProvid
 import useAvailableVarList from '@/app/components/workflow/nodes/_base/hooks/use-available-var-list'
 import useNodeCrud from '@/app/components/workflow/nodes/_base/hooks/use-node-crud'
 import { DATASET_DEFAULT } from '@/config'
-import { fetchDatasets } from '@/service/datasets'
+import { fetchDatasetsByIds } from '@/service/datasets'
 import { AppModeEnum, RETRIEVE_TYPE } from '@/types/app'
 import { useDatasetsDetailStore } from '../../datasets-detail-store/store'
 import {
@@ -228,7 +228,7 @@ const useConfig = (id: string, payload: KnowledgeRetrievalNodeType) => {
       const inputs = inputRef.current
       const datasetIds = inputs.dataset_ids
       if (datasetIds?.length > 0) {
-        const { data: dataSetsWithDetail } = await fetchDatasets({ url: '/datasets', params: { page: 1, ids: datasetIds } as any })
+        const dataSetsWithDetail = await fetchDatasetsByIds(datasetIds)
         setSelectedDatasets(dataSetsWithDetail)
       }
       const newInputs = produce(inputs, (draft) => {

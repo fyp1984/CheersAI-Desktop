@@ -23,7 +23,7 @@ import { StopCircle } from '@/app/components/base/icons/src/vender/solid/mediaAn
 import Loading from '@/app/components/base/loading'
 import Toast from '@/app/components/base/toast'
 import NoData from '@/app/components/share/text-generation/no-data'
-import { downloadOutputToolFiles } from '@/app/components/workflow/run/output-panel-utils'
+import { downloadOutputToolFiles, downloadResponseToolFiles } from '@/app/components/workflow/run/output-panel-utils'
 import { NodeRunningStatus, WorkflowRunningStatus } from '@/app/components/workflow/types'
 import { TEXT_GENERATION_TIMEOUT_MS } from '@/config'
 import { sendCompletionMessage, sendWorkflowMessage, stopChatMessageResponding, stopWorkflowMessage, updateFeedback } from '@/service/share'
@@ -502,6 +502,9 @@ const Result: FC<IResultProps> = ({
         onMessageReplace: (messageReplace) => {
           res = [messageReplace.answer]
           setCompletionRes(res.join(''))
+        },
+        onFile(file) {
+          downloadResponseToolFiles([file])
         },
         onError() {
           if (isTimeout) {
