@@ -45,7 +45,7 @@ const FileItem = ({
   let tmp_preview_url = url || base64Url
   if (!tmp_preview_url && file?.originalFile)
     tmp_preview_url = URL.createObjectURL(file.originalFile.slice()).toString()
-  const download_url = url ? `${url}&as_attachment=true` : base64Url
+  const download_url = url ? `${url}${url.includes('?') ? '&' : '?'}as_attachment=true` : base64Url
 
   return (
     <>

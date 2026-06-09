@@ -346,7 +346,7 @@ class NodeFinishStreamResponse(StreamResponse):
                 "execution_metadata": None,
                 "created_at": self.data.created_at,
                 "finished_at": self.data.finished_at,
-                "files": [],
+                "files": self.data.files,
                 "iteration_id": self.data.iteration_id,
                 "loop_id": self.data.loop_id,
             },

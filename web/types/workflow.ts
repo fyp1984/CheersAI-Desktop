@@ -42,6 +42,7 @@ export type NodeTracing = {
   process_data: any
   process_data_truncated: boolean
   outputs?: Record<string, any>
+  files?: FileResponse[]
   outputs_truncated: boolean
   outputs_full_content?: {
     download_url: string
@@ -199,7 +200,8 @@ export type NodeStartedResponse = {
 }
 
 export type FileResponse = {
-  related_id: string
+  id?: string
+  related_id?: string
   extension: string
   filename: string
   size: number
