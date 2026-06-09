@@ -27,7 +27,7 @@ import {
   getProcessedFilesFromResponse,
 } from '@/app/components/base/file-uploader/utils'
 import { useToastContext } from '@/app/components/base/toast'
-import { downloadOutputToolFiles, downloadToolFile } from '@/app/components/workflow/run/output-panel-utils'
+import { downloadOutputToolFiles, downloadResponseToolFiles, downloadToolFile } from '@/app/components/workflow/run/output-panel-utils'
 import { WorkflowRunningStatus } from '@/app/components/workflow/types'
 import useTimestamp from '@/hooks/use-timestamp'
 import { ssePost } from '@/service/base'
@@ -37,6 +37,7 @@ import {
   getProcessedInputs,
   processOpeningStatement,
 } from './utils'
+import { mergeWorkflowOutputFiles } from './workflow-output-files'
 
 type GetAbortController = (abortController: AbortController) => void
 type SendCallback = {
@@ -564,6 +565,8 @@ export const useChat = (
         },
         onWorkflowFinished: ({ data: workflowFinishedData }) => {
           downloadOutputToolFiles(workflowFinishedData.outputs)
+          downloadResponseToolFiles(workflowFinishedData.files || [])
+          responseItem.allFiles = mergeWorkflowOutputFiles(responseItem.allFiles, workflowFinishedData.outputs, workflowFinishedData.files)
           responseItem.workflowProcess!.status = workflowFinishedData.status as WorkflowRunningStatus
           updateCurrentQAOnTree({
             placeholderQuestionId,
@@ -620,13 +623,19 @@ export const useChat = (
           })
         },
         onNodeFinished: ({ data: nodeFinishedData }) => {
-          if (nodeFinishedData.iteration_id)
-            return
-
-          if (data.loop_id)
-            return
-
           downloadOutputToolFiles(nodeFinishedData.outputs)
+          downloadResponseToolFiles(nodeFinishedData.files || [])
+          responseItem.allFiles = mergeWorkflowOutputFiles(responseItem.allFiles, nodeFinishedData.outputs, nodeFinishedData.files)
+
+          if (nodeFinishedData.iteration_id || nodeFinishedData.loop_id) {
+            updateCurrentQAOnTree({
+              placeholderQuestionId,
+              questionItem,
+              responseItem,
+              parentId: data.parent_message_id,
+            })
+            return
+          }
 
           const currentIndex = responseItem.workflowProcess!.tracing!.findIndex((item) => {
             if (!item.execution_metadata?.parallel_id)
@@ -634,7 +643,8 @@ export const useChat = (
 
             return item.node_id === nodeFinishedData.node_id && (item.execution_metadata?.parallel_id === nodeFinishedData.execution_metadata?.parallel_id)
           })
-          responseItem.workflowProcess!.tracing[currentIndex] = nodeFinishedData as any
+          if (currentIndex > -1)
+            responseItem.workflowProcess!.tracing[currentIndex] = nodeFinishedData as any
 
           updateCurrentQAOnTree({
             placeholderQuestionId,

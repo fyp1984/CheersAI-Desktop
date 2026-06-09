@@ -179,6 +179,7 @@ export const getProcessedFiles = (files: FileEntity[]) => {
 
 export const getProcessedFilesFromResponse = (files: FileResponse[]) => {
   return files.map((fileItem) => {
+    const fileId = fileItem.related_id || fileItem.id || fileItem.upload_file_id
     let supportFileType = fileItem.type
 
     if (fileItem.filename && fileItem.mime_type) {
@@ -194,14 +195,14 @@ export const getProcessedFilesFromResponse = (files: FileResponse[]) => {
     }
 
     return {
-      id: fileItem.related_id,
+      id: fileId,
       name: fileItem.filename,
       size: fileItem.size || 0,
       type: fileItem.mime_type,
       progress: 100,
       transferMethod: fileItem.transfer_method,
       supportFileType,
-      uploadedId: fileItem.upload_file_id || fileItem.related_id,
+      uploadedId: fileItem.upload_file_id || fileId,
       url: fileItem.url || fileItem.remote_url,
     }
   })

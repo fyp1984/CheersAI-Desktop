@@ -7,7 +7,7 @@ import {
   RiRefreshLine,
   RiShieldCheckLine,
 } from '@remixicon/react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { API_PREFIX } from '@/config'
 import { useSandboxSecurity } from '@/context/use-sandbox-security'
@@ -46,8 +46,12 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
   const [giteaOwner, setGiteaOwner] = useState('root')
   const [giteaRepo, setGiteaRepo] = useState('cheersAI')
   const [isConfirming, setIsConfirming] = useState(false)
+  const loadControllerRef = useRef<AbortController | null>(null)
 
   const loadFiles = useCallback(async (path: string = '') => {
+    loadControllerRef.current?.abort()
+    const controller = new AbortController()
+    loadControllerRef.current = controller
     setLoading(true)
     setError('')
     try {
@@ -58,6 +62,7 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
         headers: {
           'X-CSRF-Token': csrfToken,
         },
+        signal: controller.signal,
       })
 
       if (!res.ok) {
@@ -97,8 +102,7 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
           const filtered = fileList.filter(f =>
             f.type === 'dir' || exts.some(ext => f.name.toLowerCase().endsWith(ext)),
           )
-          if (filtered.length > 0)
-            fileList = filtered
+          fileList = filtered
         }
       }
 
@@ -119,11 +123,14 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
       setFiles(fileList)
     }
     catch (err) {
+      if (controller.signal.aborted)
+        return
       console.error('Failed to load files from Gitea:', err)
       setError('无法从 FileBay 加载文件列表，请确认 FileBay 配置正确')
     }
     finally {
-      setLoading(false)
+      if (loadControllerRef.current === controller)
+        setLoading(false)
     }
   }, [accept])
 
@@ -159,6 +166,8 @@ export function SandboxFilePicker({ open, onClose, onSelect, accept, multiple }:
 
       loadGiteaConfig()
     }
+
+    return () => loadControllerRef.current?.abort()
   }, [loadFiles, open])
 
   const handleFolderClick = (folderPath: string) => {

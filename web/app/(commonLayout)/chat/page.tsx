@@ -43,7 +43,6 @@ type UploadedFile = {
   size: number
   type: string
   url: string
-  isDesensitized?: boolean
   content?: string
 }
 
@@ -374,15 +373,19 @@ const ChatPage = () => {
     if (!conversationStorageKey || !hasHydratedConversations)
       return
 
-    try {
-      if (conversations.length > 0)
-        localStorage.setItem(conversationStorageKey, JSON.stringify(conversations))
-      else
-        localStorage.removeItem(conversationStorageKey)
-    }
-    catch {
-      // 保存对话到本地存储失败，忽略错误
-    }
+    const persistenceTimer = window.setTimeout(() => {
+      try {
+        if (conversations.length > 0)
+          localStorage.setItem(conversationStorageKey, JSON.stringify(conversations))
+        else
+          localStorage.removeItem(conversationStorageKey)
+      }
+      catch {
+        // 保存对话到本地存储失败，忽略错误
+      }
+    }, 500)
+
+    return () => window.clearTimeout(persistenceTimer)
   }, [conversationStorageKey, conversations, hasHydratedConversations])
 
   useEffect(() => {
@@ -691,7 +694,7 @@ const ChatPage = () => {
     return `${baseContent}\n\n以下是用户上传的文件内容：${fileContents.join('')}${truncationHint}`
   }
 
-  // 处理沙箱文件选择
+  // 处理 FileBay 文件选择
   const handleSandboxFilesSelected = async (selectedFiles: File[]) => {
     const newFiles: UploadedFile[] = []
 
@@ -701,7 +704,6 @@ const ChatPage = () => {
       // 读取文件内容
       let content = ''
       try {
-        // 直接读取File对象的内容，不管文件类型
         content = await file.text()
       }
       catch {
@@ -713,8 +715,7 @@ const ChatPage = () => {
         name: file.name,
         size: file.size,
         type: file.type,
-        url: '', // 沙箱文件不需要URL
-        isDesensitized: true,
+        url: '', // FileBay 文件不需要 URL
         content,
       })
     }
@@ -1611,7 +1612,7 @@ const ChatPage = () => {
                       </h3>
                       <p className="mx-auto mb-6 max-w-2xl text-sm leading-6 text-[#4b5563] dark:text-gray-400">
                         我是您的 AI 助手，可协助完成数据分析、代码编写、问题解答与文件协同。
-                        当前页面支持安全输入、语音录入与 FileBay 沙箱文件选择。
+                        当前页面支持安全输入、语音录入与 FileBay 文件选择。
                       </p>
                       <div className="mb-6 flex flex-wrap justify-center gap-2">
                         {promptSuggestions.map(text => (
@@ -1695,9 +1696,6 @@ const ChatPage = () => {
                                     )}
                                     >
                                       {formatFileSize(file.size)}
-                                      {file.isDesensitized && (
-                                        <span className="ml-1">• 已脱敏</span>
-                                      )}
                                     </div>
                                   </div>
                                 </div>
@@ -1814,8 +1812,8 @@ const ChatPage = () => {
                           <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{file.name}</div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
                             {formatFileSize(file.size)}
-                            <span className="ml-2 rounded-full bg-[#d1fae5] px-2 py-0.5 text-xs text-[#065f46]">
-                              沙箱文件
+                            <span className="ml-2 rounded-full bg-[#dbeafe] px-2 py-0.5 text-xs text-[#1e40af]">
+                              FileBay 文件
                             </span>
                           </div>
                         </div>
@@ -1836,8 +1834,8 @@ const ChatPage = () => {
 
             <div className="mb-4 rounded-xl border border-[#bfdbfe] bg-[#eff6ff] p-4 dark:border-blue-400/20 dark:bg-blue-500/10">
               <p className="text-sm leading-6 text-[#1e40af] dark:text-blue-200">
-                <span className="font-medium">安全模式：</span>
-                仅可选择沙箱内的脱敏文件。系统将自动记录并脱敏输入内容中的个人身份信息。
+                <span className="font-medium">安全提示：</span>
+                附件仅可从 FileBay 选择。发送前请确认文本与附件不含敏感信息。
               </p>
             </div>
 
@@ -1901,7 +1899,7 @@ const ChatPage = () => {
                 <div className="p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-xs text-[#4b5563] dark:text-gray-400">
-                      <span className="rounded-full bg-[#d1fae5] px-2 py-1 font-medium text-[#065f46] dark:bg-emerald-500/15 dark:text-emerald-300">已脱敏保护</span>
+                      <span className="rounded-full bg-[#d1fae5] px-2 py-1 font-medium text-[#065f46] dark:bg-emerald-500/15 dark:text-emerald-300">发送前安全确认</span>
                       <span>支持语音输入、搜索历史和 Markdown 导出</span>
                     </div>
                     {voiceDraft && (
@@ -1916,7 +1914,7 @@ const ChatPage = () => {
                       type="button"
                       onClick={handleAttachmentClick}
                       className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#f3f4f6] hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-100"
-                      title="从沙箱选择文件"
+                      title="从 FileBay 选择文件"
                     >
                       <RiAttachmentLine className="h-4 w-4" />
                     </button>
@@ -1940,7 +1938,7 @@ const ChatPage = () => {
                         value={inputValue}
                         onChange={handleTextareaChange}
                         onKeyDown={handleKeyDown}
-                        placeholder="输入消息，Ctrl+Enter 换行"
+                        placeholder="输入消息，Enter 发送，Shift+Enter 换行"
                         className={cn(
                           'min-h-[32px] w-full resize-none border-0 bg-transparent py-1.5 text-sm leading-5 placeholder:text-gray-400 focus:outline-none dark:placeholder:text-gray-500',
                           isAutoFilled ? 'text-transparent' : 'text-gray-900 dark:text-gray-100',
@@ -2107,7 +2105,7 @@ const ChatPage = () => {
           open={showSandboxPicker}
           onClose={() => setShowSandboxPicker(false)}
           onSelect={handleSandboxFilesSelected}
-          accept=".txt,.md,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.csv,.json"
+          accept=".txt,.md,.csv,.json"
           multiple={true}
         />
       </div>

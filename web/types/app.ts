@@ -414,6 +414,7 @@ export enum TransferMethod {
   all = 'all',
   local_file = 'local_file',
   remote_url = 'remote_url',
+  tool_file = 'tool_file',
 }
 
 export enum TtsAutoPlay {

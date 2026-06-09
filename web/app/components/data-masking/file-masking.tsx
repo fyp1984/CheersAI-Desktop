@@ -761,7 +761,7 @@ export function FileMasking({ sandboxPath }: FileMaskingProps) {
               <DocumentIcon className="h-4 w-4 text-text-quaternary" />
               <span className="font-medium">{selectedFile?.name}</span>
               <span className="text-text-quaternary">·</span>
-              <span className="text-text-quaternary">{(selectedFile?.size ?? 0 / 1024).toFixed(1)} KB</span>
+              <span className="text-text-quaternary">{((selectedFile?.size ?? 0) / 1024).toFixed(1)} KB</span>
             </div>
             <button onClick={handleReset} className="text-xs text-text-tertiary hover:text-text-secondary">重新选择文件</button>
           </div>
