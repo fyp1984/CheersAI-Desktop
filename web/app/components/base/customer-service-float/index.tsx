@@ -25,7 +25,7 @@ const presetAnswers = [
   {
     question: '数据安全如何保障？',
     keywords: ['安全', '隐私', '脱敏', '数据', 'filebay'],
-    answer: '系统支持安全对话、脱敏文件选择和 FileBay 文件接入。敏感文件优先在沙箱/FileBay 中处理，输入内容会自动记录并脱敏个人身份信息。',
+    answer: '系统支持安全对话、脱敏文件处理和 FileBay 文件接入。发送前请确认文本与附件不含敏感信息，重要文件建议先完成脱敏后再使用。',
   },
   {
     question: '怎么重置密码？',

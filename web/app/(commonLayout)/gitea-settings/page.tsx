@@ -90,14 +90,20 @@ export default function GiteaSettingsPage() {
   const downloadConfig = async () => {
     setDownloading(true)
     try {
-      // 获取完整配置(包含未 masked 的 token)
-      const configResponse = await fetch(`${API_PREFIX}/gitea/config/download`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
+      // 配置与用户信息互不依赖，并行获取以减少下载等待时间
+      const [configResponse, userResponse] = await Promise.all([
+        fetch(`${API_PREFIX}/gitea/config/download`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }),
+        fetch(`${API_PREFIX}/account/profile`, {
+          method: 'GET',
+          credentials: 'include',
+        }).catch(() => null),
+      ])
 
       let downloadConfig: GiteaConfig = {
         gitea_url: '',
@@ -114,18 +120,16 @@ export default function GiteaSettingsPage() {
 
       // 获取用户邮箱
       let userEmail = ''
-      try {
-        const userResponse = await fetch(`${API_PREFIX}/account/profile`, {
-          method: 'GET',
-          credentials: 'include',
-        })
-        if (userResponse.ok) {
-          const userData = await userResponse.json()
-          userEmail = userData.email || ''
+      if (userResponse) {
+        try {
+          if (userResponse.ok) {
+            const userData = await userResponse.json()
+            userEmail = userData.email || ''
+          }
         }
-      }
-      catch (e) {
-        console.warn('Failed to get user email:', e)
+        catch (e) {
+          console.warn('Failed to get user email:', e)
+        }
       }
 
       // 构建配置对象
@@ -224,9 +228,9 @@ export default function GiteaSettingsPage() {
   return (
     <div className="mx-auto max-w-4xl p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Gitea 配置</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">FileBay 配置</h1>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          配置 Gitea 服务器连接信息，用于文件存储和管理
+          配置 FileBay 服务连接信息，用于文件存储和管理
         </p>
       </div>
 
@@ -247,7 +251,7 @@ export default function GiteaSettingsPage() {
           {/* Gitea URL */}
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
-              Gitea 服务器地址
+              FileBay 服务器地址
             </label>
             <input
               type="text"
@@ -260,7 +264,7 @@ export default function GiteaSettingsPage() {
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-[#1b1c21] dark:text-gray-100 dark:placeholder:text-gray-500"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Gitea 服务器的完整 URL（包括端口）
+              FileBay 服务器的完整 URL（包括端口）
             </p>
           </div>
 
@@ -280,7 +284,7 @@ export default function GiteaSettingsPage() {
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-[#1b1c21] dark:text-gray-100 dark:placeholder:text-gray-500"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Gitea 用户名或组织名
+              FileBay 用户名或组织名
             </p>
           </div>
 
@@ -320,7 +324,7 @@ export default function GiteaSettingsPage() {
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-white/10 dark:bg-[#1b1c21] dark:text-gray-100 dark:placeholder:text-gray-500"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              在 Gitea 设置中生成的 API Token（需要 repo 权限）
+              在 FileBay 设置中生成的 API Token（需要文件仓库权限）
             </p>
           </div>
 

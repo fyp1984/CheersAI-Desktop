@@ -52,6 +52,7 @@ const AuditLogsPage = () => {
     start_date: getToday(),
     end_date: getToday(),
   })
+  const [debouncedFilters, setDebouncedFilters] = useState(filters)
 
   const pageSize = 10
   const AUTO_REFRESH_INTERVAL = 30000 // 30秒自动刷新
@@ -144,22 +145,71 @@ const AuditLogsPage = () => {
       || (log.content?.mode ? `操作: ${log.content.mode}` : '-')
   }
 
+  const loadData = async (isAutoRefresh = false) => {
+    try {
+      if (!isAutoRefresh)
+        setLoading(true)
+      const logsRes = await fetchOperationLogs({ page, limit: pageSize, ...debouncedFilters })
+
+      setLogs(logsRes.data)
+      setTotal(logsRes.total)
+    }
+    catch (error) {
+      console.error('Failed to load audit logs:', error)
+    }
+    finally {
+      setLoading(false)
+    }
+  }
+
+  const loadMetadata = async (includeActions = true) => {
+    try {
+      const [statsRes, actionsRes] = await Promise.all([
+        fetchOperationLogStats(),
+        includeActions ? fetchOperationLogActions() : Promise.resolve(null),
+      ])
+      setStats(statsRes)
+      if (actionsRes)
+        setActions(actionsRes.actions)
+    }
+    catch (error) {
+      console.error('Failed to load audit metadata:', error)
+    }
+  }
+
   // 自动刷新定时器
   useEffect(() => {
-    if (!canViewAudit) return
+    if (!canViewAudit || !isAutoRefresh)
+      return
     
     const interval = setInterval(() => {
       loadData(true)
+      loadMetadata(false)
     }, AUTO_REFRESH_INTERVAL)
     
     return () => clearInterval(interval)
-  }, [canViewAudit, filters])
+  }, [canViewAudit, debouncedFilters, isAutoRefresh, page])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1)
+      setDebouncedFilters(filters)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [filters])
 
   useEffect(() => {
     if (!canViewAudit)
       return
     loadData()
-  }, [canViewAudit, page, filters])
+  }, [canViewAudit, page, debouncedFilters])
+
+  useEffect(() => {
+    if (!canViewAudit)
+      return
+    loadMetadata()
+  }, [canViewAudit])
 
   if (isLoadingCurrentWorkspace)
     return <Loading type="app" />
@@ -183,28 +233,6 @@ const AuditLogsPage = () => {
         </div>
       </div>
     )
-  }
-
-  const loadData = async (isAutoRefresh = false) => {
-    try {
-      if (!isAutoRefresh) setLoading(true)
-      const [logsRes, statsRes, actionsRes] = await Promise.all([
-        fetchOperationLogs({ page, limit: pageSize, ...filters }),
-        fetchOperationLogStats(),
-        fetchOperationLogActions(),
-      ])
-      
-      setLogs(logsRes.data)
-      setTotal(logsRes.total)
-      setStats(statsRes)
-      setActions(actionsRes.actions)
-    }
-    catch (error) {
-      console.error('Failed to load audit logs:', error)
-    }
-    finally {
-      setLoading(false)
-    }
   }
 
   const handleToggleAutoRefresh = () => {
@@ -239,6 +267,7 @@ const AuditLogsPage = () => {
 
   const handleRefresh = () => {
     loadData()
+    loadMetadata()
   }
 
   return (
@@ -258,7 +287,7 @@ const AuditLogsPage = () => {
             {isAutoRefresh ? '自动刷新中' : '开启自动刷新'}
           </button>
           <button
-            onClick={() => loadData()}
+            onClick={handleRefresh}
             className="px-4 py-2 text-sm text-text-secondary border border-divider-regular rounded-lg hover:bg-state-base-hover transition-colors"
           >
             刷新
