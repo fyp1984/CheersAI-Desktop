@@ -1,0 +1,28 @@
+[Unit]
+Description=CheersAI Desktop Worker (general queues)
+After=network.target postgresql@14-main.service redis-server.service weaviate.service cheersai-api.service
+Requires=postgresql@14-main.service redis-server.service weaviate.service
+
+[Service]
+Type=simple
+User=desktop
+Group=desktop
+WorkingDirectory=/home/desktop/CheersAI-Desktop/api
+EnvironmentFile=/home/desktop/CheersAI-Desktop/api/.env
+Environment=PATH=/home/desktop/CheersAI-Desktop/api/.venv/bin:/opt/node-v24.9.0-linux-x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=LANG=C.UTF-8
+Environment=LC_ALL=C.UTF-8
+Environment=MODE=worker
+Environment=MIGRATION_ENABLED=false
+Environment=CELERY_WORKER_CLASS=gevent
+Environment=CELERY_WORKER_AMOUNT=1
+Environment=MAX_TASKS_PER_CHILD=50
+Environment=CELERY_PREFETCH_MULTIPLIER=1
+ExecStart=/home/desktop/CheersAI-Desktop/api/.venv/bin/celery -A celery_entrypoint.celery worker -n general@%H -P gevent -c 1 --max-tasks-per-child 50 --loglevel INFO -Q priority_pipeline,pipeline,mail,ops_trace,app_deletion,plugin,workflow_storage,conversation,workflow,workflow_professional,workflow_team,workflow_sandbox,schedule_poller,schedule_executor,triggered_workflow_dispatcher,trigger_refresh_executor,retention --prefetch-multiplier=1
+Restart=always
+RestartSec=5
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
